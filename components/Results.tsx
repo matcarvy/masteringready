@@ -43,7 +43,7 @@ export default function Results({ data, onReset }: ResultsProps) {
           </button>
         </div>
 
-        {/* Score Card - FIX: Added gap-4 for spacing */}
+        {/* Score Card - CRITICAL FIX: gap-4 añadido para separar Puntuación del número */}
         <div className={`rounded-lg border p-6 mb-6 ${getScoreBg(data.score)}`}>
           <div className="flex items-center justify-between mb-4 gap-4">
             <span className="text-gray-700 font-medium">Puntuación</span>
@@ -60,7 +60,7 @@ export default function Results({ data, onReset }: ResultsProps) {
           <p className="text-lg font-semibold">{data.verdict}</p>
         </div>
 
-        {/* Report - FIXED: Show formatted report instead of JSON */}
+        {/* Report */}
         <div className="bg-gray-50 rounded-lg p-6 mb-6">
           <h3 className="font-semibold text-lg mb-4">Reporte Detallado</h3>
           <pre className="whitespace-pre-wrap text-sm leading-relaxed font-sans">
