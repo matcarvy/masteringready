@@ -43,9 +43,9 @@ export default function Results({ data, onReset }: ResultsProps) {
           </button>
         </div>
 
-        {/* Score Card */}
+        {/* Score Card - FIX: Added gap-4 for spacing */}
         <div className={`rounded-lg border p-6 mb-6 ${getScoreBg(data.score)}`}>
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-4 gap-4">
             <span className="text-gray-700 font-medium">Puntuación</span>
             <span className={`text-5xl font-bold ${getScoreColor(data.score)}`}>
               {data.score}/100
