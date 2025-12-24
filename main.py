@@ -1,18 +1,17 @@
 """
-MasteringReady API v7.3
-=======================
+MasteringReady API v7.3.2 - FINAL FIX
+======================================
 
 FastAPI backend for MasteringReady web application.
 
-Features:
-- Privacy-first: Audio analyzed in-memory, auto-deleted
-- CORS enabled for frontend
-- Supports ES/EN, Short/Write modes, Strict mode
-- Returns JSON with analysis results
+FIXES:
+- Uses analyzer's write_report() directly (no mixing)
+- Implements short mode following CLI logic exactly
+- Proper Spanish/English separation
 
 Based on Matías Carvajal's "Mastering Ready" methodology
 Author: Matías Carvajal García (@matcarvy)
-Version: 7.3.0-beta
+Version: 7.3.2-final
 """
 
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
@@ -22,7 +21,7 @@ import tempfile
 from pathlib import Path
 import logging
 import sys
-from typing import Optional
+from typing import Optional, Dict, Any
 from datetime import datetime
 
 # Setup logging
@@ -33,33 +32,24 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Import analyzer module
-# Note: analyzer.py should be in the same directory (mix_analyzer_v7.3_BETA.py renamed)
 try:
-    from analyzer import analyze_file
+    from analyzer import analyze_file, write_report, generate_cta
     logger.info("✅ Analyzer module imported successfully")
 except ImportError as e:
     logger.error(f"❌ Failed to import analyzer: {e}")
     logger.error("Make sure mix_analyzer_v7.3_BETA.py is renamed to analyzer.py")
-    # For now, continue without it for testing purposes
-    logger.warning("⚠️ Running in test mode without analyzer")
+    sys.exit(1)
 
 # Create FastAPI app
 app = FastAPI(
     title="MasteringReady API",
     description="Audio analysis API based on Matías Carvajal's Mastering Ready methodology",
-    version="7.3.0",
+    version="7.3.2",
     docs_url="/docs",
     redoc_url="/redoc"
 )
 
 # CORS Configuration
-ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "http://localhost:3001",
-    "https://masteringready.vercel.app",
-    "https://*.vercel.app",
-]
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # For development - restrict in production
@@ -73,13 +63,124 @@ MAX_FILE_SIZE = 200 * 1024 * 1024  # 200MB
 ALLOWED_EXTENSIONS = {'.wav', '.mp3', '.aiff'}
 
 
+# ============== HELPER: SHORT MODE ==============
+def generate_short_mode_report(result: Dict[str, Any], lang: str, filename: str, strict: bool = False) -> str:
+    """
+    Generate short mode report following CLI logic exactly.
+    Replicates lines 3234-3333 from analyzer.py
+    """
+    score = result.get('score', 0)
+    verdict = result.get('verdict', '')
+    metrics = result.get('metrics', [])
+    
+    # Detect mastered track (same logic as analyzer.py)
+    lufs_metric = next((m for m in metrics if "LUFS" in m.get("internal_key", "")), None)
+    peak_metric = next((m for m in metrics if "Headroom" in m.get("internal_key", "")), None)
+    tp_metric = next((m for m in metrics if "True Peak" in m.get("internal_key", "")), None)
+    
+    lufs_value = None
+    if lufs_metric and lufs_metric.get("value") != "N/A":
+        try:
+            lufs_value = float(lufs_metric.get("value", "").split()[0])
+        except:
+            pass
+    
+    peak_value = None
+    if peak_metric:
+        try:
+            peak_str = peak_metric.get("peak_db", "")
+            peak_value = float(peak_str.replace(" dBFS", "").replace("dBFS", ""))
+        except:
+            pass
+    
+    tp_value = None
+    if tp_metric:
+        try:
+            tp_str = tp_metric.get("value", "")
+            tp_value = float(tp_str.replace(" dBTP", "").replace("dBTP", ""))
+        except:
+            pass
+    
+    is_mastered = False
+    if lufs_value is not None and lufs_value > -14:
+        if (peak_value is not None and peak_value > -1.0) or (tp_value is not None and tp_value > -1.0):
+            is_mastered = True
+    
+    # Build report
+    if lang == 'es':
+        report = f"🎵 {filename}\n🧠 Resumen Rápido\n{'─' * 50}\n\n"
+        
+        if is_mastered:
+            report += """🎛️ Tipo: Máster Finalizado
+
+💼 Este archivo parece ser un master o hotmix.
+
+Si tu intención era enviar una mezcla para mastering, necesitas:
+• Volver a la sesión sin limitador en el bus maestro
+• Bajar ~6 dB (picos en -6 dBFS)
+• Re-exportar la mezcla
+
+¿Quieres hacer los ajustes, subirla de nuevo y revisar si ya está
+lista para masterizar? O si prefieres, puedo ayudarte a dejarla
+lista como mezcla para luego masterizarla.
+
+Sube los archivos y con gusto te la preparo.
+"""
+        else:
+            report += f"📊 Score: {score}/100\n🎯 {verdict}\n\n"
+            recs = result.get("notes", {}).get("recommendations", [])
+            if recs:
+                report += "💡 Recomendaciones:\n"
+                for rec in recs:
+                    report += f"  {rec}\n"
+                report += "\n"
+            
+            # Add CTA
+            cta = generate_cta(score, strict, lang, mode="short")
+            report += cta
+    
+    else:  # English
+        report = f"🎵 {filename}\n🧠 Quick Summary\n{'─' * 50}\n\n"
+        
+        if is_mastered:
+            report += """🎛️ Type: Finished Master
+
+💼 This file appears to be a master or hotmix.
+
+If your goal was to send a mix for mastering, you need:
+• Go back to session without limiter on master bus
+• Lower ~6 dB (peaks at -6 dBFS)
+• Re-export the mix
+
+Want to make the adjustments yourself, re-upload it, and check if it's
+ready for mastering? Or if you prefer, I can help you get it ready
+as a mix and then master it.
+
+Upload the files and I'll gladly prep it for you.
+"""
+        else:
+            report += f"📊 Score: {score}/100\n🎯 {verdict}\n\n"
+            recs = result.get("notes", {}).get("recommendations", [])
+            if recs:
+                report += "💡 Recommendations:\n"
+                for rec in recs:
+                    report += f"  {rec}\n"
+                report += "\n"
+            
+            # Add CTA
+            cta = generate_cta(score, strict, lang, mode="short")
+            report += cta
+    
+    return report
+
+
 # ============== HEALTH CHECK ==============
 @app.get("/")
 async def root():
     """Health check endpoint."""
     return {
         "name": "MasteringReady API",
-        "version": "7.3.0",
+        "version": "7.3.2",
         "status": "healthy",
         "methodology": "Basado en 'Mastering Ready' de Matías Carvajal",
         "endpoints": {
@@ -95,7 +196,7 @@ async def health_check():
     """Detailed health check."""
     return {
         "status": "healthy",
-        "version": "7.3.0",
+        "version": "7.3.2",
         "analyzer_loaded": True,
         "privacy": "In-memory processing, auto-delete guaranteed",
         "timestamp": datetime.utcnow().isoformat()
@@ -139,7 +240,7 @@ async def analyze_mix_endpoint(
             detail=f"Formato no soportado. Solo se aceptan: {', '.join(ALLOWED_EXTENSIONS)}"
         )
     
-    # Validate file size (read first to check)
+    # Validate file size
     content = await file.read()
     file_size = len(content)
     
@@ -181,17 +282,17 @@ async def analyze_mix_endpoint(
             logger.info(f"✅ Analysis complete: Score {result['score']}/100")
             
             # Format output based on mode
+            # USES ANALYZER'S NATIVE FUNCTIONS - NO MIXING
             if mode == "write":
-                # Get write mode output from result
-                # The analyzer returns formatted output when called with appropriate params
-                report = generate_write_report(result, lang, file.filename)
+                logger.info("📝 Generating write mode report...")
+                report = write_report(result, strict=strict, lang=lang, filename=file.filename)
                 
             elif mode == "short":
-                # Generate short format
-                report = generate_short_report(result, lang, file.filename)
+                logger.info("📱 Generating short mode report...")
+                report = generate_short_mode_report(result, lang, file.filename, strict)
                 
             else:
-                # JSON mode
+                # JSON mode (fallback)
                 report = str(result)
             
             return {
@@ -201,6 +302,9 @@ async def analyze_mix_endpoint(
                 "report": report,
                 "metrics": result.get("metrics", []),
                 "filename": file.filename,
+                "mode": mode,
+                "lang": lang,
+                "strict": strict,
                 "privacy_note": "🔒 Audio analizado en memoria y eliminado inmediatamente.",
                 "methodology": "Basado en la metodología 'Mastering Ready' de Matías Carvajal"
             }
@@ -212,78 +316,8 @@ async def analyze_mix_endpoint(
                 detail=f"Error al analizar el archivo: {str(e)}"
             )
     
-    # File automatically deleted here (tempfile context exit)
+    # File automatically deleted here
     logger.info("🗑️ Temp file auto-deleted")
-
-
-# ============== HELPER FUNCTIONS ==============
-def generate_write_report(result: dict, lang: str, filename: str) -> str:
-    """Generate write mode report from analysis result."""
-    
-    score = result["score"]
-    verdict = result["verdict"]
-    metrics = result.get("metrics", [])
-    
-    if lang == "es":
-        report = f"""🎵 Sobre "{filename}"
-
-Tu mezcla está en {"muy buen punto" if score >= 85 else "buen camino" if score >= 60 else "desarrollo"}.
-
-📊 Score: {score}/100
-🎯 {verdict}
-
-"""
-    else:
-        report = f"""🎵 Regarding "{filename}"
-
-Your mix is {"in great shape" if score >= 85 else "on the right track" if score >= 60 else "in development"}.
-
-📊 Score: {score}/100
-🎯 {verdict}
-
-"""
-    
-    # Add key metrics
-    for metric in metrics:
-        if metric.get("status") in ["critical", "warning"]:
-            report += f"• {metric['name']}: {metric['message']}\n"
-    
-    return report
-
-
-def generate_short_report(result: dict, lang: str, filename: str) -> str:
-    """Generate short mode report."""
-    
-    score = result["score"]
-    verdict = result["verdict"]
-    
-    if lang == "es":
-        report = f"""🎵 {filename}
-🧠 Resumen Rápido
-{'─' * 50}
-
-📊 Score: {score}/100
-🎯 {verdict}
-
-"""
-    else:
-        report = f"""🎵 {filename}
-🧠 Quick Summary
-{'─' * 50}
-
-📊 Score: {score}/100
-🎯 {verdict}
-
-"""
-    
-    # Add top 3 recommendations
-    recs = result.get("notes", {}).get("recommendations", [])
-    if recs:
-        report += "💡 " + ("Recomendaciones:" if lang == "es" else "Recommendations:") + "\n"
-        for rec in recs[:3]:
-            report += f"  {rec}\n"
-    
-    return report
 
 
 # ============== RUN ==============
