@@ -1,24 +1,20 @@
-export async function analyzeFile(
-  file: File,
-  opts: { lang: 'es' | 'en'; mode: string; strict: boolean }
-) {
-  const base = process.env.NEXT_PUBLIC_API_URL;
-  if (!base) throw new Error('NEXT_PUBLIC_API_URL not set');
+const API_BASE = process.env.NEXT_PUBLIC_API_URL
 
-  const form = new FormData();
-  form.append('file', file);
-  form.append('lang', opts.lang);
-  form.append('mode', opts.mode);
-  form.append('strict', String(opts.strict));
+export async function analyzeFile(file: File, options: any) {
+  const formData = new FormData()
+  formData.append('file', file)
+  formData.append('lang', options.lang)
+  formData.append('mode', options.mode)
+  formData.append('strict', String(options.strict))
 
-  const res = await fetch(`${base}/analyze`, {
+  const res = await fetch(`${API_BASE}/api/analyze/mix`, {
     method: 'POST',
-    body: form,
-  });
+    body: formData,
+  })
 
   if (!res.ok) {
-    throw new Error(`API error ${res.status}`);
+    throw new Error(`API error ${res.status}`)
   }
 
-  return res.json();
+  return res.json()
 }
