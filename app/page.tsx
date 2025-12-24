@@ -454,6 +454,30 @@ export default function LandingPage() {
               }}>
                 <div
                   onClick={() => !loading && document.getElementById('file-input')?.click()}
+                  onDragOver={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    if (!loading) {
+                      e.currentTarget.style.borderColor = '#a855f7'
+                      e.currentTarget.style.background = '#faf5ff'
+                    }
+                  }}
+                  onDragLeave={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    e.currentTarget.style.borderColor = '#d1d5db'
+                    e.currentTarget.style.background = 'transparent'
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    e.currentTarget.style.borderColor = '#d1d5db'
+                    e.currentTarget.style.background = 'transparent'
+                    
+                    if (!loading && e.dataTransfer.files && e.dataTransfer.files[0]) {
+                      setFile(e.dataTransfer.files[0])
+                    }
+                  }}
                   style={{
                     border: '2px dashed #d1d5db',
                     borderRadius: '0.75rem',
