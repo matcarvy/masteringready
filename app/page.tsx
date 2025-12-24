@@ -81,47 +81,77 @@ export default function LandingPage() {
   const isFileTooLarge = file && file.size > 50 * 1024 * 1024
 
   const getScoreColor = (score: number) => {
-    if (score >= 85) return 'text-green-600'
-    if (score >= 60) return 'text-yellow-600'
-    return 'text-red-600'
+    if (score >= 85) return '#10b981'
+    if (score >= 60) return '#f59e0b'
+    return '#ef4444'
   }
 
   const getScoreBg = (score: number) => {
-    if (score >= 85) return 'bg-green-50 border-green-200'
-    if (score >= 60) return 'bg-yellow-50 border-yellow-200'
-    return 'bg-red-50 border-red-200'
+    if (score >= 85) return '#ecfdf5'
+    if (score >= 60) return '#fffbeb'
+    return '#fef2f2'
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div style={{ minHeight: '100vh', background: '#ffffff', fontFamily: 'Inter, system-ui, sans-serif' }}>
       {/* Navigation */}
-      <nav className="fixed w-full bg-white/95 backdrop-blur-sm shadow-sm z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <span className="text-2xl font-bold gradient-text">🎵 MasteringReady</span>
+      <nav style={{
+        position: 'fixed',
+        width: '100%',
+        background: 'rgba(255, 255, 255, 0.95)',
+        backdropFilter: 'blur(10px)',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+        zIndex: 50
+      }}>
+        <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 1.5rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: '64px' }}>
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <span style={{
+                fontSize: '1.5rem',
+                fontWeight: 'bold',
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text'
+              }}>
+                🎵 MasteringReady
+              </span>
             </div>
-            <div className="hidden md:flex items-center space-x-8">
-              <a href="#features" className="text-gray-700 hover:text-purple-600 transition">
-                {lang === 'es' ? 'Características' : 'Features'}
-              </a>
-              <a href="#how-it-works" className="text-gray-700 hover:text-purple-600 transition">
-                {lang === 'es' ? 'Cómo Funciona' : 'How It Works'}
-              </a>
-              <a href="#analyze" className="text-gray-700 hover:text-purple-600 transition">
-                {lang === 'es' ? 'Analizar' : 'Analyze'}
-              </a>
+            <div style={{ display: 'flex', gap: '2rem', alignItems: 'center' }}>
               <button
                 onClick={() => setLang(lang === 'es' ? 'en' : 'es')}
-                className="text-sm font-medium text-gray-600 hover:text-purple-600 transition"
+                style={{
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  color: '#6b7280',
+                  cursor: 'pointer',
+                  border: 'none',
+                  background: 'none',
+                  padding: '0.5rem 1rem'
+                }}
               >
                 {lang === 'es' ? 'EN' : 'ES'}
               </button>
-            </div>
-            <div className="flex items-center">
               <button
                 onClick={scrollToAnalyzer}
-                className="btn-primary text-white px-6 py-2 rounded-full font-semibold hover:shadow-lg transition"
+                style={{
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  color: 'white',
+                  padding: '0.5rem 1.5rem',
+                  borderRadius: '9999px',
+                  fontWeight: '600',
+                  border: 'none',
+                  cursor: 'pointer',
+                  transition: 'transform 0.2s, box-shadow 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-2px)'
+                  e.currentTarget.style.boxShadow = '0 10px 25px rgba(102, 126, 234, 0.4)'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)'
+                  e.currentTarget.style.boxShadow = 'none'
+                }}
               >
                 {lang === 'es' ? 'Analizar Gratis' : 'Analyze Free'}
               </button>
@@ -131,97 +161,169 @@ export default function LandingPage() {
       </nav>
 
       {/* Hero Section */}
-      <section className="pt-32 pb-20 px-4 sm:px-6 lg:px-8 gradient-bg">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid md:grid-cols-2 gap-12 items-center">
+      <section style={{
+        paddingTop: '8rem',
+        paddingBottom: '5rem',
+        paddingLeft: '1.5rem',
+        paddingRight: '1.5rem',
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+      }}>
+        <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+            gap: '3rem',
+            alignItems: 'center'
+          }}>
             {/* Left: Copy */}
-            <div className="text-white">
-              <div className="inline-block bg-white/20 backdrop-blur-sm rounded-full px-4 py-2 mb-6">
-                <span className="text-sm font-medium">
+            <div style={{ color: 'white' }}>
+              <div style={{
+                display: 'inline-block',
+                background: 'rgba(255, 255, 255, 0.2)',
+                backdropFilter: 'blur(10px)',
+                borderRadius: '9999px',
+                padding: '0.5rem 1rem',
+                marginBottom: '1.5rem'
+              }}>
+                <span style={{ fontSize: '0.875rem', fontWeight: '500' }}>
                   ✨ {lang === 'es' 
                     ? 'Metodología probada en más de 300 producciones profesionales'
                     : 'Methodology proven in over 300 professional productions'}
                 </span>
               </div>
               
-              <h1 className="text-5xl md:text-6xl font-bold mb-6 leading-tight">
+              <h1 style={{
+                fontSize: 'clamp(2.5rem, 5vw, 3.75rem)',
+                fontWeight: 'bold',
+                marginBottom: '1.5rem',
+                lineHeight: '1.2'
+              }}>
                 {lang === 'es'
                   ? '¿Tu mezcla está lista para el mastering?'
                   : 'Is your mix ready for mastering?'}
               </h1>
               
-              <p className="text-xl md:text-2xl mb-8 text-purple-100">
+              <p style={{
+                fontSize: 'clamp(1.125rem, 2vw, 1.5rem)',
+                marginBottom: '2rem',
+                color: '#e9d5ff'
+              }}>
                 {lang === 'es'
                   ? 'Análisis técnico en 30 segundos + recomendaciones basadas en metodología profesional'
                   : 'Technical analysis in 30 seconds + recommendations based on professional methodology'}
               </p>
               
-              <div className="flex flex-col sm:flex-row gap-4 mb-8">
-                <button
-                  onClick={scrollToAnalyzer}
-                  className="bg-white text-purple-600 px-8 py-4 rounded-full font-bold text-lg hover:bg-gray-100 transition transform hover:scale-105"
-                >
-                  {lang === 'es' ? 'Analiza Tu Mezcla Gratis' : 'Analyze Your Mix Free'}
-                </button>
-              </div>
+              <button
+                onClick={scrollToAnalyzer}
+                style={{
+                  background: 'white',
+                  color: '#667eea',
+                  padding: '1rem 2rem',
+                  borderRadius: '9999px',
+                  fontWeight: 'bold',
+                  fontSize: '1.125rem',
+                  border: 'none',
+                  cursor: 'pointer',
+                  marginBottom: '2rem',
+                  transition: 'all 0.3s',
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'scale(1.05)'
+                  e.currentTarget.style.boxShadow = '0 8px 30px rgba(0,0,0,0.2)'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'scale(1)'
+                  e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.1)'
+                }}
+              >
+                {lang === 'es' ? 'Analiza Tu Mezcla Gratis' : 'Analyze Your Mix Free'}
+              </button>
               
-              <div className="flex flex-wrap items-center gap-6 text-sm">
-                <div className="flex items-center">
-                  <Check className="w-5 h-5 mr-2" />
-                  {lang === 'es' ? 'Sin tarjeta requerida' : 'No credit card required'}
-                </div>
-                <div className="flex items-center">
-                  <Check className="w-5 h-5 mr-2" />
-                  {lang === 'es' ? 'Privacy-first' : 'Privacy-first'}
-                </div>
-                <div className="flex items-center">
-                  <Check className="w-5 h-5 mr-2" />
-                  {lang === 'es' ? 'Español e Inglés' : 'Spanish & English'}
-                </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem', fontSize: '0.875rem' }}>
+                {[
+                  lang === 'es' ? 'Sin tarjeta requerida' : 'No credit card required',
+                  'Privacy-first',
+                  lang === 'es' ? 'Español e Inglés' : 'Spanish & English'
+                ].map((text, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <Check size={20} />
+                    {text}
+                  </div>
+                ))}
               </div>
             </div>
             
             {/* Right: Demo Card */}
-            <div className="relative">
-              <div className="bg-white rounded-2xl shadow-2xl p-8 transform hover:scale-105 transition duration-300">
-                <div className="mb-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <span className="text-gray-600 font-medium">
+            <div>
+              <div style={{
+                background: 'white',
+                borderRadius: '1rem',
+                boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+                padding: '2rem',
+                transition: 'transform 0.3s'
+              }}>
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                    <span style={{ color: '#6b7280', fontWeight: '500' }}>
                       {lang === 'es' ? 'Puntuación' : 'Score'}
                     </span>
-                    <span className="text-4xl font-bold gradient-text">85/100</span>
+                    <span style={{
+                      fontSize: '2.25rem',
+                      fontWeight: 'bold',
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      WebkitBackgroundClip: 'text',
+                      WebkitTextFillColor: 'transparent',
+                      backgroundClip: 'text'
+                    }}>
+                      85/100
+                    </span>
                   </div>
-                  <div className="w-full bg-gray-200 rounded-full h-3">
-                    <div className="bg-gradient-purple h-3 rounded-full transition-all duration-1000" style={{width: '85%'}}></div>
+                  <div style={{
+                    width: '100%',
+                    height: '0.75rem',
+                    background: '#e5e7eb',
+                    borderRadius: '9999px',
+                    overflow: 'hidden'
+                  }}>
+                    <div style={{
+                      width: '85%',
+                      height: '100%',
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      transition: 'width 1s ease-out'
+                    }} />
                   </div>
                 </div>
                 
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
-                    <span className="flex items-center text-green-800">
-                      <Check className="w-5 h-5 mr-2" />
-                      Headroom
-                    </span>
-                    <span className="text-green-700 font-semibold">-6.2 dB</span>
-                  </div>
-                  <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
-                    <span className="flex items-center text-green-800">
-                      <Check className="w-5 h-5 mr-2" />
-                      True Peak
-                    </span>
-                    <span className="text-green-700 font-semibold">-3.1 dBTP</span>
-                  </div>
-                  <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
-                    <span className="flex items-center text-green-800">
-                      <Check className="w-5 h-5 mr-2" />
-                      {lang === 'es' ? 'Balance Estéreo' : 'Stereo Balance'}
-                    </span>
-                    <span className="text-green-700 font-semibold">0.75</span>
-                  </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  {[
+                    { label: 'Headroom', value: '-6.2 dB' },
+                    { label: 'True Peak', value: '-3.1 dBTP' },
+                    { label: lang === 'es' ? 'Balance Estéreo' : 'Stereo Balance', value: '0.75' }
+                  ].map((item, i) => (
+                    <div key={i} style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      padding: '0.75rem',
+                      background: '#ecfdf5',
+                      borderRadius: '0.5rem'
+                    }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#065f46' }}>
+                        <Check size={20} color="#10b981" />
+                        {item.label}
+                      </span>
+                      <span style={{ color: '#047857', fontWeight: '600' }}>{item.value}</span>
+                    </div>
+                  ))}
                 </div>
                 
-                <div className="mt-6 p-4 bg-purple-50 rounded-lg">
-                  <p className="text-sm text-purple-800 font-medium">
+                <div style={{
+                  marginTop: '1.5rem',
+                  padding: '1rem',
+                  background: '#f3e8ff',
+                  borderRadius: '0.5rem'
+                }}>
+                  <p style={{ fontSize: '0.875rem', color: '#6b21a8', fontWeight: '500' }}>
                     ✅ {lang === 'es' 
                       ? 'Lista para mastering profesional'
                       : 'Ready for professional mastering'}
@@ -234,78 +336,87 @@ export default function LandingPage() {
       </section>
 
       {/* Features Section */}
-      <section id="features" className="py-20 px-4 sm:px-6 lg:px-8 bg-gray-50">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold mb-4">
+      <section id="features" style={{
+        padding: '5rem 1.5rem',
+        background: '#f9fafb'
+      }}>
+        <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: '4rem' }}>
+            <h2 style={{ fontSize: '2.25rem', fontWeight: 'bold', marginBottom: '1rem' }}>
               {lang === 'es' ? '¿Por qué MasteringReady?' : 'Why MasteringReady?'}
             </h2>
-            <p className="text-xl text-gray-600">
+            <p style={{ fontSize: '1.25rem', color: '#6b7280' }}>
               {lang === 'es'
                 ? 'Metodología profesional basada en 300+ producciones'
                 : 'Professional methodology based on 300+ productions'}
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8">
-            {/* Feature 1 */}
-            <div className="bg-white p-8 rounded-2xl shadow-lg feature-card">
-              <div className="text-purple-600 mb-4">
-                <Zap className="w-12 h-12" />
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+            gap: '2rem'
+          }}>
+            {[
+              {
+                icon: <Zap size={48} color="#667eea" />,
+                title: lang === 'es' ? 'Análisis en 30 Segundos' : 'Analysis in 30 Seconds',
+                desc: lang === 'es'
+                  ? 'Headroom, LUFS, True Peak, balance de frecuencias, estéreo y más.'
+                  : 'Headroom, LUFS, True Peak, frequency balance, stereo and more.'
+              },
+              {
+                icon: <Shield size={48} color="#667eea" />,
+                title: 'Privacy-First',
+                desc: lang === 'es'
+                  ? 'Tu audio se analiza solo en memoria y se elimina inmediatamente.'
+                  : 'Your audio is analyzed in-memory only and deleted immediately.'
+              },
+              {
+                icon: <TrendingUp size={48} color="#667eea" />,
+                title: lang === 'es' ? 'Metodología Profesional' : 'Professional Methodology',
+                desc: lang === 'es'
+                  ? 'Basado en técnicas de ingenieros top.'
+                  : 'Based on techniques from top engineers.'
+              }
+            ].map((feature, i) => (
+              <div key={i} style={{
+                background: 'white',
+                padding: '2rem',
+                borderRadius: '1rem',
+                boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+                transition: 'transform 0.3s, box-shadow 0.3s',
+                cursor: 'pointer'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-5px)'
+                e.currentTarget.style.boxShadow = '0 20px 40px rgba(0,0,0,0.12)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)'
+                e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.08)'
+              }}>
+                <div style={{ marginBottom: '1rem' }}>{feature.icon}</div>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '0.75rem' }}>
+                  {feature.title}
+                </h3>
+                <p style={{ color: '#6b7280', lineHeight: '1.6' }}>{feature.desc}</p>
               </div>
-              <h3 className="text-xl font-bold mb-3">
-                {lang === 'es' ? 'Análisis en 30 Segundos' : 'Analysis in 30 Seconds'}
-              </h3>
-              <p className="text-gray-600">
-                {lang === 'es'
-                  ? 'Headroom, LUFS, True Peak, balance de frecuencias, estéreo y más. Todo automático y preciso.'
-                  : 'Headroom, LUFS, True Peak, frequency balance, stereo and more. All automatic and precise.'}
-              </p>
-            </div>
-
-            {/* Feature 2 */}
-            <div className="bg-white p-8 rounded-2xl shadow-lg feature-card">
-              <div className="text-purple-600 mb-4">
-                <Shield className="w-12 h-12" />
-              </div>
-              <h3 className="text-xl font-bold mb-3">
-                {lang === 'es' ? 'Privacy-First' : 'Privacy-First'}
-              </h3>
-              <p className="text-gray-600">
-                {lang === 'es'
-                  ? 'Tu audio se analiza solo en memoria y se elimina inmediatamente. Sin almacenamiento sin consentimiento.'
-                  : 'Your audio is analyzed in-memory only and deleted immediately. No storage without consent.'}
-              </p>
-            </div>
-
-            {/* Feature 3 */}
-            <div className="bg-white p-8 rounded-2xl shadow-lg feature-card">
-              <div className="text-purple-600 mb-4">
-                <TrendingUp className="w-12 h-12" />
-              </div>
-              <h3 className="text-xl font-bold mb-3">
-                {lang === 'es' ? 'Metodología Profesional' : 'Professional Methodology'}
-              </h3>
-              <p className="text-gray-600">
-                {lang === 'es'
-                  ? 'Basado en técnicas de ingenieros top como Bob Clearmountain, Andrew Scheps y Chris Lord-Alge.'
-                  : 'Based on techniques from top engineers like Bob Clearmountain, Andrew Scheps and Chris Lord-Alge.'}
-              </p>
-            </div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* Analyzer Section */}
-      <section id="analyze" className="py-20 px-4 sm:px-6 lg:px-8 bg-white">
-        <div className="max-w-4xl mx-auto">
+      {/* Analyzer Section - Same as before but with inline styles */}
+      <section id="analyze" style={{ padding: '5rem 1.5rem', background: 'white' }}>
+        <div style={{ maxWidth: '896px', margin: '0 auto' }}>
           {!result ? (
             <>
-              <div className="text-center mb-12">
-                <h2 className="text-4xl font-bold mb-4">
+              <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
+                <h2 style={{ fontSize: '2.25rem', fontWeight: 'bold', marginBottom: '1rem' }}>
                   {lang === 'es' ? 'Analiza Tu Mezcla Ahora' : 'Analyze Your Mix Now'}
                 </h2>
-                <p className="text-xl text-gray-600">
+                <p style={{ fontSize: '1.25rem', color: '#6b7280' }}>
                   {lang === 'es'
                     ? 'Sube tu archivo y obtén un reporte profesional en 30 segundos'
                     : 'Upload your file and get a professional report in 30 seconds'}
@@ -313,46 +424,75 @@ export default function LandingPage() {
               </div>
 
               {/* Privacy Badge */}
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-8">
-                <div className="flex items-center gap-2 mb-2">
-                  <Shield className="w-5 h-5 text-green-600" />
-                  <span className="font-semibold text-green-900">
+              <div style={{
+                background: '#ecfdf5',
+                border: '1px solid #a7f3d0',
+                borderRadius: '0.5rem',
+                padding: '1rem',
+                marginBottom: '2rem'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                  <Shield size={20} color="#059669" />
+                  <span style={{ fontWeight: '600', color: '#064e3b' }}>
                     🔒 Privacy-First Analyzer
                   </span>
                 </div>
-                <p className="text-sm text-green-800">
+                <p style={{ fontSize: '0.875rem', color: '#065f46' }}>
                   {lang === 'es'
-                    ? 'Tu audio se analiza solo en memoria y se elimina inmediatamente. No guardamos archivos sin tu consentimiento explícito.'
-                    : 'Your audio is analyzed in-memory only and deleted immediately. We don\'t store files without your explicit consent.'}
+                    ? 'Tu audio se analiza solo en memoria y se elimina inmediatamente.'
+                    : 'Your audio is analyzed in-memory only and deleted immediately.'}
                 </p>
               </div>
 
               {/* File Upload */}
-              <div className="bg-white rounded-2xl shadow-xl p-8 mb-6">
+              <div style={{
+                background: 'white',
+                borderRadius: '1rem',
+                boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
+                padding: '2rem',
+                marginBottom: '1.5rem'
+              }}>
                 <div
                   onClick={() => !loading && document.getElementById('file-input')?.click()}
-                  className={`border-2 border-dashed rounded-xl p-12 text-center transition-all cursor-pointer
-                    ${loading ? 'opacity-50 cursor-not-allowed' : 'hover:border-purple-500 hover:bg-purple-50'}`}
+                  style={{
+                    border: '2px dashed #d1d5db',
+                    borderRadius: '0.75rem',
+                    padding: '3rem',
+                    textAlign: 'center',
+                    cursor: loading ? 'not-allowed' : 'pointer',
+                    opacity: loading ? 0.5 : 1,
+                    transition: 'all 0.3s'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!loading) {
+                      e.currentTarget.style.borderColor = '#a855f7'
+                      e.currentTarget.style.background = '#faf5ff'
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = '#d1d5db'
+                    e.currentTarget.style.background = 'transparent'
+                  }}
                 >
                   <input
                     id="file-input"
                     type="file"
                     accept=".wav,.mp3,.aiff"
                     onChange={(e) => setFile(e.target.files?.[0] || null)}
-                    className="hidden"
+                    style={{ display: 'none' }}
                     disabled={loading}
                   />
                   
-                  <Upload className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-                  <p className="text-lg font-medium mb-2">
+                  <Upload size={64} color="#9ca3af" style={{ margin: '0 auto 1rem' }} />
+                  <p style={{ fontSize: '1.125rem', fontWeight: '500', marginBottom: '0.5rem' }}>
                     {lang === 'es' ? 'Sube tu mezcla' : 'Upload your mix'}
                   </p>
-                  <p className="text-sm text-gray-500">
+                  <p style={{ fontSize: '0.875rem', color: '#6b7280' }}>
                     {lang === 'es'
                       ? 'Arrastra y suelta o haz click para seleccionar'
                       : 'Drag and drop or click to select'}
                   </p>
-                  <p className="text-xs text-gray-400 mt-2">
+                  <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.5rem' }}>
                     WAV, MP3 o AIFF (máx 50MB)
                   </p>
                 </div>
@@ -360,21 +500,42 @@ export default function LandingPage() {
 
               {/* Selected File */}
               {file && (
-                <div className={`rounded-lg border p-4 mb-6 ${
-                  isFileTooLarge ? 'bg-red-50 border-red-300' : 'bg-blue-50 border-blue-200'
-                }`}>
-                  <p className={`text-sm font-medium ${isFileTooLarge ? 'text-red-900' : 'text-blue-900'}`}>
+                <div style={{
+                  borderRadius: '0.5rem',
+                  border: `1px solid ${isFileTooLarge ? '#fca5a5' : '#93c5fd'}`,
+                  background: isFileTooLarge ? '#fef2f2' : '#eff6ff',
+                  padding: '1rem',
+                  marginBottom: '1.5rem'
+                }}>
+                  <p style={{
+                    fontSize: '0.875rem',
+                    fontWeight: '500',
+                    color: isFileTooLarge ? '#7f1d1d' : '#1e3a8a'
+                  }}>
                     {lang === 'es' ? 'Archivo seleccionado:' : 'Selected file:'}
                   </p>
-                  <p className={`text-lg font-bold ${isFileTooLarge ? 'text-red-900' : 'text-blue-900'}`}>
+                  <p style={{
+                    fontSize: '1.125rem',
+                    fontWeight: 'bold',
+                    color: isFileTooLarge ? '#7f1d1d' : '#1e3a8a'
+                  }}>
                     {file.name}
                   </p>
-                  <p className={`text-sm ${isFileTooLarge ? 'text-red-700' : 'text-blue-700'}`}>
+                  <p style={{
+                    fontSize: '0.875rem',
+                    color: isFileTooLarge ? '#991b1b' : '#1e40af'
+                  }}>
                     {(file.size / 1024 / 1024).toFixed(2)} MB
                   </p>
                   {isFileTooLarge && (
-                    <div className="mt-2 bg-red-100 border border-red-300 rounded p-3">
-                      <p className="text-sm text-red-800 font-semibold">
+                    <div style={{
+                      marginTop: '0.5rem',
+                      background: '#fee2e2',
+                      border: '1px solid #fca5a5',
+                      borderRadius: '0.25rem',
+                      padding: '0.75rem'
+                    }}>
+                      <p style={{ fontSize: '0.875rem', color: '#7f1d1d', fontWeight: '600' }}>
                         ⚠️ {lang === 'es' 
                           ? 'Archivo demasiado grande (máximo 50MB)'
                           : 'File too large (maximum 50MB)'}
@@ -386,54 +547,55 @@ export default function LandingPage() {
 
               {/* Options */}
               {file && !isFileTooLarge && (
-                <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
-                  <h3 className="font-semibold text-lg mb-4">
+                <div style={{
+                  background: 'white',
+                  borderRadius: '0.75rem',
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+                  padding: '1.5rem',
+                  marginBottom: '1.5rem'
+                }}>
+                  <h3 style={{ fontWeight: '600', fontSize: '1.125rem', marginBottom: '1rem' }}>
                     {lang === 'es' ? 'Opciones de Análisis' : 'Analysis Options'}
                   </h3>
                   
-                  {/* Mode */}
-                  <div className="mb-4">
-                    <label className="block text-sm font-medium mb-2">
+                  <div style={{ marginBottom: '1rem' }}>
+                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem' }}>
                       {lang === 'es' ? 'Modo de Reporte' : 'Report Mode'}
                     </label>
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        onClick={() => setMode('short')}
-                        className={`px-4 py-2 rounded-lg transition ${
-                          mode === 'short'
-                            ? 'bg-gradient-purple text-white'
-                            : 'bg-gray-100 hover:bg-gray-200'
-                        }`}
-                      >
-                        📱 Short
-                      </button>
-                      <button
-                        onClick={() => setMode('write')}
-                        className={`px-4 py-2 rounded-lg transition ${
-                          mode === 'write'
-                            ? 'bg-gradient-purple text-white'
-                            : 'bg-gray-100 hover:bg-gray-200'
-                        }`}
-                      >
-                        📄 Write
-                      </button>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                      {['short', 'write'].map((m) => (
+                        <button
+                          key={m}
+                          onClick={() => setMode(m as 'short' | 'write')}
+                          style={{
+                            padding: '0.5rem 1rem',
+                            borderRadius: '0.5rem',
+                            border: 'none',
+                            background: mode === m ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : '#f3f4f6',
+                            color: mode === m ? 'white' : '#111827',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s'
+                          }}
+                        >
+                          {m === 'short' ? '📱 Short' : '📄 Write'}
+                        </button>
+                      ))}
                     </div>
                   </div>
 
-                  {/* Strict Mode */}
                   <div>
-                    <label className="flex items-center gap-2 cursor-pointer">
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
                       <input
                         type="checkbox"
                         checked={strict}
                         onChange={(e) => setStrict(e.target.checked)}
-                        className="w-4 h-4 rounded"
+                        style={{ width: '1rem', height: '1rem', borderRadius: '0.25rem' }}
                       />
-                      <span className="text-sm font-medium">
+                      <span style={{ fontSize: '0.875rem', fontWeight: '500' }}>
                         {lang === 'es' ? 'Modo Strict' : 'Strict Mode'}
                       </span>
                     </label>
-                    <p className="text-xs text-gray-500 mt-1 ml-6">
+                    <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem', marginLeft: '1.5rem' }}>
                       {lang === 'es'
                         ? 'Estándares comerciales más exigentes'
                         : 'More demanding commercial standards'}
@@ -447,26 +609,55 @@ export default function LandingPage() {
                 <button
                   onClick={handleAnalyze}
                   disabled={loading || isFileTooLarge}
-                  className="w-full btn-primary text-white py-4 rounded-xl font-semibold text-lg 
-                           hover:shadow-xl transition-all transform hover:scale-105
-                           disabled:bg-gray-400 disabled:cursor-not-allowed disabled:transform-none"
+                  style={{
+                    width: '100%',
+                    background: (loading || isFileTooLarge) ? '#9ca3af' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    color: 'white',
+                    padding: '1rem',
+                    borderRadius: '0.75rem',
+                    fontWeight: '600',
+                    fontSize: '1.125rem',
+                    border: 'none',
+                    cursor: (loading || isFileTooLarge) ? 'not-allowed' : 'pointer',
+                    transition: 'all 0.3s',
+                    boxShadow: (loading || isFileTooLarge) ? 'none' : '0 4px 20px rgba(102, 126, 234, 0.3)'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!loading && !isFileTooLarge) {
+                      e.currentTarget.style.transform = 'scale(1.02)'
+                      e.currentTarget.style.boxShadow = '0 8px 30px rgba(102, 126, 234, 0.4)'
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'scale(1)'
+                    e.currentTarget.style.boxShadow = (loading || isFileTooLarge) ? 'none' : '0 4px 20px rgba(102, 126, 234, 0.3)'
+                  }}
                 >
                   {loading ? (
-                    <div className="flex flex-col items-center gap-2">
-                      <div className="flex items-center gap-3">
-                        <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                        <svg style={{ animation: 'spin 1s linear infinite', height: '1.25rem', width: '1.25rem' }} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle style={{ opacity: 0.25 }} cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path style={{ opacity: 0.75 }} fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
                         <span>{lang === 'es' ? 'Analizando...' : 'Analyzing...'}</span>
                       </div>
-                      <div className="w-full bg-white/20 rounded-full h-2 mt-2">
-                        <div 
-                          className="bg-white h-2 rounded-full transition-all duration-300"
-                          style={{ width: `${progress}%` }}
-                        ></div>
+                      <div style={{
+                        width: '100%',
+                        background: 'rgba(255,255,255,0.2)',
+                        borderRadius: '9999px',
+                        height: '0.5rem',
+                        marginTop: '0.5rem'
+                      }}>
+                        <div style={{
+                          background: 'white',
+                          height: '0.5rem',
+                          borderRadius: '9999px',
+                          transition: 'width 0.3s',
+                          width: `${progress}%`
+                        }} />
                       </div>
-                      <span className="text-xs opacity-75">
+                      <span style={{ fontSize: '0.75rem', opacity: 0.75 }}>
                         {progress}% • {lang === 'es' ? 'Hasta 30 segundos' : 'Up to 30 seconds'}
                       </span>
                     </div>
@@ -480,57 +671,115 @@ export default function LandingPage() {
 
               {/* Error */}
               {error && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-4 mt-4">
-                  <p className="text-red-800 font-medium">Error:</p>
-                  <p className="text-red-700">{error}</p>
+                <div style={{
+                  background: '#fef2f2',
+                  border: '1px solid #fca5a5',
+                  borderRadius: '0.5rem',
+                  padding: '1rem',
+                  marginTop: '1rem'
+                }}>
+                  <p style={{ color: '#7f1d1d', fontWeight: '500' }}>Error:</p>
+                  <p style={{ color: '#991b1b' }}>{error}</p>
                 </div>
               )}
             </>
           ) : (
-            /* Results */
-            <div className="space-y-6">
-              <div className="bg-white rounded-2xl shadow-xl p-8">
-                <div className="flex justify-between items-start mb-6">
-                  <h2 className="text-2xl font-bold">
+            /* Results - Same structure but inline styles */
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              <div style={{
+                background: 'white',
+                borderRadius: '1rem',
+                boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
+                padding: '2rem'
+              }}>
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  marginBottom: '1.5rem'
+                }}>
+                  <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>
                     {lang === 'es' ? 'Resultados del Análisis' : 'Analysis Results'}
                   </h2>
                   <button
                     onClick={handleReset}
-                    className="text-sm text-purple-600 hover:underline font-medium"
+                    style={{
+                      fontSize: '0.875rem',
+                      color: '#a855f7',
+                      border: 'none',
+                      background: 'none',
+                      cursor: 'pointer',
+                      textDecoration: 'underline',
+                      fontWeight: '500'
+                    }}
                   >
                     {lang === 'es' ? 'Analizar otro archivo' : 'Analyze another file'}
                   </button>
                 </div>
 
                 {/* Score Card */}
-                <div className={`rounded-xl border p-6 mb-6 ${getScoreBg(result.score)}`}>
-                  <div className="grid grid-cols-2 gap-8 items-center mb-4">
-                    <div className="text-left">
-                      <span className="text-gray-700 font-medium text-lg">
+                <div style={{
+                  borderRadius: '0.75rem',
+                  border: `1px solid ${result.score >= 85 ? '#a7f3d0' : result.score >= 60 ? '#fcd34d' : '#fca5a5'}`,
+                  background: getScoreBg(result.score),
+                  padding: '1.5rem',
+                  marginBottom: '1.5rem'
+                }}>
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1fr 1fr',
+                    gap: '2rem',
+                    alignItems: 'center',
+                    marginBottom: '1rem'
+                  }}>
+                    <div style={{ textAlign: 'left' }}>
+                      <span style={{ color: '#374151', fontWeight: '500', fontSize: '1.125rem' }}>
                         {lang === 'es' ? 'Puntuación' : 'Score'}
                       </span>
                     </div>
-                    <div className="text-right">
-                      <span className={`text-5xl font-bold ${getScoreColor(result.score)}`}>
+                    <div style={{ textAlign: 'right' }}>
+                      <span style={{
+                        fontSize: '3rem',
+                        fontWeight: 'bold',
+                        color: getScoreColor(result.score)
+                      }}>
                         {result.score}/100
                       </span>
                     </div>
                   </div>
-                  <div className="w-full bg-gray-200 rounded-full h-3 mb-3">
-                    <div 
-                      className="bg-gradient-purple h-3 rounded-full transition-all duration-500" 
-                      style={{ width: `${result.score}%` }}
-                    ></div>
+                  <div style={{
+                    width: '100%',
+                    background: '#e5e7eb',
+                    borderRadius: '9999px',
+                    height: '0.75rem',
+                    marginBottom: '0.75rem'
+                  }}>
+                    <div style={{
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      height: '0.75rem',
+                      borderRadius: '9999px',
+                      width: `${result.score}%`,
+                      transition: 'width 0.5s'
+                    }} />
                   </div>
-                  <p className="text-lg font-semibold">{result.verdict}</p>
+                  <p style={{ fontSize: '1.125rem', fontWeight: '600' }}>{result.verdict}</p>
                 </div>
 
                 {/* Report */}
-                <div className="bg-gray-50 rounded-xl p-6 mb-6">
-                  <h3 className="font-semibold text-lg mb-4">
+                <div style={{
+                  background: '#f9fafb',
+                  borderRadius: '0.75rem',
+                  padding: '1.5rem',
+                  marginBottom: '1.5rem'
+                }}>
+                  <h3 style={{ fontWeight: '600', fontSize: '1.125rem', marginBottom: '1rem' }}>
                     {lang === 'es' ? 'Reporte Detallado' : 'Detailed Report'}
                   </h3>
-                  <pre className="whitespace-pre-wrap text-sm leading-relaxed font-sans">
+                  <pre style={{
+                    whiteSpace: 'pre-wrap',
+                    fontSize: '0.875rem',
+                    lineHeight: '1.6',
+                    fontFamily: 'Inter, system-ui, sans-serif'
+                  }}>
                     {result.report}
                   </pre>
                 </div>
@@ -538,29 +787,71 @@ export default function LandingPage() {
                 {/* Download */}
                 <button
                   onClick={handleDownload}
-                  className="flex items-center justify-center gap-2 bg-gradient-purple text-white px-6 py-3 
-                           rounded-xl font-medium hover:shadow-lg transition-all transform hover:scale-105"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.5rem',
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    color: 'white',
+                    padding: '0.75rem 1.5rem',
+                    borderRadius: '0.75rem',
+                    fontWeight: '500',
+                    border: 'none',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s',
+                    boxShadow: '0 4px 15px rgba(102, 126, 234, 0.3)'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'scale(1.05)'
+                    e.currentTarget.style.boxShadow = '0 6px 25px rgba(102, 126, 234, 0.4)'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'scale(1)'
+                    e.currentTarget.style.boxShadow = '0 4px 15px rgba(102, 126, 234, 0.3)'
+                  }}
                 >
-                  <Download className="w-4 h-4" />
+                  <Download size={16} />
                   {lang === 'es' ? 'Descargar Reporte' : 'Download Report'}
                 </button>
               </div>
 
               {/* CTA */}
               {result.score >= 60 && (
-                <div className="bg-gradient-purple text-white rounded-2xl p-8">
-                  <h3 className="text-2xl font-semibold mb-3">
+                <div style={{
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  color: 'white',
+                  borderRadius: '1rem',
+                  padding: '2rem'
+                }}>
+                  <h3 style={{ fontSize: '1.5rem', fontWeight: '600', marginBottom: '0.75rem' }}>
                     🎧 {lang === 'es' 
                       ? '¿Te gustaría que mastericemos esta canción?'
                       : 'Would you like us to master this song?'}
                   </h3>
-                  <p className="mb-4 text-purple-100">
+                  <p style={{ marginBottom: '1rem', color: '#e9d5ff' }}>
                     {lang === 'es'
                       ? 'Tu mezcla está en buen punto. Trabajemos juntos en el mastering.'
                       : 'Your mix is in good shape. Let\'s work together on mastering.'}
                   </p>
-                  <button className="bg-white text-purple-600 px-8 py-3 rounded-full 
-                                   font-semibold hover:bg-gray-100 transition transform hover:scale-105">
+                  <button style={{
+                    background: 'white',
+                    color: '#667eea',
+                    padding: '0.75rem 2rem',
+                    borderRadius: '9999px',
+                    fontWeight: '600',
+                    border: 'none',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'scale(1.05)'
+                    e.currentTarget.style.background = '#f3f4f6'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'scale(1)'
+                    e.currentTarget.style.background = 'white'
+                  }}>
                     {lang === 'es' ? 'Solicitar Mastering' : 'Request Mastering'}
                   </button>
                 </div>
@@ -570,129 +861,28 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* How It Works */}
-      <section id="how-it-works" className="py-20 px-4 sm:px-6 lg:px-8 bg-gray-50">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold mb-4">
-              {lang === 'es' ? 'Cómo Funciona' : 'How It Works'}
-            </h2>
-          </div>
-
-          <div className="grid md:grid-cols-4 gap-8">
-            <div className="text-center">
-              <div className="w-16 h-16 bg-purple-600 text-white rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">
-                1
-              </div>
-              <h3 className="text-xl font-bold mb-3">
-                {lang === 'es' ? 'Sube tu mezcla' : 'Upload your mix'}
-              </h3>
-              <p className="text-gray-600">
-                WAV, MP3 {lang === 'es' ? 'o' : 'or'} AIFF {lang === 'es' ? 'hasta' : 'up to'} 50MB
-              </p>
-            </div>
-            
-            <div className="text-center">
-              <div className="w-16 h-16 bg-purple-600 text-white rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">
-                2
-              </div>
-              <h3 className="text-xl font-bold mb-3">
-                {lang === 'es' ? 'Análisis automático' : 'Automatic analysis'}
-              </h3>
-              <p className="text-gray-600">
-                {lang === 'es'
-                  ? 'En 30 segundos: headroom, LUFS, frecuencias, estéreo'
-                  : 'In 30 seconds: headroom, LUFS, frequencies, stereo'}
-              </p>
-            </div>
-            
-            <div className="text-center">
-              <div className="w-16 h-16 bg-purple-600 text-white rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">
-                3
-              </div>
-              <h3 className="text-xl font-bold mb-3">
-                {lang === 'es' ? 'Reporte profesional' : 'Professional report'}
-              </h3>
-              <p className="text-gray-600">
-                {lang === 'es'
-                  ? 'Recomendaciones basadas en metodología comprobada'
-                  : 'Recommendations based on proven methodology'}
-              </p>
-            </div>
-            
-            <div className="text-center">
-              <div className="w-16 h-16 bg-purple-600 text-white rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">
-                4
-              </div>
-              <h3 className="text-xl font-bold mb-3">
-                {lang === 'es' ? 'Descarga o comparte' : 'Download or share'}
-              </h3>
-              <p className="text-gray-600">
-                {lang === 'es'
-                  ? 'Reporte en texto para tu ingeniero'
-                  : 'Text report for your engineer'}
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 gradient-bg text-white text-center">
-        <div className="max-w-4xl mx-auto">
-          <h2 className="text-4xl md:text-5xl font-bold mb-6">
-            {lang === 'es'
-              ? 'Prepara Tu Mezcla Como Los Profesionales'
-              : 'Prepare Your Mix Like The Pros'}
-          </h2>
-          <p className="text-xl mb-8 text-purple-100">
-            {lang === 'es'
-              ? 'Metodología profesional comprobada en 300+ producciones'
-              : 'Professional methodology proven in 300+ productions'}
-          </p>
-          
-          <button
-            onClick={scrollToAnalyzer}
-            className="bg-white text-purple-600 px-10 py-4 rounded-full font-bold text-lg 
-                     hover:bg-gray-100 transition transform hover:scale-105 shadow-2xl"
-          >
-            {lang === 'es' 
-              ? 'Analiza Tu Mezcla Gratis'
-              : 'Analyze Your Mix Free'}
-          </button>
-          
-          <div className="flex justify-center items-center flex-wrap gap-8 mt-8 text-sm">
-            <div className="flex items-center">
-              <Check className="w-5 h-5 mr-2" />
-              {lang === 'es' ? 'Privacy-first' : 'Privacy-first'}
-            </div>
-            <div className="flex items-center">
-              <Check className="w-5 h-5 mr-2" />
-              {lang === 'es' ? 'Sin compromiso' : 'No commitment'}
-            </div>
-            <div className="flex items-center">
-              <Check className="w-5 h-5 mr-2" />
-              {lang === 'es' ? 'Resultados inmediatos' : 'Immediate results'}
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* Footer */}
-      <footer className="bg-gray-900 text-white py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto text-center">
-          <div className="text-2xl font-bold mb-4">🎵 MasteringReady</div>
-          <p className="text-gray-400 mb-8">
+      <footer style={{
+        background: '#111827',
+        color: 'white',
+        padding: '3rem 1.5rem',
+        textAlign: 'center'
+      }}>
+        <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
+          <div style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1rem' }}>
+            🎵 MasteringReady
+          </div>
+          <p style={{ color: '#9ca3af', marginBottom: '2rem' }}>
             {lang === 'es'
               ? 'Prepara tu mezcla para el mastering profesional'
               : 'Prepare your mix for professional mastering'}
           </p>
           
-          <div className="border-t border-gray-800 pt-8">
-            <p className="text-gray-400">
-              © 2025 MasteringReady by Matías Carvajal. {lang === 'es' ? 'Todos los derechos reservados' : 'All rights reserved'}.
+          <div style={{ borderTop: '1px solid #374151', paddingTop: '2rem' }}>
+            <p style={{ color: '#9ca3af' }}>
+              © 2025 MasteringReady by Matías Carvajal.
             </p>
-            <p className="text-sm text-gray-500 mt-2">
+            <p style={{ fontSize: '0.875rem', color: '#6b7280', marginTop: '0.5rem' }}>
               {lang === 'es' 
                 ? 'Basado en la metodología "Mastering Ready"'
                 : 'Based on the "Mastering Ready" methodology'}
@@ -702,32 +892,9 @@ export default function LandingPage() {
       </footer>
 
       <style jsx global>{`
-        .gradient-bg {
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        }
-        
-        .gradient-text {
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          background-clip: text;
-        }
-        
-        .btn-primary {
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        }
-        
-        .bg-gradient-purple {
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        }
-        
-        .feature-card {
-          transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-        
-        .feature-card:hover {
-          transform: translateY(-5px);
-          box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
         }
       `}</style>
     </div>
