@@ -5,7 +5,7 @@ import { Download } from 'lucide-react'
 interface ResultsProps {
   data: any
   onReset: () => void
-  lang?: 'es' | 'en' // Passed from parent to ensure sync
+  lang?: 'es' | 'en'
 }
 
 export default function Results({ data, onReset, lang: parentLang }: ResultsProps) {
@@ -31,7 +31,6 @@ export default function Results({ data, onReset, lang: parentLang }: ResultsProp
     return 'bg-red-50 border-red-200'
   }
 
-  // Use parent lang first, fallback to data.lang, default to 'es'
   const currentLang = parentLang || data.lang || 'es'
 
   return (
@@ -49,13 +48,15 @@ export default function Results({ data, onReset, lang: parentLang }: ResultsProp
           </button>
         </div>
 
-        {/* Score Card - CRITICAL FIX: Explicit spacing with gap-6 and language */}
+        {/* Score Card - ULTRA FIX: Two-column grid layout for guaranteed spacing */}
         <div className={`rounded-lg border p-6 mb-6 ${getScoreBg(data.score)}`}>
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-6">
+          <div className="grid grid-cols-2 gap-8 items-center mb-4">
+            <div className="text-left">
               <span className="text-gray-700 font-medium text-lg">
                 {currentLang === 'es' ? 'Puntuación' : 'Score'}
               </span>
+            </div>
+            <div className="text-right">
               <span className={`text-5xl font-bold ${getScoreColor(data.score)}`}>
                 {data.score}/100
               </span>
