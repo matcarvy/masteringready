@@ -36,13 +36,16 @@ export default function Home() {
     setProgress(0)
     setError(null)
 
-    // Simulate progress bar
+    // Simulate progress bar with more realistic timing
     const progressInterval = setInterval(() => {
       setProgress(prev => {
-        if (prev >= 90) return prev
-        return prev + 10
+        // Slow down at 90% to make it more realistic
+        if (prev >= 90) return Math.min(prev + 1, 95) // Very slow at end
+        if (prev >= 70) return prev + 5 // Slower
+        if (prev >= 40) return prev + 8 // Medium
+        return prev + 12 // Fast at start
       })
-    }, 1000)
+    }, 800) // Slightly slower interval
 
     try {
       const data = await analyzeFile(file, { lang, mode, strict })
