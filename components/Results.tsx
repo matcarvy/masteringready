@@ -1,16 +1,116 @@
-'use client';
+'use client'
 
-export default function Results({
-  data,
-  onReset,
-}: {
-  data: any;
-  onReset: () => void;
-}) {
+import { Download } from 'lucide-react'
+
+interface ResultsProps {
+  data: any
+  onReset: () => void
+}
+
+export default function Results({ data, onReset }: ResultsProps) {
+  const handleDownload = () => {
+    const blob = new Blob([data.report], { type: 'text/plain' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `analisis-${data.filename || 'mezcla'}-${Date.now()}.txt`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const getScoreColor = (score: number) => {
+    if (score >= 85) return 'text-green-600'
+    if (score >= 60) return 'text-yellow-600'
+    return 'text-red-600'
+  }
+
+  const getScoreBg = (score: number) => {
+    if (score >= 85) return 'bg-green-50 border-green-200'
+    if (score >= 60) return 'bg-yellow-50 border-yellow-200'
+    return 'bg-red-50 border-red-200'
+  }
+
   return (
-    <div>
-      <pre>{JSON.stringify(data, null, 2)}</pre>
-      <button onClick={onReset}>Reset</button>
+    <div className="mt-8 space-y-6">
+      <div className="bg-white rounded-lg border shadow-lg p-6">
+        <div className="flex justify-between items-start mb-6">
+          <h2 className="text-2xl font-bold">Resultados del Análisis</h2>
+          <button
+            onClick={onReset}
+            className="text-sm text-purple-600 hover:underline font-medium"
+          >
+            Analizar otro archivo
+          </button>
+        </div>
+
+        {/* Score Card */}
+        <div className={`rounded-lg border p-6 mb-6 ${getScoreBg(data.score)}`}>
+          <div className="flex items-center justify-between mb-4">
+            <span className="text-gray-700 font-medium">Puntuación</span>
+            <span className={`text-5xl font-bold ${getScoreColor(data.score)}`}>
+              {data.score}/100
+            </span>
+          </div>
+          <div className="w-full bg-gray-200 rounded-full h-3 mb-3">
+            <div 
+              className="bg-gradient-purple h-3 rounded-full transition-all duration-500" 
+              style={{ width: `${data.score}%` }}
+            ></div>
+          </div>
+          <p className="text-lg font-semibold">{data.verdict}</p>
+        </div>
+
+        {/* Report - FIXED: Show formatted report instead of JSON */}
+        <div className="bg-gray-50 rounded-lg p-6 mb-6">
+          <h3 className="font-semibold text-lg mb-4">Reporte Detallado</h3>
+          <pre className="whitespace-pre-wrap text-sm leading-relaxed font-sans">
+            {data.report}
+          </pre>
+        </div>
+
+        {/* Actions */}
+        <div className="flex flex-col sm:flex-row gap-4">
+          <button
+            onClick={handleDownload}
+            className="flex items-center justify-center gap-2 bg-gradient-purple text-white px-6 py-3 
+                     rounded-lg font-medium hover:opacity-90 transition"
+          >
+            <Download className="w-4 h-4" />
+            Descargar Reporte
+          </button>
+        </div>
+
+        {/* Privacy Note */}
+        {data.privacy_note && (
+          <p className="text-xs text-gray-500 mt-4">
+            {data.privacy_note}
+          </p>
+        )}
+        
+        {/* Methodology Note */}
+        {data.methodology && (
+          <p className="text-xs text-gray-500 italic">
+            {data.methodology}
+          </p>
+        )}
+      </div>
+
+      {/* CTA for Mastering Service */}
+      {data.score >= 60 && (
+        <div className="bg-gradient-purple text-white rounded-lg p-6">
+          <h3 className="text-xl font-semibold mb-3">
+            🎧 ¿Te gustaría que mastericemos esta canción?
+          </h3>
+          <p className="mb-4">
+            Tu mezcla está en buen punto. Si quieres que trabajemos juntos en el mastering,
+            podemos ayudarte a llevarla al siguiente nivel.
+          </p>
+          <button className="bg-white text-purple-600 px-6 py-3 rounded-lg 
+                           font-semibold hover:bg-gray-100 transition">
+            Solicitar Mastering
+          </button>
+        </div>
+      )}
     </div>
-  );
+  )
 }
