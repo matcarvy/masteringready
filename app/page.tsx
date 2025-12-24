@@ -20,6 +20,13 @@ export default function Home() {
   const handleAnalyze = async () => {
     if (!file) return
 
+    // FIX: Check file size limit (50MB for beta)
+    const maxSize = 50 * 1024 * 1024 // 50MB
+    if (file.size > maxSize) {
+      setError('Archivo demasiado grande. Máximo: 50MB en beta. Para archivos más grandes, contacta support@masteringready.com')
+      return
+    }
+
     setLoading(true)
     setError(null)
 
@@ -38,6 +45,7 @@ export default function Home() {
     setFile(null)
     setResult(null)
     setError(null)
+    setLoading(false)  // FIX: Reset loading state to allow re-analysis
   }
 
   return (
@@ -97,17 +105,36 @@ export default function Home() {
 
             {/* Selected File Info */}
             {file && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <p className="text-sm font-medium text-blue-900">Archivo seleccionado:</p>
-                <p className="text-lg font-bold text-blue-900">{file.name}</p>
-                <p className="text-sm text-blue-700">
+              <div className={`border rounded-lg p-4 ${
+                file.size > 50 * 1024 * 1024 
+                  ? 'bg-red-50 border-red-200' 
+                  : 'bg-blue-50 border-blue-200'
+              }`}>
+                <p className={`text-sm font-medium ${
+                  file.size > 50 * 1024 * 1024 ? 'text-red-900' : 'text-blue-900'
+                }`}>
+                  Archivo seleccionado:
+                </p>
+                <p className={`text-lg font-bold ${
+                  file.size > 50 * 1024 * 1024 ? 'text-red-900' : 'text-blue-900'
+                }`}>
+                  {file.name}
+                </p>
+                <p className={`text-sm ${
+                  file.size > 50 * 1024 * 1024 ? 'text-red-700' : 'text-blue-700'
+                }`}>
                   {(file.size / 1024 / 1024).toFixed(2)} MB
+                  {file.size > 50 * 1024 * 1024 && (
+                    <span className="block mt-1">
+                      ⚠️ Archivo muy grande (máx 50MB en beta)
+                    </span>
+                  )}
                 </p>
               </div>
             )}
 
             {/* Options */}
-            {file && (
+            {file && file.size <= 50 * 1024 * 1024 && (
               <AnalysisOptions
                 lang={lang}
                 mode={mode}
@@ -122,7 +149,7 @@ export default function Home() {
             {file && (
               <button
                 onClick={handleAnalyze}
-                disabled={loading}
+                disabled={loading || file.size > 50 * 1024 * 1024}
                 className="w-full btn-primary text-white py-4 rounded-lg
                          font-semibold text-lg hover:bg-purple-700 transition
                          disabled:bg-gray-400 disabled:cursor-not-allowed"
@@ -133,8 +160,10 @@ export default function Home() {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    Analizando...
+                    Analizando... (puede tomar hasta 30 seg)
                   </span>
+                ) : file.size > 50 * 1024 * 1024 ? (
+                  'Archivo muy grande (máx 50MB)'
                 ) : (
                   'Analizar Mezcla'
                 )}
@@ -150,7 +179,7 @@ export default function Home() {
             )}
           </div>
         ) : (
-          /* Results */
+          /* Results */}
           <Results 
             data={result} 
             onReset={handleReset}
