@@ -2154,148 +2154,72 @@ def generate_cta(score: int, strict: bool, lang: str, mode: str = "write") -> st
     """
     Generate conversational CTA based on mix score and mode.
     
-    Args:
-        score: Mix quality score (0-100)
-        strict: Whether strict mode is enabled
-        lang: Language ('es' or 'en')
-        mode: Output mode ('write', 'short', 'normal')
-    
-    Returns:
-        CTA string appropriate for the context
+    CRITICAL: Short mode returns EMPTY STRING (no CTA section at all)
+    Write mode returns full CTA with "SIGUIENTES PASOS" section
     """
-    if lang == 'es':
-        # Spanish CTAs
-        if score >= 85:
-            # Mix is ready
-            if mode == "write":
-                return (
-                    "\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-                    "🎧 ¿Te gustaría que mastericemos esta canción juntos?\n"
-                    "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
-                    "La idea es que llegue con el espacio correcto para que yo pueda "
-                    "trabajar fino y que la música respire.\n\n"
-                    "Si quieres, súbeme la mezcla y arrancamos."
-                )
-            else:  # short/normal
-                return (
-                    "\n\n🎧 ¿Te gustaría que mastericemos esta canción juntos?\n"
-                    "   Súbeme la mezcla y arrancamos."
-                )
-        
-        elif score >= 60:
-            # Mix needs adjustments
-            if mode == "write":
-                return (
-                    "\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-                    "🔧 SIGUIENTES PASOS\n"
-                    "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
-                    "Esta mezcla necesita algunos ajustes antes de estar lista para mastering.\n\n"
-                    "Tienes dos caminos claros:\n\n"
-                    "1️⃣ Puedes hacer los ajustes recomendados en tu sesión, re-exportar la mezcla "
-                    "y volver a analizarla aquí para confirmar que ya está lista.\n\n"
-                    "2️⃣ Si prefieres, puedes compartirme los archivos de tu sesión y con gusto hago "
-                    "los ajustes necesarios para dejarla lista, y luego la masterizamos.\n\n"
-                    "La idea es que llegue al mastering con el espacio correcto para trabajar fino "
-                    "y que la música respire."
-                )
-            else:  # short/normal
-                return (
-                    "\n\n🔧 Esta mezcla necesita algunos ajustes antes de mastering.\n\n"
-                    "Puedes hacer los ajustes recomendados y volver a analizarla para confirmar que ya está lista.\n\n"
-                    "O, si prefieres, puedo ayudarte a hacer esos ajustes y luego masterizarla. "
-                    "¿Cómo te gustaría seguir?"
-                )
-        
-        else:
-            # Mix requires significant work
-            if mode == "write":
-                return (
-                    "\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-                    "🔧 SIGUIENTES PASOS\n"
-                    "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
-                    "Esta mezcla necesita atención en varios aspectos técnicos antes del mastering.\n\n"
-                    "Tienes dos caminos claros:\n\n"
-                    "1️⃣ Puedes hacer los ajustes recomendados en tu sesión, re-exportar la mezcla "
-                    "y volver a analizarla aquí para confirmar que ya está lista.\n\n"
-                    "2️⃣ Si prefieres, puedes compartirme los archivos de tu sesión y con gusto hago "
-                    "los ajustes necesarios para dejarla lista, y luego la masterizamos.\n\n"
-                    "La idea es que llegue al mastering con el espacio correcto para trabajar fino "
-                    "y que la música respire."
-                )
-            else:  # short/normal
-                return (
-                    "\n\n🔧 Esta mezcla necesita varios ajustes antes de mastering.\n\n"
-                    "Puedes hacer los ajustes recomendados y volver a analizarla para confirmar que ya está lista.\n\n"
-                    "O, si prefieres, puedo ayudarte a hacer esos ajustes y luego masterizarla. "
-                    "¿Cómo te gustaría seguir?"
-                )
+    # SHORT MODE: No CTA section
+    if mode == "short":
+        return ""
     
-    else:
-        # English CTAs
-        if score >= 85:
-            # Mix is ready
-            if mode == "write":
-                return (
-                    "\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-                    "🎧 Want to master this song together?\n"
-                    "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
-                    "The goal is for the mix to arrive with proper headroom so I can work with "
-                    "finesse and let the music breathe.\n\n"
-                    "If you'd like, upload the mix and we'll get started."
-                )
-            else:  # short/normal
-                return (
-                    "\n\n🎧 Want to master this song together?\n"
-                    "   Upload the mix and we'll get started."
-                )
-        
-        elif score >= 60:
-            # Mix needs adjustments
-            if mode == "write":
-                return (
-                    "\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-                    "🔧 NEXT STEPS\n"
-                    "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
-                    "This mix needs a few adjustments before it's truly mastering-ready.\n\n"
-                    "You have two clear options:\n\n"
-                    "1️⃣ Apply the recommended tweaks in your session, re-export the mix, and "
-                    "re-run the analysis to confirm it's ready.\n\n"
-                    "2️⃣ If you prefer, you can share your session files and I'll help make the "
-                    "necessary adjustments to get it ready, then we can move on to mastering.\n\n"
-                    "The goal is for the mix to arrive with proper space so the mastering can be "
-                    "done with finesse and musicality."
-                )
-            else:  # short/normal
-                return (
-                    "\n\n🔧 This mix needs a few adjustments before it's ready for mastering.\n\n"
-                    "You can apply the suggested tweaks and re-run the analysis to confirm it's ready.\n\n"
-                    "Or, if you prefer, I can help you make those adjustments and then master the track. "
-                    "How would you like to proceed?"
-                )
-        
+    # WRITE MODE: Full CTA
+    if lang == 'es':
+        if score >= 60:
+            return (
+                "\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                "🔧 SIGUIENTES PASOS\n"
+                "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+                "Esta mezcla necesita algunos ajustes antes de estar lista para mastering.\n\n"
+                "Tienes dos caminos claros:\n\n"
+                "1️⃣ Puedes hacer los ajustes recomendados en tu sesión, re-exportar la mezcla "
+                "y volver a analizarla aquí para confirmar que ya está lista.\n\n"
+                "2️⃣ Si prefieres, puedes compartirme los archivos de tu sesión y con gusto hago "
+                "los ajustes necesarios para dejarla lista, y luego la masterizamos.\n\n"
+                "La idea es que llegue al mastering con el espacio correcto para trabajar fino "
+                "y que la música respire."
+            )
         else:
-            # Mix requires significant work
-            if mode == "write":
-                return (
-                    "\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-                    "🔧 NEXT STEPS\n"
-                    "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
-                    "This mix requires attention to several technical aspects before mastering.\n\n"
-                    "You have two clear options:\n\n"
-                    "1️⃣ Apply the recommended tweaks in your session, re-export the mix, and "
-                    "re-run the analysis to confirm it's ready.\n\n"
-                    "2️⃣ If you prefer, you can share your session files and I'll help make the "
-                    "necessary adjustments to get it ready, then we can move on to mastering.\n\n"
-                    "The goal is for the mix to arrive with proper space so the mastering can be "
-                    "done with finesse and musicality."
-                )
-            else:  # short/normal
-                return (
-                    "\n\n🔧 This mix needs several adjustments before mastering.\n\n"
-                    "You can apply the suggested tweaks and re-run the analysis to confirm it's ready.\n\n"
-                    "Or, if you prefer, I can help you make those adjustments and then master the track. "
-                    "How would you like to proceed?"
-                )
+            return (
+                "\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                "🔧 SIGUIENTES PASOS\n"
+                "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+                "Esta mezcla necesita atención en varios aspectos técnicos antes del mastering.\n\n"
+                "Tienes dos caminos claros:\n\n"
+                "1️⃣ Puedes hacer los ajustes recomendados en tu sesión, re-exportar la mezcla "
+                "y volver a analizarla aquí para confirmar que ya está lista.\n\n"
+                "2️⃣ Si prefieres, puedes compartirme los archivos de tu sesión y con gusto hago "
+                "los ajustes necesarios para dejarla lista, y luego la masterizamos.\n\n"
+                "La idea es que llegue al mastering con el espacio correcto para trabajar fino "
+                "y que la música respire."
+            )
+    else:
+        if score >= 60:
+            return (
+                "\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                "🔧 NEXT STEPS\n"
+                "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+                "This mix needs a few adjustments before it's truly mastering-ready.\n\n"
+                "You have two clear options:\n\n"
+                "1️⃣ Apply the recommended tweaks in your session, re-export the mix, and "
+                "re-run the analysis to confirm it's ready.\n\n"
+                "2️⃣ If you prefer, you can share your session files and I'll help make the "
+                "necessary adjustments to get it ready, then we can move on to mastering.\n\n"
+                "The goal is for the mix to arrive with proper space so the mastering can be "
+                "done with finesse and musicality."
+            )
+        else:
+            return (
+                "\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                "🔧 NEXT STEPS\n"
+                "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+                "This mix requires attention to several technical aspects before mastering.\n\n"
+                "You have two clear options:\n\n"
+                "1️⃣ Apply the recommended tweaks in your session, re-export the mix, and "
+                "re-run the analysis to confirm it's ready.\n\n"
+                "2️⃣ If you prefer, you can share your session files and I'll help make the "
+                "necessary adjustments to get it ready, then we can move on to mastering.\n\n"
+                "The goal is for the mix to arrive with proper space so the mastering can be "
+                "done with finesse and musicality."
+            )
 
 
 def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en', filename: str = "mix") -> str:
