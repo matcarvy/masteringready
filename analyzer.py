@@ -2780,10 +2780,33 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
         
         # Recommendation
         if score >= 85:
+            # Add technical details for high-scoring mixes
+            tech_details = ""
+            
+            # Get key metrics
+            headroom_metric = next((m for m in metrics if "Headroom" in m.get("internal_key", "")), None)
+            tp_metric = next((m for m in metrics if "True Peak" in m.get("internal_key", "")), None)
+            plr_metric = next((m for m in metrics if "PLR" in m.get("internal_key", "")), None)
+            
+            if headroom_metric or tp_metric or plr_metric:
+                tech_details += "\n\n📊 **Detalles Técnicos:**"
+                
+                if headroom_metric:
+                    peak_val = headroom_metric.get("peak_db", "")
+                    tech_details += f"\n• Headroom: {peak_val}"
+                
+                if tp_metric:
+                    tp_val = tp_metric.get("value", "")
+                    tech_details += f"\n• True Peak: {tp_val}"
+                
+                if plr_metric and plr_metric.get("value") != "N/A":
+                    plr_val = plr_metric.get("value", "")
+                    tech_details += f"\n• Rango Dinámico (PLR): {plr_val}"
+            
             if strict:
-                recommendation = "\n\n💡 Recomendación: Esta mezcla cumple con los estándares profesionales para entrega comercial. Puedes enviarla a mastering con confianza."
+                recommendation = tech_details + "\n\n💡 Recomendación: Esta mezcla cumple con los estándares profesionales para entrega comercial. Puedes enviarla a mastering con confianza."
             else:
-                recommendation = "\n\n💡 Recomendación: Envíala a mastering tal como está."
+                recommendation = tech_details + "\n\n💡 Recomendación: Envíala a mastering tal como está."
         elif score >= 75:
             recommendation = "\n\n💡 Recomendación: Revisa los puntos mencionados si buscas la máxima calidad, pero la mezcla es aceptable para mastering."
         else:
@@ -2996,10 +3019,33 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
         
         # Recommendation
         if score >= 85:
+            # Add technical details for high-scoring mixes
+            tech_details = ""
+            
+            # Get key metrics
+            headroom_metric = next((m for m in metrics if "Headroom" in m.get("internal_key", "")), None)
+            tp_metric = next((m for m in metrics if "True Peak" in m.get("internal_key", "")), None)
+            plr_metric = next((m for m in metrics if "PLR" in m.get("internal_key", "")), None)
+            
+            if headroom_metric or tp_metric or plr_metric:
+                tech_details += "\n\n📊 **Technical Details:**"
+                
+                if headroom_metric:
+                    peak_val = headroom_metric.get("peak_db", "")
+                    tech_details += f"\n• Headroom: {peak_val}"
+                
+                if tp_metric:
+                    tp_val = tp_metric.get("value", "")
+                    tech_details += f"\n• True Peak: {tp_val}"
+                
+                if plr_metric and plr_metric.get("value") != "N/A":
+                    plr_val = plr_metric.get("value", "")
+                    tech_details += f"\n• Dynamic Range (PLR): {plr_val}"
+            
             if strict:
-                recommendation = "\n\n💡 Recommendation: This mix meets professional standards for commercial delivery. You can send it to mastering with confidence."
+                recommendation = tech_details + "\n\n💡 Recommendation: This mix meets professional standards for commercial delivery. You can send it to mastering with confidence."
             else:
-                recommendation = "\n\n💡 Recommendation: Send it to mastering as-is."
+                recommendation = tech_details + "\n\n💡 Recommendation: Send it to mastering as-is."
         elif score >= 75:
             recommendation = "\n\n💡 Recommendation: Review the mentioned points if you're seeking maximum quality, but the mix is acceptable for mastering."
         else:
