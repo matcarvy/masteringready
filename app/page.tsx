@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Download, Check, Upload, Zap, Shield, TrendingUp } from 'lucide-react'
 import { analyzeFile } from '@/lib/api'
 import { compressAudioFile } from '@/lib/audio-compression'
@@ -22,6 +22,22 @@ function Home() {
   const [reportView, setReportView] = useState<'visual' | 'short' | 'write'>('visual')
   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false)
   const [feedback, setFeedback] = useState({ rating: 0, liked: '', change: '', add: '' })
+
+  // Scroll to results when analysis completes
+  useEffect(() => {
+    if (result) {
+      const resultsElement = document.getElementById('analysis-results')
+      if (resultsElement) {
+        setTimeout(() => {
+          resultsElement.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'start',
+            inline: 'nearest'
+          })
+        }, 100)
+      }
+    }
+  }, [result])
 
   const handleAnalyze = async () => {
     if (!file) return
@@ -223,7 +239,28 @@ ${lang === 'es' ? 'Veredicto' : 'Verdict'}: ${result.verdict}
 ${extractPositiveAspects()}
 ${lang === 'es' ? 'MÉTRICAS TÉCNICAS' : 'TECHNICAL METRICS'}
 ${'─'.repeat(50)}
-${result.metrics?.lufs ? `LUFS ${lang === 'es' ? 'Integrado' : 'Integrated'}:        ${result.metrics.lufs} LUFS\n` : ''}${result.metrics?.true_peak ? `True Peak:             ${result.metrics.true_peak} dBTP\n` : ''}${result.metrics?.headroom ? `Headroom:              ${result.metrics.headroom} dB\n` : ''}${result.metrics?.correlation ? `${lang === 'es' ? 'Correlación' : 'Correlation'}:           ${result.metrics.correlation}\n` : ''}${result.metrics?.stereo_balance ? `${lang === 'es' ? 'Balance Estéreo' : 'Stereo Balance'}:       ${result.metrics.stereo_balance}\n` : ''}${result.metrics?.dynamic_range ? `${lang === 'es' ? 'Rango Dinámico' : 'Dynamic Range'}:        ${result.metrics.dynamic_range} dB\n` : ''}
+${(() => {
+  const metrics = result.metrics || [];
+  const lines = [];
+  
+  metrics.forEach(m => {
+    const name = m.name || '';
+    const value = m.value || '';
+    
+    // Skip informational or N/A metrics
+    if (m.status === 'info' || value === 'N/A') return;
+    
+    // Format metric line with padding
+    const padding = ' '.repeat(Math.max(0, 30 - name.length));
+    lines.push(`${name}:${padding}${value}`);
+  });
+  
+  return lines.length > 0 
+    ? lines.join('\n') 
+    : (lang === 'es' 
+        ? 'Todas las métricas dentro de rango óptimo' 
+        : 'All metrics within optimal range');
+})()}
 ${lang === 'es' ? 'ANÁLISIS DETALLADO' : 'DETAILED ANALYSIS'}
 ${'─'.repeat(50)}
 ${result.report}
@@ -1026,7 +1063,7 @@ by Matías Carvajal
             </>
           ) : (
             /* Results - Same structure but inline styles */
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            <div id="analysis-results" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
               <div style={{
                 background: 'white',
                 borderRadius: '1rem',
