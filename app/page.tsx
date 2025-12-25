@@ -684,7 +684,19 @@ by Matías Carvajal
                     e.currentTarget.style.background = 'transparent'
                     
                     if (!loading && e.dataTransfer.files && e.dataTransfer.files[0]) {
-                      setFile(e.dataTransfer.files[0])
+                      const droppedFile = e.dataTransfer.files[0]
+                      setFile(droppedFile)
+                      
+                      // Scroll to analyze section
+                      setTimeout(() => {
+                        const analyzeSection = document.getElementById('analyze-section')
+                        if (analyzeSection) {
+                          analyzeSection.scrollIntoView({ 
+                            behavior: 'smooth', 
+                            block: 'center'
+                          })
+                        }
+                      }, 100)
                     }
                   }}
                   style={{
@@ -711,7 +723,23 @@ by Matías Carvajal
                     id="file-input"
                     type="file"
                     accept=".wav,.mp3,.aiff"
-                    onChange={(e) => setFile(e.target.files?.[0] || null)}
+                    onChange={(e) => {
+                      const selectedFile = e.target.files?.[0] || null
+                      setFile(selectedFile)
+                      
+                      // Scroll to analyze section when file is selected
+                      if (selectedFile) {
+                        setTimeout(() => {
+                          const analyzeSection = document.getElementById('analyze-section')
+                          if (analyzeSection) {
+                            analyzeSection.scrollIntoView({ 
+                              behavior: 'smooth', 
+                              block: 'center'
+                            })
+                          }
+                        }, 100)
+                      }
+                    }}
                     style={{ display: 'none' }}
                     disabled={loading}
                   />
@@ -823,13 +851,16 @@ by Matías Carvajal
 
               {/* Options */}
               {file && !isFileTooLarge && (
-                <div style={{
-                  background: 'white',
-                  borderRadius: '0.75rem',
-                  boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-                  padding: '1.5rem',
-                  marginBottom: '1.5rem'
-                }}>
+                <div 
+                  id="analyze-section"
+                  style={{
+                    background: 'white',
+                    borderRadius: '0.75rem',
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+                    padding: '1.5rem',
+                    marginBottom: '1.5rem'
+                  }}
+                >
                   <h3 style={{ fontWeight: '600', fontSize: '1.125rem', marginBottom: '1rem' }}>
                     {lang === 'es' ? 'Opciones de Análisis' : 'Analysis Options'}
                   </h3>
