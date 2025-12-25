@@ -41,7 +41,7 @@ export default function LandingPage() {
         
         try {
           const { file: compressedFile, compressed, originalSize, newSize } = 
-            await compressAudioFile(file, 50)
+            await compressAudioFile(file, 35) // Compress to 35MB (faster analysis)
           
           clearInterval(compressionInterval)
           setCompressionProgress(100)
@@ -605,8 +605,8 @@ export default function LandingPage() {
                       </p>
                       <p style={{ fontSize: '0.75rem', color: '#92400e' }}>
                         {lang === 'es'
-                          ? `Tu archivo será comprimido automáticamente de ${(file.size / 1024 / 1024).toFixed(1)}MB a ~${Math.min(45, (file.size / 1024 / 1024) * 0.4).toFixed(1)}MB antes del análisis. Esto toma ~10-15 segundos.`
-                          : `Your file will be automatically compressed from ${(file.size / 1024 / 1024).toFixed(1)}MB to ~${Math.min(45, (file.size / 1024 / 1024) * 0.4).toFixed(1)}MB before analysis. Takes ~10-15 seconds.`}
+                          ? `Tu archivo será comprimido automáticamente de ${(file.size / 1024 / 1024).toFixed(1)}MB a ~${Math.min(35, (file.size / 1024 / 1024) * 0.3).toFixed(1)}MB antes del análisis. Esto toma ~10-15 segundos.`
+                          : `Your file will be automatically compressed from ${(file.size / 1024 / 1024).toFixed(1)}MB to ~${Math.min(35, (file.size / 1024 / 1024) * 0.3).toFixed(1)}MB before analysis. Takes ~10-15 seconds.`}
                       </p>
                     </div>
                   )}
@@ -748,8 +748,8 @@ export default function LandingPage() {
                       </div>
                       <span style={{ fontSize: '0.75rem', opacity: 0.75 }}>
                         {compressionProgress}% • {lang === 'es' 
-                          ? `${(file.size / 1024 / 1024).toFixed(1)}MB → ~${Math.min(45, (file.size / 1024 / 1024) * 0.4).toFixed(1)}MB`
-                          : `${(file.size / 1024 / 1024).toFixed(1)}MB → ~${Math.min(45, (file.size / 1024 / 1024) * 0.4).toFixed(1)}MB`}
+                          ? `${(file.size / 1024 / 1024).toFixed(1)}MB → ~${Math.min(35, (file.size / 1024 / 1024) * 0.3).toFixed(1)}MB`
+                          : `${(file.size / 1024 / 1024).toFixed(1)}MB → ~${Math.min(35, (file.size / 1024 / 1024) * 0.3).toFixed(1)}MB`}
                       </span>
                     </div>
                   ) : loading ? (
