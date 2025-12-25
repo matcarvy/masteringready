@@ -2154,16 +2154,24 @@ def generate_cta(score: int, strict: bool, lang: str, mode: str = "write") -> st
     """
     Generate conversational CTA based on mix score and mode.
     
-    CRITICAL: Short mode returns EMPTY STRING (no CTA section at all)
-    Write mode returns full CTA with "SIGUIENTES PASOS" section
+    CRITICAL: 
+    - Short mode returns EMPTY STRING (no CTA at all)
+    - Score >= 85: Mix is ready, NO "necesita ajustes"
+    - Score 60-84: Minor adjustments needed
+    - Score < 60: Significant work needed
     """
-    # SHORT MODE: No CTA section
+    # SHORT MODE: No CTA section at all
     if mode == "short":
         return ""
     
-    # WRITE MODE: Full CTA
+    # WRITE MODE ONLY:
     if lang == 'es':
-        if score >= 60:
+        if score >= 85:
+            # Score 85+: Mix is READY - no "necesita ajustes"
+            return ""  # No CTA needed, mix is ready
+        
+        elif score >= 60:
+            # Score 60-84: Minor adjustments
             return (
                 "\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
                 "🔧 SIGUIENTES PASOS\n"
@@ -2177,7 +2185,9 @@ def generate_cta(score: int, strict: bool, lang: str, mode: str = "write") -> st
                 "La idea es que llegue al mastering con el espacio correcto para trabajar fino "
                 "y que la música respire."
             )
+        
         else:
+            # Score < 60: Significant work
             return (
                 "\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
                 "🔧 SIGUIENTES PASOS\n"
@@ -2191,8 +2201,15 @@ def generate_cta(score: int, strict: bool, lang: str, mode: str = "write") -> st
                 "La idea es que llegue al mastering con el espacio correcto para trabajar fino "
                 "y que la música respire."
             )
+    
     else:
-        if score >= 60:
+        # English
+        if score >= 85:
+            # Score 85+: Mix is READY
+            return ""  # No CTA needed
+        
+        elif score >= 60:
+            # Score 60-84: Minor adjustments
             return (
                 "\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
                 "🔧 NEXT STEPS\n"
@@ -2206,7 +2223,9 @@ def generate_cta(score: int, strict: bool, lang: str, mode: str = "write") -> st
                 "The goal is for the mix to arrive with proper space so the mastering can be "
                 "done with finesse and musicality."
             )
+        
         else:
+            # Score < 60: Significant work
             return (
                 "\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
                 "🔧 NEXT STEPS\n"
