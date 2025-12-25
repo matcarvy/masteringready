@@ -18,9 +18,10 @@ export default function LandingPage() {
   const [compressing, setCompressing] = useState(false)
   const [compressionProgress, setCompressionProgress] = useState(0)
   const [showContactModal, setShowContactModal] = useState(false)
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false)
   const [reportView, setReportView] = useState<'visual' | 'short' | 'write'>('visual')
   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false)
-  const [feedback, setFeedback] = useState({ liked: '', change: '', add: '' })
+  const [feedback, setFeedback] = useState({ rating: 0, liked: '', change: '', add: '' })
 
   const handleAnalyze = async () => {
     if (!file) return
@@ -855,19 +856,18 @@ by Matías Carvajal
                       <div style={{ width: '100%' }}>
                         <div style={{
                           width: '100%',
-                          background: 'rgba(255,255,255,0.3)',
+                          background: '#e5e7eb',
                           borderRadius: '9999px',
                           height: '1rem',
-                          overflow: 'hidden',
-                          boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.1)'
+                          overflow: 'hidden'
                         }}>
                           <div style={{
-                            background: 'linear-gradient(90deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,1) 100%)',
+                            background: 'linear-gradient(90deg, #667eea 0%, #764ba2 100%)',
                             height: '1rem',
                             borderRadius: '9999px',
                             transition: 'width 0.3s ease-out',
                             width: `${compressionProgress}%`,
-                            boxShadow: '0 2px 8px rgba(255,255,255,0.5)'
+                            boxShadow: '0 2px 8px rgba(102, 126, 234, 0.4)'
                           }} />
                         </div>
                         <div style={{ 
@@ -900,19 +900,18 @@ by Matías Carvajal
                       <div style={{ width: '100%' }}>
                         <div style={{
                           width: '100%',
-                          background: 'rgba(255,255,255,0.3)',
+                          background: '#e5e7eb',
                           borderRadius: '9999px',
                           height: '1rem',
-                          overflow: 'hidden',
-                          boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.1)'
+                          overflow: 'hidden'
                         }}>
                           <div style={{
-                            background: 'linear-gradient(90deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,1) 100%)',
+                            background: 'linear-gradient(90deg, #667eea 0%, #764ba2 100%)',
                             height: '1rem',
                             borderRadius: '9999px',
                             transition: 'width 0.3s ease-out',
                             width: `${progress}%`,
-                            boxShadow: '0 2px 8px rgba(255,255,255,0.5)'
+                            boxShadow: '0 2px 8px rgba(102, 126, 234, 0.4)'
                           }} />
                         </div>
                         <div style={{ 
@@ -1113,6 +1112,54 @@ by Matías Carvajal
                       {lang === 'es' ? 'Análisis Técnico' : 'Technical Analysis'}
                     </h3>
                     
+                    {/* Parse report for positive points if score is good */}
+                    {result.score >= 60 && (
+                      <div style={{ marginBottom: '1.5rem' }}>
+                        <h4 style={{ fontSize: '0.95rem', fontWeight: '600', marginBottom: '1rem', color: '#065f46' }}>
+                          {lang === 'es' ? '✓ Aspectos Positivos:' : '✓ Positive Aspects:'}
+                        </h4>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                          {(() => {
+                            const report = result.report || result.report_short || ''
+                            const positives = []
+                            
+                            // Extract positive points from report
+                            if (report.includes('headroom') || report.includes('Headroom')) {
+                              positives.push(lang === 'es' ? 'Headroom apropiado para mastering' : 'Appropriate headroom for mastering')
+                            }
+                            if (report.includes('dinámico') || report.includes('dynamic') || report.includes('rango')) {
+                              positives.push(lang === 'es' ? 'Excelente rango dinámico' : 'Excellent dynamic range')
+                            }
+                            if (report.includes('estéreo') || report.includes('stereo') || report.includes('imagen')) {
+                              positives.push(lang === 'es' ? 'Imagen estéreo sólida y centrada' : 'Solid and centered stereo image')
+                            }
+                            if (report.includes('balance') || report.includes('Balance')) {
+                              positives.push(lang === 'es' ? 'Balance tonal saludable' : 'Healthy tonal balance')
+                            }
+                            if (positives.length === 0) {
+                              positives.push(lang === 'es' ? 'Mezcla técnicamente sólida' : 'Technically solid mix')
+                              positives.push(lang === 'es' ? 'Lista para mastering profesional' : 'Ready for professional mastering')
+                            }
+                            
+                            return positives.map((point, i) => (
+                              <div key={i} style={{
+                                display: 'flex',
+                                alignItems: 'start',
+                                gap: '0.5rem',
+                                padding: '0.75rem',
+                                background: '#ecfdf5',
+                                borderRadius: '0.5rem'
+                              }}>
+                                <span style={{ color: '#10b981', fontSize: '1.1rem', marginTop: '0.1rem' }}>✓</span>
+                                <span style={{ color: '#065f46', fontSize: '0.875rem', lineHeight: '1.5' }}>{point}</span>
+                              </div>
+                            ))
+                          })()}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Show metrics if available */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                       {/* Headroom */}
                       {result.metrics?.headroom && (
@@ -1125,8 +1172,7 @@ by Matías Carvajal
                           borderRadius: '0.5rem'
                         }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <span style={{ color: '#10b981', fontSize: '1.25rem' }}>✓</span>
-                            <span style={{ fontWeight: '500', color: '#065f46' }}>Headroom</span>
+                            <span style={{ fontSize: '0.875rem', fontWeight: '500', color: '#065f46' }}>Headroom</span>
                           </div>
                           <span style={{ fontWeight: '600', color: '#047857' }}>
                             {result.metrics.headroom} dB
@@ -1145,8 +1191,7 @@ by Matías Carvajal
                           borderRadius: '0.5rem'
                         }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <span style={{ color: '#10b981', fontSize: '1.25rem' }}>✓</span>
-                            <span style={{ fontWeight: '500', color: '#065f46' }}>True Peak</span>
+                            <span style={{ fontSize: '0.875rem', fontWeight: '500', color: '#065f46' }}>True Peak</span>
                           </div>
                           <span style={{ fontWeight: '600', color: '#047857' }}>
                             {result.metrics.true_peak} dBTP
@@ -1165,8 +1210,7 @@ by Matías Carvajal
                           borderRadius: '0.5rem'
                         }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <span style={{ color: '#10b981', fontSize: '1.25rem' }}>✓</span>
-                            <span style={{ fontWeight: '500', color: '#065f46' }}>
+                            <span style={{ fontSize: '0.875rem', fontWeight: '500', color: '#065f46' }}>
                               {lang === 'es' ? 'Balance Estéreo' : 'Stereo Balance'}
                             </span>
                           </div>
@@ -1347,157 +1391,14 @@ by Matías Carvajal
                 </button>
               </div>
 
-              {/* Feedback Form */}
-              {!feedbackSubmitted && (
-                <div style={{
-                  background: '#f9fafb',
-                  borderRadius: '1rem',
-                  padding: '2rem',
-                  marginBottom: '1.5rem',
-                  border: '1px solid #e5e7eb'
-                }}>
-                  <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '0.5rem' }}>
-                    💬 {lang === 'es' 
-                      ? '¿Cómo te fue con el análisis?'
-                      : 'How was your analysis experience?'}
-                  </h3>
-                  <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '1.5rem' }}>
-                    {lang === 'es'
-                      ? 'Estamos en beta. Tu feedback nos ayuda a mejorar MasteringReady.'
-                      : 'We\'re in beta. Your feedback helps us improve MasteringReady.'}
-                  </p>
-
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                    <div>
-                      <label style={{ fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem', display: 'block' }}>
-                        {lang === 'es' ? '¿Qué te gustó?' : 'What did you like?'}
-                      </label>
-                      <textarea
-                        value={feedback.liked}
-                        onChange={(e) => setFeedback({...feedback, liked: e.target.value})}
-                        placeholder={lang === 'es' ? 'Ej: La velocidad del análisis...' : 'E.g: The analysis speed...'}
-                        style={{
-                          width: '100%',
-                          padding: '0.75rem',
-                          borderRadius: '0.5rem',
-                          border: '1px solid #d1d5db',
-                          fontSize: '0.875rem',
-                          fontFamily: 'Inter, system-ui, sans-serif',
-                          minHeight: '80px',
-                          resize: 'vertical'
-                        }}
-                      />
-                    </div>
-
-                    <div>
-                      <label style={{ fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem', display: 'block' }}>
-                        {lang === 'es' ? '¿Qué cambiarías?' : 'What would you change?'}
-                      </label>
-                      <textarea
-                        value={feedback.change}
-                        onChange={(e) => setFeedback({...feedback, change: e.target.value})}
-                        placeholder={lang === 'es' ? 'Opcional' : 'Optional'}
-                        style={{
-                          width: '100%',
-                          padding: '0.75rem',
-                          borderRadius: '0.5rem',
-                          border: '1px solid #d1d5db',
-                          fontSize: '0.875rem',
-                          fontFamily: 'Inter, system-ui, sans-serif',
-                          minHeight: '80px',
-                          resize: 'vertical'
-                        }}
-                      />
-                    </div>
-
-                    <div>
-                      <label style={{ fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem', display: 'block' }}>
-                        {lang === 'es' ? '¿Qué agregarías?' : 'What would you add?'}
-                      </label>
-                      <textarea
-                        value={feedback.add}
-                        onChange={(e) => setFeedback({...feedback, add: e.target.value})}
-                        placeholder={lang === 'es' ? 'Opcional' : 'Optional'}
-                        style={{
-                          width: '100%',
-                          padding: '0.75rem',
-                          borderRadius: '0.5rem',
-                          border: '1px solid #d1d5db',
-                          fontSize: '0.875rem',
-                          fontFamily: 'Inter, system-ui, sans-serif',
-                          minHeight: '80px',
-                          resize: 'vertical'
-                        }}
-                      />
-                    </div>
-
-                    <button
-                      onClick={() => {
-                        // Send feedback to WhatsApp or email
-                        const feedbackText = `FEEDBACK BETA - MasteringReady\n\n✅ Qué gustó:\n${feedback.liked}\n\n🔄 Qué cambiaría:\n${feedback.change || 'N/A'}\n\n➕ Qué agregaría:\n${feedback.add || 'N/A'}\n\nScore obtenido: ${result.score}/100`
-                        
-                        // Open WhatsApp with feedback
-                        window.open(`https://wa.me/573155576115?text=${encodeURIComponent(feedbackText)}`, '_blank')
-                        setFeedbackSubmitted(true)
-                      }}
-                      disabled={!feedback.liked}
-                      style={{
-                        background: feedback.liked ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : '#d1d5db',
-                        color: 'white',
-                        padding: '0.875rem 1.5rem',
-                        borderRadius: '0.75rem',
-                        fontWeight: '600',
-                        border: 'none',
-                        cursor: feedback.liked ? 'pointer' : 'not-allowed',
-                        transition: 'all 0.2s',
-                        fontSize: '1rem'
-                      }}
-                      onMouseEnter={(e) => {
-                        if (feedback.liked) {
-                          e.currentTarget.style.transform = 'translateY(-2px)'
-                          e.currentTarget.style.boxShadow = '0 6px 20px rgba(102, 126, 234, 0.4)'
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.transform = 'translateY(0)'
-                        e.currentTarget.style.boxShadow = 'none'
-                      }}
-                    >
-                      {lang === 'es' ? 'Enviar Feedback' : 'Send Feedback'}
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* Thank you message after feedback */}
-              {feedbackSubmitted && (
-                <div style={{
-                  background: '#f0fdf4',
-                  borderRadius: '1rem',
-                  padding: '1.5rem',
-                  marginBottom: '1.5rem',
-                  border: '1px solid #86efac',
-                  textAlign: 'center'
-                }}>
-                  <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>🙏</div>
-                  <h3 style={{ fontSize: '1.25rem', fontWeight: '600', color: '#166534', marginBottom: '0.5rem' }}>
-                    {lang === 'es' ? '¡Gracias por tu feedback!' : 'Thank you for your feedback!'}
-                  </h3>
-                  <p style={{ fontSize: '0.875rem', color: '#15803d' }}>
-                    {lang === 'es'
-                      ? 'Tu opinión nos ayuda a mejorar MasteringReady para todos.'
-                      : 'Your input helps us improve MasteringReady for everyone.'}
-                  </p>
-                </div>
-              )}
-
-              {/* CTA */}
+              {/* CTA Mastering - FIRST */}
               {result.score >= 60 && (
                 <div style={{
                   background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                   color: 'white',
                   borderRadius: '1rem',
-                  padding: '2rem'
+                  padding: '2rem',
+                  marginBottom: '1.5rem'
                 }}>
                   <h3 style={{ fontSize: '1.5rem', fontWeight: '600', marginBottom: '0.75rem' }}>
                     🎧 {lang === 'es' 
@@ -1532,6 +1433,66 @@ by Matías Carvajal
                   >
                     {lang === 'es' ? 'Solicitar Mastering' : 'Request Mastering'}
                   </button>
+                </div>
+              )}
+
+              {/* Feedback Button - SECOND */}
+              {!feedbackSubmitted && (
+                <div style={{
+                  textAlign: 'center',
+                  marginBottom: '1.5rem'
+                }}>
+                  <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.75rem' }}>
+                    {lang === 'es'
+                      ? 'Estamos en beta. ¿Cómo te fue con el análisis?'
+                      : 'We\'re in beta. How was your analysis experience?'}
+                  </p>
+                  <button
+                    onClick={() => setShowFeedbackModal(true)}
+                    style={{
+                      background: 'white',
+                      color: '#667eea',
+                      padding: '0.75rem 2rem',
+                      borderRadius: '9999px',
+                      fontWeight: '600',
+                      border: '2px solid #667eea',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      fontSize: '0.95rem'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = '#f3f4f6'
+                      e.currentTarget.style.transform = 'translateY(-2px)'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'white'
+                      e.currentTarget.style.transform = 'translateY(0)'
+                    }}
+                  >
+                    💬 {lang === 'es' ? 'Dejarnos Feedback' : 'Give Feedback'}
+                  </button>
+                </div>
+              )}
+
+              {/* Thank you message after feedback */}
+              {feedbackSubmitted && (
+                <div style={{
+                  background: '#f0fdf4',
+                  borderRadius: '1rem',
+                  padding: '1.5rem',
+                  marginBottom: '1.5rem',
+                  border: '1px solid #86efac',
+                  textAlign: 'center'
+                }}>
+                  <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>🙏</div>
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: '600', color: '#166534', marginBottom: '0.5rem' }}>
+                    {lang === 'es' ? '¡Gracias por tu feedback!' : 'Thank you for your feedback!'}
+                  </h3>
+                  <p style={{ fontSize: '0.875rem', color: '#15803d' }}>
+                    {lang === 'es'
+                      ? 'Tu opinión nos ayuda a mejorar MasteringReady para todos.'
+                      : 'Your input helps us improve MasteringReady for everyone.'}
+                  </p>
                 </div>
               )}
             </div>
@@ -1640,25 +1601,9 @@ by Matías Carvajal
                     ? 'Análisis profesional de mezclas basado en la metodología Mastering Ready.'
                     : 'Professional mix analysis based on the Mastering Ready methodology.'}
                 </p>
-                <a 
-                  href="https://www.masteringready.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ 
-                    color: '#9ca3af', 
-                    textDecoration: 'none',
-                    fontSize: '0.875rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    transition: 'color 0.2s'
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.color = '#667eea'}
-                  onMouseLeave={(e) => e.currentTarget.style.color = '#9ca3af'}
-                >
-                  <span>🌐</span>
-                  <span>masteringready.com</span>
-                </a>
+                <p style={{ color: '#9ca3af', fontSize: '0.875rem' }}>
+                  masteringready.com
+                </p>
               </div>
             </div>
           </div>
@@ -1872,6 +1817,251 @@ by Matías Carvajal
                   <div style={{ fontSize: '0.875rem', color: '#be123c' }}>@matcarvy</div>
                 </div>
               </a>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Feedback Modal */}
+      {showFeedbackModal && (
+        <div 
+          onClick={() => {
+            setShowFeedbackModal(false)
+            setFeedback({ rating: 0, liked: '', change: '', add: '' })
+          }}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.6)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 100,
+            padding: '1.5rem'
+          }}
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: 'white',
+              borderRadius: '1rem',
+              padding: '2rem',
+              maxWidth: '500px',
+              width: '100%',
+              boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+              position: 'relative',
+              maxHeight: '90vh',
+              overflowY: 'auto'
+            }}
+          >
+            {/* Close button */}
+            <button
+              onClick={() => {
+                setShowFeedbackModal(false)
+                setFeedback({ rating: 0, liked: '', change: '', add: '' })
+              }}
+              style={{
+                position: 'absolute',
+                top: '1rem',
+                right: '1rem',
+                background: 'none',
+                border: 'none',
+                fontSize: '1.5rem',
+                cursor: 'pointer',
+                color: '#6b7280',
+                width: '2rem',
+                height: '2rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: '0.5rem',
+                transition: 'all 0.2s'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = '#f3f4f6'
+                e.currentTarget.style.color = '#111827'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'none'
+                e.currentTarget.style.color = '#6b7280'
+              }}
+            >
+              ✕
+            </button>
+
+            {/* Header */}
+            <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+              <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>💬</div>
+              <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>
+                {lang === 'es' ? '¿Cómo te fue?' : 'How was it?'}
+              </h3>
+              <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>
+                {lang === 'es' 
+                  ? 'Tu feedback nos ayuda a mejorar MasteringReady'
+                  : 'Your feedback helps us improve MasteringReady'}
+              </p>
+            </div>
+
+            {/* Form */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {/* Rating 1-10 */}
+              <div>
+                <label style={{ fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.75rem', display: 'block', textAlign: 'center' }}>
+                  {lang === 'es' ? '¿Qué tan útil fue el análisis?' : 'How useful was the analysis?'}
+                </label>
+                <div style={{ 
+                  display: 'flex', 
+                  gap: '0.5rem', 
+                  justifyContent: 'center',
+                  marginBottom: '0.5rem'
+                }}>
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
+                    <button
+                      key={num}
+                      onClick={() => setFeedback({...feedback, rating: num})}
+                      style={{
+                        width: '2.5rem',
+                        height: '2.5rem',
+                        borderRadius: '0.5rem',
+                        border: feedback.rating === num ? '2px solid #667eea' : '1px solid #d1d5db',
+                        background: feedback.rating === num ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'white',
+                        color: feedback.rating === num ? 'white' : '#374151',
+                        fontWeight: '600',
+                        fontSize: '0.875rem',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
+                      }}
+                      onMouseEnter={(e) => {
+                        if (feedback.rating !== num) {
+                          e.currentTarget.style.borderColor = '#667eea'
+                          e.currentTarget.style.transform = 'scale(1.1)'
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (feedback.rating !== num) {
+                          e.currentTarget.style.borderColor = '#d1d5db'
+                          e.currentTarget.style.transform = 'scale(1)'
+                        }
+                      }}
+                    >
+                      {num}
+                    </button>
+                  ))}
+                </div>
+                <div style={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between',
+                  fontSize: '0.75rem',
+                  color: '#6b7280',
+                  paddingX: '0.5rem'
+                }}>
+                  <span>😞 {lang === 'es' ? 'No útil' : 'Not useful'}</span>
+                  <span>{lang === 'es' ? 'Muy útil' : 'Very useful'} 😍</span>
+                </div>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem', display: 'block' }}>
+                  {lang === 'es' ? '¿Qué te gustó?' : 'What did you like?'}
+                  <span style={{ color: '#ef4444' }}> *</span>
+                </label>
+                <textarea
+                  value={feedback.liked}
+                  onChange={(e) => setFeedback({...feedback, liked: e.target.value})}
+                  placeholder={lang === 'es' ? 'Ej: La velocidad del análisis...' : 'E.g: The analysis speed...'}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    borderRadius: '0.5rem',
+                    border: '1px solid #d1d5db',
+                    fontSize: '0.875rem',
+                    fontFamily: 'Inter, system-ui, sans-serif',
+                    minHeight: '80px',
+                    resize: 'vertical'
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem', display: 'block' }}>
+                  {lang === 'es' ? '¿Qué cambiarías?' : 'What would you change?'}
+                  <span style={{ color: '#9ca3af', fontSize: '0.75rem' }}> ({lang === 'es' ? 'opcional' : 'optional'})</span>
+                </label>
+                <textarea
+                  value={feedback.change}
+                  onChange={(e) => setFeedback({...feedback, change: e.target.value})}
+                  placeholder={lang === 'es' ? 'Opcional' : 'Optional'}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    borderRadius: '0.5rem',
+                    border: '1px solid #d1d5db',
+                    fontSize: '0.875rem',
+                    fontFamily: 'Inter, system-ui, sans-serif',
+                    minHeight: '80px',
+                    resize: 'vertical'
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem', display: 'block' }}>
+                  {lang === 'es' ? '¿Qué agregarías?' : 'What would you add?'}
+                  <span style={{ color: '#9ca3af', fontSize: '0.75rem' }}> ({lang === 'es' ? 'opcional' : 'optional'})</span>
+                </label>
+                <textarea
+                  value={feedback.add}
+                  onChange={(e) => setFeedback({...feedback, add: e.target.value})}
+                  placeholder={lang === 'es' ? 'Opcional' : 'Optional'}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    borderRadius: '0.5rem',
+                    border: '1px solid #d1d5db',
+                    fontSize: '0.875rem',
+                    fontFamily: 'Inter, system-ui, sans-serif',
+                    minHeight: '80px',
+                    resize: 'vertical'
+                  }}
+                />
+              </div>
+
+              <button
+                onClick={() => {
+                  const feedbackText = `FEEDBACK BETA - MasteringReady\n\n⭐ Utilidad: ${feedback.rating}/10\n\n✅ Qué gustó:\n${feedback.liked}\n\n🔄 Qué cambiaría:\n${feedback.change || 'N/A'}\n\n➕ Qué agregaría:\n${feedback.add || 'N/A'}\n\nScore obtenido: ${result?.score || 'N/A'}/100`
+                  window.open(`https://wa.me/573155576115?text=${encodeURIComponent(feedbackText)}`, '_blank')
+                  setFeedbackSubmitted(true)
+                  setShowFeedbackModal(false)
+                }}
+                disabled={!feedback.liked || feedback.rating === 0}
+                style={{
+                  background: (feedback.liked && feedback.rating > 0) ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : '#d1d5db',
+                  color: 'white',
+                  padding: '0.875rem 1.5rem',
+                  borderRadius: '0.75rem',
+                  fontWeight: '600',
+                  border: 'none',
+                  cursor: (feedback.liked && feedback.rating > 0) ? 'pointer' : 'not-allowed',
+                  transition: 'all 0.2s',
+                  fontSize: '1rem',
+                  marginTop: '0.5rem'
+                }}
+                onMouseEnter={(e) => {
+                  if (feedback.liked && feedback.rating > 0) {
+                    e.currentTarget.style.transform = 'translateY(-2px)'
+                    e.currentTarget.style.boxShadow = '0 6px 20px rgba(102, 126, 234, 0.4)'
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)'
+                  e.currentTarget.style.boxShadow = 'none'
+                }}
+              >
+                {lang === 'es' ? 'Enviar Feedback' : 'Send Feedback'}
+              </button>
             </div>
           </div>
         </div>
