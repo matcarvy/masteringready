@@ -175,8 +175,39 @@ ${new Date().toLocaleDateString()}
   const handleDownloadFull = () => {
     if (!result) return
     
+    // Extract positive aspects from report
+    const extractPositiveAspects = () => {
+      if (result.score < 60) return ''
+      
+      const report = result.report || result.report_short || ''
+      const positives = []
+      
+      if (report.includes('headroom') || report.includes('Headroom')) {
+        positives.push(lang === 'es' ? '✓ Headroom apropiado para mastering' : '✓ Appropriate headroom for mastering')
+      }
+      if (report.includes('dinámico') || report.includes('dynamic') || report.includes('rango')) {
+        positives.push(lang === 'es' ? '✓ Excelente rango dinámico' : '✓ Excellent dynamic range')
+      }
+      if (report.includes('estéreo') || report.includes('stereo') || report.includes('imagen')) {
+        positives.push(lang === 'es' ? '✓ Imagen estéreo sólida y centrada' : '✓ Solid and centered stereo image')
+      }
+      if (report.includes('balance') || report.includes('Balance')) {
+        positives.push(lang === 'es' ? '✓ Balance tonal saludable' : '✓ Healthy tonal balance')
+      }
+      
+      if (positives.length === 0) {
+        positives.push(lang === 'es' ? '✓ Mezcla técnicamente sólida' : '✓ Technically solid mix')
+      }
+      
+      return positives.length > 0 ? `
+${lang === 'es' ? 'ASPECTOS POSITIVOS' : 'POSITIVE ASPECTS'}
+${'─'.repeat(50)}
+${positives.join('\n')}
+` : ''
+    }
+    
     const content = `${'═'.repeat(50)}
-   MASTERINGREADY - ${lang === 'es' ? 'Reporte Completo' : 'Full Report'}
+   MASTERINGREADY - ${lang === 'es' ? 'Reporte Completo' : 'Complete Report'}
 ${'═'.repeat(50)}
 
 ${lang === 'es' ? 'INFORMACIÓN DEL ARCHIVO' : 'FILE INFORMATION'}
@@ -189,7 +220,7 @@ ${lang === 'es' ? 'Fecha' : 'Date'}: ${new Date().toLocaleDateString(lang === 'e
 })}
 ${lang === 'es' ? 'Puntuación' : 'Score'}: ${result.score}/100
 ${lang === 'es' ? 'Veredicto' : 'Verdict'}: ${result.verdict}
-
+${extractPositiveAspects()}
 ${lang === 'es' ? 'MÉTRICAS TÉCNICAS' : 'TECHNICAL METRICS'}
 ${'─'.repeat(50)}
 ${result.metrics?.lufs ? `LUFS ${lang === 'es' ? 'Integrado' : 'Integrated'}:        ${result.metrics.lufs} LUFS\n` : ''}${result.metrics?.true_peak ? `True Peak:             ${result.metrics.true_peak} dBTP\n` : ''}${result.metrics?.headroom ? `Headroom:              ${result.metrics.headroom} dB\n` : ''}${result.metrics?.correlation ? `${lang === 'es' ? 'Correlación' : 'Correlation'}:           ${result.metrics.correlation}\n` : ''}${result.metrics?.stereo_balance ? `${lang === 'es' ? 'Balance Estéreo' : 'Stereo Balance'}:       ${result.metrics.stereo_balance}\n` : ''}${result.metrics?.dynamic_range ? `${lang === 'es' ? 'Rango Dinámico' : 'Dynamic Range'}:        ${result.metrics.dynamic_range} dB\n` : ''}
@@ -207,7 +238,7 @@ by Matías Carvajal
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `masteringready-full-report-${Date.now()}.txt`
+    a.download = `masteringready-complete-report-${Date.now()}.txt`
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
@@ -775,9 +806,8 @@ by Matías Carvajal
                         <button
                           key={m}
                           onClick={() => {
-                            if (m === 'visual') {
-                              setReportView('visual')
-                            } else {
+                            setReportView(m as 'visual' | 'short' | 'write')
+                            if (m !== 'visual') {
                               setMode(m as 'short' | 'write')
                             }
                           }}
@@ -785,14 +815,16 @@ by Matías Carvajal
                             padding: '0.5rem 1rem',
                             borderRadius: '0.5rem',
                             border: 'none',
-                            background: (m === 'visual' ? reportView === 'visual' : mode === m) ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : '#f3f4f6',
-                            color: (m === 'visual' ? reportView === 'visual' : mode === m) ? 'white' : '#111827',
+                            background: reportView === m ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : '#f3f4f6',
+                            color: reportView === m ? 'white' : '#111827',
                             cursor: 'pointer',
                             transition: 'all 0.2s',
                             fontSize: '0.875rem'
                           }}
                         >
-                          {m === 'visual' ? '📊 Visual' : m === 'short' ? '📱 Short' : '📄 Write'}
+                          {m === 'visual' ? (lang === 'es' ? '📊 Visual' : '📊 Visual') :
+                           m === 'short' ? (lang === 'es' ? '📱 Corto' : '📱 Short') :
+                           (lang === 'es' ? '📄 Completo' : '📄 Complete')}
                         </button>
                       ))}
                     </div>
@@ -1102,7 +1134,7 @@ by Matías Carvajal
                     >
                       {view === 'visual' ? (lang === 'es' ? '📊 Visual' : '📊 Visual') :
                        view === 'short' ? (lang === 'es' ? '📱 Corto' : '📱 Short') :
-                       (lang === 'es' ? '📄 Completo' : '📄 Full')}
+                       (lang === 'es' ? '📄 Completo' : '📄 Complete')}
                     </button>
                   ))}
                 </div>
@@ -1281,7 +1313,7 @@ by Matías Carvajal
                     marginBottom: '1.5rem'
                   }}>
                     <h3 style={{ fontWeight: '600', fontSize: '1.125rem', marginBottom: '1rem' }}>
-                      {lang === 'es' ? 'Análisis Completo' : 'Full Analysis'}
+                      {lang === 'es' ? 'Análisis Completo' : 'Complete Analysis'}
                     </h3>
                     <pre style={{
                       whiteSpace: 'pre-wrap',
@@ -1328,7 +1360,7 @@ by Matías Carvajal
                     <Download size={18} />
                     {lang === 'es' 
                       ? `Descargar ${reportView === 'visual' ? 'Visual' : reportView === 'short' ? 'Corto' : 'Completo'}`
-                      : `Download ${reportView === 'visual' ? 'Visual' : reportView === 'short' ? 'Short' : 'Full'}`}
+                      : `Download ${reportView === 'visual' ? 'Visual' : reportView === 'short' ? 'Short' : 'Complete'}`}
                   </button>
 
                   {/* Download Full Report */}
@@ -1362,7 +1394,7 @@ by Matías Carvajal
                     }}
                   >
                     <Download size={18} />
-                    {lang === 'es' ? 'Reporte Completo' : 'Full Report'}
+                    {lang === 'es' ? 'Reporte Completo' : 'Complete Report'}
                   </button>
                 </div>
 
