@@ -635,42 +635,33 @@ export default function LandingPage() {
               )}
 
               {/* Analyze Button */}
-              {file && (
+              {file && !isFileTooLarge && (
                 <button
-                  onClick={(e) => {
-                    // Double-check: Block if file is too large
-                    if (isFileTooLarge) {
-                      e.preventDefault()
-                      e.stopPropagation()
-                      return
-                    }
-                    handleAnalyze()
-                  }}
-                  disabled={loading || isFileTooLarge}
+                  onClick={handleAnalyze}
+                  disabled={loading}
                   style={{
                     width: '100%',
-                    background: (loading || isFileTooLarge) ? '#d1d5db' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                    color: (loading || isFileTooLarge) ? '#6b7280' : 'white',
+                    background: loading ? '#d1d5db' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    color: loading ? '#6b7280' : 'white',
                     padding: '1rem',
                     borderRadius: '0.75rem',
                     fontWeight: '600',
                     fontSize: '1.125rem',
                     border: 'none',
-                    cursor: (loading || isFileTooLarge) ? 'not-allowed' : 'pointer',
+                    cursor: loading ? 'not-allowed' : 'pointer',
                     transition: 'all 0.3s',
-                    boxShadow: (loading || isFileTooLarge) ? 'none' : '0 4px 20px rgba(102, 126, 234, 0.3)',
-                    opacity: (loading || isFileTooLarge) ? 0.6 : 1,
-                    pointerEvents: isFileTooLarge ? 'none' : 'auto'
+                    boxShadow: loading ? 'none' : '0 4px 20px rgba(102, 126, 234, 0.3)',
+                    opacity: loading ? 0.6 : 1
                   }}
                   onMouseEnter={(e) => {
-                    if (!loading && !isFileTooLarge) {
+                    if (!loading) {
                       e.currentTarget.style.transform = 'scale(1.02)'
                       e.currentTarget.style.boxShadow = '0 8px 30px rgba(102, 126, 234, 0.4)'
                     }
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.transform = 'scale(1)'
-                    e.currentTarget.style.boxShadow = (loading || isFileTooLarge) ? 'none' : '0 4px 20px rgba(102, 126, 234, 0.3)'
+                    e.currentTarget.style.boxShadow = loading ? 'none' : '0 4px 20px rgba(102, 126, 234, 0.3)'
                   }}
                 >
                   {loading ? (
@@ -701,12 +692,36 @@ export default function LandingPage() {
                         {progress}% • {lang === 'es' ? 'Hasta 30 segundos' : 'Up to 30 seconds'}
                       </span>
                     </div>
-                  ) : isFileTooLarge ? (
-                    lang === 'es' ? 'Archivo muy grande' : 'File too large'
                   ) : (
                     lang === 'es' ? 'Analizar Mezcla' : 'Analyze Mix'
                   )}
                 </button>
+              )}
+
+              {/* Message when file is too large */}
+              {file && isFileTooLarge && (
+                <div style={{
+                  width: '100%',
+                  background: '#fee2e2',
+                  border: '2px solid #ef4444',
+                  borderRadius: '0.75rem',
+                  padding: '1rem',
+                  textAlign: 'center'
+                }}>
+                  <p style={{ 
+                    fontSize: '1.125rem', 
+                    fontWeight: '600', 
+                    color: '#7f1d1d',
+                    marginBottom: '0.5rem'
+                  }}>
+                    🚫 {lang === 'es' ? 'No se puede analizar' : 'Cannot analyze'}
+                  </p>
+                  <p style={{ fontSize: '0.875rem', color: '#991b1b' }}>
+                    {lang === 'es'
+                      ? `Tu archivo tiene ${(file.size / 1024 / 1024).toFixed(1)}MB. El límite es 50MB.`
+                      : `Your file is ${(file.size / 1024 / 1024).toFixed(1)}MB. Limit is 50MB.`}
+                  </p>
+                </div>
               )}
 
               {/* Error */}
