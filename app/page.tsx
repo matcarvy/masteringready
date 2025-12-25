@@ -637,12 +637,20 @@ export default function LandingPage() {
               {/* Analyze Button */}
               {file && (
                 <button
-                  onClick={handleAnalyze}
+                  onClick={(e) => {
+                    // Double-check: Block if file is too large
+                    if (isFileTooLarge) {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      return
+                    }
+                    handleAnalyze()
+                  }}
                   disabled={loading || isFileTooLarge}
                   style={{
                     width: '100%',
-                    background: (loading || isFileTooLarge) ? '#9ca3af' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                    color: 'white',
+                    background: (loading || isFileTooLarge) ? '#d1d5db' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    color: (loading || isFileTooLarge) ? '#6b7280' : 'white',
                     padding: '1rem',
                     borderRadius: '0.75rem',
                     fontWeight: '600',
@@ -650,7 +658,9 @@ export default function LandingPage() {
                     border: 'none',
                     cursor: (loading || isFileTooLarge) ? 'not-allowed' : 'pointer',
                     transition: 'all 0.3s',
-                    boxShadow: (loading || isFileTooLarge) ? 'none' : '0 4px 20px rgba(102, 126, 234, 0.3)'
+                    boxShadow: (loading || isFileTooLarge) ? 'none' : '0 4px 20px rgba(102, 126, 234, 0.3)',
+                    opacity: (loading || isFileTooLarge) ? 0.6 : 1,
+                    pointerEvents: isFileTooLarge ? 'none' : 'auto'
                   }}
                   onMouseEnter={(e) => {
                     if (!loading && !isFileTooLarge) {
