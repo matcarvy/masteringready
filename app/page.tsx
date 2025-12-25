@@ -3,14 +3,13 @@
 import { useState } from 'react'
 import { Download, Check, Upload, Zap, Shield, TrendingUp } from 'lucide-react'
 import { analyzeFile } from '@/lib/api'
-import { compressAudioFile } from '@/lib/audio-compression'
 
 export default function LandingPage() {
   const [file, setFile] = useState<File | null>(null)
   const [lang, setLang] = useState<'es' | 'en'>('es')
   const [mode, setMode] = useState<'short' | 'write'>('write')
   const [strict, setStrict] = useState(false)
-
+  
   const [loading, setLoading] = useState(false)
   const [progress, setProgress] = useState(0)
   const [result, setResult] = useState<any>(null)
@@ -19,48 +18,39 @@ export default function LandingPage() {
   const handleAnalyze = async () => {
     if (!file) return
 
+    // CRITICAL: Block files >50MB before any processing
+    const maxSize = 50 * 1024 * 1024
+    if (file.size > maxSize) {
+      setError(
+        lang === 'es'
+          ? `⚠️ Archivo demasiado grande: ${(file.size / 1024 / 1024).toFixed(1)} MB. El límite actual es 50MB. Para archivos más grandes, contáctanos.`
+          : `⚠️ File too large: ${(file.size / 1024 / 1024).toFixed(1)} MB. Current limit is 50MB. For larger files, contact us.`
+      )
+      return // Stop here - don't proceed
+    }
+
     setLoading(true)
     setProgress(0)
     setError(null)
 
-    const maxSizeMB = 50
-    let fileToUpload: File = file
-    let progressInterval: ReturnType<typeof setInterval> | undefined
+    const progressInterval = setInterval(() => {
+      setProgress(prev => {
+        if (prev >= 95) return 98
+        if (prev >= 90) return prev + 2
+        if (prev >= 70) return prev + 5
+        if (prev >= 40) return prev + 8
+        return prev + 12
+      })
+    }, 700)
 
     try {
-      // Si el archivo es mayor al límite, lo comprimimos antes de enviar
-      if (file.size > maxSizeMB * 1024 * 1024) {
-        setError(
-          lang === 'es'
-            ? `Archivo grande detectado (${(file.size / 1024 / 1024).toFixed(1)} MB). Comprimiendo audio para análisis…`
-            : `Large file detected (${(file.size / 1024 / 1024).toFixed(1)} MB). Compressing audio for analysis…`
-        )
-
-        const { file: compressedFile } = await compressAudioFile(file, maxSizeMB)
-        fileToUpload = compressedFile
-        setError(null)
-      }
-
-      progressInterval = setInterval(() => {
-        setProgress(prev => {
-          if (prev >= 95) return 98
-          if (prev >= 90) return prev + 2
-          if (prev >= 70) return prev + 5
-          if (prev >= 40) return prev + 8
-          return prev + 12
-        })
-      }, 700)
-
-      const data = await analyzeFile(fileToUpload, { lang, mode, strict })
+      const data = await analyzeFile(file, { lang, mode, strict })
       setProgress(100)
       setResult(data)
     } catch (err: any) {
-      console.error(err)
       setError(err.message || (lang === 'es' ? 'Error al analizar' : 'Analysis error'))
     } finally {
-      if (progressInterval) {
-        clearInterval(progressInterval)
-      }
+      clearInterval(progressInterval)
       setLoading(false)
       setProgress(0)
     }
@@ -86,435 +76,259 @@ export default function LandingPage() {
   }
 
   const scrollToAnalyzer = () => {
-    document.getElementById('analyzer')?.scrollIntoView({ behavior: 'smooth' })
+    document.getElementById('analyze')?.scrollIntoView({ behavior: 'smooth' })
   }
 
-  const gradientText = 'bg-gradient-to-r from-purple-600 via-pink-500 to-amber-400 bg-clip-text text-transparent'
+  const isFileTooLarge = file && file.size > 50 * 1024 * 1024
+
+  const getScoreColor = (score: number) => {
+    if (score >= 85) return '#10b981'
+    if (score >= 60) return '#f59e0b'
+    return '#ef4444'
+  }
+
+  const getScoreBg = (score: number) => {
+    if (score >= 85) return '#ecfdf5'
+    if (score >= 60) return '#fffbeb'
+    return '#fef2f2'
+  }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-50">
-      {/* NAVBAR */}
-      <nav className="border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-xl sticky top-0 z-40">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-purple-600 via-pink-500 to-amber-400 shadow-lg shadow-purple-500/30">
-              <span className="text-xl font-bold">MR</span>
-            </div>
-            <div>
-              <div className={`text-lg font-semibold ${gradientText}`}>MasteringReady</div>
-              <p className="text-xs text-slate-400">
-                {lang === 'es'
-                  ? 'Analizador técnico de mezcla por Matías Carvajal'
-                  : 'Technical mix analyzer by Matías Carvajal'}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => setLang(prev => (prev === 'es' ? 'en' : 'es'))}
-              className="flex items-center gap-2 rounded-full border border-slate-700 bg-slate-900 px-3 py-1 text-xs font-medium text-slate-200 hover:border-purple-500/60 hover:bg-slate-900/70"
-            >
-              <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-slate-600 bg-slate-900 text-[10px] font-semibold">
-                {lang === 'es' ? 'ES' : 'EN'}
+    <div style={{ minHeight: '100vh', background: '#ffffff', fontFamily: 'Inter, system-ui, sans-serif' }}>
+      {/* Navigation */}
+      <nav style={{
+        position: 'fixed',
+        width: '100%',
+        background: 'rgba(255, 255, 255, 0.95)',
+        backdropFilter: 'blur(10px)',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+        zIndex: 50
+      }}>
+        <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 1.5rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: '64px' }}>
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <span style={{
+                fontSize: '1.5rem',
+                fontWeight: 'bold',
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text'
+              }}>
+                🎵 MasteringReady
               </span>
-              <span className="hidden sm:inline">
-                {lang === 'es' ? 'Cambiar a inglés' : 'Switch to Spanish'}
-              </span>
-            </button>
+            </div>
+            <div style={{ display: 'flex', gap: '2rem', alignItems: 'center' }}>
+              <button
+                onClick={() => setLang(lang === 'es' ? 'en' : 'es')}
+                style={{
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  color: '#6b7280',
+                  cursor: 'pointer',
+                  border: 'none',
+                  background: 'none',
+                  padding: '0.5rem 1rem'
+                }}
+              >
+                {lang === 'es' ? 'EN' : 'ES'}
+              </button>
+              <button
+                onClick={scrollToAnalyzer}
+                style={{
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  color: 'white',
+                  padding: '0.5rem 1.5rem',
+                  borderRadius: '9999px',
+                  fontWeight: '600',
+                  border: 'none',
+                  cursor: 'pointer',
+                  transition: 'transform 0.2s, box-shadow 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-2px)'
+                  e.currentTarget.style.boxShadow = '0 10px 25px rgba(102, 126, 234, 0.4)'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)'
+                  e.currentTarget.style.boxShadow = 'none'
+                }}
+              >
+                {lang === 'es' ? 'Analizar Gratis' : 'Analyze Free'}
+              </button>
+            </div>
           </div>
         </div>
       </nav>
 
-      {/* HERO */}
-      <section className="border-b border-slate-900/60 bg-gradient-to-b from-slate-950 via-slate-950 to-slate-950/90">
-        <div className="mx-auto flex max-w-6xl flex-col gap-10 px-4 py-10 md:flex-row md:items-center md:py-16">
-          {/* LEFT */}
-          <div className="flex-1 space-y-8">
-            <div className="inline-flex items-center gap-2 rounded-full border border-purple-500/30 bg-purple-500/10 px-3 py-1 text-xs text-purple-100 shadow-sm shadow-purple-500/20">
-              <Zap className="h-3.5 w-3.5" />
-              <span className="font-medium">
+      {/* Hero Section */}
+      <section style={{
+        paddingTop: '8rem',
+        paddingBottom: '5rem',
+        paddingLeft: '1.5rem',
+        paddingRight: '1.5rem',
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+      }}>
+        <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+            gap: '3rem',
+            alignItems: 'center'
+          }}>
+            {/* Left: Copy */}
+            <div style={{ color: 'white' }}>
+              <div style={{
+                display: 'inline-block',
+                background: 'rgba(255, 255, 255, 0.2)',
+                backdropFilter: 'blur(10px)',
+                borderRadius: '9999px',
+                padding: '0.5rem 1rem',
+                marginBottom: '1.5rem'
+              }}>
+                <span style={{ fontSize: '0.875rem', fontWeight: '500' }}>
+                  ✨ {lang === 'es' 
+                    ? 'Metodología probada en más de 300 producciones profesionales'
+                    : 'Methodology proven in over 300 professional productions'}
+                </span>
+              </div>
+              
+              <h1 style={{
+                fontSize: 'clamp(2.5rem, 5vw, 3.75rem)',
+                fontWeight: 'bold',
+                marginBottom: '1.5rem',
+                lineHeight: '1.2'
+              }}>
                 {lang === 'es'
-                  ? 'Metodología probada en más de 300 producciones'
-                  : 'Methodology tested on 300+ professional releases'}
-              </span>
-            </div>
-
-            <div className="space-y-3">
-              <h1 className="text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
-                <span className="block">
-                  {lang === 'es'
-                    ? '¿Tu mezcla está lista'
-                    : 'Is your mix really ready'}
-                </span>
-                <span className={`block mt-1 ${gradientText}`}>
-                  {lang === 'es'
-                    ? 'para el mastering?'
-                    : 'for mastering?'}
-                </span>
+                  ? '¿Tu mezcla está lista para el mastering?'
+                  : 'Is your mix ready for mastering?'}
               </h1>
-
-              <p className="max-w-xl text-sm text-slate-300 sm:text-base">
+              
+              <p style={{
+                fontSize: 'clamp(1.125rem, 2vw, 1.5rem)',
+                marginBottom: '2rem',
+                color: '#e9d5ff'
+              }}>
                 {lang === 'es'
-                  ? 'Sube tu mezcla y recibe un análisis técnico objetivo en segundos: headroom, LUFS, PLR, ancho estéreo y balance de frecuencias, basado en la metodología de Matías Carvajal.'
-                  : 'Upload your mix and get an objective technical analysis in seconds: headroom, LUFS, PLR, stereo image and tonal balance, based on Matías Carvajal’s mastering workflow.'}
+                  ? 'Análisis técnico en 30 segundos + recomendaciones basadas en metodología profesional'
+                  : 'Technical analysis in 30 seconds + recommendations based on professional methodology'}
               </p>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-4">
+              
               <button
                 onClick={scrollToAnalyzer}
-                className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-purple-600 via-pink-500 to-amber-400 px-5 py-2.5 text-sm font-semibold text-slate-950 shadow-lg shadow-purple-500/40 hover:opacity-95 active:scale-[0.99]"
+                style={{
+                  background: 'white',
+                  color: '#667eea',
+                  padding: '1rem 2rem',
+                  borderRadius: '9999px',
+                  fontWeight: 'bold',
+                  fontSize: '1.125rem',
+                  border: 'none',
+                  cursor: 'pointer',
+                  marginBottom: '2rem',
+                  transition: 'all 0.3s',
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'scale(1.05)'
+                  e.currentTarget.style.boxShadow = '0 8px 30px rgba(0,0,0,0.2)'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'scale(1)'
+                  e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.1)'
+                }}
               >
-                <Upload className="h-4 w-4" />
-                {lang === 'es' ? 'Subir mezcla para analizar' : 'Upload mix for analysis'}
+                {lang === 'es' ? 'Analiza Tu Mezcla Gratis' : 'Analyze Your Mix Free'}
               </button>
-
-              <div className="flex items-center gap-2 text-xs text-slate-400">
-                <Shield className="h-3.5 w-3.5 text-emerald-400" />
-                <span>
-                  {lang === 'es'
-                    ? 'Tu archivo no se almacena ni se comparte'
-                    : 'Your audio is never stored or shared'}
-                </span>
+              
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem', fontSize: '0.875rem' }}>
+                {[
+                  lang === 'es' ? 'Sin tarjeta requerida' : 'No credit card required',
+                  'Privacy-first',
+                  lang === 'es' ? 'Español e Inglés' : 'Spanish & English'
+                ].map((text, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <Check size={20} />
+                    {text}
+                  </div>
+                ))}
               </div>
             </div>
-
-            <div className="grid gap-3 text-xs text-slate-300 sm:grid-cols-3">
-              <div className="flex items-center gap-2 rounded-lg border border-slate-800 bg-slate-900/40 px-3 py-2">
-                <Check className="h-3.5 w-3.5 text-emerald-400" />
-                <span>
-                  {lang === 'es'
-                    ? 'Headroom y true peak listos para mastering'
-                    : 'Headroom & true peak ready for mastering'}
-                </span>
-              </div>
-              <div className="flex items-center gap-2 rounded-lg border border-slate-800 bg-slate-900/40 px-3 py-2">
-                <TrendingUp className="h-3.5 w-3.5 text-sky-400" />
-                <span>
-                  {lang === 'es'
-                    ? 'PLR y dinámica pensados para streaming'
-                    : 'PLR & dynamics tuned for streaming'}
-                </span>
-              </div>
-              <div className="flex items-center gap-2 rounded-lg border border-slate-800 bg-slate-900/40 px-3 py-2">
-                <Shield className="h-3.5 w-3.5 text-amber-300" />
-                <span>
-                  {lang === 'es'
-                    ? 'Chequeos técnicos objetivos, sin humo'
-                    : 'Objective technical checks, no fluff'}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* RIGHT (CARD) */}
-          <div className="flex-1">
-            <div
-              id="analyzer"
-              className="relative overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/60 p-4 shadow-xl shadow-purple-500/20 sm:p-6"
-            >
-              {/* Glow background */}
-              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(168,85,247,0.18),_transparent_60%),radial-gradient(circle_at_bottom,_rgba(251,146,60,0.16),_transparent_60%)]" />
-
-              <div className="relative space-y-5">
-                {/* Header */}
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <h2 className="text-sm font-semibold text-slate-50 sm:text-base">
-                      {lang === 'es'
-                        ? 'Sube tu mezcla en WAV o AIFF'
-                        : 'Upload your mix in WAV or AIFF'}
-                    </h2>
-                    <p className="text-xs text-slate-400">
-                      {lang === 'es'
-                        ? 'Ideal: 24 bits, -6 dBFS de pico, sin limitador agresivo en el master bus.'
-                        : 'Ideal: 24-bit, -6 dBFS peak, no heavy limiting on the mix bus.'}
-                    </p>
-                  </div>
-
-                  <div className="flex flex-col items-end gap-1">
-                    <span className="rounded-full border border-emerald-500/40 bg-slate-900/80 px-2.5 py-1 text-[10px] font-medium text-emerald-300">
-                      {lang === 'es' ? 'Análisis técnico' : 'Technical analysis'}
+            
+            {/* Right: Demo Card */}
+            <div>
+              <div style={{
+                background: 'white',
+                borderRadius: '1rem',
+                boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+                padding: '2rem',
+                transition: 'transform 0.3s'
+              }}>
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                    <span style={{ color: '#6b7280', fontWeight: '500' }}>
+                      {lang === 'es' ? 'Puntuación' : 'Score'}
                     </span>
-                    <span className="text-[10px] text-slate-500">
-                      {lang === 'es' ? 'No altera tu audio' : 'Non-destructive, read-only'}
+                    <span style={{
+                      fontSize: '2.25rem',
+                      fontWeight: 'bold',
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      WebkitBackgroundClip: 'text',
+                      WebkitTextFillColor: 'transparent',
+                      backgroundClip: 'text'
+                    }}>
+                      85/100
                     </span>
                   </div>
-                </div>
-
-                {/* Dropzone */}
-                <div
-                  className={`relative mt-2 rounded-xl border-2 border-dashed ${
-                    file ? 'border-purple-500/70 bg-slate-900/70' : 'border-slate-700/80 bg-slate-900/40'
-                  } px-4 py-6 text-center transition-colors`}
-                  onDragOver={(e) => {
-                    e.preventDefault()
-                    e.stopPropagation()
-                    if (!loading) {
-                      e.currentTarget.style.borderColor = '#a855f7'
-                      e.currentTarget.style.background = 'rgba(15,23,42,0.9)'
-                    }
-                  }}
-                  onDragLeave={(e) => {
-                    e.preventDefault()
-                    e.stopPropagation()
-                    e.currentTarget.style.borderColor = file ? '#a855f7' : '#334155'
-                    e.currentTarget.style.background = file
-                      ? 'rgba(15,23,42,0.9)'
-                      : 'rgba(15,23,42,0.6)'
-                  }}
-                  onDrop={(e) => {
-                    e.preventDefault()
-                    e.stopPropagation()
-                    e.currentTarget.style.borderColor = file ? '#a855f7' : '#334155'
-                    e.currentTarget.style.background = file
-                      ? 'rgba(15,23,42,0.9)'
-                      : 'rgba(15,23,42,0.6)'
-
-                    if (!loading && e.dataTransfer.files && e.dataTransfer.files[0]) {
-                      setFile(e.dataTransfer.files[0])
-                    }
-                  }}
-                >
-                  <label className="flex cursor-pointer flex-col items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-900 shadow-inner shadow-slate-950/80">
-                      <Upload className="h-5 w-5 text-purple-400" />
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium text-slate-50">
-                        {file
-                          ? (lang === 'es' ? 'Archivo listo para analizar' : 'File ready for analysis')
-                          : (lang === 'es' ? 'Arrastra tu mezcla aquí' : 'Drag your mix here')}
-                      </p>
-                      <p className="text-xs text-slate-400">
-                        {lang === 'es'
-                          ? 'O haz click para seleccionar un archivo .wav, .aiff, .mp3'
-                          : 'Or click to select a .wav, .aiff, .mp3 file'}
-                      </p>
-                    </div>
-                    <input
-                      type="file"
-                      accept=".wav,.aiff,.aif,.mp3,.flac,.m4a"
-                      className="hidden"
-                      onChange={(e) => {
-                        const f = e.target.files?.[0]
-                        if (f && !loading) {
-                          setFile(f)
-                          setResult(null)
-                          setError(null)
-                        }
-                      }}
-                    />
-                  </label>
-
-                  {file && (
-                    <div className="mt-4 rounded-lg bg-slate-900/90 px-3 py-2 text-left text-xs text-slate-300">
-                      <p className="truncate font-medium text-slate-50">{file.name}</p>
-                      <p className="mt-0.5 text-[11px] text-slate-400">
-                        {(file.size / (1024 * 1024)).toFixed(1)} MB •{' '}
-                        {lang === 'es'
-                          ? 'Se recomienda mezcla estéreo final (no stems)'
-                          : 'Recommended: final stereo mix (not stems)'}
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                {/* Options */}
-                <div className="grid gap-3 rounded-xl border border-slate-800 bg-slate-900/60 p-3 text-xs sm:grid-cols-3">
-                  <div className="space-y-1">
-                    <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-                      {lang === 'es' ? 'Idioma del reporte' : 'Report language'}
-                    </p>
-                    <div className="inline-flex rounded-full bg-slate-900 p-1">
-                      <button
-                        onClick={() => setLang('es')}
-                        className={`flex-1 rounded-full px-2 py-1 text-[11px] ${
-                          lang === 'es'
-                            ? 'bg-purple-600 text-white shadow-sm shadow-purple-500/40'
-                            : 'text-slate-300'
-                        }`}
-                      >
-                        ES
-                      </button>
-                      <button
-                        onClick={() => setLang('en')}
-                        className={`flex-1 rounded-full px-2 py-1 text-[11px] ${
-                          lang === 'en'
-                            ? 'bg-purple-600 text-white shadow-sm shadow-purple-500/40'
-                            : 'text-slate-300'
-                        }`}
-                      >
-                        EN
-                      </button>
-                    </div>
+                  <div style={{
+                    width: '100%',
+                    height: '0.75rem',
+                    background: '#e5e7eb',
+                    borderRadius: '9999px',
+                    overflow: 'hidden'
+                  }}>
+                    <div style={{
+                      width: '85%',
+                      height: '100%',
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      transition: 'width 1s ease-out'
+                    }} />
                   </div>
-
-                  <div className="space-y-1">
-                    <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-                      {lang === 'es' ? 'Modo de reporte' : 'Report mode'}
-                    </p>
-                    <div className="inline-flex rounded-full bg-slate-900 p-1">
-                      <button
-                        onClick={() => setMode('short')}
-                        className={`flex-1 rounded-full px-2 py-1 text-[11px] ${
-                          mode === 'short'
-                            ? 'bg-sky-500 text-white shadow-sm shadow-sky-400/40'
-                            : 'text-slate-300'
-                        }`}
-                      >
-                        {lang === 'es' ? 'Resumen' : 'Short'}
-                      </button>
-                      <button
-                        onClick={() => setMode('write')}
-                        className={`flex-1 rounded-full px-2 py-1 text-[11px] ${
-                          mode === 'write'
-                            ? 'bg-sky-500 text-white shadow-sm shadow-sky-400/40'
-                            : 'text-slate-300'
-                        }`}
-                      >
-                        {lang === 'es' ? 'Detallado' : 'Detailed'}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="space-y-1">
-                    <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-                      {lang === 'es' ? 'Modo estricto' : 'Strict mode'}
-                    </p>
-                    <button
-                      onClick={() => setStrict(prev => !prev)}
-                      className={`inline-flex w-full items-center justify-between rounded-full border px-2 py-1 text-[11px] ${
-                        strict
-                          ? 'border-red-500/60 bg-red-500/10 text-red-200'
-                          : 'border-slate-700 bg-slate-900 text-slate-300'
-                      }`}
-                    >
-                      <span>
-                        {lang === 'es'
-                          ? strict
-                            ? 'Más exigente con los errores'
-                            : 'Tolerante (recomendado)'
-                          : strict
-                            ? 'Harsher on issues'
-                            : 'Forgiving (recommended)'}
+                </div>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  {[
+                    { label: 'Headroom', value: '-6.2 dB' },
+                    { label: 'True Peak', value: '-3.1 dBTP' },
+                    { label: lang === 'es' ? 'Balance Estéreo' : 'Stereo Balance', value: '0.75' }
+                  ].map((item, i) => (
+                    <div key={i} style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      padding: '0.75rem',
+                      background: '#ecfdf5',
+                      borderRadius: '0.5rem'
+                    }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#065f46' }}>
+                        <Check size={20} color="#10b981" />
+                        {item.label}
                       </span>
-                      <span
-                        className={`ml-2 inline-flex h-4 w-7 items-center rounded-full ${
-                          strict ? 'bg-red-500/80' : 'bg-slate-600'
-                        }`}
-                      >
-                        <span
-                          className={`h-3 w-3 rounded-full bg-white transition-transform ${
-                            strict ? 'translate-x-3' : 'translate-x-0'
-                          }`}
-                        />
-                      </span>
-                    </button>
-                  </div>
+                      <span style={{ color: '#047857', fontWeight: '600' }}>{item.value}</span>
+                    </div>
+                  ))}
                 </div>
-
-                {/* Progress + Error */}
-                <div className="space-y-2">
-                  {loading && (
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between text-[11px] text-slate-400">
-                        <span>
-                          {lang === 'es'
-                            ? 'Analizando mezcla…'
-                            : 'Analyzing your mix…'}
-                        </span>
-                        <span>{progress}%</span>
-                      </div>
-                      <div className="h-2 overflow-hidden rounded-full bg-slate-800">
-                        <div
-                          className="h-full rounded-full bg-gradient-to-r from-purple-500 via-pink-500 to-amber-400"
-                          style={{
-                            width: `${progress}%`,
-                            transition: 'width 0.4s ease-out'
-                          }}
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  {error && (
-                    <div className="rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-[11px] text-red-100">
-                      <p className="font-semibold">
-                        {lang === 'es' ? 'Error:' : 'Error:'}
-                      </p>
-                      <p className="mt-0.5">{error}</p>
-                    </div>
-                  )}
-                </div>
-
-                {/* CTA Button */}
-                <button
-                  onClick={handleAnalyze}
-                  disabled={!file || loading}
-                  className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-purple-600 via-pink-500 to-amber-400 px-4 py-2.5 text-sm font-semibold text-slate-950 shadow-lg shadow-purple-500/40 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {loading ? (
-                    <>
-                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-900 border-t-transparent" />
-                      {lang === 'es' ? 'Analizando…' : 'Analyzing…'}
-                    </>
-                  ) : (
-                    <>
-                      <Zap className="h-4 w-4" />
-                      {lang === 'es' ? 'Analizar mezcla' : 'Analyze mix'}
-                    </>
-                  )}
-                </button>
-
-                {/* Result */}
-                {result && (
-                  <div className="mt-4 space-y-3 rounded-xl border border-slate-800 bg-slate-900/80 p-3 text-xs">
-                    <div className="flex items-center justify-between gap-2">
-                      <div>
-                        <p className="text-[11px] uppercase tracking-wide text-slate-400">
-                          {lang === 'es' ? 'Resultado' : 'Result'}
-                        </p>
-                        <p className="font-semibold text-slate-100">
-                          {result.filename || 'Mix'}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="rounded-full bg-slate-900 px-2 py-1 text-[11px] text-slate-200">
-                          {lang === 'es' ? 'Puntuación ' : 'Score '}{result.score}/100
-                        </div>
-                        <button
-                          onClick={handleDownload}
-                          className="inline-flex items-center gap-1 rounded-full border border-slate-700 bg-slate-900 px-2 py-1 text-[11px] text-slate-200 hover:border-slate-500"
-                        >
-                          <Download className="h-3.5 w-3.5" />
-                          {lang === 'es' ? 'Descargar reporte' : 'Download report'}
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="rounded-lg bg-slate-950/60 p-2 text-[11px] text-slate-200 whitespace-pre-wrap">
-                      {result.report}
-                    </div>
-                  </div>
-                )}
-
-                {/* Reset */}
-                <div className="mt-2 flex items-center justify-between text-[10px] text-slate-500">
-                  <button
-                    onClick={handleReset}
-                    className="text-slate-400 hover:text-slate-200"
-                  >
-                    {lang === 'es'
-                      ? 'Limpiar y analizar otra mezcla'
-                      : 'Reset and analyze another mix'}
-                  </button>
-                  <span>
-                    {lang === 'es'
-                      ? 'Este análisis no reemplaza el criterio humano de un ingeniero de mastering.'
-                      : 'This analysis does not replace the human judgment of a mastering engineer.'}
-                  </span>
+                
+                <div style={{
+                  marginTop: '1.5rem',
+                  padding: '1rem',
+                  background: '#f3e8ff',
+                  borderRadius: '0.5rem'
+                }}>
+                  <p style={{ fontSize: '0.875rem', color: '#6b21a8', fontWeight: '500' }}>
+                    ✅ {lang === 'es' 
+                      ? 'Lista para mastering profesional'
+                      : 'Ready for professional mastering'}
+                  </p>
                 </div>
               </div>
             </div>
@@ -522,18 +336,587 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* FOOTER SIMPLE */}
-      <footer className="border-t border-slate-900/80 bg-slate-950">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-2 px-4 py-4 text-[11px] text-slate-500 sm:flex-row">
-          <p>
-            © {new Date().getFullYear()} MasteringReady • Matías Carvajal
-          </p>
-          <div className="flex items-center gap-3">
-            <span>
+      {/* Features Section */}
+      <section id="features" style={{
+        padding: '5rem 1.5rem',
+        background: '#f9fafb'
+      }}>
+        <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: '4rem' }}>
+            <h2 style={{ fontSize: '2.25rem', fontWeight: 'bold', marginBottom: '1rem' }}>
+              {lang === 'es' ? '¿Por qué MasteringReady?' : 'Why MasteringReady?'}
+            </h2>
+            <p style={{ fontSize: '1.25rem', color: '#6b7280' }}>
               {lang === 'es'
+                ? 'Metodología profesional basada en 300+ producciones'
+                : 'Professional methodology based on 300+ productions'}
+            </p>
+          </div>
+
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+            gap: '2rem'
+          }}>
+            {[
+              {
+                icon: <Zap size={48} color="#667eea" />,
+                title: lang === 'es' ? 'Análisis en 30 Segundos' : 'Analysis in 30 Seconds',
+                desc: lang === 'es'
+                  ? 'Headroom, LUFS, True Peak, balance de frecuencias, estéreo y más.'
+                  : 'Headroom, LUFS, True Peak, frequency balance, stereo and more.'
+              },
+              {
+                icon: <Shield size={48} color="#667eea" />,
+                title: 'Privacy-First',
+                desc: lang === 'es'
+                  ? 'Tu audio se analiza solo en memoria y se elimina inmediatamente.'
+                  : 'Your audio is analyzed in-memory only and deleted immediately.'
+              },
+              {
+                icon: <TrendingUp size={48} color="#667eea" />,
+                title: lang === 'es' ? 'Metodología Profesional' : 'Professional Methodology',
+                desc: lang === 'es'
+                  ? 'Basado en técnicas de ingenieros top.'
+                  : 'Based on techniques from top engineers.'
+              }
+            ].map((feature, i) => (
+              <div key={i} style={{
+                background: 'white',
+                padding: '2rem',
+                borderRadius: '1rem',
+                boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+                transition: 'transform 0.3s, box-shadow 0.3s',
+                cursor: 'pointer'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-5px)'
+                e.currentTarget.style.boxShadow = '0 20px 40px rgba(0,0,0,0.12)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)'
+                e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.08)'
+              }}>
+                <div style={{ marginBottom: '1rem' }}>{feature.icon}</div>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '0.75rem' }}>
+                  {feature.title}
+                </h3>
+                <p style={{ color: '#6b7280', lineHeight: '1.6' }}>{feature.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Analyzer Section - Same as before but with inline styles */}
+      <section id="analyze" style={{ padding: '5rem 1.5rem', background: 'white' }}>
+        <div style={{ maxWidth: '896px', margin: '0 auto' }}>
+          {!result ? (
+            <>
+              <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
+                <h2 style={{ fontSize: '2.25rem', fontWeight: 'bold', marginBottom: '1rem' }}>
+                  {lang === 'es' ? 'Analiza Tu Mezcla Ahora' : 'Analyze Your Mix Now'}
+                </h2>
+                <p style={{ fontSize: '1.25rem', color: '#6b7280' }}>
+                  {lang === 'es'
+                    ? 'Sube tu archivo y obtén un reporte profesional en 30 segundos'
+                    : 'Upload your file and get a professional report in 30 seconds'}
+                </p>
+              </div>
+
+              {/* Privacy Badge */}
+              <div style={{
+                background: '#ecfdf5',
+                border: '1px solid #a7f3d0',
+                borderRadius: '0.5rem',
+                padding: '1rem',
+                marginBottom: '2rem'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                  <Shield size={20} color="#059669" />
+                  <span style={{ fontWeight: '600', color: '#064e3b' }}>
+                    🔒 Privacy-First Analyzer
+                  </span>
+                </div>
+                <p style={{ fontSize: '0.875rem', color: '#065f46' }}>
+                  {lang === 'es'
+                    ? 'Tu audio se analiza solo en memoria y se elimina inmediatamente.'
+                    : 'Your audio is analyzed in-memory only and deleted immediately.'}
+                </p>
+              </div>
+
+              {/* File Upload */}
+              <div style={{
+                background: 'white',
+                borderRadius: '1rem',
+                boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
+                padding: '2rem',
+                marginBottom: '1.5rem'
+              }}>
+                <div
+                  onClick={() => !loading && document.getElementById('file-input')?.click()}
+                  onDragOver={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    if (!loading) {
+                      e.currentTarget.style.borderColor = '#a855f7'
+                      e.currentTarget.style.background = '#faf5ff'
+                    }
+                  }}
+                  onDragLeave={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    e.currentTarget.style.borderColor = '#d1d5db'
+                    e.currentTarget.style.background = 'transparent'
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    e.currentTarget.style.borderColor = '#d1d5db'
+                    e.currentTarget.style.background = 'transparent'
+                    
+                    if (!loading && e.dataTransfer.files && e.dataTransfer.files[0]) {
+                      setFile(e.dataTransfer.files[0])
+                    }
+                  }}
+                  style={{
+                    border: '2px dashed #d1d5db',
+                    borderRadius: '0.75rem',
+                    padding: '3rem',
+                    textAlign: 'center',
+                    cursor: loading ? 'not-allowed' : 'pointer',
+                    opacity: loading ? 0.5 : 1,
+                    transition: 'all 0.3s'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!loading) {
+                      e.currentTarget.style.borderColor = '#a855f7'
+                      e.currentTarget.style.background = '#faf5ff'
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = '#d1d5db'
+                    e.currentTarget.style.background = 'transparent'
+                  }}
+                >
+                  <input
+                    id="file-input"
+                    type="file"
+                    accept=".wav,.mp3,.aiff"
+                    onChange={(e) => setFile(e.target.files?.[0] || null)}
+                    style={{ display: 'none' }}
+                    disabled={loading}
+                  />
+                  
+                  <Upload size={64} color="#9ca3af" style={{ margin: '0 auto 1rem' }} />
+                  <p style={{ fontSize: '1.125rem', fontWeight: '500', marginBottom: '0.5rem' }}>
+                    {lang === 'es' ? 'Sube tu mezcla' : 'Upload your mix'}
+                  </p>
+                  <p style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+                    {lang === 'es'
+                      ? 'Arrastra y suelta o haz click para seleccionar'
+                      : 'Drag and drop or click to select'}
+                  </p>
+                  <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.5rem' }}>
+                    WAV, MP3 o AIFF (máx 50MB)
+                  </p>
+                </div>
+              </div>
+
+              {/* Selected File */}
+              {file && (
+                <div style={{
+                  borderRadius: '0.5rem',
+                  border: `1px solid ${isFileTooLarge ? '#fca5a5' : '#93c5fd'}`,
+                  background: isFileTooLarge ? '#fef2f2' : '#eff6ff',
+                  padding: '1rem',
+                  marginBottom: '1.5rem'
+                }}>
+                  <p style={{
+                    fontSize: '0.875rem',
+                    fontWeight: '500',
+                    color: isFileTooLarge ? '#7f1d1d' : '#1e3a8a'
+                  }}>
+                    {lang === 'es' ? 'Archivo seleccionado:' : 'Selected file:'}
+                  </p>
+                  <p style={{
+                    fontSize: '1.125rem',
+                    fontWeight: 'bold',
+                    color: isFileTooLarge ? '#7f1d1d' : '#1e3a8a'
+                  }}>
+                    {file.name}
+                  </p>
+                  <p style={{
+                    fontSize: '0.875rem',
+                    color: isFileTooLarge ? '#991b1b' : '#1e40af'
+                  }}>
+                    {(file.size / 1024 / 1024).toFixed(2)} MB
+                  </p>
+                  {isFileTooLarge && (
+                    <div style={{
+                      marginTop: '0.5rem',
+                      background: '#fee2e2',
+                      border: '1px solid #fca5a5',
+                      borderRadius: '0.25rem',
+                      padding: '0.75rem'
+                    }}>
+                      <p style={{ fontSize: '0.875rem', color: '#7f1d1d', fontWeight: '600', marginBottom: '0.25rem' }}>
+                        ⚠️ {lang === 'es' 
+                          ? 'Archivo demasiado grande'
+                          : 'File too large'}
+                      </p>
+                      <p style={{ fontSize: '0.75rem', color: '#991b1b' }}>
+                        {lang === 'es'
+                          ? `El límite actual es 50MB. Tu archivo tiene ${(file.size / 1024 / 1024).toFixed(1)}MB. Por favor, usa un archivo más pequeño o contáctanos para procesar archivos grandes.`
+                          : `Current limit is 50MB. Your file is ${(file.size / 1024 / 1024).toFixed(1)}MB. Please use a smaller file or contact us to process large files.`}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Options */}
+              {file && !isFileTooLarge && (
+                <div style={{
+                  background: 'white',
+                  borderRadius: '0.75rem',
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+                  padding: '1.5rem',
+                  marginBottom: '1.5rem'
+                }}>
+                  <h3 style={{ fontWeight: '600', fontSize: '1.125rem', marginBottom: '1rem' }}>
+                    {lang === 'es' ? 'Opciones de Análisis' : 'Analysis Options'}
+                  </h3>
+                  
+                  <div style={{ marginBottom: '1rem' }}>
+                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem' }}>
+                      {lang === 'es' ? 'Modo de Reporte' : 'Report Mode'}
+                    </label>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                      {['short', 'write'].map((m) => (
+                        <button
+                          key={m}
+                          onClick={() => setMode(m as 'short' | 'write')}
+                          style={{
+                            padding: '0.5rem 1rem',
+                            borderRadius: '0.5rem',
+                            border: 'none',
+                            background: mode === m ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : '#f3f4f6',
+                            color: mode === m ? 'white' : '#111827',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s'
+                          }}
+                        >
+                          {m === 'short' ? '📱 Short' : '📄 Write'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                      <input
+                        type="checkbox"
+                        checked={strict}
+                        onChange={(e) => setStrict(e.target.checked)}
+                        style={{ width: '1rem', height: '1rem', borderRadius: '0.25rem' }}
+                      />
+                      <span style={{ fontSize: '0.875rem', fontWeight: '500' }}>
+                        {lang === 'es' ? 'Modo Strict' : 'Strict Mode'}
+                      </span>
+                    </label>
+                    <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem', marginLeft: '1.5rem' }}>
+                      {lang === 'es'
+                        ? 'Estándares comerciales más exigentes'
+                        : 'More demanding commercial standards'}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Analyze Button */}
+              {file && (
+                <button
+                  onClick={handleAnalyze}
+                  disabled={loading || isFileTooLarge}
+                  style={{
+                    width: '100%',
+                    background: (loading || isFileTooLarge) ? '#9ca3af' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    color: 'white',
+                    padding: '1rem',
+                    borderRadius: '0.75rem',
+                    fontWeight: '600',
+                    fontSize: '1.125rem',
+                    border: 'none',
+                    cursor: (loading || isFileTooLarge) ? 'not-allowed' : 'pointer',
+                    transition: 'all 0.3s',
+                    boxShadow: (loading || isFileTooLarge) ? 'none' : '0 4px 20px rgba(102, 126, 234, 0.3)'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!loading && !isFileTooLarge) {
+                      e.currentTarget.style.transform = 'scale(1.02)'
+                      e.currentTarget.style.boxShadow = '0 8px 30px rgba(102, 126, 234, 0.4)'
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'scale(1)'
+                    e.currentTarget.style.boxShadow = (loading || isFileTooLarge) ? 'none' : '0 4px 20px rgba(102, 126, 234, 0.3)'
+                  }}
+                >
+                  {loading ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                        <svg style={{ animation: 'spin 1s linear infinite', height: '1.25rem', width: '1.25rem' }} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle style={{ opacity: 0.25 }} cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path style={{ opacity: 0.75 }} fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span>{lang === 'es' ? 'Analizando...' : 'Analyzing...'}</span>
+                      </div>
+                      <div style={{
+                        width: '100%',
+                        background: 'rgba(255,255,255,0.2)',
+                        borderRadius: '9999px',
+                        height: '0.5rem',
+                        marginTop: '0.5rem'
+                      }}>
+                        <div style={{
+                          background: 'white',
+                          height: '0.5rem',
+                          borderRadius: '9999px',
+                          transition: 'width 0.3s',
+                          width: `${progress}%`
+                        }} />
+                      </div>
+                      <span style={{ fontSize: '0.75rem', opacity: 0.75 }}>
+                        {progress}% • {lang === 'es' ? 'Hasta 30 segundos' : 'Up to 30 seconds'}
+                      </span>
+                    </div>
+                  ) : isFileTooLarge ? (
+                    lang === 'es' ? 'Archivo muy grande' : 'File too large'
+                  ) : (
+                    lang === 'es' ? 'Analizar Mezcla' : 'Analyze Mix'
+                  )}
+                </button>
+              )}
+
+              {/* Error */}
+              {error && (
+                <div style={{
+                  background: '#fef2f2',
+                  border: '1px solid #fca5a5',
+                  borderRadius: '0.5rem',
+                  padding: '1rem',
+                  marginTop: '1rem'
+                }}>
+                  <p style={{ color: '#7f1d1d', fontWeight: '500' }}>Error:</p>
+                  <p style={{ color: '#991b1b' }}>{error}</p>
+                </div>
+              )}
+            </>
+          ) : (
+            /* Results - Same structure but inline styles */
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              <div style={{
+                background: 'white',
+                borderRadius: '1rem',
+                boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
+                padding: '2rem'
+              }}>
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  marginBottom: '1.5rem'
+                }}>
+                  <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>
+                    {lang === 'es' ? 'Resultados del Análisis' : 'Analysis Results'}
+                  </h2>
+                  <button
+                    onClick={handleReset}
+                    style={{
+                      fontSize: '0.875rem',
+                      color: '#a855f7',
+                      border: 'none',
+                      background: 'none',
+                      cursor: 'pointer',
+                      textDecoration: 'underline',
+                      fontWeight: '500'
+                    }}
+                  >
+                    {lang === 'es' ? 'Analizar otro archivo' : 'Analyze another file'}
+                  </button>
+                </div>
+
+                {/* Score Card */}
+                <div style={{
+                  borderRadius: '0.75rem',
+                  border: `1px solid ${result.score >= 85 ? '#a7f3d0' : result.score >= 60 ? '#fcd34d' : '#fca5a5'}`,
+                  background: getScoreBg(result.score),
+                  padding: '1.5rem',
+                  marginBottom: '1.5rem'
+                }}>
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1fr 1fr',
+                    gap: '2rem',
+                    alignItems: 'center',
+                    marginBottom: '1rem'
+                  }}>
+                    <div style={{ textAlign: 'left' }}>
+                      <span style={{ color: '#374151', fontWeight: '500', fontSize: '1.125rem' }}>
+                        {lang === 'es' ? 'Puntuación' : 'Score'}
+                      </span>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <span style={{
+                        fontSize: '3rem',
+                        fontWeight: 'bold',
+                        color: getScoreColor(result.score)
+                      }}>
+                        {result.score}/100
+                      </span>
+                    </div>
+                  </div>
+                  <div style={{
+                    width: '100%',
+                    background: '#e5e7eb',
+                    borderRadius: '9999px',
+                    height: '0.75rem',
+                    marginBottom: '0.75rem'
+                  }}>
+                    <div style={{
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      height: '0.75rem',
+                      borderRadius: '9999px',
+                      width: `${result.score}%`,
+                      transition: 'width 0.5s'
+                    }} />
+                  </div>
+                  <p style={{ fontSize: '1.125rem', fontWeight: '600' }}>{result.verdict}</p>
+                </div>
+
+                {/* Report */}
+                <div style={{
+                  background: '#f9fafb',
+                  borderRadius: '0.75rem',
+                  padding: '1.5rem',
+                  marginBottom: '1.5rem'
+                }}>
+                  <h3 style={{ fontWeight: '600', fontSize: '1.125rem', marginBottom: '1rem' }}>
+                    {lang === 'es' ? 'Reporte Detallado' : 'Detailed Report'}
+                  </h3>
+                  <pre style={{
+                    whiteSpace: 'pre-wrap',
+                    fontSize: '0.875rem',
+                    lineHeight: '1.6',
+                    fontFamily: 'Inter, system-ui, sans-serif'
+                  }}>
+                    {result.report}
+                  </pre>
+                </div>
+
+                {/* Download */}
+                <button
+                  onClick={handleDownload}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.5rem',
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    color: 'white',
+                    padding: '0.75rem 1.5rem',
+                    borderRadius: '0.75rem',
+                    fontWeight: '500',
+                    border: 'none',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s',
+                    boxShadow: '0 4px 15px rgba(102, 126, 234, 0.3)'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'scale(1.05)'
+                    e.currentTarget.style.boxShadow = '0 6px 25px rgba(102, 126, 234, 0.4)'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'scale(1)'
+                    e.currentTarget.style.boxShadow = '0 4px 15px rgba(102, 126, 234, 0.3)'
+                  }}
+                >
+                  <Download size={16} />
+                  {lang === 'es' ? 'Descargar Reporte' : 'Download Report'}
+                </button>
+              </div>
+
+              {/* CTA */}
+              {result.score >= 60 && (
+                <div style={{
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  color: 'white',
+                  borderRadius: '1rem',
+                  padding: '2rem'
+                }}>
+                  <h3 style={{ fontSize: '1.5rem', fontWeight: '600', marginBottom: '0.75rem' }}>
+                    🎧 {lang === 'es' 
+                      ? '¿Te gustaría que mastericemos esta canción?'
+                      : 'Would you like us to master this song?'}
+                  </h3>
+                  <p style={{ marginBottom: '1rem', color: '#e9d5ff' }}>
+                    {lang === 'es'
+                      ? 'Tu mezcla está en buen punto. Trabajemos juntos en el mastering.'
+                      : 'Your mix is in good shape. Let\'s work together on mastering.'}
+                  </p>
+                  <button style={{
+                    background: 'white',
+                    color: '#667eea',
+                    padding: '0.75rem 2rem',
+                    borderRadius: '9999px',
+                    fontWeight: '600',
+                    border: 'none',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'scale(1.05)'
+                    e.currentTarget.style.background = '#f3f4f6'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'scale(1)'
+                    e.currentTarget.style.background = 'white'
+                  }}>
+                    {lang === 'es' ? 'Solicitar Mastering' : 'Request Mastering'}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer style={{
+        background: '#111827',
+        color: 'white',
+        padding: '3rem 1.5rem',
+        textAlign: 'center'
+      }}>
+        <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
+          <div style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1rem' }}>
+            🎵 MasteringReady
+          </div>
+          <p style={{ color: '#9ca3af', marginBottom: '2rem' }}>
+            {lang === 'es'
+              ? 'Prepara tu mezcla para el mastering profesional'
+              : 'Prepare your mix for professional mastering'}
+          </p>
+          
+          <div style={{ borderTop: '1px solid #374151', paddingTop: '2rem' }}>
+            <p style={{ color: '#9ca3af' }}>
+              © 2025 MasteringReady by Matías Carvajal.
+            </p>
+            <p style={{ fontSize: '0.875rem', color: '#6b7280', marginTop: '0.5rem' }}>
+              {lang === 'es' 
                 ? 'Basado en la metodología "Mastering Ready"'
                 : 'Based on the "Mastering Ready" methodology'}
-            </span>
+            </p>
           </div>
         </div>
       </footer>
