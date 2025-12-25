@@ -1963,7 +1963,8 @@ by Matías Carvajal
                   justifyContent: 'space-between',
                   fontSize: '0.75rem',
                   color: '#6b7280',
-                  paddingX: '0.5rem'
+                  paddingLeft: '0.5rem',
+                  paddingRight: '0.5rem'
                 }}>
                   <span>😞 {lang === 'es' ? 'No útil' : 'Not useful'}</span>
                   <span>{lang === 'es' ? 'Muy útil' : 'Very useful'} 😍</span>
