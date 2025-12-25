@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Download, Check, Upload, Zap, Shield, TrendingUp } from 'lucide-react'
 import { analyzeFile } from '@/lib/api'
+import { compressAudioFile } from '@/lib/audio-compression'
 
 export default function LandingPage() {
   const [file, setFile] = useState<File | null>(null)
@@ -14,45 +15,81 @@ export default function LandingPage() {
   const [progress, setProgress] = useState(0)
   const [result, setResult] = useState<any>(null)
   const [error, setError] = useState<string | null>(null)
+  const [compressing, setCompressing] = useState(false)
+  const [compressionProgress, setCompressionProgress] = useState(0)
 
   const handleAnalyze = async () => {
     if (!file) return
-
-    // CRITICAL: Block files >50MB before any processing
-    const maxSize = 50 * 1024 * 1024
-    if (file.size > maxSize) {
-      setError(
-        lang === 'es'
-          ? `⚠️ Archivo demasiado grande: ${(file.size / 1024 / 1024).toFixed(1)} MB. El límite actual es 50MB. Para archivos más grandes, contáctanos.`
-          : `⚠️ File too large: ${(file.size / 1024 / 1024).toFixed(1)} MB. Current limit is 50MB. For larger files, contact us.`
-      )
-      return // Stop here - don't proceed
-    }
 
     setLoading(true)
     setProgress(0)
     setError(null)
 
-    const progressInterval = setInterval(() => {
-      setProgress(prev => {
-        if (prev >= 95) return 98
-        if (prev >= 90) return prev + 2
-        if (prev >= 70) return prev + 5
-        if (prev >= 40) return prev + 8
-        return prev + 12
-      })
-    }, 700)
-
     try {
-      const data = await analyzeFile(file, { lang, mode, strict })
+      let fileToAnalyze = file
+      
+      // Check if file needs compression
+      const maxSize = 50 * 1024 * 1024
+      if (file.size > maxSize) {
+        setCompressing(true)
+        setCompressionProgress(0)
+        
+        // Simulate compression progress
+        const compressionInterval = setInterval(() => {
+          setCompressionProgress(prev => Math.min(prev + 10, 90))
+        }, 500)
+        
+        try {
+          const { file: compressedFile, compressed, originalSize, newSize } = 
+            await compressAudioFile(file, 50)
+          
+          clearInterval(compressionInterval)
+          setCompressionProgress(100)
+          
+          if (compressed) {
+            console.log(`Compressed: ${(originalSize/1024/1024).toFixed(1)}MB → ${(newSize/1024/1024).toFixed(1)}MB`)
+          }
+          
+          fileToAnalyze = compressedFile
+          
+          // Wait a moment to show completion
+          await new Promise(resolve => setTimeout(resolve, 500))
+          setCompressing(false)
+          setCompressionProgress(0)
+        } catch (compressionError) {
+          clearInterval(compressionInterval)
+          setCompressing(false)
+          setCompressionProgress(0)
+          throw new Error(
+            lang === 'es'
+              ? 'Error al comprimir el archivo. Por favor, intenta con un archivo más pequeño.'
+              : 'Error compressing file. Please try a smaller file.'
+          )
+        }
+      }
+
+      // Progress bar for analysis
+      const progressInterval = setInterval(() => {
+        setProgress(prev => {
+          if (prev >= 95) return 98
+          if (prev >= 90) return prev + 2
+          if (prev >= 70) return prev + 5
+          if (prev >= 40) return prev + 8
+          return prev + 12
+        })
+      }, 700)
+
+      const data = await analyzeFile(fileToAnalyze, { lang, mode, strict })
       setProgress(100)
       setResult(data)
+      clearInterval(progressInterval)
     } catch (err: any) {
       setError(err.message || (lang === 'es' ? 'Error al analizar' : 'Analysis error'))
     } finally {
-      clearInterval(progressInterval)
       setLoading(false)
       setProgress(0)
+      setCompressing(false)
+      setCompressionProgress(0)
     }
   }
 
@@ -79,7 +116,8 @@ export default function LandingPage() {
     document.getElementById('analyze')?.scrollIntoView({ behavior: 'smooth' })
   }
 
-  const isFileTooLarge = file && file.size > 50 * 1024 * 1024
+  const isFileTooLarge = file && file.size > 500 * 1024 * 1024 // 500MB hard limit
+  const needsCompression = file && file.size > 50 * 1024 * 1024 && file.size <= 500 * 1024 * 1024
 
   const getScoreColor = (score: number) => {
     if (score >= 85) return '#10b981'
@@ -527,31 +565,51 @@ export default function LandingPage() {
               {file && (
                 <div style={{
                   borderRadius: '0.5rem',
-                  border: `1px solid ${isFileTooLarge ? '#fca5a5' : '#93c5fd'}`,
-                  background: isFileTooLarge ? '#fef2f2' : '#eff6ff',
+                  border: `1px solid ${isFileTooLarge ? '#fca5a5' : needsCompression ? '#fbbf24' : '#93c5fd'}`,
+                  background: isFileTooLarge ? '#fef2f2' : needsCompression ? '#fffbeb' : '#eff6ff',
                   padding: '1rem',
                   marginBottom: '1.5rem'
                 }}>
                   <p style={{
                     fontSize: '0.875rem',
                     fontWeight: '500',
-                    color: isFileTooLarge ? '#7f1d1d' : '#1e3a8a'
+                    color: isFileTooLarge ? '#7f1d1d' : needsCompression ? '#78350f' : '#1e3a8a'
                   }}>
                     {lang === 'es' ? 'Archivo seleccionado:' : 'Selected file:'}
                   </p>
                   <p style={{
                     fontSize: '1.125rem',
                     fontWeight: 'bold',
-                    color: isFileTooLarge ? '#7f1d1d' : '#1e3a8a'
+                    color: isFileTooLarge ? '#7f1d1d' : needsCompression ? '#78350f' : '#1e3a8a'
                   }}>
                     {file.name}
                   </p>
                   <p style={{
                     fontSize: '0.875rem',
-                    color: isFileTooLarge ? '#991b1b' : '#1e40af'
+                    color: isFileTooLarge ? '#991b1b' : needsCompression ? '#92400e' : '#1e40af'
                   }}>
                     {(file.size / 1024 / 1024).toFixed(2)} MB
                   </p>
+                  {needsCompression && !isFileTooLarge && (
+                    <div style={{
+                      marginTop: '0.5rem',
+                      background: '#fef3c7',
+                      border: '1px solid #fbbf24',
+                      borderRadius: '0.25rem',
+                      padding: '0.75rem'
+                    }}>
+                      <p style={{ fontSize: '0.875rem', color: '#78350f', fontWeight: '600', marginBottom: '0.25rem' }}>
+                        ℹ️ {lang === 'es' 
+                          ? 'Archivo grande detectado'
+                          : 'Large file detected'}
+                      </p>
+                      <p style={{ fontSize: '0.75rem', color: '#92400e' }}>
+                        {lang === 'es'
+                          ? `Tu archivo será comprimido automáticamente de ${(file.size / 1024 / 1024).toFixed(1)}MB a ~${Math.min(45, (file.size / 1024 / 1024) * 0.4).toFixed(1)}MB antes del análisis. Esto toma ~10-15 segundos.`
+                          : `Your file will be automatically compressed from ${(file.size / 1024 / 1024).toFixed(1)}MB to ~${Math.min(45, (file.size / 1024 / 1024) * 0.4).toFixed(1)}MB before analysis. Takes ~10-15 seconds.`}
+                      </p>
+                    </div>
+                  )}
                   {isFileTooLarge && (
                     <div style={{
                       marginTop: '0.5rem',
@@ -567,8 +625,8 @@ export default function LandingPage() {
                       </p>
                       <p style={{ fontSize: '0.75rem', color: '#991b1b' }}>
                         {lang === 'es'
-                          ? `El límite actual es 50MB. Tu archivo tiene ${(file.size / 1024 / 1024).toFixed(1)}MB. Por favor, usa un archivo más pequeño o contáctanos para procesar archivos grandes.`
-                          : `Current limit is 50MB. Your file is ${(file.size / 1024 / 1024).toFixed(1)}MB. Please use a smaller file or contact us to process large files.`}
+                          ? `El límite máximo es 500MB. Tu archivo tiene ${(file.size / 1024 / 1024).toFixed(1)}MB. Por favor, usa un archivo más pequeño.`
+                          : `Maximum limit is 500MB. Your file is ${(file.size / 1024 / 1024).toFixed(1)}MB. Please use a smaller file.`}
                       </p>
                     </div>
                   )}
@@ -638,33 +696,63 @@ export default function LandingPage() {
               {file && !isFileTooLarge && (
                 <button
                   onClick={handleAnalyze}
-                  disabled={loading}
+                  disabled={loading || compressing}
                   style={{
                     width: '100%',
-                    background: loading ? '#d1d5db' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                    color: loading ? '#6b7280' : 'white',
+                    background: (loading || compressing) ? '#d1d5db' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    color: (loading || compressing) ? '#6b7280' : 'white',
                     padding: '1rem',
                     borderRadius: '0.75rem',
                     fontWeight: '600',
                     fontSize: '1.125rem',
                     border: 'none',
-                    cursor: loading ? 'not-allowed' : 'pointer',
+                    cursor: (loading || compressing) ? 'not-allowed' : 'pointer',
                     transition: 'all 0.3s',
-                    boxShadow: loading ? 'none' : '0 4px 20px rgba(102, 126, 234, 0.3)',
-                    opacity: loading ? 0.6 : 1
+                    boxShadow: (loading || compressing) ? 'none' : '0 4px 20px rgba(102, 126, 234, 0.3)',
+                    opacity: (loading || compressing) ? 0.6 : 1
                   }}
                   onMouseEnter={(e) => {
-                    if (!loading) {
+                    if (!loading && !compressing) {
                       e.currentTarget.style.transform = 'scale(1.02)'
                       e.currentTarget.style.boxShadow = '0 8px 30px rgba(102, 126, 234, 0.4)'
                     }
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.transform = 'scale(1)'
-                    e.currentTarget.style.boxShadow = loading ? 'none' : '0 4px 20px rgba(102, 126, 234, 0.3)'
+                    e.currentTarget.style.boxShadow = (loading || compressing) ? 'none' : '0 4px 20px rgba(102, 126, 234, 0.3)'
                   }}
                 >
-                  {loading ? (
+                  {compressing ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                        <svg style={{ animation: 'spin 1s linear infinite', height: '1.25rem', width: '1.25rem' }} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle style={{ opacity: 0.25 }} cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path style={{ opacity: 0.75 }} fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span>{lang === 'es' ? 'Comprimiendo...' : 'Compressing...'}</span>
+                      </div>
+                      <div style={{
+                        width: '100%',
+                        background: 'rgba(255,255,255,0.2)',
+                        borderRadius: '9999px',
+                        height: '0.5rem',
+                        marginTop: '0.5rem'
+                      }}>
+                        <div style={{
+                          background: 'white',
+                          height: '0.5rem',
+                          borderRadius: '9999px',
+                          transition: 'width 0.3s',
+                          width: `${compressionProgress}%`
+                        }} />
+                      </div>
+                      <span style={{ fontSize: '0.75rem', opacity: 0.75 }}>
+                        {compressionProgress}% • {lang === 'es' 
+                          ? `${(file.size / 1024 / 1024).toFixed(1)}MB → ~${Math.min(45, (file.size / 1024 / 1024) * 0.4).toFixed(1)}MB`
+                          : `${(file.size / 1024 / 1024).toFixed(1)}MB → ~${Math.min(45, (file.size / 1024 / 1024) * 0.4).toFixed(1)}MB`}
+                      </span>
+                    </div>
+                  ) : loading ? (
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                         <svg style={{ animation: 'spin 1s linear infinite', height: '1.25rem', width: '1.25rem' }} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -693,12 +781,20 @@ export default function LandingPage() {
                       </span>
                     </div>
                   ) : (
-                    lang === 'es' ? 'Analizar Mezcla' : 'Analyze Mix'
+                    <>
+                      {needsCompression ? (
+                        <>
+                          {lang === 'es' ? '🗜️ Comprimir y Analizar' : '🗜️ Compress & Analyze'}
+                        </>
+                      ) : (
+                        lang === 'es' ? 'Analizar Mezcla' : 'Analyze Mix'
+                      )}
+                    </>
                   )}
                 </button>
               )}
 
-              {/* Message when file is too large */}
+              {/* Message when file is too large (>500MB) */}
               {file && isFileTooLarge && (
                 <div style={{
                   width: '100%',
@@ -714,12 +810,17 @@ export default function LandingPage() {
                     color: '#7f1d1d',
                     marginBottom: '0.5rem'
                   }}>
-                    🚫 {lang === 'es' ? 'No se puede analizar' : 'Cannot analyze'}
+                    🚫 {lang === 'es' ? 'Archivo demasiado grande' : 'File too large'}
                   </p>
                   <p style={{ fontSize: '0.875rem', color: '#991b1b' }}>
                     {lang === 'es'
-                      ? `Tu archivo tiene ${(file.size / 1024 / 1024).toFixed(1)}MB. El límite es 50MB.`
-                      : `Your file is ${(file.size / 1024 / 1024).toFixed(1)}MB. Limit is 50MB.`}
+                      ? `El límite máximo es 500MB. Tu archivo tiene ${(file.size / 1024 / 1024).toFixed(1)}MB.`
+                      : `Maximum limit is 500MB. Your file is ${(file.size / 1024 / 1024).toFixed(1)}MB.`}
+                  </p>
+                  <p style={{ fontSize: '0.75rem', color: '#991b1b', marginTop: '0.5rem' }}>
+                    {lang === 'es'
+                      ? 'Contáctanos en support@masteringready.com para archivos más grandes.'
+                      : 'Contact us at support@masteringready.com for larger files.'}
                   </p>
                 </div>
               )}
