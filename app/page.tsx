@@ -5,7 +5,7 @@ import { Download, Check, Upload, Zap, Shield, TrendingUp } from 'lucide-react'
 import { analyzeFile } from '@/lib/api'
 import { compressAudioFile } from '@/lib/audio-compression'
 
-export default function LandingPage() {
+function Home() {
   const [file, setFile] = useState<File | null>(null)
   const [lang, setLang] = useState<'es' | 'en'>('es')
   const [mode, setMode] = useState<'short' | 'write'>('write')
@@ -2076,3 +2076,5 @@ by Matías Carvajal
     </div>
   )
 }
+
+export default Home
