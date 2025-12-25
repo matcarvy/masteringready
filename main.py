@@ -66,112 +66,37 @@ ALLOWED_EXTENSIONS = {'.wav', '.mp3', '.aiff'}
 # ============== HELPER: SHORT MODE ==============
 def generate_short_mode_report(result: Dict[str, Any], lang: str, filename: str, strict: bool = False) -> str:
     """
-    Generate short mode report following CLI logic exactly.
-    Replicates lines 3234-3333 from analyzer.py
+    Generate short mode report - simplified version without technical details.
+    Uses the base write_report but strips out technical details section.
     """
-    score = result.get('score', 0)
-    verdict = result.get('verdict', '')
-    metrics = result.get('metrics', [])
+    # Get the full write report
+    full_report = write_report(result, strict=strict, lang=lang, filename=filename)
     
-    # Detect mastered track (same logic as analyzer.py)
-    lufs_metric = next((m for m in metrics if "LUFS" in m.get("internal_key", "")), None)
-    peak_metric = next((m for m in metrics if "Headroom" in m.get("internal_key", "")), None)
-    tp_metric = next((m for m in metrics if "True Peak" in m.get("internal_key", "")), None)
-    
-    lufs_value = None
-    if lufs_metric and lufs_metric.get("value") != "N/A":
-        try:
-            lufs_value = float(lufs_metric.get("value", "").split()[0])
-        except:
-            pass
-    
-    peak_value = None
-    if peak_metric:
-        try:
-            peak_str = peak_metric.get("peak_db", "")
-            peak_value = float(peak_str.replace(" dBFS", "").replace("dBFS", ""))
-        except:
-            pass
-    
-    tp_value = None
-    if tp_metric:
-        try:
-            tp_str = tp_metric.get("value", "")
-            tp_value = float(tp_str.replace(" dBTP", "").replace("dBTP", ""))
-        except:
-            pass
-    
-    is_mastered = False
-    if lufs_value is not None and lufs_value > -14:
-        if (peak_value is not None and peak_value > -1.0) or (tp_value is not None and tp_value > -1.0):
-            is_mastered = True
-    
-    # Build report
+    # Remove technical details section if present
+    # Technical details start with "📊 **Detalles Técnicos:**" or "📊 **Technical Details:**"
     if lang == 'es':
-        report = f"🎵 {filename}\n🧠 Resumen Rápido\n{'─' * 50}\n\n"
-        
-        if is_mastered:
-            report += """🎛️ Tipo: Máster Finalizado
-
-💼 Este archivo parece ser un master o hotmix.
-
-Si tu intención era enviar una mezcla para mastering, necesitas:
-• Volver a la sesión sin limitador en el bus maestro
-• Bajar ~6 dB (picos en -6 dBFS)
-• Re-exportar la mezcla
-
-¿Quieres hacer los ajustes, subirla de nuevo y revisar si ya está
-lista para masterizar? O si prefieres, puedo ayudarte a dejarla
-lista como mezcla para luego masterizarla.
-
-Sube los archivos y con gusto te la preparo.
-"""
-        else:
-            report += f"📊 Score: {score}/100\n🎯 {verdict}\n\n"
-            recs = result.get("notes", {}).get("recommendations", [])
-            if recs:
-                report += "💡 Recomendaciones:\n"
-                for rec in recs:
-                    report += f"  {rec}\n"
-                report += "\n"
-            
-            # Add CTA
-            cta = generate_cta(score, strict, lang, mode="short")
-            report += cta
+        # Split at technical details marker
+        if "📊 **Detalles Técnicos:**" in full_report:
+            parts = full_report.split("📊 **Detalles Técnicos:**")
+            # Keep everything before technical details
+            base_report = parts[0]
+            # If there's a recommendation after, add it back
+            if "💡 Recomendación:" in full_report:
+                recommendation = "💡 Recomendación:" + full_report.split("💡 Recomendación:")[1]
+                return base_report.strip() + "\n\n" + recommendation
+            return base_report.strip()
+    else:
+        # English version
+        if "📊 **Technical Details:**" in full_report:
+            parts = full_report.split("📊 **Technical Details:**")
+            base_report = parts[0]
+            if "💡 Recommendation:" in full_report:
+                recommendation = "💡 Recommendation:" + full_report.split("💡 Recommendation:")[1]
+                return base_report.strip() + "\n\n" + recommendation
+            return base_report.strip()
     
-    else:  # English
-        report = f"🎵 {filename}\n🧠 Quick Summary\n{'─' * 50}\n\n"
-        
-        if is_mastered:
-            report += """🎛️ Type: Finished Master
-
-💼 This file appears to be a master or hotmix.
-
-If your goal was to send a mix for mastering, you need:
-• Go back to session without limiter on master bus
-• Lower ~6 dB (peaks at -6 dBFS)
-• Re-export the mix
-
-Want to make the adjustments yourself, re-upload it, and check if it's
-ready for mastering? Or if you prefer, I can help you get it ready
-as a mix and then master it.
-
-Upload the files and I'll gladly prep it for you.
-"""
-        else:
-            report += f"📊 Score: {score}/100\n🎯 {verdict}\n\n"
-            recs = result.get("notes", {}).get("recommendations", [])
-            if recs:
-                report += "💡 Recommendations:\n"
-                for rec in recs:
-                    report += f"  {rec}\n"
-                report += "\n"
-            
-            # Add CTA
-            cta = generate_cta(score, strict, lang, mode="short")
-            report += cta
-    
-    return report
+    # If no technical details section found, return as-is
+    return full_report
 
 
 # ============== HEALTH CHECK ==============
