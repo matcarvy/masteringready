@@ -770,22 +770,29 @@ by Matías Carvajal
                     <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem' }}>
                       {lang === 'es' ? 'Modo de Reporte' : 'Report Mode'}
                     </label>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-                      {['short', 'write'].map((m) => (
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem' }}>
+                      {['visual', 'short', 'write'].map((m) => (
                         <button
                           key={m}
-                          onClick={() => setMode(m as 'short' | 'write')}
+                          onClick={() => {
+                            if (m === 'visual') {
+                              setReportView('visual')
+                            } else {
+                              setMode(m as 'short' | 'write')
+                            }
+                          }}
                           style={{
                             padding: '0.5rem 1rem',
                             borderRadius: '0.5rem',
                             border: 'none',
-                            background: mode === m ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : '#f3f4f6',
-                            color: mode === m ? 'white' : '#111827',
+                            background: (m === 'visual' ? reportView === 'visual' : mode === m) ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : '#f3f4f6',
+                            color: (m === 'visual' ? reportView === 'visual' : mode === m) ? 'white' : '#111827',
                             cursor: 'pointer',
-                            transition: 'all 0.2s'
+                            transition: 'all 0.2s',
+                            fontSize: '0.875rem'
                           }}
                         >
-                          {m === 'short' ? '📱 Short' : '📄 Write'}
+                          {m === 'visual' ? '📊 Visual' : m === 'short' ? '📱 Short' : '📄 Write'}
                         </button>
                       ))}
                     </div>
