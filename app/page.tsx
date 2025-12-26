@@ -1285,7 +1285,7 @@ by Matías Carvajal
                       maxWidth: '100%',
                       margin: 0
                     }}>
-                      {result.report_visual || result.report_short || result.report}
+                      {(result as any).report_visual || result.report_short || result.report}
                     </pre>
                   </div>
                 )}
