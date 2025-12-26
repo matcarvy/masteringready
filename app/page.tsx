@@ -50,7 +50,7 @@ function Home() {
       let fileToAnalyze = file
       
       // Check if file needs compression
-      const maxSize = 50 * 1024 * 1024
+      const maxSize = 30 * 1024 * 1024  // 30MB threshold (Railway free tier timeout)
       if (file.size > maxSize) {
         setCompressing(true)
         setCompressionProgress(0)
@@ -287,7 +287,7 @@ by Matías Carvajal
   }
 
   const isFileTooLarge = file && file.size > 500 * 1024 * 1024 // 500MB hard limit
-  const needsCompression = file && file.size > 50 * 1024 * 1024 && file.size <= 500 * 1024 * 1024
+  const needsCompression = file && file.size > 30 * 1024 * 1024 && file.size <= 500 * 1024 * 1024  // 30MB threshold
 
   const getScoreColor = (score: number) => {
     if (score >= 85) return '#10b981'
