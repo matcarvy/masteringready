@@ -890,8 +890,8 @@ by Matías Carvajal
                             fontSize: '0.875rem'
                           }}
                         >
-                          {m === 'visual' ? (lang === 'es' ? '📊 Visual' : '📊 Visual') :
-                           m === 'short' ? (lang === 'es' ? '📱 Corto' : '📱 Short') :
+                          {m === 'visual' ? (lang === 'es' ? '⚡ Rápido' : '⚡ Quick') :
+                           m === 'short' ? (lang === 'es' ? '📝 Resumen' : '📝 Summary') :
                            (lang === 'es' ? '📄 Completo' : '📄 Complete')}
                         </button>
                       ))}
@@ -1200,8 +1200,8 @@ by Matías Carvajal
                         boxShadow: reportView === view ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
                       }}
                     >
-                      {view === 'visual' ? (lang === 'es' ? '📊 Visual' : '📊 Visual') :
-                       view === 'short' ? (lang === 'es' ? '📱 Corto' : '📱 Short') :
+                      {view === 'visual' ? (lang === 'es' ? '⚡ Rápido' : '⚡ Quick') :
+                       view === 'short' ? (lang === 'es' ? '📝 Resumen' : '📝 Summary') :
                        (lang === 'es' ? '📄 Completo' : '📄 Complete')}
                     </button>
                   ))}
