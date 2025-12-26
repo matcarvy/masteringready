@@ -68,53 +68,40 @@ def generate_short_mode_report(result: Dict[str, Any], lang: str, filename: str,
     """
     Generate short mode report - simplified version without technical details.
     Uses the base write_report but strips out technical details section.
+    
+    CRITICAL: This must remove the entire "DETALLES TÉCNICOS COMPLETOS" section.
     """
     # Get the full write report
     full_report = write_report(result, strict=strict, lang=lang, filename=filename)
     
-    # Remove technical details section if present
-    # Strategy: Find the section and remove everything between the two separators
-    
+    # Define markers based on language
     if lang == 'es':
-        separator_line = "━" * 50  # The actual separator
-        tech_marker = "📊 DETALLES TÉCNICOS COMPLETOS"
+        tech_section_start = "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n📊 DETALLES TÉCNICOS COMPLETOS"
         rec_marker = "💡 Recomendación:"
-        
-        # Check if technical details section exists
-        if tech_marker in full_report:
-            # Find start of technical details (the separator before the marker)
-            tech_start = full_report.find(separator_line, 0, full_report.find(tech_marker))
-            
-            if tech_start >= 0:
-                # Find the recommendation after technical details
-                rec_pos = full_report.find(rec_marker, tech_start)
-                
-                if rec_pos >= 0:
-                    # Keep: everything before tech details + recommendation onwards
-                    base = full_report[:tech_start].strip()
-                    rec_section = full_report[rec_pos:].strip()
-                    return base + "\n\n" + rec_section
-                else:
-                    # No recommendation found, just keep everything before tech details
-                    return full_report[:tech_start].strip()
-    
-    else:  # English
-        separator_line = "━" * 50
-        tech_marker = "📊 COMPLETE TECHNICAL DETAILS"
+    else:
+        tech_section_start = "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n📊 COMPLETE TECHNICAL DETAILS"
         rec_marker = "💡 Recommendation:"
+    
+    # Check if technical details section exists
+    if tech_section_start in full_report:
+        # Find position of technical details section
+        tech_pos = full_report.find(tech_section_start)
         
-        if tech_marker in full_report:
-            tech_start = full_report.find(separator_line, 0, full_report.find(tech_marker))
+        # Get everything before technical details
+        before_tech = full_report[:tech_pos].strip()
+        
+        # Find recommendation after technical details
+        rec_pos = full_report.find(rec_marker, tech_pos)
+        
+        if rec_pos >= 0:
+            # Get recommendation section
+            after_tech = full_report[rec_pos:].strip()
             
-            if tech_start >= 0:
-                rec_pos = full_report.find(rec_marker, tech_start)
-                
-                if rec_pos >= 0:
-                    base = full_report[:tech_start].strip()
-                    rec_section = full_report[rec_pos:].strip()
-                    return base + "\n\n" + rec_section
-                else:
-                    return full_report[:tech_start].strip()
+            # Combine: before + recommendation
+            return before_tech + "\n\n" + after_tech
+        else:
+            # No recommendation found, just return before tech details
+            return before_tech
     
     # If no technical details section found, return as-is
     return full_report
