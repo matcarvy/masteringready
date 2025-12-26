@@ -3606,6 +3606,12 @@ def analyze_file_chunked(
     # Calculate score using the same score_report function as analyze_file
     hard_fail = tp_hard  # Use the hard fail from status_true_peak
     
+    # Debug: Log metrics status
+    print("\n📊 METRICS STATUS FOR SCORING:")
+    for m in metrics:
+        print(f"   {m['name']}: {m['status']}")
+    print()
+    
     # Import and use the actual score_report function
     from analyzer import score_report
     score, verdict = score_report(metrics, hard_fail, strict, lang)
