@@ -67,44 +67,49 @@ ALLOWED_EXTENSIONS = {'.wav', '.mp3', '.aiff'}
 def generate_short_mode_report(result: Dict[str, Any], lang: str, filename: str, strict: bool = False) -> str:
     """
     Generate short mode report - simplified version without technical details.
-    Uses the base write_report but strips out technical details section.
     
-    CRITICAL: This must remove the entire "DETALLES TÉCNICOS COMPLETOS" section.
+    STRATEGY: Get full report, then brutally remove tech section with string operations.
+    This CANNOT fail - it's pure string manipulation.
     """
     # Get the full write report
     full_report = write_report(result, strict=strict, lang=lang, filename=filename)
     
-    # Define markers based on language
+    logger.info(f"🔧 SHORT MODE - Lang: {lang}")
+    logger.info(f"📏 Full report length: {len(full_report)}")
+    
+    # ULTRA SIMPLE: Split and rejoin
     if lang == 'es':
-        tech_section_start = "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n📊 DETALLES TÉCNICOS COMPLETOS"
-        rec_marker = "💡 Recomendación:"
+        marker_start = "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n📊 DETALLES TÉCNICOS COMPLETOS"
+        marker_end = "💡 Recomendación:"
     else:
-        tech_section_start = "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n📊 COMPLETE TECHNICAL DETAILS"
-        rec_marker = "💡 Recommendation:"
+        marker_start = "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n📊 COMPLETE TECHNICAL DETAILS"  
+        marker_end = "💡 Recommendation:"
     
-    # Check if technical details section exists
-    if tech_section_start in full_report:
-        # Find position of technical details section
-        tech_pos = full_report.find(tech_section_start)
+    logger.info(f"🔍 Searching for tech section marker...")
+    logger.info(f"   Has marker_start: {marker_start in full_report}")
+    logger.info(f"   Has marker_end: {marker_end in full_report}")
+    
+    # If tech section exists, remove it
+    if marker_start in full_report and marker_end in full_report:
+        logger.info("✂️ Removing tech section...")
         
-        # Get everything before technical details
-        before_tech = full_report[:tech_pos].strip()
-        
-        # Find recommendation after technical details
-        rec_pos = full_report.find(rec_marker, tech_pos)
-        
-        if rec_pos >= 0:
-            # Get recommendation section
-            after_tech = full_report[rec_pos:].strip()
-            
-            # Combine: before + recommendation
-            return before_tech + "\n\n" + after_tech
+        # Split at tech section start
+        before = full_report.split(marker_start)[0]
+        # Split after tech section and get recommendation
+        after_parts = full_report.split(marker_end)
+        if len(after_parts) > 1:
+            recommendation = marker_end + after_parts[1]
+            result = before.strip() + "\n\n" + recommendation.strip()
+            logger.info(f"✅ Tech section removed. New length: {len(result)}")
+            return result
         else:
-            # No recommendation found, just return before tech details
-            return before_tech
+            logger.warning("⚠️ Recommendation not found after tech section")
+            return before.strip()
     
-    # If no technical details section found, return as-is
+    # No tech section found, return as-is
+    logger.warning("⚠️ Tech section markers not found - returning full report")
     return full_report
+
 
 
 # ============== HEALTH CHECK ==============
