@@ -3368,8 +3368,8 @@ def analyze_file_chunked(
             
             # Spatial metrics
             chunk_corr = stereo_correlation(y)
-            chunk_lr = calculate_lr_balance(y)  # ← FIXED: Nombre correcto
-            chunk_ms = ms_ratio(y)
+            chunk_lr = calculate_lr_balance(y)
+            chunk_ms, _, _ = calculate_ms_ratio(y)  # ← FIXED: Returns tuple (ratio, mid, side)
             
             # Store results
             results['peaks'].append(chunk_peak_db)
@@ -3483,11 +3483,54 @@ def analyze_file_chunked(
             "lr_balance_db": final_lr_balance,
             "ms_ratio": final_ms_ratio
         },
+        "metrics": [],  # Will be populated below
+        "score": 0,  # Will be calculated below
+        "verdict": "",  # Will be set below
         "territory": territory,
         "is_mastered": is_mastered,
         "chunked": True,
-        "num_chunks": num_chunks
+        "num_chunks": num_chunks,
+        "notes": {
+            "lufs_is_real": True,
+            "lufs_reliable": duration >= MIN_DURATION_FOR_LUFS,
+            "oversample_factor": oversample,
+            "auto_oversample": True,
+            "clipping_detected": final_tp > -0.1,
+            "dc_offset_detected": False,
+            "recommendations": []
+        }
     }
+    
+    # Simple scoring based on metrics (simplified version)
+    # This is a basic implementation - ideally should match analyze_file's logic
+    score = 100
+    
+    # Deduct points for issues
+    if final_tp > -1.0:
+        score -= 15
+    if weighted_lufs > -10 or weighted_lufs < -20:
+        score -= 10
+    if final_plr < 6 or final_plr > 18:
+        score -= 10
+    if abs(final_correlation) < 0.1 or abs(final_correlation) > 0.95:
+        score -= 10
+    if abs(final_lr_balance) > 2.0:
+        score -= 10
+        
+    score = max(0, min(100, score))
+    result["score"] = score
+    
+    # Set verdict based on score
+    if score >= 85:
+        verdict = "Excelente - Lista para mastering" if lang == "es" else "Excellent - Ready for mastering"
+    elif score >= 70:
+        verdict = "Buena - Ajustes menores recomendados" if lang == "es" else "Good - Minor adjustments recommended"
+    elif score >= 50:
+        verdict = "Aceptable - Varias mejoras necesarias" if lang == "es" else "Acceptable - Several improvements needed"
+    else:
+        verdict = "Necesita trabajo - Mejoras importantes requeridas" if lang == "es" else "Needs work - Major improvements required"
+    
+    result["verdict"] = verdict
     
     # Return in the format that write_report and other functions expect
     # This should match analyze_file's return format
