@@ -388,15 +388,41 @@ async def start_analysis(
                 
                 # Analyze (blocking call - run in executor to not block event loop)
                 logger.info(f"🔍 [{job_id}] Starting analysis...")
+                
+                # Determine if we need chunked analysis
+                file_size_mb = file_size / (1024 * 1024)
+                
+                # Estimate duration: ~2 MB per minute for WAV (rough estimate)
+                estimated_duration_min = file_size_mb / 2
+                
+                # Use chunked analysis for files > 2 minutes (to avoid memory issues)
+                use_chunked = estimated_duration_min > 2.0
+                
                 loop = asyncio.get_event_loop()
                 
-                # Use functools.partial to pass keyword arguments correctly
-                analyze_func = functools.partial(
-                    analyze_file,
-                    Path(temp_file.name),
-                    lang=lang,
-                    strict=strict
-                )
+                if use_chunked:
+                    logger.info(f"🔄 [{job_id}] Using CHUNKED analysis (estimated {estimated_duration_min:.1f} min, {file_size_mb:.1f} MB)")
+                    
+                    # Import chunked function
+                    from analyzer import analyze_file_chunked
+                    
+                    analyze_func = functools.partial(
+                        analyze_file_chunked,
+                        Path(temp_file.name),
+                        lang=lang,
+                        strict=strict,
+                        chunk_duration=30.0  # 30 second chunks
+                    )
+                else:
+                    logger.info(f"📊 [{job_id}] Using NORMAL analysis (estimated {estimated_duration_min:.1f} min, {file_size_mb:.1f} MB)")
+                    
+                    analyze_func = functools.partial(
+                        analyze_file,
+                        Path(temp_file.name),
+                        lang=lang,
+                        strict=strict
+                    )
+                
                 result = await loop.run_in_executor(None, analyze_func)
                 
                 logger.info(f"✅ [{job_id}] Analysis complete: Score {result['score']}/100")
@@ -518,3 +544,4 @@ if __name__ == "__main__":
         reload=True,
         log_level="info"
     )
+
