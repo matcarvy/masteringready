@@ -1389,7 +1389,7 @@ by Matías Carvajal
                       lineHeight: '1.6',
                       fontFamily: 'Inter, system-ui, sans-serif'
                     }}>
-                      {result.report}
+                      {result.report_write || result.report}
                     </pre>
                   </div>
                 )}
