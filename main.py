@@ -73,27 +73,39 @@ def generate_short_mode_report(result: Dict[str, Any], lang: str, filename: str,
     full_report = write_report(result, strict=strict, lang=lang, filename=filename)
     
     # Remove technical details section if present
-    # Technical details start with "📊 **Detalles Técnicos:**" or "📊 **Technical Details:**"
+    # Technical details are marked with "━━━━━━" separator and title
     if lang == 'es':
-        # Split at technical details marker
-        if "📊 **Detalles Técnicos:**" in full_report:
-            parts = full_report.split("📊 **Detalles Técnicos:**")
-            # Keep everything before technical details
-            base_report = parts[0]
-            # If there's a recommendation after, add it back
-            if "💡 Recomendación:" in full_report:
-                recommendation = "💡 Recomendación:" + full_report.split("💡 Recomendación:")[1]
-                return base_report.strip() + "\n\n" + recommendation
-            return base_report.strip()
+        # Look for the technical details section
+        if "━━━━━━" in full_report and "DETALLES TÉCNICOS COMPLETOS" in full_report:
+            # Split at the first occurrence of the separator before technical details
+            parts = full_report.split("━━━━━━")
+            if len(parts) >= 3:
+                # parts[0] = content before first separator
+                # parts[1] = "DETALLES TÉCNICOS..." section
+                # parts[2+] = content after technical details
+                
+                base_report = parts[0]  # Everything before technical details
+                
+                # Find if there's a recommendation after tech details
+                # Look in parts[2] onwards
+                remaining = "".join(parts[2:])
+                if "💡 Recomendación:" in remaining:
+                    rec = "💡 Recomendación:" + remaining.split("💡 Recomendación:")[1]
+                    return base_report.strip() + "\n\n" + rec.strip()
+                
+                return base_report.strip()
     else:
         # English version
-        if "📊 **Technical Details:**" in full_report:
-            parts = full_report.split("📊 **Technical Details:**")
-            base_report = parts[0]
-            if "💡 Recommendation:" in full_report:
-                recommendation = "💡 Recommendation:" + full_report.split("💡 Recommendation:")[1]
-                return base_report.strip() + "\n\n" + recommendation
-            return base_report.strip()
+        if "━━━━━━" in full_report and "COMPLETE TECHNICAL DETAILS" in full_report:
+            parts = full_report.split("━━━━━━")
+            if len(parts) >= 3:
+                base_report = parts[0]
+                remaining = "".join(parts[2:])
+                if "💡 Recommendation:" in remaining:
+                    rec = "💡 Recommendation:" + remaining.split("💡 Recommendation:")[1]
+                    return base_report.strip() + "\n\n" + rec.strip()
+                
+                return base_report.strip()
     
     # If no technical details section found, return as-is
     return full_report
