@@ -2241,6 +2241,220 @@ def generate_cta(score: int, strict: bool, lang: str, mode: str = "write") -> st
             )
 
 
+def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
+    """
+    Build comprehensive technical details section.
+    Used ONLY in write mode for well-scored mixes (≥85).
+    Includes explanation of EVERY metric with context.
+    """
+    lang = _pick_lang(lang)
+    
+    if lang == 'es':
+        details = "\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        details += "📊 DETALLES TÉCNICOS COMPLETOS\n"
+        details += "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        
+        # HEADROOM
+        headroom_metric = next((m for m in metrics if "Headroom" in m.get("internal_key", "")), None)
+        if headroom_metric:
+            peak_val = headroom_metric.get("peak_db", "")
+            details += f"🎚️ HEADROOM: {peak_val}\n"
+            details += "   → Los picos dejan suficiente espacio para procesamiento\n"
+            details += "     sin riesgo de clipping durante el mastering.\n"
+            
+            # Add temporal info if exists
+            if "temporal_analysis" in headroom_metric:
+                temporal = format_temporal_message(
+                    headroom_metric["temporal_analysis"], 
+                    "Headroom", 
+                    lang
+                )
+                if temporal:
+                    details += "  " + temporal.strip() + "\n"
+            else:
+                details += "   → Headroom consistente en toda la canción.\n"
+            details += "\n"
+        
+        # TRUE PEAK
+        tp_metric = next((m for m in metrics if "True Peak" in m.get("internal_key", "")), None)
+        if tp_metric:
+            tp_val = tp_metric.get("value", "")
+            details += f"🔊 TRUE PEAK: {tp_val}\n"
+            details += "   → Seguro para conversión a formatos con pérdida (MP3, AAC, Spotify).\n"
+            details += "     No habrá distorsión intersample en streaming.\n"
+            
+            # Add temporal info
+            if "temporal_analysis" in tp_metric:
+                temporal = format_temporal_message(
+                    tp_metric["temporal_analysis"],
+                    "True Peak",
+                    lang
+                )
+                if temporal:
+                    details += "  " + temporal.strip() + "\n"
+            else:
+                details += "   → Márgenes de seguridad cumplidos en todo el track.\n"
+            details += "\n"
+        
+        # PLR (Dynamic Range)
+        plr_metric = next((m for m in metrics if "PLR" in m.get("internal_key", "")), None)
+        if plr_metric and plr_metric.get("value") != "N/A":
+            plr_val = plr_metric.get("value", "")
+            details += f"📈 RANGO DINÁMICO (PLR): {plr_val}\n"
+            
+            # Contextual explanation based on value
+            if isinstance(plr_val, str):
+                try:
+                    plr_num = float(plr_val.split()[0])
+                    if plr_num >= 12:
+                        details += "   → Excelente preservación de dinámica. La mezcla respira bien.\n"
+                        details += "   → Ideal para mastering expresivo con punch natural.\n"
+                    elif plr_num >= 8:
+                        details += "   → Buen rango dinámico, apropiado para mastering.\n"
+                    else:
+                        details += "   → Algo comprimida, pero aún trabajable en mastering.\n"
+                except:
+                    details += "   → Rango dinámico medido.\n"
+            details += "\n"
+        
+        # STEREO FIELD
+        stereo_metric = next((m for m in metrics if "Stereo" in m.get("internal_key", "")), None)
+        if stereo_metric:
+            corr_val = stereo_metric.get("value", "")
+            ms_ratio = stereo_metric.get("ms_ratio", 0)
+            lr_balance = stereo_metric.get("lr_balance_db", 0)
+            
+            details += "🎧 CAMPO ESTÉREO:\n"
+            details += f"   • Correlación: {corr_val}\n"
+            if ms_ratio:
+                details += f"   • M/S Ratio: {ms_ratio:.2f}\n"
+            if lr_balance is not None:
+                details += f"   • L/R Balance: {abs(lr_balance):.1f} dB\n"
+            details += "\n"
+            details += "   → Imagen estéreo con buena compatibilidad mono.\n"
+            details += "     Se traducirá bien en diferentes sistemas.\n\n"
+        
+        # FREQUENCY BALANCE
+        freq_metric = next((m for m in metrics if "Frequency" in m.get("internal_key", "")), None)
+        if freq_metric:
+            bass = freq_metric.get("bass_pct", 0)
+            mid = freq_metric.get("mid_pct", 0)
+            high = freq_metric.get("high_pct", 0)
+            
+            details += "🎼 BALANCE DE FRECUENCIAS:\n"
+            if bass:
+                details += f"   • Graves (20-250 Hz): {bass:.0f}%\n"
+            if mid:
+                details += f"   • Medios (250 Hz-4 kHz): {mid:.0f}%\n"
+            if high:
+                details += f"   • Agudos (4 kHz-20 kHz): {high:.0f}%\n"
+            details += "\n"
+            details += "   → Distribución tonal balanceada.\n"
+        
+        return details
+    
+    else:  # English
+        details = "\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        details += "📊 COMPLETE TECHNICAL DETAILS\n"
+        details += "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        
+        # HEADROOM
+        headroom_metric = next((m for m in metrics if "Headroom" in m.get("internal_key", "")), None)
+        if headroom_metric:
+            peak_val = headroom_metric.get("peak_db", "")
+            details += f"🎚️ HEADROOM: {peak_val}\n"
+            details += "   → Peaks leave sufficient space for processing\n"
+            details += "     without risk of clipping during mastering.\n"
+            
+            if "temporal_analysis" in headroom_metric:
+                temporal = format_temporal_message(
+                    headroom_metric["temporal_analysis"], 
+                    "Headroom", 
+                    lang
+                )
+                if temporal:
+                    details += "  " + temporal.strip() + "\n"
+            else:
+                details += "   → Consistent headroom throughout the song.\n"
+            details += "\n"
+        
+        # TRUE PEAK
+        tp_metric = next((m for m in metrics if "True Peak" in m.get("internal_key", "")), None)
+        if tp_metric:
+            tp_val = tp_metric.get("value", "")
+            details += f"🔊 TRUE PEAK: {tp_val}\n"
+            details += "   → Safe for lossy format conversion (MP3, AAC, Spotify).\n"
+            details += "     No intersample distortion in streaming.\n"
+            
+            if "temporal_analysis" in tp_metric:
+                temporal = format_temporal_message(
+                    tp_metric["temporal_analysis"],
+                    "True Peak",
+                    lang
+                )
+                if temporal:
+                    details += "  " + temporal.strip() + "\n"
+            else:
+                details += "   → Safety margins met throughout the track.\n"
+            details += "\n"
+        
+        # PLR
+        plr_metric = next((m for m in metrics if "PLR" in m.get("internal_key", "")), None)
+        if plr_metric and plr_metric.get("value") != "N/A":
+            plr_val = plr_metric.get("value", "")
+            details += f"📈 DYNAMIC RANGE (PLR): {plr_val}\n"
+            
+            if isinstance(plr_val, str):
+                try:
+                    plr_num = float(plr_val.split()[0])
+                    if plr_num >= 12:
+                        details += "   → Excellent dynamic preservation. Mix breathes well.\n"
+                        details += "   → Ideal for expressive mastering with natural punch.\n"
+                    elif plr_num >= 8:
+                        details += "   → Good dynamic range, appropriate for mastering.\n"
+                    else:
+                        details += "   → Somewhat compressed, but still workable in mastering.\n"
+                except:
+                    details += "   → Dynamic range measured.\n"
+            details += "\n"
+        
+        # STEREO FIELD
+        stereo_metric = next((m for m in metrics if "Stereo" in m.get("internal_key", "")), None)
+        if stereo_metric:
+            corr_val = stereo_metric.get("value", "")
+            ms_ratio = stereo_metric.get("ms_ratio", 0)
+            lr_balance = stereo_metric.get("lr_balance_db", 0)
+            
+            details += "🎧 STEREO FIELD:\n"
+            details += f"   • Correlation: {corr_val}\n"
+            if ms_ratio:
+                details += f"   • M/S Ratio: {ms_ratio:.2f}\n"
+            if lr_balance is not None:
+                details += f"   • L/R Balance: {abs(lr_balance):.1f} dB\n"
+            details += "\n"
+            details += "   → Stereo image with good mono compatibility.\n"
+            details += "     Will translate well across systems.\n\n"
+        
+        # FREQUENCY BALANCE
+        freq_metric = next((m for m in metrics if "Frequency" in m.get("internal_key", "")), None)
+        if freq_metric:
+            bass = freq_metric.get("bass_pct", 0)
+            mid = freq_metric.get("mid_pct", 0)
+            high = freq_metric.get("high_pct", 0)
+            
+            details += "🎼 FREQUENCY BALANCE:\n"
+            if bass:
+                details += f"   • Lows (20-250 Hz): {bass:.0f}%\n"
+            if mid:
+                details += f"   • Mids (250 Hz-4 kHz): {mid:.0f}%\n"
+            if high:
+                details += f"   • Highs (4 kHz-20 kHz): {high:.0f}%\n"
+            details += "\n"
+            details += "   → Balanced tonal distribution.\n"
+        
+        return details
+
+
 def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en', filename: str = "mix") -> str:
     """
     Generate narrative engineer-style feedback from analysis report.
@@ -2780,13 +2994,18 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
         
         # Recommendation
         if score >= 85:
+            # Add technical details for high-scoring mixes
+            tech_details = build_technical_details(metrics, lang)
+            
             if strict:
                 recommendation = "\n\n💡 Recomendación: Esta mezcla cumple con los estándares profesionales para entrega comercial. Puedes enviarla a mastering con confianza."
             else:
                 recommendation = "\n\n💡 Recomendación: Envíala a mastering tal como está."
         elif score >= 75:
+            tech_details = ""
             recommendation = "\n\n💡 Recomendación: Revisa los puntos mencionados si buscas la máxima calidad, pero la mezcla es aceptable para mastering."
         else:
+            tech_details = ""
             recommendation = "\n\n💡 Recomendación: Atiende los problemas identificados antes de enviar a mastering para obtener los mejores resultados."
         
         # Mode note
@@ -2801,7 +3020,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
         # Generate CTA based on score
         cta = generate_cta(score, strict, lang, mode="write")
         
-        return f"{filename_ref}{intro}\n\n{tech_sentence}{issues_sentence}{stereo_detail}{recommendation}{mode_note}{cta}"
+        return f"{filename_ref}{intro}\n\n{tech_sentence}{issues_sentence}{stereo_detail}{tech_details}{recommendation}{mode_note}{cta}"
     
     else:
         # English narrative
@@ -2996,13 +3215,18 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
         
         # Recommendation
         if score >= 85:
+            # Add technical details for high-scoring mixes
+            tech_details = build_technical_details(metrics, lang)
+            
             if strict:
                 recommendation = "\n\n💡 Recommendation: This mix meets professional standards for commercial delivery. You can send it to mastering with confidence."
             else:
                 recommendation = "\n\n💡 Recommendation: Send it to mastering as-is."
         elif score >= 75:
+            tech_details = ""
             recommendation = "\n\n💡 Recommendation: Review the mentioned points if you're seeking maximum quality, but the mix is acceptable for mastering."
         else:
+            tech_details = ""
             recommendation = "\n\n💡 Recommendation: Address the identified issues before sending to mastering for best results."
         
         # Mode note
@@ -3017,7 +3241,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
         # Generate CTA based on score
         cta = generate_cta(score, strict, lang, mode="write")
         
-        return f"{filename_ref}{intro}\n\n{tech_sentence}{issues_sentence}{stereo_detail}{recommendation}{mode_note}{cta}"
+        return f"{filename_ref}{intro}\n\n{tech_sentence}{issues_sentence}{stereo_detail}{tech_details}{recommendation}{mode_note}{cta}"
 
 
 def iter_audio_files(p: Path) -> List[Path]:
