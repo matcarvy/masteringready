@@ -219,25 +219,24 @@ async def analyze_mix_endpoint(
             
             logger.info(f"✅ Analysis complete: Score {result['score']}/100")
             
-            # Format output based on mode
-            # USES ANALYZER'S NATIVE FUNCTIONS - NO MIXING
-            if mode == "write":
-                logger.info("📝 Generating write mode report...")
-                report = write_report(result, strict=strict, lang=lang, filename=file.filename)
-                
-            elif mode == "short":
-                logger.info("📱 Generating short mode report...")
-                report = generate_short_mode_report(result, lang, file.filename, strict)
-                
+            # GENERATE BOTH REPORTS - Frontend decides which to show
+            logger.info("📝 Generating both report modes...")
+            report_write = write_report(result, strict=strict, lang=lang, filename=file.filename)
+            report_short = generate_short_mode_report(result, lang, file.filename, strict)
+            
+            # For backward compatibility, use mode to set primary report
+            if mode == "short":
+                report = report_short
             else:
-                # JSON mode (fallback)
-                report = str(result)
+                report = report_write
             
             return {
                 "success": True,
                 "score": result["score"],
                 "verdict": result["verdict"],
-                "report": report,
+                "report": report,  # Primary report (for backward compat)
+                "report_short": report_short,  # NUEVO: Always included
+                "report_write": report_write,  # NUEVO: Always included
                 "metrics": result.get("metrics", []),
                 "filename": file.filename,
                 "mode": mode,
