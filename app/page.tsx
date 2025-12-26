@@ -1271,7 +1271,24 @@ by Matías Carvajal
                     padding: '1.5rem',
                     marginBottom: '1.5rem'
                   }}>
-                    <h3 style={{ fontWeight: '600', fontSize: '1.125rem', marginBottom: '1.5rem' }}>
+                    <h3 style={{ fontWeight: '600', fontSize: '1.125rem', marginBottom: '1rem' }}>
+                      {lang === 'es' ? 'Análisis Rápido' : 'Quick Analysis'}
+                    </h3>
+                    <pre style={{
+                      whiteSpace: 'pre-wrap',
+                      wordBreak: 'break-word',
+                      overflowWrap: 'break-word',
+                      fontSize: '0.875rem',
+                      lineHeight: '1.6',
+                      fontFamily: 'Inter, system-ui, sans-serif',
+                      overflowX: 'auto',
+                      maxWidth: '100%',
+                      margin: 0
+                    }}>
+                      {result.report_visual || result.report_short || result.report}
+                    </pre>
+                  </div>
+                )}
                       {lang === 'es' ? 'Análisis Rápido' : 'Quick Analysis'}
                     </h3>
                     
