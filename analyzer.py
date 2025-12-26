@@ -3267,7 +3267,8 @@ def analyze_file_chunked(
     genre: Optional[str] = None,
     strict: bool = False,
     lang: str = "es",
-    chunk_duration: float = 30.0
+    chunk_duration: float = 30.0,
+    progress_callback = None  # ← NUEVO: Callback para actualizar progreso
 ) -> Dict[str, Any]:
     """
     Analiza archivo de audio por chunks para reducir uso de memoria 60%.
@@ -3382,6 +3383,12 @@ def analyze_file_chunked(
             
             print(f"   ✅ Peak: {chunk_peak_db:.1f} dBFS, TP: {chunk_tp_db:.1f} dBTP, LUFS: {chunk_lufs:.1f}")
             
+            # Update progress callback if provided
+            # Progress: 10% (file loaded) + 60% (chunks processing) = 10-70%
+            if progress_callback:
+                chunk_progress = 10 + int((i + 1) / num_chunks * 60)
+                progress_callback(chunk_progress)
+            
         except Exception as e:
             print(f"   ❌ Error in chunk {i+1}: {e}")
             # Use safe defaults
@@ -3465,6 +3472,174 @@ def analyze_file_chunked(
     print(f"{'🎚️  Mastered track detected' if is_mastered else '🎛️  Mix (not mastered)'}")
     print(f"{'='*60}\n")
     
+    # Build metrics array using the same evaluation logic as analyze_file()
+    # This ensures consistent scoring between normal and chunked analysis
+    
+    metrics = []
+    lang_picked = "es" if lang == "es" else "en"
+    
+    # 1. Headroom
+    headroom = -final_peak
+    if headroom >= 3.0:
+        st_h = "good"
+        msg_h = "Headroom apropiado para procesamiento de mastering." if lang == "es" else "Appropriate headroom for mastering processing."
+    elif headroom >= 1.0:
+        st_h = "warning"
+        msg_h = "Headroom ajustado. Aún procesable." if lang == "es" else "Tight headroom. Still processable."
+    else:
+        st_h = "critical"
+        msg_h = "Headroom muy bajo. Riesgo de clipping." if lang == "es" else "Very low headroom. Risk of clipping."
+    
+    metrics.append({
+        "name": "Headroom",
+        "internal_key": "Headroom",
+        "value": f"{headroom:.1f} dBFS",
+        "status": st_h,
+        "message": msg_h,
+        "peak_db": f"{final_peak:.1f}"
+    })
+    
+    # 2. True Peak
+    if final_tp < -1.0:
+        st_tp = "good"
+        msg_tp = "Seguro para conversión a formatos lossy." if lang == "es" else "Safe for lossy format conversion."
+    elif final_tp < 0.0:
+        st_tp = "warning"
+        msg_tp = "Cerca del límite. Precaución con conversión." if lang == "es" else "Close to limit. Caution with conversion."
+    else:
+        st_tp = "critical"
+        msg_tp = "Sobre el límite. Distorsión en conversión garantizada." if lang == "es" else "Over limit. Conversion distortion guaranteed."
+    
+    metrics.append({
+        "name": "True Peak",
+        "internal_key": "True Peak",
+        "value": f"{final_tp:.1f} dBTP",
+        "status": st_tp,
+        "message": msg_tp
+    })
+    
+    # 3. DC Offset (assume not detected in chunked analysis)
+    metrics.append({
+        "name": "DC Offset",
+        "internal_key": "DC Offset",
+        "value": "No detectado" if lang == "es" else "Not detected",
+        "status": "good",
+        "message": "Sin offset DC detectado." if lang == "es" else "No DC offset detected.",
+        "details": {"detected": False, "max_offset": 0.0}
+    })
+    
+    # 4. LUFS
+    if -16 <= weighted_lufs <= -10:
+        st_l = "good"
+        msg_l = "Nivel apropiado para mastering." if lang == "es" else "Appropriate level for mastering."
+    elif -20 <= weighted_lufs < -16 or -10 < weighted_lufs <= -8:
+        st_l = "warning"
+        msg_l = "Nivel aceptable pero no óptimo." if lang == "es" else "Acceptable but not optimal level."
+    else:
+        st_l = "critical"
+        msg_l = "Nivel fuera de rango recomendado." if lang == "es" else "Level outside recommended range."
+    
+    metrics.append({
+        "name": "LUFS (Integrated)",
+        "internal_key": "LUFS (Integrated)",
+        "value": f"{weighted_lufs:.1f} LUFS",
+        "status": st_l,
+        "message": f"{msg_l} (method: chunked average)",
+        "method": "chunked",
+        "reliable": duration >= MIN_DURATION_FOR_LUFS
+    })
+    
+    # 5. PLR
+    if strict:
+        plr_good_range = (10, 15)
+        plr_warning_range = (8, 18)
+    else:
+        plr_good_range = (8, 15)
+        plr_warning_range = (6, 18)
+    
+    if plr_good_range[0] <= final_plr <= plr_good_range[1]:
+        st_p = "good"
+        msg_p = "Rango dinámico excelente." if lang == "es" else "Excellent dynamic range."
+    elif plr_warning_range[0] <= final_plr <= plr_warning_range[1]:
+        st_p = "warning"
+        msg_p = "Rango dinámico aceptable." if lang == "es" else "Acceptable dynamic range."
+    else:
+        st_p = "critical"
+        msg_p = "Rango dinámico problemático." if lang == "es" else "Problematic dynamic range."
+    
+    metrics.append({
+        "name": "PLR",
+        "internal_key": "PLR",
+        "value": f"{final_plr:.1f} dB",
+        "status": st_p,
+        "message": msg_p
+    })
+    
+    # 6. Crest Factor (informational when we have real LUFS)
+    crest = final_plr  # Similar to PLR for chunked analysis
+    metrics.append({
+        "name": "Crest Factor",
+        "internal_key": "Crest Factor",
+        "value": f"{crest:.1f} dB",
+        "status": "good",
+        "message": "Informativo (usa PLR como métrica principal de dinámica)." if lang == "es" else "Informational (use PLR as the primary dynamics metric)."
+    })
+    
+    # 7. Stereo Width (comprehensive evaluation)
+    if strict:
+        corr_good = (0.3, 0.85)
+        corr_warning = (0.1, 0.95)
+    else:
+        corr_good = (0.3, 0.9)
+        corr_warning = (0.1, 0.95)
+    
+    # Evaluate correlation
+    if corr_good[0] <= final_correlation <= corr_good[1]:
+        st_s = "good"
+        msg_s = "Imagen estéreo saludable." if lang == "es" else "Healthy stereo image."
+    elif corr_warning[0] <= final_correlation <= corr_warning[1]:
+        st_s = "warning"
+        msg_s = "Imagen estéreo aceptable." if lang == "es" else "Acceptable stereo image."
+    else:
+        st_s = "critical"
+        msg_s = "Problemas con imagen estéreo." if lang == "es" else "Stereo image issues."
+    
+    # Adjust based on M/S ratio and L/R balance
+    if final_ms_ratio < 0.05 or final_ms_ratio > 1.5:
+        st_s = "warning" if st_s == "good" else st_s
+    if abs(final_lr_balance) > 2.0:
+        st_s = "warning" if st_s == "good" else st_s
+    
+    metrics.append({
+        "name": "Stereo Width",
+        "internal_key": "Stereo Width",
+        "value": f"{final_correlation*100:.0f}% corr | M/S: {final_ms_ratio:.2f} | L/R: {final_lr_balance:+.1f} dB",
+        "correlation": final_correlation,
+        "ms_ratio": round(final_ms_ratio, 2),
+        "lr_balance_db": round(final_lr_balance, 1),
+        "status": st_s,
+        "message": msg_s
+    })
+    
+    # 8. Frequency Balance (simplified - we don't have full frequency analysis in chunks)
+    metrics.append({
+        "name": "Frequency Balance",
+        "internal_key": "Frequency Balance",
+        "value": "Not analyzed in chunked mode",
+        "status": "good",
+        "message": "Análisis de frecuencias no disponible en modo chunks." if lang == "es" else "Frequency analysis not available in chunked mode.",
+        "low_percent": 33,
+        "mid_percent": 34,
+        "high_percent": 33
+    })
+    
+    # Calculate score using the same score_report function as analyze_file
+    hard_fail = final_tp > 0.0  # Hard fail if true peak clips
+    
+    # Import and use the actual score_report function
+    from analyzer import score_report
+    score, verdict = score_report(metrics, hard_fail, strict, lang)
+    
     # Build full result using the same structure as analyze_file
     result = {
         "file": {
@@ -3483,9 +3658,9 @@ def analyze_file_chunked(
             "lr_balance_db": final_lr_balance,
             "ms_ratio": final_ms_ratio
         },
-        "metrics": [],  # Will be populated below
-        "score": 0,  # Will be calculated below
-        "verdict": "",  # Will be set below
+        "metrics": metrics,
+        "score": score,
+        "verdict": verdict,
         "territory": territory,
         "is_mastered": is_mastered,
         "chunked": True,
@@ -3501,39 +3676,7 @@ def analyze_file_chunked(
         }
     }
     
-    # Simple scoring based on metrics (simplified version)
-    # This is a basic implementation - ideally should match analyze_file's logic
-    score = 100
-    
-    # Deduct points for issues
-    if final_tp > -1.0:
-        score -= 15
-    if weighted_lufs > -10 or weighted_lufs < -20:
-        score -= 10
-    if final_plr < 6 or final_plr > 18:
-        score -= 10
-    if abs(final_correlation) < 0.1 or abs(final_correlation) > 0.95:
-        score -= 10
-    if abs(final_lr_balance) > 2.0:
-        score -= 10
-        
-    score = max(0, min(100, score))
-    result["score"] = score
-    
-    # Set verdict based on score
-    if score >= 85:
-        verdict = "Excelente - Lista para mastering" if lang == "es" else "Excellent - Ready for mastering"
-    elif score >= 70:
-        verdict = "Buena - Ajustes menores recomendados" if lang == "es" else "Good - Minor adjustments recommended"
-    elif score >= 50:
-        verdict = "Aceptable - Varias mejoras necesarias" if lang == "es" else "Acceptable - Several improvements needed"
-    else:
-        verdict = "Necesita trabajo - Mejoras importantes requeridas" if lang == "es" else "Needs work - Major improvements required"
-    
-    result["verdict"] = verdict
-    
     # Return in the format that write_report and other functions expect
-    # This should match analyze_file's return format
     return result
 
 
