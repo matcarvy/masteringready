@@ -23,6 +23,7 @@ import logging
 import sys
 import uuid
 import asyncio
+import functools
 from typing import Optional, Dict, Any
 from datetime import datetime, timedelta
 
@@ -388,13 +389,15 @@ async def start_analysis(
                 # Analyze (blocking call - run in executor to not block event loop)
                 logger.info(f"🔍 [{job_id}] Starting analysis...")
                 loop = asyncio.get_event_loop()
-                result = await loop.run_in_executor(
-                    None,  # Use default executor
+                
+                # Use functools.partial to pass keyword arguments correctly
+                analyze_func = functools.partial(
                     analyze_file,
                     Path(temp_file.name),
-                    lang,
-                    strict
+                    lang=lang,
+                    strict=strict
                 )
+                result = await loop.run_in_executor(None, analyze_func)
                 
                 logger.info(f"✅ [{job_id}] Analysis complete: Score {result['score']}/100")
                 
@@ -405,23 +408,23 @@ async def start_analysis(
                 # Generate reports (also blocking - run in executor)
                 logger.info(f"📝 [{job_id}] Generating reports...")
                 
-                report_write = await loop.run_in_executor(
-                    None,
+                write_func = functools.partial(
                     write_report,
                     result,
-                    strict,
-                    lang,
-                    file.filename
+                    strict=strict,
+                    lang=lang,
+                    filename=file.filename
                 )
+                report_write = await loop.run_in_executor(None, write_func)
                 
-                report_short = await loop.run_in_executor(
-                    None,
+                short_func = functools.partial(
                     generate_short_mode_report,
                     result,
                     lang,
                     file.filename,
                     strict
                 )
+                report_short = await loop.run_in_executor(None, short_func)
                 
                 # Primary report for backward compat
                 if mode == "short":
