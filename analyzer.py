@@ -3486,16 +3486,18 @@ def analyze_file_chunked(
     )
     
     # 1. Headroom
-    headroom = -final_peak
-    st_h, msg_h, _ = status_headroom(headroom, lang)
+    # In dBFS, headroom is the peak level itself (negative value)
+    # Headroom = distance to 0 dBFS ceiling = peak value
+    headroom = final_peak  # Both are negative in dBFS (e.g., -6.28 dBFS)
+    st_h, msg_h, _ = status_headroom(final_peak, strict, lang)
     
     metrics.append({
         "name": "Headroom",
         "internal_key": "Headroom",
-        "value": f"{headroom:.1f} dBFS",
+        "value": f"{headroom:.1f} dBFS",  # Display as dBFS (negative)
         "status": st_h,
         "message": msg_h,
-        "peak_db": f"{final_peak:.1f}"
+        "peak_db": f"{final_peak:.1f} dBFS"
     })
     
     # 2. True Peak
