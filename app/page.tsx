@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Download, Check, Upload, Zap, Shield, TrendingUp } from 'lucide-react'
 import { analyzeFile } from '@/lib/api'
+import { startAnalysisPolling, getAnalysisStatus } from '@/lib/api'
 import { compressAudioFile } from '@/lib/audio-compression'
 
 function Home() {
@@ -39,80 +40,135 @@ function Home() {
     }
   }, [result])
 
-  const handleAnalyze = async () => {
-    if (!file) return
+const handleAnalyze = async () => {
+  if (!file) return
 
-    setLoading(true)
-    setProgress(0)
-    setError(null)
+  setLoading(true)
+  setProgress(0)
+  setError(null)
 
-    try {
-      let fileToAnalyze = file
+  try {
+    let fileToAnalyze = file
+    
+    // Check if file needs compression
+    const maxSize = 30 * 1024 * 1024  // 30MB threshold
+    if (file.size > maxSize) {
+      setCompressing(true)
+      setCompressionProgress(0)
       
-      // Check if file needs compression
-      const maxSize = 30 * 1024 * 1024  // 30MB threshold (Railway free tier timeout)
-      if (file.size > maxSize) {
-        setCompressing(true)
+      // Simulate compression progress
+      const compressionInterval = setInterval(() => {
+        setCompressionProgress(prev => Math.min(prev + 10, 90))
+      }, 500)
+      
+      try {
+        const { file: compressedFile, compressed, originalSize, newSize } = 
+          await compressAudioFile(file, 20)
+        
+        clearInterval(compressionInterval)
+        setCompressionProgress(100)
+        
+        if (compressed) {
+          console.log(`Compressed: ${(originalSize/1024/1024).toFixed(1)}MB → ${(newSize/1024/1024).toFixed(1)}MB`)
+        }
+        
+        fileToAnalyze = compressedFile
+        
+        // Wait a moment to show completion
+        await new Promise(resolve => setTimeout(resolve, 500))
+        setCompressing(false)
         setCompressionProgress(0)
-        
-        // Simulate compression progress
-        const compressionInterval = setInterval(() => {
-          setCompressionProgress(prev => Math.min(prev + 10, 90))
-        }, 500)
-        
-        try {
-          const { file: compressedFile, compressed, originalSize, newSize } = 
-            await compressAudioFile(file, 20) // Compress to 20MB (Railway timeout workaround)
+      } catch (compressionError) {
+        clearInterval(compressionInterval)
+        setCompressing(false)
+        setCompressionProgress(0)
+        throw new Error(
+          lang === 'es'
+            ? 'Error al comprimir el archivo. Por favor, intenta con un archivo más pequeño.'
+            : 'Error compressing file. Please try a smaller file.'
+        )
+      }
+    }
+
+    // START ANALYSIS (returns job_id immediately)
+    console.log('🚀 Starting analysis with polling...')
+    const startData = await startAnalysisPolling(fileToAnalyze, { lang, mode, strict })
+    const jobId = startData.job_id
+    
+    console.log(`🆔 Job ID: ${jobId}`)
+    setProgress(10)
+    
+    // POLL FOR RESULT
+    let pollAttempts = 0
+    const maxPollAttempts = 60  // 60 attempts * 3 sec = 3 min max
+    
+    const pollForResult = async (): Promise<any> => {
+      return new Promise((resolve, reject) => {
+        const pollInterval = setInterval(async () => {
+          pollAttempts++
           
-          clearInterval(compressionInterval)
-          setCompressionProgress(100)
-          
-          if (compressed) {
-            console.log(`Compressed: ${(originalSize/1024/1024).toFixed(1)}MB → ${(newSize/1024/1024).toFixed(1)}MB`)
+          try {
+            const statusData = await getAnalysisStatus(jobId)
+            
+            console.log(`📊 Poll ${pollAttempts}: ${statusData.status} - ${statusData.progress}%`)
+            
+            // Update progress bar
+            setProgress(statusData.progress || 0)
+            
+            if (statusData.status === 'complete') {
+              clearInterval(pollInterval)
+              console.log('✅ Analysis complete!')
+              resolve(statusData.result)
+              
+            } else if (statusData.status === 'error') {
+              clearInterval(pollInterval)
+              console.error('❌ Analysis error:', statusData.error)
+              reject(new Error(statusData.error || 'Analysis failed'))
+              
+            } else if (pollAttempts >= maxPollAttempts) {
+              clearInterval(pollInterval)
+              console.error('⏱️ Polling timeout')
+              reject(new Error(
+                lang === 'es'
+                  ? 'El análisis está tardando más de lo esperado. Por favor, intenta de nuevo.'
+                  : 'Analysis is taking longer than expected. Please try again.'
+              ))
+            }
+            
+          } catch (pollError: any) {
+            clearInterval(pollInterval)
+            console.error('❌ Polling error:', pollError)
+            reject(pollError)
           }
           
-          fileToAnalyze = compressedFile
-          
-          // Wait a moment to show completion
-          await new Promise(resolve => setTimeout(resolve, 500))
-          setCompressing(false)
-          setCompressionProgress(0)
-        } catch (compressionError) {
-          clearInterval(compressionInterval)
-          setCompressing(false)
-          setCompressionProgress(0)
-          throw new Error(
-            lang === 'es'
-              ? 'Error al comprimir el archivo. Por favor, intenta con un archivo más pequeño.'
-              : 'Error compressing file. Please try a smaller file.'
-          )
-        }
-      }
-
-      // Progress bar for analysis
-      const progressInterval = setInterval(() => {
-        setProgress(prev => {
-          if (prev >= 95) return 98
-          if (prev >= 90) return prev + 2
-          if (prev >= 70) return prev + 5
-          if (prev >= 40) return prev + 8
-          return prev + 12
-        })
-      }, 700)
-
-      const data = await analyzeFile(fileToAnalyze, { lang, mode, strict })
-      setProgress(100)
-      setResult(data)
-      clearInterval(progressInterval)
-    } catch (err: any) {
-      setError(err.message || (lang === 'es' ? 'Error al analizar' : 'Analysis error'))
-    } finally {
-      setLoading(false)
-      setProgress(0)
-      setCompressing(false)
-      setCompressionProgress(0)
+        }, 3000)  // Poll every 3 seconds
+      })
     }
+    
+    // Wait for result
+    const data = await pollForResult()
+    
+    setProgress(100)
+    setResult(data)
+    
+    // Scroll to results
+    setTimeout(() => {
+      const resultsElement = document.getElementById('results')
+      if (resultsElement) {
+        resultsElement.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }
+    }, 100)
+    
+  } catch (err: any) {
+    console.error('Analysis error:', err)
+    setError(err.message || (lang === 'es' ? 'Error al analizar' : 'Analysis error'))
+  } finally {
+    setLoading(false)
+    setProgress(0)
+    setCompressing(false)
+    setCompressionProgress(0)
   }
+}
 
   const handleReset = () => {
     setFile(null)
