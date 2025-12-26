@@ -3368,7 +3368,7 @@ def analyze_file_chunked(
             
             # Spatial metrics
             chunk_corr = stereo_correlation(y)
-            chunk_lr = analyze_lr_balance_db(y)
+            chunk_lr = calculate_lr_balance(y)  # ← FIXED: Nombre correcto
             chunk_ms = ms_ratio(y)
             
             # Store results
@@ -3457,8 +3457,9 @@ def analyze_file_chunked(
     # For now, we'll reconstruct the result format manually
     
     # Detect territory and mastered status
-    territory = detect_territory(weighted_lufs, final_plr, final_tp)
-    is_mastered = detect_mastered_track(final_tp, weighted_lufs, final_plr)
+    territory = detect_territory(weighted_lufs, final_peak, final_tp, final_plr)
+    mastered_result = detect_mastered_file(weighted_lufs, final_peak, final_tp, final_plr, 0.0)
+    is_mastered = mastered_result['is_mastered']
     
     print(f"📍 Territory: {territory}")
     print(f"{'🎚️  Mastered track detected' if is_mastered else '🎛️  Mix (not mastered)'}")
