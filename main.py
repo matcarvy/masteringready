@@ -311,7 +311,32 @@ def generate_short_mode_report(result: Dict[str, Any], lang: str, filename: str,
             logger.info(f"✅ Tech section removed. New length: {len(result_report)}")
             return result_report
     
-    logger.warning("⚠️ Tech section markers not found - returning full report")
+    # If markers not found, try to keep just the summary part
+    # Look for the intro and recommendation, skip middle sections
+    logger.warning("⚠️ Tech section markers not found")
+    
+    # For chunked analysis, just return intro + recommendation
+    if result.get('chunked', False):
+        logger.info("📦 Chunked analysis detected - generating simplified short report")
+        
+        # Extract just the intro part (before any technical details)
+        lines = full_report.split('\n')
+        short_lines = []
+        skip_mode = False
+        
+        for line in lines:
+            # Keep everything until we hit technical details
+            if '━━━' in line or '📊' in line or 'TECHNICAL' in line or 'TÉCNICOS' in line:
+                skip_mode = True
+            elif '💡' in line or 'Recomendación' in line or 'Recommendation' in line:
+                skip_mode = False
+            
+            if not skip_mode:
+                short_lines.append(line)
+        
+        return '\n'.join(short_lines)
+    
+    logger.warning("   Returning full report")
     return full_report
 
 
@@ -395,8 +420,9 @@ async def start_analysis(
                 # Estimate duration: ~2 MB per minute for WAV (rough estimate)
                 estimated_duration_min = file_size_mb / 2
                 
-                # Use chunked analysis for files > 2 minutes (to avoid memory issues)
-                use_chunked = estimated_duration_min > 2.0
+                # Use chunked analysis for files > 4 minutes (to avoid memory issues)
+                # Most songs are < 4 min and will use normal analysis (exact scoring)
+                use_chunked = estimated_duration_min > 4.0  # Increased from 2.0 to 4.0
                 
                 loop = asyncio.get_event_loop()
                 
@@ -406,12 +432,28 @@ async def start_analysis(
                     # Import chunked function
                     from analyzer import analyze_file_chunked
                     
+                    # Create progress callback to update job progress
+                    def update_progress(progress_value):
+                        """Update job progress - called from chunked analysis"""
+                        import asyncio
+                        async def _update():
+                            async with jobs_lock:
+                                if job_id in jobs:
+                                    jobs[job_id]['progress'] = progress_value
+                        # Schedule the async update
+                        try:
+                            loop = asyncio.get_event_loop()
+                            asyncio.run_coroutine_threadsafe(_update(), loop)
+                        except:
+                            pass  # Ignore errors in progress updates
+                    
                     analyze_func = functools.partial(
                         analyze_file_chunked,
                         Path(temp_file.name),
                         lang=lang,
                         strict=strict,
-                        chunk_duration=30.0  # 30 second chunks
+                        chunk_duration=30.0,  # 30 second chunks
+                        progress_callback=update_progress  # ← Pass callback
                     )
                 else:
                     logger.info(f"📊 [{job_id}] Using NORMAL analysis (estimated {estimated_duration_min:.1f} min, {file_size_mb:.1f} MB)")
