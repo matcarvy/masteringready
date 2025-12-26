@@ -3472,23 +3472,22 @@ def analyze_file_chunked(
     print(f"{'🎚️  Mastered track detected' if is_mastered else '🎛️  Mix (not mastered)'}")
     print(f"{'='*60}\n")
     
-    # Build metrics array using the same evaluation logic as analyze_file()
-    # This ensures consistent scoring between normal and chunked analysis
+    # Build metrics array using the ACTUAL evaluation functions from analyzer
+    # This ensures IDENTICAL scoring between normal and chunked analysis
     
     metrics = []
     lang_picked = "es" if lang == "es" else "en"
     
+    # Import evaluation functions
+    from analyzer import (
+        status_headroom, status_true_peak, status_dc_offset,
+        status_lufs, status_plr, status_crest_factor,
+        evaluate_stereo_field_comprehensive, status_freq
+    )
+    
     # 1. Headroom
     headroom = -final_peak
-    if headroom >= 3.0:
-        st_h = "good"
-        msg_h = "Headroom apropiado para procesamiento de mastering." if lang == "es" else "Appropriate headroom for mastering processing."
-    elif headroom >= 1.0:
-        st_h = "warning"
-        msg_h = "Headroom ajustado. Aún procesable." if lang == "es" else "Tight headroom. Still processable."
-    else:
-        st_h = "critical"
-        msg_h = "Headroom muy bajo. Riesgo de clipping." if lang == "es" else "Very low headroom. Risk of clipping."
+    st_h, msg_h, _ = status_headroom(headroom, lang)
     
     metrics.append({
         "name": "Headroom",
@@ -3500,15 +3499,7 @@ def analyze_file_chunked(
     })
     
     # 2. True Peak
-    if final_tp < -1.0:
-        st_tp = "good"
-        msg_tp = "Seguro para conversión a formatos lossy." if lang == "es" else "Safe for lossy format conversion."
-    elif final_tp < 0.0:
-        st_tp = "warning"
-        msg_tp = "Cerca del límite. Precaución con conversión." if lang == "es" else "Close to limit. Caution with conversion."
-    else:
-        st_tp = "critical"
-        msg_tp = "Sobre el límite. Distorsión en conversión garantizada." if lang == "es" else "Over limit. Conversion distortion guaranteed."
+    st_tp, msg_tp, _ = status_true_peak(final_tp, 0.0, lang)  # tp_clipping_pct = 0 for chunked
     
     metrics.append({
         "name": "True Peak",
@@ -3519,53 +3510,35 @@ def analyze_file_chunked(
     })
     
     # 3. DC Offset (assume not detected in chunked analysis)
+    dc_data = {"detected": False, "max_offset": 0.0}
+    st_dc, msg_dc, _ = status_dc_offset(dc_data, lang)
+    
     metrics.append({
         "name": "DC Offset",
         "internal_key": "DC Offset",
         "value": "No detectado" if lang == "es" else "Not detected",
-        "status": "good",
-        "message": "Sin offset DC detectado." if lang == "es" else "No DC offset detected.",
-        "details": {"detected": False, "max_offset": 0.0}
+        "status": st_dc,
+        "message": msg_dc,
+        "details": dc_data
     })
     
     # 4. LUFS
-    if -16 <= weighted_lufs <= -10:
-        st_l = "good"
-        msg_l = "Nivel apropiado para mastering." if lang == "es" else "Appropriate level for mastering."
-    elif -20 <= weighted_lufs < -16 or -10 < weighted_lufs <= -8:
-        st_l = "warning"
-        msg_l = "Nivel aceptable pero no óptimo." if lang == "es" else "Acceptable but not optimal level."
-    else:
-        st_l = "critical"
-        msg_l = "Nivel fuera de rango recomendado." if lang == "es" else "Level outside recommended range."
+    lufs_reliable = duration >= MIN_DURATION_FOR_LUFS
+    st_l, msg_l, _ = status_lufs(weighted_lufs, "chunked", lufs_reliable, lang)
     
     metrics.append({
         "name": "LUFS (Integrated)",
         "internal_key": "LUFS (Integrated)",
         "value": f"{weighted_lufs:.1f} LUFS",
         "status": st_l,
-        "message": f"{msg_l} (method: chunked average)",
+        "message": f"{msg_l} (method: chunked)",
         "method": "chunked",
-        "reliable": duration >= MIN_DURATION_FOR_LUFS
+        "reliable": lufs_reliable
     })
     
     # 5. PLR
-    if strict:
-        plr_good_range = (10, 15)
-        plr_warning_range = (8, 18)
-    else:
-        plr_good_range = (8, 15)
-        plr_warning_range = (6, 18)
-    
-    if plr_good_range[0] <= final_plr <= plr_good_range[1]:
-        st_p = "good"
-        msg_p = "Rango dinámico excelente." if lang == "es" else "Excellent dynamic range."
-    elif plr_warning_range[0] <= final_plr <= plr_warning_range[1]:
-        st_p = "warning"
-        msg_p = "Rango dinámico aceptable." if lang == "es" else "Acceptable dynamic range."
-    else:
-        st_p = "critical"
-        msg_p = "Rango dinámico problemático." if lang == "es" else "Problematic dynamic range."
+    has_real_lufs = True  # chunked uses pyloudnorm
+    st_p, msg_p, _ = status_plr(final_plr, has_real_lufs, strict, lang)
     
     metrics.append({
         "name": "PLR",
@@ -3577,38 +3550,24 @@ def analyze_file_chunked(
     
     # 6. Crest Factor (informational when we have real LUFS)
     crest = final_plr  # Similar to PLR for chunked analysis
+    st_cf, msg_cf, _ = status_crest_factor(crest, lang)
+    
     metrics.append({
         "name": "Crest Factor",
         "internal_key": "Crest Factor",
         "value": f"{crest:.1f} dB",
-        "status": "good",
+        "status": st_cf,
         "message": "Informativo (usa PLR como métrica principal de dinámica)." if lang == "es" else "Informational (use PLR as the primary dynamics metric)."
     })
     
-    # 7. Stereo Width (comprehensive evaluation)
-    if strict:
-        corr_good = (0.3, 0.85)
-        corr_warning = (0.1, 0.95)
-    else:
-        corr_good = (0.3, 0.9)
-        corr_warning = (0.1, 0.95)
-    
-    # Evaluate correlation
-    if corr_good[0] <= final_correlation <= corr_good[1]:
-        st_s = "good"
-        msg_s = "Imagen estéreo saludable." if lang == "es" else "Healthy stereo image."
-    elif corr_warning[0] <= final_correlation <= corr_warning[1]:
-        st_s = "warning"
-        msg_s = "Imagen estéreo aceptable." if lang == "es" else "Acceptable stereo image."
-    else:
-        st_s = "critical"
-        msg_s = "Problemas con imagen estéreo." if lang == "es" else "Stereo image issues."
-    
-    # Adjust based on M/S ratio and L/R balance
-    if final_ms_ratio < 0.05 or final_ms_ratio > 1.5:
-        st_s = "warning" if st_s == "good" else st_s
-    if abs(final_lr_balance) > 2.0:
-        st_s = "warning" if st_s == "good" else st_s
+    # 7. Stereo Field (comprehensive evaluation)
+    st_s, msg_s = evaluate_stereo_field_comprehensive(
+        final_correlation, 
+        final_ms_ratio, 
+        final_lr_balance, 
+        lang, 
+        strict
+    )
     
     metrics.append({
         "name": "Stereo Width",
@@ -3622,15 +3581,26 @@ def analyze_file_chunked(
     })
     
     # 8. Frequency Balance (simplified - we don't have full frequency analysis in chunks)
+    # Create dummy frequency balance data
+    fb_dummy = {
+        "low_percent": 33.0,
+        "mid_percent": 34.0,
+        "high_percent": 33.0,
+        "low_db": 0.0,
+        "mid_db": 0.0,
+        "high_db": 0.0,
+        "d_low_mid_db": 0.0,
+        "d_high_mid_db": 0.0
+    }
+    st_f, msg_f, _ = status_freq(fb_dummy, genre, strict, lang)
+    
     metrics.append({
         "name": "Frequency Balance",
         "internal_key": "Frequency Balance",
         "value": "Not analyzed in chunked mode",
-        "status": "good",
+        "status": "info",  # Always info for chunked
         "message": "Análisis de frecuencias no disponible en modo chunks." if lang == "es" else "Frequency analysis not available in chunked mode.",
-        "low_percent": 33,
-        "mid_percent": 34,
-        "high_percent": 33
+        **fb_dummy
     })
     
     # Calculate score using the same score_report function as analyze_file
@@ -3956,3 +3926,205 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+# ============================================================================
+# SHORT MODE REPORT - Agregar al final de analyzer.py (antes de main())
+# ============================================================================
+
+def generate_short_mode_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en', filename: str = "mix") -> str:
+    """
+    Generate short mode report with bullets showing positive aspects and areas to improve.
+    
+    Structure:
+    - Header (filename, score, verdict)
+    - Positive aspects (bullets)
+    - Areas to improve (bullets) 
+    - Recommendation
+    """
+    lang = _pick_lang(lang)
+    
+    score = report.get("score", 0)
+    verdict = report.get("verdict", "")
+    metrics = report.get("metrics", [])
+    
+    # Build positive aspects list
+    positive_aspects = []
+    areas_to_improve = []
+    
+    for metric in metrics:
+        status = metric.get("status", "")
+        name = metric.get("name", "")
+        message = metric.get("message", "")
+        
+        # Skip informational metrics
+        if status == "info":
+            continue
+            
+        # Add to appropriate list
+        if status in ["perfect", "pass", "good"]:
+            positive_aspects.append(f"• {name}: {message}")
+        elif status in ["warning", "critical", "catastrophic"]:
+            areas_to_improve.append(f"• {name}: {message}")
+    
+    # Build report
+    if lang == 'es':
+        header = (
+            f"🎵 Sobre \"{filename}\"\n\n"
+            f"Puntuación: {score}/100\n"
+            f"Veredicto: {verdict}\n\n"
+        )
+        
+        body = ""
+        
+        if positive_aspects:
+            body += "✅ Aspectos Positivos:\n"
+            body += "\n".join(positive_aspects[:5])  # Limit to 5
+            body += "\n\n"
+        
+        if areas_to_improve:
+            body += "⚠️ Áreas a Mejorar:\n"
+            body += "\n".join(areas_to_improve[:5])  # Limit to 5
+            body += "\n\n"
+        
+        # Recommendation based on score
+        if score >= 85:
+            recommendation = "💡 Recomendación: Envíala a mastering tal como está."
+        elif score >= 70:
+            recommendation = "💡 Recomendación: Con algunos ajustes menores, estará lista para mastering."
+        elif score >= 50:
+            recommendation = "💡 Recomendación: Necesita varios ajustes antes de enviar a mastering."
+        else:
+            recommendation = "💡 Recomendación: Requiere trabajo significativo antes de mastering."
+        
+        # Generate CTA
+        cta = generate_cta(score, strict, lang, mode="short")
+        
+        return header + body + recommendation + "\n\n" + cta
+    
+    else:  # English
+        header = (
+            f"🎵 Regarding \"{filename}\"\n\n"
+            f"Score: {score}/100\n"
+            f"Verdict: {verdict}\n\n"
+        )
+        
+        body = ""
+        
+        if positive_aspects:
+            body += "✅ Positive Aspects:\n"
+            body += "\n".join(positive_aspects[:5])
+            body += "\n\n"
+        
+        if areas_to_improve:
+            body += "⚠️ Areas to Improve:\n"
+            body += "\n".join(areas_to_improve[:5])
+            body += "\n\n"
+        
+        # Recommendation based on score
+        if score >= 85:
+            recommendation = "💡 Recommendation: Send it to mastering as-is."
+        elif score >= 70:
+            recommendation = "💡 Recommendation: With minor adjustments, it'll be ready for mastering."
+        elif score >= 50:
+            recommendation = "💡 Recommendation: Needs several adjustments before sending to mastering."
+        else:
+            recommendation = "💡 Recommendation: Requires significant work before mastering."
+        
+        # Generate CTA
+        cta = generate_cta(score, strict, lang, mode="short")
+        
+        return header + body + recommendation + "\n\n" + cta
+def generate_visual_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en') -> str:
+    """
+    Generate visual mode report with bullets showing positive aspects and areas to review.
+    Educational and constructive tone.
+    """
+    lang = _pick_lang(lang)
+    
+    metrics = report.get("metrics", [])
+    
+    # Build positive aspects and areas to review
+    positive_aspects = []
+    areas_to_review = []
+    
+    for metric in metrics:
+        status = metric.get("status", "")
+        name = metric.get("name", "")
+        message = metric.get("message", "")
+        
+        # Skip informational metrics
+        if status == "info":
+            continue
+            
+        # Add to appropriate list with educational, positive framing
+        if status in ["perfect", "pass", "good"]:
+            # Extract the positive aspect concisely
+            if "Headroom" in name:
+                positive_aspects.append("Headroom apropiado para mastering" if lang == "es" else "Appropriate headroom for mastering")
+            elif "True Peak" in name:
+                positive_aspects.append("True Peak seguro para streaming" if lang == "es" else "Safe True Peak for streaming")
+            elif "PLR" in name or "dinám" in message.lower() or "dynamic" in message.lower():
+                positive_aspects.append("Excelente rango dinámico" if lang == "es" else "Excellent dynamic range")
+            elif "Stereo" in name or "stéreo" in name.lower():
+                positive_aspects.append("Imagen estéreo sólida y centrada" if lang == "es" else "Solid and centered stereo image")
+            elif "Frequency" in name or "Frecuen" in name:
+                positive_aspects.append("Balance tonal saludable" if lang == "es" else "Healthy tonal balance")
+            elif "LUFS" in name:
+                positive_aspects.append("Nivel apropiado para mastering" if lang == "es" else "Appropriate level for mastering")
+            elif "DC Offset" in name:
+                positive_aspects.append("Sin DC offset detectado" if lang == "es" else "No DC offset detected")
+        
+        elif status in ["warning", "critical", "catastrophic"]:
+            # Frame as "areas to review" with educational tone
+            if "Headroom" in name:
+                areas_to_review.append("Revisar headroom - Considerar dejar más espacio en los picos" if lang == "es" else "Review headroom - Consider leaving more headroom in peaks")
+            elif "True Peak" in name:
+                areas_to_review.append("Revisar True Peak - Ajustar limitadores para evitar clipping" if lang == "es" else "Review True Peak - Adjust limiters to avoid clipping")
+            elif "PLR" in name:
+                areas_to_review.append("Revisar dinámica - Considerar reducir compresión/limitación" if lang == "es" else "Review dynamics - Consider reducing compression/limiting")
+            elif "Stereo" in name or "stéreo" in name.lower():
+                areas_to_review.append("Revisar imagen estéreo - Verificar balance y correlación" if lang == "es" else "Review stereo image - Check balance and correlation")
+            elif "Frequency" in name or "Frecuen" in name:
+                areas_to_review.append("Revisar balance de frecuencias - Ajustar EQ si es necesario" if lang == "es" else "Review frequency balance - Adjust EQ if needed")
+            elif "LUFS" in name:
+                areas_to_review.append("Revisar nivel general - Ajustar gain staging" if lang == "es" else "Review overall level - Adjust gain staging")
+    
+    # Remove duplicates while preserving order
+    positive_aspects = list(dict.fromkeys(positive_aspects))
+    areas_to_review = list(dict.fromkeys(areas_to_review))
+    
+    # Build report
+    if lang == 'es':
+        report_text = ""
+        
+        if positive_aspects:
+            report_text += "ASPECTOS POSITIVOS\n"
+            report_text += "─" * 50 + "\n"
+            for aspect in positive_aspects[:6]:  # Limit to 6
+                report_text += f"✓ {aspect}\n"
+            report_text += "\n"
+        
+        if areas_to_review:
+            report_text += "ASPECTOS PARA REVISAR\n"
+            report_text += "─" * 50 + "\n"
+            for aspect in areas_to_review[:6]:  # Limit to 6
+                report_text += f"→ {aspect}\n"
+        
+        return report_text.strip()
+    
+    else:  # English
+        report_text = ""
+        
+        if positive_aspects:
+            report_text += "POSITIVE ASPECTS\n"
+            report_text += "─" * 50 + "\n"
+            for aspect in positive_aspects[:6]:
+                report_text += f"✓ {aspect}\n"
+            report_text += "\n"
+        
+        if areas_to_review:
+            report_text += "AREAS TO REVIEW\n"
+            report_text += "─" * 50 + "\n"
+            for aspect in areas_to_review[:6]:
+                report_text += f"→ {aspect}\n"
+        
+        return report_text.strip()
