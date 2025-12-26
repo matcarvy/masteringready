@@ -22,7 +22,7 @@ from pathlib import Path
 import logging
 import sys
 import uuid
-import threading
+import asyncio
 from typing import Optional, Dict, Any
 from datetime import datetime, timedelta
 
@@ -45,11 +45,11 @@ except ImportError as e:
 # In-memory job storage for polling pattern
 # Jobs expire after 10 minutes
 jobs: Dict[str, dict] = {}
-jobs_lock = threading.Lock()
+jobs_lock = asyncio.Lock()
 
-def cleanup_old_jobs():
+async def cleanup_old_jobs():
     """Remove jobs older than 10 minutes"""
-    with jobs_lock:
+    async with jobs_lock:
         now = datetime.now()
         expired = [
             job_id for job_id, job in jobs.items()
@@ -329,7 +329,7 @@ async def start_analysis(
     """
     
     # Cleanup old jobs
-    cleanup_old_jobs()
+    await cleanup_old_jobs()
     
     # Validate file
     if not file.filename:
@@ -359,7 +359,7 @@ async def start_analysis(
     job_id = str(uuid.uuid4())
     
     # Create job entry
-    with jobs_lock:
+    async with jobs_lock:
         jobs[job_id] = {
             'status': 'processing',
             'progress': 0,
@@ -371,8 +371,8 @@ async def start_analysis(
     
     logger.info(f"🆔 Job created: {job_id}")
     
-    # Start analysis in background thread
-    def analyze_in_background():
+    # Start analysis in background asyncio task
+    async def analyze_in_background():
         try:
             # Create temp file
             with tempfile.NamedTemporaryFile(delete=True, suffix=file_ext) as temp_file:
@@ -382,27 +382,46 @@ async def start_analysis(
                 logger.info(f"💾 [{job_id}] Temp file created")
                 
                 # Update progress
-                with jobs_lock:
+                async with jobs_lock:
                     jobs[job_id]['progress'] = 10
                 
-                # Analyze
+                # Analyze (blocking call - run in executor to not block event loop)
                 logger.info(f"🔍 [{job_id}] Starting analysis...")
-                result = analyze_file(
+                loop = asyncio.get_event_loop()
+                result = await loop.run_in_executor(
+                    None,  # Use default executor
+                    analyze_file,
                     Path(temp_file.name),
-                    lang=lang,
-                    strict=strict
+                    lang,
+                    strict
                 )
                 
                 logger.info(f"✅ [{job_id}] Analysis complete: Score {result['score']}/100")
                 
                 # Update progress
-                with jobs_lock:
+                async with jobs_lock:
                     jobs[job_id]['progress'] = 70
                 
-                # Generate reports
+                # Generate reports (also blocking - run in executor)
                 logger.info(f"📝 [{job_id}] Generating reports...")
-                report_write = write_report(result, strict=strict, lang=lang, filename=file.filename)
-                report_short = generate_short_mode_report(result, lang, file.filename, strict)
+                
+                report_write = await loop.run_in_executor(
+                    None,
+                    write_report,
+                    result,
+                    strict,
+                    lang,
+                    file.filename
+                )
+                
+                report_short = await loop.run_in_executor(
+                    None,
+                    generate_short_mode_report,
+                    result,
+                    lang,
+                    file.filename,
+                    strict
+                )
                 
                 # Primary report for backward compat
                 if mode == "short":
@@ -411,7 +430,7 @@ async def start_analysis(
                     report = report_write
                 
                 # Store result
-                with jobs_lock:
+                async with jobs_lock:
                     jobs[job_id]['status'] = 'complete'
                     jobs[job_id]['progress'] = 100
                     jobs[job_id]['result'] = {
@@ -434,13 +453,12 @@ async def start_analysis(
                 
         except Exception as e:
             logger.error(f"❌ [{job_id}] Analysis error: {str(e)}")
-            with jobs_lock:
+            async with jobs_lock:
                 jobs[job_id]['status'] = 'error'
                 jobs[job_id]['error'] = str(e)
     
-    # Start thread
-    thread = threading.Thread(target=analyze_in_background, daemon=True)
-    thread.start()
+    # Start asyncio task (non-blocking)
+    asyncio.create_task(analyze_in_background())
     
     # Return job_id immediately (< 1 second)
     return {
@@ -469,7 +487,7 @@ async def get_analysis_status(job_id: str):
             detail="Job not found or expired (jobs expire after 10 minutes)"
         )
     
-    with jobs_lock:
+    async with jobs_lock:
         job = jobs[job_id].copy()  # Copy to avoid lock issues
     
     response = {
