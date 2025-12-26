@@ -2154,24 +2154,24 @@ def generate_cta(score: int, strict: bool, lang: str, mode: str = "write") -> st
     """
     Generate conversational CTA based on mix score and mode.
     
-    CRITICAL: 
-    - Short mode returns EMPTY STRING (no CTA at all)
-    - Score >= 85: Mix is ready, NO "necesita ajustes"
-    - Score 60-84: Minor adjustments needed
-    - Score < 60: Significant work needed
+    CRITICAL:
+    - Short mode: NO CTA (returns empty string)
+    - Write mode score ≥85: NO CTA (mix is ready)
+    - Write mode score <85: CTA with next steps
     """
-    # SHORT MODE: No CTA section at all
+    # SHORT MODE: Never show CTA
     if mode == "short":
         return ""
     
-    # WRITE MODE ONLY:
+    # WRITE MODE: Only show CTA if score <85
     if lang == 'es':
+        # Spanish CTAs
         if score >= 85:
-            # Score 85+: Mix is READY - no "necesita ajustes"
-            return ""  # No CTA needed, mix is ready
+            # Mix is ready - no CTA needed
+            return ""
         
         elif score >= 60:
-            # Score 60-84: Minor adjustments
+            # Mix needs adjustments
             return (
                 "\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
                 "🔧 SIGUIENTES PASOS\n"
@@ -2187,7 +2187,7 @@ def generate_cta(score: int, strict: bool, lang: str, mode: str = "write") -> st
             )
         
         else:
-            # Score < 60: Significant work
+            # Mix requires significant work
             return (
                 "\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
                 "🔧 SIGUIENTES PASOS\n"
@@ -2203,13 +2203,13 @@ def generate_cta(score: int, strict: bool, lang: str, mode: str = "write") -> st
             )
     
     else:
-        # English
+        # English CTAs
         if score >= 85:
-            # Score 85+: Mix is READY
-            return ""  # No CTA needed
+            # Mix is ready - no CTA needed
+            return ""
         
         elif score >= 60:
-            # Score 60-84: Minor adjustments
+            # Mix needs adjustments
             return (
                 "\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
                 "🔧 NEXT STEPS\n"
@@ -2225,7 +2225,7 @@ def generate_cta(score: int, strict: bool, lang: str, mode: str = "write") -> st
             )
         
         else:
-            # Score < 60: Significant work
+            # Mix requires significant work
             return (
                 "\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
                 "🔧 NEXT STEPS\n"
@@ -2780,33 +2780,10 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
         
         # Recommendation
         if score >= 85:
-            # Add technical details for high-scoring mixes
-            tech_details = ""
-            
-            # Get key metrics
-            headroom_metric = next((m for m in metrics if "Headroom" in m.get("internal_key", "")), None)
-            tp_metric = next((m for m in metrics if "True Peak" in m.get("internal_key", "")), None)
-            plr_metric = next((m for m in metrics if "PLR" in m.get("internal_key", "")), None)
-            
-            if headroom_metric or tp_metric or plr_metric:
-                tech_details += "\n\n📊 **Detalles Técnicos:**"
-                
-                if headroom_metric:
-                    peak_val = headroom_metric.get("peak_db", "")
-                    tech_details += f"\n• Headroom: {peak_val}"
-                
-                if tp_metric:
-                    tp_val = tp_metric.get("value", "")
-                    tech_details += f"\n• True Peak: {tp_val}"
-                
-                if plr_metric and plr_metric.get("value") != "N/A":
-                    plr_val = plr_metric.get("value", "")
-                    tech_details += f"\n• Rango Dinámico (PLR): {plr_val}"
-            
             if strict:
-                recommendation = tech_details + "\n\n💡 Recomendación: Esta mezcla cumple con los estándares profesionales para entrega comercial. Puedes enviarla a mastering con confianza."
+                recommendation = "\n\n💡 Recomendación: Esta mezcla cumple con los estándares profesionales para entrega comercial. Puedes enviarla a mastering con confianza."
             else:
-                recommendation = tech_details + "\n\n💡 Recomendación: Envíala a mastering tal como está."
+                recommendation = "\n\n💡 Recomendación: Envíala a mastering tal como está."
         elif score >= 75:
             recommendation = "\n\n💡 Recomendación: Revisa los puntos mencionados si buscas la máxima calidad, pero la mezcla es aceptable para mastering."
         else:
@@ -3019,33 +2996,10 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
         
         # Recommendation
         if score >= 85:
-            # Add technical details for high-scoring mixes
-            tech_details = ""
-            
-            # Get key metrics
-            headroom_metric = next((m for m in metrics if "Headroom" in m.get("internal_key", "")), None)
-            tp_metric = next((m for m in metrics if "True Peak" in m.get("internal_key", "")), None)
-            plr_metric = next((m for m in metrics if "PLR" in m.get("internal_key", "")), None)
-            
-            if headroom_metric or tp_metric or plr_metric:
-                tech_details += "\n\n📊 **Technical Details:**"
-                
-                if headroom_metric:
-                    peak_val = headroom_metric.get("peak_db", "")
-                    tech_details += f"\n• Headroom: {peak_val}"
-                
-                if tp_metric:
-                    tp_val = tp_metric.get("value", "")
-                    tech_details += f"\n• True Peak: {tp_val}"
-                
-                if plr_metric and plr_metric.get("value") != "N/A":
-                    plr_val = plr_metric.get("value", "")
-                    tech_details += f"\n• Dynamic Range (PLR): {plr_val}"
-            
             if strict:
-                recommendation = tech_details + "\n\n💡 Recommendation: This mix meets professional standards for commercial delivery. You can send it to mastering with confidence."
+                recommendation = "\n\n💡 Recommendation: This mix meets professional standards for commercial delivery. You can send it to mastering with confidence."
             else:
-                recommendation = tech_details + "\n\n💡 Recommendation: Send it to mastering as-is."
+                recommendation = "\n\n💡 Recommendation: Send it to mastering as-is."
         elif score >= 75:
             recommendation = "\n\n💡 Recommendation: Review the mentioned points if you're seeking maximum quality, but the mix is acceptable for mastering."
         else:
