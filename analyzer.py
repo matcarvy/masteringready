@@ -3499,7 +3499,7 @@ def analyze_file_chunked(
     })
     
     # 2. True Peak
-    st_tp, msg_tp, _ = status_true_peak(final_tp, 0.0, lang)  # tp_clipping_pct = 0 for chunked
+    st_tp, msg_tp, _, tp_hard = status_true_peak(final_tp, strict, lang)
     
     metrics.append({
         "name": "True Peak",
@@ -3604,7 +3604,7 @@ def analyze_file_chunked(
     })
     
     # Calculate score using the same score_report function as analyze_file
-    hard_fail = final_tp > 0.0  # Hard fail if true peak clips
+    hard_fail = tp_hard  # Use the hard fail from status_true_peak
     
     # Import and use the actual score_report function
     from analyzer import score_report
