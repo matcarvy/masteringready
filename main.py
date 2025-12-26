@@ -21,8 +21,10 @@ import tempfile
 from pathlib import Path
 import logging
 import sys
+import uuid
+import threading
 from typing import Optional, Dict, Any
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # Setup logging
 logging.basicConfig(
@@ -39,6 +41,23 @@ except ImportError as e:
     logger.error(f"❌ Failed to import analyzer: {e}")
     logger.error("Make sure mix_analyzer_v7.3_BETA.py is renamed to analyzer.py")
     sys.exit(1)
+
+# In-memory job storage for polling pattern
+# Jobs expire after 10 minutes
+jobs: Dict[str, dict] = {}
+jobs_lock = threading.Lock()
+
+def cleanup_old_jobs():
+    """Remove jobs older than 10 minutes"""
+    with jobs_lock:
+        now = datetime.now()
+        expired = [
+            job_id for job_id, job in jobs.items()
+            if (now - job['created_at']) > timedelta(minutes=10)
+        ]
+        for job_id in expired:
+            logger.info(f"🗑️ Cleaning up expired job: {job_id}")
+            del jobs[job_id]
 
 # Create FastAPI app
 app = FastAPI(
@@ -255,6 +274,217 @@ async def analyze_mix_endpoint(
     
     # File automatically deleted here
     logger.info("🗑️ Temp file auto-deleted")
+
+
+# ============== POLLING ENDPOINTS (Render Starter workaround) ==============
+
+def generate_short_mode_report(result: Dict[str, Any], lang: str, filename: str, strict: bool = False) -> str:
+    """Generate short mode report by removing technical details section"""
+    logger.info(f"🔧 SHORT MODE - Lang: {lang}")
+    
+    # Get full report first
+    full_report = write_report(result, strict=strict, lang=lang, filename=filename)
+    
+    logger.info(f"📏 Full report length: {len(full_report)}")
+    
+    # Find and remove technical details section
+    logger.info("🔍 Searching for tech section marker...")
+    
+    if lang == 'es':
+        marker_start = "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n📊 DETALLES TÉCNICOS COMPLETOS"
+        marker_end = "💡 Recomendación:"
+    else:
+        marker_start = "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n📊 COMPLETE TECHNICAL DETAILS"
+        marker_end = "💡 Recommendation:"
+    
+    logger.info(f"   Has marker_start: {marker_start in full_report}")
+    logger.info(f"   Has marker_end: {marker_end in full_report}")
+    
+    if marker_start in full_report and marker_end in full_report:
+        logger.info("✂️ Removing tech section...")
+        before = full_report.split(marker_start)[0]
+        after_parts = full_report.split(marker_end)
+        if len(after_parts) > 1:
+            recommendation = marker_end + after_parts[1]
+            result_report = before.strip() + "\n\n" + recommendation.strip()
+            logger.info(f"✅ Tech section removed. New length: {len(result_report)}")
+            return result_report
+    
+    logger.warning("⚠️ Tech section markers not found - returning full report")
+    return full_report
+
+
+@app.post("/api/analyze/start")
+async def start_analysis(
+    file: UploadFile = File(...),
+    lang: str = Form("es"),
+    mode: str = Form("write"),
+    strict: bool = Form(False)
+):
+    """
+    Start analysis and return job_id immediately (<1 sec).
+    Client polls /api/analyze/status/{job_id} for progress and result.
+    
+    This endpoint avoids Render's 30-second timeout by returning immediately.
+    """
+    
+    # Cleanup old jobs
+    cleanup_old_jobs()
+    
+    # Validate file
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="No filename provided")
+    
+    file_ext = Path(file.filename).suffix.lower()
+    if file_ext not in ALLOWED_EXTENSIONS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid file type. Allowed: {', '.join(ALLOWED_EXTENSIONS)}"
+        )
+    
+    # Read file content
+    content = await file.read()
+    file_size = len(content)
+    
+    logger.info(f"📥 Analysis request (polling): {file.filename}, lang={lang}, mode={mode}")
+    logger.info(f"📊 File size: {file_size / 1024 / 1024:.2f} MB")
+    
+    if file_size > MAX_FILE_SIZE:
+        raise HTTPException(
+            status_code=413,
+            detail=f"File too large. Max: {MAX_FILE_SIZE / 1024 / 1024:.0f}MB"
+        )
+    
+    # Generate unique job ID
+    job_id = str(uuid.uuid4())
+    
+    # Create job entry
+    with jobs_lock:
+        jobs[job_id] = {
+            'status': 'processing',
+            'progress': 0,
+            'result': None,
+            'error': None,
+            'created_at': datetime.now(),
+            'filename': file.filename
+        }
+    
+    logger.info(f"🆔 Job created: {job_id}")
+    
+    # Start analysis in background thread
+    def analyze_in_background():
+        try:
+            # Create temp file
+            with tempfile.NamedTemporaryFile(delete=True, suffix=file_ext) as temp_file:
+                temp_file.write(content)
+                temp_file.flush()
+                
+                logger.info(f"💾 [{job_id}] Temp file created")
+                
+                # Update progress
+                with jobs_lock:
+                    jobs[job_id]['progress'] = 10
+                
+                # Analyze
+                logger.info(f"🔍 [{job_id}] Starting analysis...")
+                result = analyze_file(
+                    Path(temp_file.name),
+                    lang=lang,
+                    strict=strict
+                )
+                
+                logger.info(f"✅ [{job_id}] Analysis complete: Score {result['score']}/100")
+                
+                # Update progress
+                with jobs_lock:
+                    jobs[job_id]['progress'] = 70
+                
+                # Generate reports
+                logger.info(f"📝 [{job_id}] Generating reports...")
+                report_write = write_report(result, strict=strict, lang=lang, filename=file.filename)
+                report_short = generate_short_mode_report(result, lang, file.filename, strict)
+                
+                # Primary report for backward compat
+                if mode == "short":
+                    report = report_short
+                else:
+                    report = report_write
+                
+                # Store result
+                with jobs_lock:
+                    jobs[job_id]['status'] = 'complete'
+                    jobs[job_id]['progress'] = 100
+                    jobs[job_id]['result'] = {
+                        "success": True,
+                        "score": result["score"],
+                        "verdict": result["verdict"],
+                        "report": report,
+                        "report_short": report_short,
+                        "report_write": report_write,
+                        "metrics": result.get("metrics", []),
+                        "filename": file.filename,
+                        "mode": mode,
+                        "lang": lang,
+                        "strict": strict,
+                        "privacy_note": "🔒 Audio analizado en memoria y eliminado inmediatamente.",
+                        "methodology": "Basado en la metodología 'Mastering Ready' de Matías Carvajal"
+                    }
+                
+                logger.info(f"✅ [{job_id}] Job complete")
+                
+        except Exception as e:
+            logger.error(f"❌ [{job_id}] Analysis error: {str(e)}")
+            with jobs_lock:
+                jobs[job_id]['status'] = 'error'
+                jobs[job_id]['error'] = str(e)
+    
+    # Start thread
+    thread = threading.Thread(target=analyze_in_background, daemon=True)
+    thread.start()
+    
+    # Return job_id immediately (< 1 second)
+    return {
+        "job_id": job_id,
+        "status": "processing",
+        "progress": 0,
+        "message": "Analysis started. Poll /api/analyze/status/{job_id} for progress."
+    }
+
+
+@app.get("/api/analyze/status/{job_id}")
+async def get_analysis_status(job_id: str):
+    """
+    Poll this endpoint to check analysis progress and retrieve result.
+    
+    Returns:
+    - status: "processing", "complete", or "error"
+    - progress: 0-100
+    - result: (only when status="complete")
+    - error: (only when status="error")
+    """
+    
+    if job_id not in jobs:
+        raise HTTPException(
+            status_code=404,
+            detail="Job not found or expired (jobs expire after 10 minutes)"
+        )
+    
+    with jobs_lock:
+        job = jobs[job_id].copy()  # Copy to avoid lock issues
+    
+    response = {
+        "job_id": job_id,
+        "status": job['status'],
+        "progress": job['progress'],
+        "filename": job['filename']
+    }
+    
+    if job['status'] == 'complete':
+        response['result'] = job['result']
+    elif job['status'] == 'error':
+        response['error'] = job['error']
+    
+    return response
 
 
 # ============== RUN ==============
