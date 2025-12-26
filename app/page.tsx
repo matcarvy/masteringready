@@ -62,7 +62,7 @@ function Home() {
         
         try {
           const { file: compressedFile, compressed, originalSize, newSize } = 
-            await compressAudioFile(file, 35) // Compress to 35MB (faster analysis)
+            await compressAudioFile(file, 20) // Compress to 20MB (Railway timeout workaround)
           
           clearInterval(compressionInterval)
           setCompressionProgress(100)
