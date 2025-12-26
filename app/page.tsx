@@ -1419,9 +1419,14 @@ by Matías Carvajal
                     </h3>
                     <pre style={{
                       whiteSpace: 'pre-wrap',
+                      wordBreak: 'break-word',
+                      overflowWrap: 'break-word',
                       fontSize: '0.875rem',
                       lineHeight: '1.6',
-                      fontFamily: 'Inter, system-ui, sans-serif'
+                      fontFamily: 'Inter, system-ui, sans-serif',
+                      overflowX: 'auto',
+                      maxWidth: '100%',
+                      margin: 0
                     }}>
                       {result.report_short || result.report}
                     </pre>
@@ -1441,9 +1446,14 @@ by Matías Carvajal
                     </h3>
                     <pre style={{
                       whiteSpace: 'pre-wrap',
+                      wordBreak: 'break-word',
+                      overflowWrap: 'break-word',
                       fontSize: '0.875rem',
                       lineHeight: '1.6',
-                      fontFamily: 'Inter, system-ui, sans-serif'
+                      fontFamily: 'Inter, system-ui, sans-serif',
+                      overflowX: 'auto',
+                      maxWidth: '100%',
+                      margin: 0
                     }}>
                       {result.report_write || result.report}
                     </pre>
