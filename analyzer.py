@@ -2926,15 +2926,16 @@ def analyze_file_chunked(
     # Build temporal analysis if there are problem chunks
     tp_temporal = None
     if results['tp_problem_chunks']:
-        # Calculate percentage of track with TP issues
+        # FIRST: Merge consecutive chunks into regions
+        regions = merge_chunks_into_regions(results['tp_problem_chunks'])
+        
+        # THEN: Calculate percentage based on MERGED REGIONS (not individual windows)
+        # This avoids double-counting overlapping windows
         problem_duration = sum(
-            chunk['end_time'] - chunk['start_time'] 
-            for chunk in results['tp_problem_chunks']
+            region['end'] - region['start']
+            for region in regions
         )
         percentage = (problem_duration / duration) * 100 if duration > 0 else 0
-        
-        # Merge consecutive chunks into regions
-        regions = merge_chunks_into_regions(results['tp_problem_chunks'])
         
         tp_temporal = {
             'total_time_above_threshold': problem_duration,
