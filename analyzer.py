@@ -44,7 +44,6 @@ Usage:
 from __future__ import annotations
 
 import argparse
-import gc
 import json
 import math
 import sys
@@ -2354,4 +2353,1971 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
         
         return details
     
+    else:  # English
+        details = "\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        details += "📊 COMPLETE TECHNICAL DETAILS\n"
+        details += "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        
+        # HEADROOM
+        headroom_metric = next((m for m in metrics if "Headroom" in m.get("internal_key", "")), None)
+        if headroom_metric:
+            peak_val = headroom_metric.get("peak_db", "")
+            details += f"🎚️ HEADROOM: {peak_val}\n"
+            details += "   → Peaks leave sufficient space for processing\n"
+            details += "     without risk of clipping during mastering.\n"
+            
+            if "temporal_analysis" in headroom_metric:
+                temporal = format_temporal_message(
+                    headroom_metric["temporal_analysis"], 
+                    "Headroom", 
+                    lang
+                )
+                if temporal:
+                    details += "  " + temporal.strip() + "\n"
+            else:
+                details += "   → Consistent headroom throughout the song.\n"
+            details += "\n"
+        
+        # TRUE PEAK
+        tp_metric = next((m for m in metrics if "True Peak" in m.get("internal_key", "")), None)
+        if tp_metric:
+            tp_val = tp_metric.get("value", "")
+            details += f"🔊 TRUE PEAK: {tp_val}\n"
+            details += "   → Safe for lossy format conversion (MP3, AAC, Spotify).\n"
+            details += "     No intersample distortion in streaming.\n"
+            
+            if "temporal_analysis" in tp_metric:
+                temporal = format_temporal_message(
+                    tp_metric["temporal_analysis"],
+                    "True Peak",
+                    lang
+                )
+                if temporal:
+                    details += "  " + temporal.strip() + "\n"
+            else:
+                details += "   → Safety margins met throughout the track.\n"
+            details += "\n"
+        
+        # PLR
+        plr_metric = next((m for m in metrics if "PLR" in m.get("internal_key", "")), None)
+        if plr_metric and plr_metric.get("value") != "N/A":
+            plr_val = plr_metric.get("value", "")
+            details += f"📈 DYNAMIC RANGE (PLR): {plr_val}\n"
+            
+            if isinstance(plr_val, str):
+                try:
+                    plr_num = float(plr_val.split()[0])
+                    if plr_num >= 12:
+                        details += "   → Excellent dynamic preservation. Mix breathes well.\n"
+                        details += "   → Ideal for expressive mastering with natural punch.\n"
+                    elif plr_num >= 8:
+                        details += "   → Good dynamic range, appropriate for mastering.\n"
+                    else:
+                        details += "   → Somewhat compressed, but still workable in mastering.\n"
+                except:
+                    details += "   → Dynamic range measured.\n"
+            details += "\n"
+        
+        # STEREO FIELD
+        stereo_metric = next((m for m in metrics if "Stereo" in m.get("internal_key", "")), None)
+        if stereo_metric:
+            corr_val = stereo_metric.get("value", "")
+            ms_ratio = stereo_metric.get("ms_ratio", 0)
+            lr_balance = stereo_metric.get("lr_balance_db", 0)
+            
+            details += "🎧 STEREO FIELD:\n"
+            details += f"   • Correlation: {corr_val}\n"
+            if ms_ratio:
+                details += f"   • M/S Ratio: {ms_ratio:.2f}\n"
+            if lr_balance is not None:
+                details += f"   • L/R Balance: {abs(lr_balance):.1f} dB\n"
+            details += "\n"
+            details += "   → Stereo image with good mono compatibility.\n"
+            details += "     Will translate well across systems.\n\n"
+        
+        # FREQUENCY BALANCE
+        freq_metric = next((m for m in metrics if "Frequency" in m.get("internal_key", "")), None)
+        if freq_metric:
+            bass = freq_metric.get("bass_pct", 0)
+            mid = freq_metric.get("mid_pct", 0)
+            high = freq_metric.get("high_pct", 0)
+            
+            details += "🎼 FREQUENCY BALANCE:\n"
+            if bass:
+                details += f"   • Lows (20-250 Hz): {bass:.0f}%\n"
+            if mid:
+                details += f"   • Mids (250 Hz-4 kHz): {mid:.0f}%\n"
+            if high:
+                details += f"   • Highs (4 kHz-20 kHz): {high:.0f}%\n"
+            details += "\n"
+            details += "   → Balanced tonal distribution.\n"
+        
+        return details
+
+
+def analyze_file_chunked(
+    path: Path,
+    oversample: int = 4,
+    genre: Optional[str] = None,
+    strict: bool = False,
+    lang: str = "en",
+    chunk_duration: float = 30.0,
+    progress_callback = None
+) -> Dict[str, Any]:
+    """
+    Memory-optimized analysis for large files using chunked processing.
+    Processes audio in chunks to avoid loading entire file into memory.
+    
+    Args:
+        path: Audio file path
+        oversample: Oversampling factor for true peak (1, 2, 4, or 'auto')
+        genre: Genre hint for frequency balance evaluation
+        strict: Use stricter commercial standards
+        lang: Language for reports ('en' or 'es')
+        chunk_duration: Duration of each chunk in seconds (default: 30s)
+        progress_callback: Optional callback function(progress_value) for progress updates
+    
+    Returns:
+        Same structure as analyze_file() but with chunked=True flag
+    """
+    
+    print("============================================================")
+    print("🔄 CHUNKED ANALYSIS - Memory Optimized")
+    print("============================================================")
+    
+    # 1. Get file metadata without loading audio
+    import soundfile as sf
+    
+    file_info = sf.info(str(path))
+    sr = file_info.samplerate
+    channels = file_info.channels
+    duration = file_info.duration
+    file_size = path.stat().st_size
+    
+    print(f"📁 File: {path.name}")
+    print(f"📦 Chunk size: {chunk_duration} seconds")
+    print(f"⏱️  Duration: {duration:.1f} seconds ({duration/60:.1f} minutes)")
+    print(f"📊 Sample rate: {sr} Hz")
+    print(f"🔊 Channels: {channels}")
+    print(f"💾 File size: {file_size / (1024*1024):.1f} MB")
+    
+    # Calculate number of chunks
+    num_chunks = int(np.ceil(duration / chunk_duration))
+    print(f"📦 Processing in {num_chunks} chunks")
+    
+    # 2. Initialize accumulators
+    results = {
+        'peaks': [],
+        'tps': [],
+        'lufs_values': [],
+        'correlations': [],
+        'lr_balances': [],
+        'ms_ratios': [],
+        'chunk_durations': [],
+        'tp_problem_chunks': [],           # Track chunks with TP > -1.0 dBTP
+        'clipping_chunks': [],              # Track chunks with sample clipping
+        'correlation_problem_chunks': [],   # Track chunks with correlation issues
+        'ms_ratio_problem_chunks': [],      # Track chunks with M/S ratio issues
+        'lr_balance_problem_chunks': []     # Track chunks with L/R balance issues
+    }
+    
+    # 3. Process each chunk
+    for i in range(num_chunks):
+        start_time = i * chunk_duration
+        actual_chunk_duration = min(chunk_duration, duration - start_time)
+        
+        print(f"📦 Chunk {i+1}/{num_chunks} (offset: {start_time:.1f}s, duration: {actual_chunk_duration:.1f}s)")
+        
+        # Load only this chunk (STEREO)
+        y, _ = librosa.load(
+            str(path),
+            sr=sr,
+            offset=start_time,
+            duration=actual_chunk_duration,
+            mono=False  # ← CRITICAL: Keep stereo
+        )
+        
+        # Ensure correct format (channels, samples)
+        if y.ndim == 1:
+            # Mono file - convert to pseudo-stereo
+            y = np.stack([y, y])
+        elif y.shape[0] > y.shape[1]:
+            # Transpose if needed
+            y = y.T
+        
+        print(f"   Loaded: {y.shape[0]} channels, {y.shape[1]} samples (~{y.nbytes / (1024*1024):.1f} MB)")
+        
+        # Calculate metrics for this chunk
+        try:
+            # Peak
+            chunk_peak = np.max(np.abs(y))
+            chunk_peak_db = 20 * np.log10(chunk_peak) if chunk_peak > 0 else -np.inf
+            
+            # True Peak (oversampled)
+            chunk_tp_db = oversampled_true_peak_db(y, oversample)
+            
+            # LUFS (integrated)
+            if HAS_PYLOUDNORM:
+                meter = pyln.Meter(sr)
+                chunk_lufs = meter.integrated_loudness(y.T)
+            else:
+                chunk_lufs = -23.0  # Safe default
+            
+            # Spatial metrics
+            chunk_corr = stereo_correlation(y)
+            chunk_lr = calculate_lr_balance(y)
+            chunk_ms, _, _ = calculate_ms_ratio(y)
+            
+            # Store results
+            results['peaks'].append(chunk_peak_db)
+            results['tps'].append(chunk_tp_db)
+            results['lufs_values'].append(chunk_lufs)
+            results['correlations'].append(chunk_corr)
+            results['lr_balances'].append(chunk_lr)
+            results['ms_ratios'].append(chunk_ms)
+            results['chunk_durations'].append(actual_chunk_duration)
+            
+            # Track problem regions
+            # True Peak issues (above -1.0 dBTP threshold)
+            if chunk_tp_db > -1.0:
+                results['tp_problem_chunks'].append({
+                    'chunk': i + 1,
+                    'start_time': start_time,
+                    'end_time': start_time + actual_chunk_duration,
+                    'tp_db': chunk_tp_db
+                })
+            
+            # Sample clipping (samples >= 0.999999)
+            if chunk_peak >= 0.999999:
+                results['clipping_chunks'].append({
+                    'chunk': i + 1,
+                    'start_time': start_time,
+                    'end_time': start_time + actual_chunk_duration,
+                    'peak': chunk_peak
+                })
+            
+            # Stereo field issues
+            # 1. Correlation problems (too low < 0.3 or too high > 0.95)
+            if chunk_corr < 0.3:
+                results['correlation_problem_chunks'].append({
+                    'chunk': i + 1,
+                    'start_time': start_time,
+                    'end_time': start_time + actual_chunk_duration,
+                    'correlation': chunk_corr,
+                    'issue': 'low',
+                    'severity': 'critical' if chunk_corr < 0.1 else 'warning'
+                })
+            elif chunk_corr > 0.95:
+                results['correlation_problem_chunks'].append({
+                    'chunk': i + 1,
+                    'start_time': start_time,
+                    'end_time': start_time + actual_chunk_duration,
+                    'correlation': chunk_corr,
+                    'issue': 'high',
+                    'severity': 'warning'
+                })
+            
+            # 2. M/S Ratio problems (too low < 0.1 or too high > 1.2)
+            if chunk_ms < 0.1:
+                results['ms_ratio_problem_chunks'].append({
+                    'chunk': i + 1,
+                    'start_time': start_time,
+                    'end_time': start_time + actual_chunk_duration,
+                    'ms_ratio': chunk_ms,
+                    'issue': 'mono',
+                    'severity': 'warning'
+                })
+            elif chunk_ms > 1.2:
+                results['ms_ratio_problem_chunks'].append({
+                    'chunk': i + 1,
+                    'start_time': start_time,
+                    'end_time': start_time + actual_chunk_duration,
+                    'ms_ratio': chunk_ms,
+                    'issue': 'too_wide',
+                    'severity': 'warning'
+                })
+            
+            # 3. L/R Balance problems (abs > 2.0 dB)
+            if abs(chunk_lr) > 2.0:
+                results['lr_balance_problem_chunks'].append({
+                    'chunk': i + 1,
+                    'start_time': start_time,
+                    'end_time': start_time + actual_chunk_duration,
+                    'lr_balance_db': chunk_lr,
+                    'side': 'left' if chunk_lr > 0 else 'right',
+                    'severity': 'critical' if abs(chunk_lr) > 3.0 else 'warning'
+                })
+            
+            print(f"   ✅ Peak: {chunk_peak_db:.1f} dBFS, TP: {chunk_tp_db:.1f} dBTP, LUFS: {chunk_lufs:.1f}")
+            
+            # Update progress callback if provided
+            # Progress: 10% (file loaded) + 60% (chunks processing) = 10-70%
+            if progress_callback:
+                chunk_progress = 10 + int((i + 1) / num_chunks * 60)
+                progress_callback(chunk_progress)
+            
+        except Exception as e:
+            print(f"   ❌ Error in chunk {i+1}: {e}")
+            # Use safe defaults
+            results['peaks'].append(-60.0)
+            results['tps'].append(-60.0)
+            results['lufs_values'].append(-40.0)
+            results['correlations'].append(0.5)
+            results['lr_balances'].append(0.0)
+            results['ms_ratios'].append(0.3)
+            results['chunk_durations'].append(actual_chunk_duration)
+    
+    print("============================================================")
+    print("Aggregating results...")
+    print("============================================================")
+    
+    # 4. Aggregate results using weighted average
+    total_duration = sum(results['chunk_durations'])
+    
+    # Weighted averages
+    final_peak = max(results['peaks']) if results['peaks'] else -60.0
+    final_tp = max(results['tps']) if results['tps'] else -60.0
+    
+    # LUFS: weighted average
+    weighted_lufs = sum(
+        lufs * dur for lufs, dur in zip(results['lufs_values'], results['chunk_durations'])
+    ) / total_duration if total_duration > 0 else -23.0
+    
+    # PLR: difference between peak and LUFS
+    final_plr = final_peak - weighted_lufs
+    
+    # Stereo metrics: weighted averages
+    final_correlation = sum(
+        corr * dur for corr, dur in zip(results['correlations'], results['chunk_durations'])
+    ) / total_duration if total_duration > 0 else 0.5
+    
+    final_lr_balance = sum(
+        lr * dur for lr, dur in zip(results['lr_balances'], results['chunk_durations'])
+    ) / total_duration if total_duration > 0 else 0.0
+    
+    final_ms_ratio = sum(
+        ms * dur for ms, dur in zip(results['ms_ratios'], results['chunk_durations'])
+    ) / total_duration if total_duration > 0 else 0.3
+    
+    print(f"✅ Peak: {final_peak:.2f} dBFS")
+    print(f"✅ True Peak: {final_tp:.2f} dBTP")
+    print(f"✅ LUFS: {weighted_lufs:.2f}")
+    print(f"✅ PLR: {final_plr:.2f} dB")
+    print(f"✅ Correlation: {final_correlation:.3f}")
+    print(f"✅ L/R Balance: {final_lr_balance:+.2f} dB")
+    print(f"✅ M/S Ratio: {final_ms_ratio:.2f}")
+    
+    # 5. Detect territory and mastered status
+    territory = detect_territory(weighted_lufs, final_peak, final_tp, final_plr)
+    is_mastered = detect_mastered_file(weighted_lufs, final_peak, final_tp, final_plr, 0.0)
+    
+    print(f"📍 Territory: {territory}")
+    print(f"🎛️  {'Mastered' if is_mastered else 'Mix (not mastered)'}")
+    print("============================================================")
+    
+    # Helper function to merge consecutive chunks into regions
+    def merge_chunks_into_regions(problem_chunks, gap_threshold=1.0):
+        """Merge consecutive problem chunks into continuous regions."""
+        if not problem_chunks:
+            return []
+        
+        regions = []
+        current_region = {
+            'start': problem_chunks[0]['start_time'],
+            'end': problem_chunks[0]['end_time'],
+            'chunks': [problem_chunks[0]]
+        }
+        
+        for chunk in problem_chunks[1:]:
+            # If this chunk is consecutive (within gap_threshold seconds), extend region
+            if chunk['start_time'] - current_region['end'] < gap_threshold:
+                current_region['end'] = chunk['end_time']
+                current_region['chunks'].append(chunk)
+            else:
+                # Save current region and start new one
+                regions.append(current_region)
+                current_region = {
+                    'start': chunk['start_time'],
+                    'end': chunk['end_time'],
+                    'chunks': [chunk]
+                }
+        
+        # Don't forget last region
+        regions.append(current_region)
+        return regions
+    
+    # Build metrics array using the ACTUAL evaluation functions from analyzer
+    # This ensures IDENTICAL scoring between normal and chunked analysis
+    
+    metrics = []
+    lang_picked = "es" if lang == "es" else "en"
+    
+    # Import evaluation functions
+    from analyzer import (
+        status_headroom, status_true_peak, status_dc_offset,
+        status_lufs, status_plr, status_crest_factor,
+        evaluate_stereo_field_comprehensive, status_freq
+    )
+    
+    # 1. Headroom
+    # In dBFS, headroom is the peak level itself (negative value)
+    # Headroom = distance to 0 dBFS ceiling = peak value
+    headroom = final_peak  # Both are negative in dBFS (e.g., -6.28 dBFS)
+    st_h, msg_h, _ = status_headroom(final_peak, strict, lang)
+    
+    # Build clipping temporal analysis if there are clipping chunks
+    clipping_temporal = None
+    if results['clipping_chunks']:
+        # Merge consecutive chunks into regions
+        regions = merge_chunks_into_regions(results['clipping_chunks'])
+        
+        clipping_temporal = {
+            'num_regions': len(regions),
+            'regions': [{'start': r['start'], 'end': r['end']} for r in regions[:10]]
+        }
+    
+    headroom_metric = {
+        "name": "Headroom",
+        "internal_key": "Headroom",
+        "value": f"{headroom:.1f} dBFS",
+        "status": st_h,
+        "message": msg_h,
+        "peak_db": f"{final_peak:.1f} dBFS"
+    }
+    
+    if clipping_temporal:
+        headroom_metric["clipping_temporal"] = clipping_temporal
+    
+    metrics.append(headroom_metric)
+    
+    # 2. True Peak
+    st_tp, msg_tp, _, tp_hard = status_true_peak(final_tp, strict, lang)
+    
+    # Build temporal analysis if there are problem chunks
+    tp_temporal = None
+    if results['tp_problem_chunks']:
+        # Calculate percentage of track with TP issues
+        problem_duration = sum(
+            chunk['end_time'] - chunk['start_time'] 
+            for chunk in results['tp_problem_chunks']
+        )
+        percentage = (problem_duration / duration) * 100 if duration > 0 else 0
+        
+        # Merge consecutive chunks into regions
+        regions = merge_chunks_into_regions(results['tp_problem_chunks'])
+        
+        tp_temporal = {
+            'total_time_above_threshold': problem_duration,
+            'percentage_above_threshold': percentage,
+            'num_regions': len(regions),
+            'regions': [{'start': r['start'], 'end': r['end']} for r in regions[:10]]
+        }
+    
+    tp_metric = {
+        "name": "True Peak",
+        "internal_key": "True Peak",
+        "value": f"{final_tp:.1f} dBTP",
+        "status": st_tp,
+        "message": msg_tp
+    }
+    
+    if tp_temporal:
+        tp_metric["temporal_analysis"] = tp_temporal
+    
+    metrics.append(tp_metric)
+    
+    # 3. DC Offset (assume not detected in chunked analysis)
+    dc_data = {"detected": False, "max_offset": 0.0}
+    st_dc, msg_dc, _ = status_dc_offset(dc_data, lang)
+    
+    metrics.append({
+        "name": "DC Offset",
+        "internal_key": "DC Offset",
+        "value": "No detectado" if lang == "es" else "Not detected",
+        "status": st_dc,
+        "message": msg_dc,
+        "details": dc_data
+    })
+    
+    # 4. LUFS
+    lufs_reliable = duration >= MIN_DURATION_FOR_LUFS
+    st_l, msg_l, _ = status_lufs(weighted_lufs, "chunked", lufs_reliable, lang)
+    
+    metrics.append({
+        "name": "LUFS (Integrated)",
+        "internal_key": "LUFS (Integrated)",
+        "value": f"{weighted_lufs:.1f} LUFS",
+        "status": st_l,
+        "message": f"{msg_l} (method: chunked)",
+        "method": "chunked",
+        "reliable": lufs_reliable
+    })
+    
+    # 5. PLR
+    has_real_lufs = True  # chunked uses pyloudnorm
+    st_p, msg_p, _ = status_plr(final_plr, has_real_lufs, strict, lang)
+    
+    metrics.append({
+        "name": "PLR",
+        "internal_key": "PLR",
+        "value": f"{final_plr:.1f} dB",
+        "status": st_p,
+        "message": msg_p
+    })
+    
+    # 6. Crest Factor (informational when we have real LUFS)
+    crest = final_plr  # Similar to PLR for chunked analysis
+    st_cf, msg_cf, _ = status_crest_factor(crest, lang)
+    
+    metrics.append({
+        "name": "Crest Factor",
+        "internal_key": "Crest Factor",
+        "value": f"{crest:.1f} dB",
+        "status": st_cf,
+        "message": "Informativo (usa PLR como métrica principal de dinámica)." if lang == "es" else "Informational (use PLR as the primary dynamics metric)."
+    })
+    
+    # 7. Stereo Field (comprehensive evaluation)
+    st_s, msg_s = evaluate_stereo_field_comprehensive(
+        final_correlation, 
+        final_ms_ratio, 
+        final_lr_balance, 
+        lang, 
+        strict
+    )
+    
+    # Build comprehensive stereo temporal analysis
+    stereo_temporal = None
+    has_stereo_problems = (
+        results['correlation_problem_chunks'] or 
+        results['ms_ratio_problem_chunks'] or 
+        results['lr_balance_problem_chunks']
+    )
+    
+    if has_stereo_problems:
+        stereo_temporal = {}
+        
+        # 1. Correlation temporal analysis
+        if results['correlation_problem_chunks']:
+            corr_regions = merge_chunks_into_regions(results['correlation_problem_chunks'])
+            stereo_temporal['correlation'] = {
+                'num_regions': len(corr_regions),
+                'regions': [
+                    {
+                        'start': r['start'],
+                        'end': r['end'],
+                        'duration': r['end'] - r['start'],
+                        'avg_correlation': sum(c['correlation'] for c in r['chunks']) / len(r['chunks']),
+                        'issue': r['chunks'][0]['issue'],  # 'low' or 'high'
+                        'severity': max(c['severity'] for c in r['chunks'])  # worst severity in region
+                    }
+                    for r in corr_regions[:10]  # Limit to 10 regions
+                ]
+            }
+        
+        # 2. M/S Ratio temporal analysis
+        if results['ms_ratio_problem_chunks']:
+            ms_regions = merge_chunks_into_regions(results['ms_ratio_problem_chunks'])
+            stereo_temporal['ms_ratio'] = {
+                'num_regions': len(ms_regions),
+                'regions': [
+                    {
+                        'start': r['start'],
+                        'end': r['end'],
+                        'duration': r['end'] - r['start'],
+                        'avg_ms_ratio': sum(c['ms_ratio'] for c in r['chunks']) / len(r['chunks']),
+                        'issue': r['chunks'][0]['issue'],  # 'mono' or 'too_wide'
+                        'severity': max(c['severity'] for c in r['chunks'])
+                    }
+                    for r in ms_regions[:10]
+                ]
+            }
+        
+        # 3. L/R Balance temporal analysis
+        if results['lr_balance_problem_chunks']:
+            lr_regions = merge_chunks_into_regions(results['lr_balance_problem_chunks'])
+            stereo_temporal['lr_balance'] = {
+                'num_regions': len(lr_regions),
+                'regions': [
+                    {
+                        'start': r['start'],
+                        'end': r['end'],
+                        'duration': r['end'] - r['start'],
+                        'avg_balance_db': sum(c['lr_balance_db'] for c in r['chunks']) / len(r['chunks']),
+                        'side': r['chunks'][0]['side'],  # 'left' or 'right'
+                        'severity': max(c['severity'] for c in r['chunks'])
+                    }
+                    for r in lr_regions[:10]
+                ]
+            }
+    
+    stereo_metric = {
+        "name": "Stereo Width",
+        "internal_key": "Stereo Width",
+        "value": f"{final_correlation*100:.0f}% corr | M/S: {final_ms_ratio:.2f} | L/R: {final_lr_balance:+.1f} dB",
+        "correlation": final_correlation,
+        "ms_ratio": round(final_ms_ratio, 2),
+        "lr_balance_db": round(final_lr_balance, 1),
+        "status": st_s,
+        "message": msg_s
+    }
+    
+    if stereo_temporal:
+        stereo_metric["temporal_analysis"] = stereo_temporal
+    
+    metrics.append(stereo_metric)
+    
+    # 8. Frequency Balance (simplified - we don't have full frequency analysis in chunks)
+    # Create dummy frequency balance data
+    fb_dummy = {
+        "low_percent": 33.0,
+        "mid_percent": 34.0,
+        "high_percent": 33.0,
+        "low_db": 0.0,
+        "mid_db": 0.0,
+        "high_db": 0.0,
+        "d_low_mid_db": 0.0,
+        "d_high_mid_db": 0.0
+    }
+    st_f, msg_f, _ = status_freq(fb_dummy, genre, strict, lang)
+    
+    metrics.append({
+        "name": "Frequency Balance",
+        "internal_key": "Frequency Balance",
+        "value": "Not analyzed in chunked mode",
+        "status": "info",  # Always info for chunked
+        "message": "Análisis de frecuencias no disponible en modo chunks." if lang == "es" else "Frequency analysis not available in chunked mode.",
+        **fb_dummy
+    })
+    
+    # Calculate score using the same score_report function as analyze_file
+    hard_fail = tp_hard  # Use the hard fail from status_true_peak
+    
+    # Import and use the actual score_report function
+    from analyzer import score_report
+    score, verdict = score_report(metrics, hard_fail, strict, lang)
+    
+    # Build full result using the same structure as analyze_file
+    result = {
+        "file": {
+            "name": path.name,
+            "size": file_size,
+            "duration": duration,
+            "sample_rate": sr,
+            "channels": channels
+        },
+        "technical": {
+            "peak_dbfs": final_peak,
+            "true_peak_dbtp": final_tp,
+            "lufs": weighted_lufs,
+            "plr": final_plr,
+            "stereo_correlation": final_correlation,
+            "lr_balance_db": final_lr_balance,
+            "ms_ratio": final_ms_ratio
+        },
+        "metrics": metrics,
+        "score": score,
+        "verdict": verdict,
+        "territory": territory,
+        "is_mastered": is_mastered,
+        "chunked": True,
+        "num_chunks": num_chunks,
+        "notes": {
+            "lufs_is_real": True,
+            "lufs_reliable": duration >= MIN_DURATION_FOR_LUFS,
+            "oversample_factor": oversample,
+            "auto_oversample": True,
+            "clipping_detected": bool(results['clipping_chunks'])
+        }
+    }
+    
+    return result
+def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en', filename: str = "mix") -> str:
+    """
+    Generate narrative engineer-style feedback from analysis report.
+    Perfect for emails, web UI, or written reports.
+    Includes detection for already-mastered tracks.
+    """
+    lang = _pick_lang(lang)
+    
+    score = report.get("score", 0)
+    verdict = report.get("verdict", "")
+    metrics = report.get("metrics", [])
+    notes = report.get("notes", {})
+    
+    # ============= MASTERED TRACK DETECTION =============
+    # Detect if this is already a finished master (not suitable for mastering)
+    lufs_metric = next((m for m in metrics if "LUFS" in m.get("internal_key", "")), None)
+    peak_metric = next((m for m in metrics if "Headroom" in m.get("internal_key", "")), None)
+    tp_metric = next((m for m in metrics if "True Peak" in m.get("internal_key", "")), None)
+    
+    # Extract numerical values
+    lufs_value = None
+    if lufs_metric and lufs_metric.get("value") != "N/A":
+        try:
+            # Extract LUFS value (e.g., "-12.1 LUFS" -> -12.1)
+            lufs_str = lufs_metric.get("value", "")
+            lufs_value = float(lufs_str.split()[0])
+        except:
+            pass
+    
+    peak_value = None
+    if peak_metric:
+        try:
+            # Extract peak dBFS (e.g., "-0.1 dBFS" -> -0.1)
+            peak_str = peak_metric.get("peak_db", "")
+            peak_value = float(peak_str.replace(" dBFS", "").replace("dBFS", ""))
+        except:
+            pass
+    
+    tp_value = None
+    if tp_metric:
+        try:
+            # Extract true peak dBTP (e.g., "-0.1 dBTP" -> -0.1)
+            tp_str = tp_metric.get("value", "")
+            tp_value = float(tp_str.replace(" dBTP", "").replace("dBTP", ""))
+        except:
+            pass
+    
+    # Detection criteria for mastered track:
+    # 1. LUFS > -14 (commercial loudness level)
+    # 2. AND (Peak > -1.0 dBFS OR True Peak > -1.0 dBTP)
+    is_mastered = False
+    if lufs_value is not None and lufs_value > -14:
+        if (peak_value is not None and peak_value > -1.0) or (tp_value is not None and tp_value > -1.0):
+            is_mastered = True
+    
+    # If mastered track detected, build comprehensive master analysis message
+    if is_mastered:
+        # Extract all metrics for comprehensive analysis
+        plr_metric = next((m for m in metrics if "PLR" in m.get("internal_key", "")), None)
+        stereo_metric = next((m for m in metrics if "Stereo" in m.get("internal_key", "")), None)
+        freq_metric = next((m for m in metrics if "Frequency" in m.get("internal_key", "")), None)
+        
+        # Check for clipping (actual sample clipping)
+        clipping_detected = notes.get("clipping_detected", False)
+        
+        # Get temporal analysis for True Peak if available
+        tp_temporal = None
+        if tp_metric and "temporal_analysis" in tp_metric:
+            tp_temporal = tp_metric["temporal_analysis"]
+        
+        if lang == 'es':
+            headroom_str = f"{abs(peak_value):.1f} dB" if peak_value is not None else "0 dB"
+            tp_str = f"{tp_value:.1f} dBTP" if tp_value is not None else "0.0 dBTP"
+            lufs_str = f"{lufs_value:.1f} LUFS" if lufs_value is not None else "nivel comercial"
+            
+            # SECTION 1: Header + Detection Reason
+            filename_ref = f"🎵 Sobre \"{filename}\"\n\n"
+            message = (
+                filename_ref +
+                "🎯 Este archivo parece ser un máster finalizado, no una mezcla para entregar a mastering.\n\n"
+                "El análisis muestra:\n"
+                f"• Loudness comercial ({lufs_str})\n"
+                f"• Headroom muy reducido ({headroom_str})\n"
+                f"• True Peak que excede el límite digital ({tp_str})\n\n"
+                "Estas características son normales en un master terminado, pero lo hacen inadecuado para procesarlo nuevamente en mastering.\n\n"
+            )
+            
+            # SECTION 2: Positive Aspects
+            positive_aspects = []
+            
+            # Check stereo correlation
+            if stereo_metric:
+                stereo_status = stereo_metric.get("status", "")
+                stereo_value = stereo_metric.get("value")
+                if stereo_status in ["perfect", "pass"]:
+                    if isinstance(stereo_value, (int, float)):
+                        positive_aspects.append(f"• Balance estéreo: excelente correlación ({stereo_value:.2f})")
+                    else:
+                        positive_aspects.append("• Balance estéreo: buena compatibilidad mono")
+            
+            # Check frequency balance
+            if freq_metric:
+                freq_status = freq_metric.get("status", "")
+                if freq_status in ["perfect", "pass"]:
+                    positive_aspects.append("• Balance tonal: saludable")
+            
+            # Check PLR (if reasonable for a master)
+            if plr_metric:
+                plr_value = plr_metric.get("value")
+                if isinstance(plr_value, (int, float)) and plr_value >= 7:
+                    positive_aspects.append(f"• Rango dinámico: conservado ({plr_value:.1f} dB PLR)")
+            
+            if positive_aspects:
+                message += "✅ Aspectos técnicamente correctos:\n"
+                message += "\n".join(positive_aspects)
+                message += "\n\n"
+            
+            # SECTION 3: Technical Observations
+            observations = []
+            
+            # PLR observation (over-compression)
+            if plr_metric:
+                plr_value = plr_metric.get("value")
+                if isinstance(plr_value, (int, float)) and plr_value < 7:
+                    observations.append(
+                        f"• PLR: {plr_value:.1f} dB - dinámicas muy reducidas por limiting agresivo.\n"
+                        "  Normal en masters comerciales loud, pero reduce micro-dinámica."
+                    )
+            
+            # Frequency balance observation
+            if freq_metric:
+                freq_status = freq_metric.get("status", "")
+                if freq_status == "warning":
+                    freq_msg = freq_metric.get("message", "")
+                    observations.append(
+                        f"• Balance tonal: {freq_msg}\n"
+                        "  Puede ser decisión creativa, pero verifica traducción en múltiples sistemas."
+                    )
+            
+            # Stereo correlation observation
+            if stereo_metric:
+                stereo_value = stereo_metric.get("value")
+                stereo_status = stereo_metric.get("status", "")
+                if isinstance(stereo_value, (int, float)) and stereo_value < 0.60:
+                    observations.append(
+                        f"• Ancho estéreo muy amplio (correlación {stereo_value:.2f}).\n"
+                        "  Verifica compatibilidad en reproducción mono y sistemas Bluetooth."
+                    )
+            
+            if observations:
+                message += "📊 Observaciones técnicas del master:\n"
+                message += "\n".join(observations)
+                message += "\n\n"
+                message += "💡 Estas observaciones NO invalidan el master, solo contextualizan las decisiones técnicas tomadas durante el proceso.\n\n"
+            
+            # SECTION 4: Bifurcation - If Mix
+            # Calculate how much to reduce (correct formula)
+            target_peak_dbfs = -6.0
+            if peak_value is not None:
+                reduction_needed = max(0.0, peak_value - target_peak_dbfs)
+                reduction_rounded = round(reduction_needed)
+            else:
+                reduction_rounded = 6
+            
+            message += (
+                "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                "⚠️ SI ESTE ARCHIVO CORRESPONDE A UNA MEZCLA:\n"
+                "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+                "Si tu intención es enviarla a mastering, vuelve a la sesión original sin limitación "
+                "en el bus maestro y ajusta el nivel antes del bounce:\n\n"
+                "1. Vuelve a tu sesión de mezcla\n"
+                "2. Inserta un plugin de Gain/Utility al final del bus master (DESPUÉS de toda tu cadena)\n"
+                f"3. Reduce el nivel aproximadamente {reduction_rounded} dB\n"
+                "4. Verifica que los picos queden alrededor de -6 dBFS\n"
+                "5. Re-exporta\n\n"
+                "Esto le devuelve al mastering el espacio necesario para trabajar sin distorsión.\n\n"
+            )
+            
+            # SECTION 5: Bifurcation - If Master
+            message += (
+                "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                "✅ SI ESTE ES TU MASTER FINAL:\n"
+                "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+            )
+            
+            if tp_value is not None and tp_value > -1.0:
+                message += (
+                    f"🔧 True Peak: {tp_str}\n\n"
+                    "📋 Lo que recomiendan las plataformas: ≤ -1.0 dBTP\n\n"
+                    "📊 Lo que hace la industria real:\n"
+                    "Muchos masters comerciales loud (EDM, pop, trap, reggaeton) están entre -0.3 y +0.5 dBTP. "
+                    "Los algoritmos de normalización modernos lo toleran bien.\n\n"
+                    "💡 Tu decisión:\n"
+                    "Si tu master traduce bien en diferentes sistemas y suena como buscas, el archivo es "
+                    "funcional para distribución. El riesgo de clipping intersample es bajo en codecs modernos.\n\n"
+                    "Si prefieres máxima seguridad técnica: reduce 1–2 dB con Gain/Utility al final de la cadena "
+                    "y re-exporta.\n\n"
+                    "🎧 Al final del día, tus oídos tienen la última palabra. Si el master suena balanceado, "
+                    "impactante y se traduce bien en múltiples sistemas, confía en tu decisión."
+                )
+            else:
+                message += "El archivo está listo para distribución."
+            
+            return message
+            
+        else:  # English
+            headroom_str = f"{abs(peak_value):.1f} dB" if peak_value is not None else "0 dB"
+            tp_str = f"{tp_value:.1f} dBTP" if tp_value is not None else "0.0 dBTP"
+            lufs_str = f"{lufs_value:.1f} LUFS" if lufs_value is not None else "commercial level"
+            
+            # SECTION 1: Header + Detection Reason
+            filename_ref = f"🎵 Regarding \"{filename}\"\n\n"
+            message = (
+                filename_ref +
+                "🎯 This file appears to be a finished master, not a mix prepared for mastering delivery.\n\n"
+                "The analysis shows:\n"
+                f"• Commercial loudness level ({lufs_str})\n"
+                f"• Very reduced headroom ({headroom_str})\n"
+                f"• True peak exceeding digital ceiling ({tp_str})\n\n"
+                "These characteristics are normal in a finished master, but make it unsuitable for additional mastering processing.\n\n"
+            )
+            
+            # SECTION 2: Positive Aspects
+            positive_aspects = []
+            
+            # Check stereo correlation
+            if stereo_metric:
+                stereo_status = stereo_metric.get("status", "")
+                stereo_value = stereo_metric.get("value")
+                if stereo_status in ["perfect", "pass"]:
+                    if isinstance(stereo_value, (int, float)):
+                        positive_aspects.append(f"• Stereo balance: excellent correlation ({stereo_value:.2f})")
+                    else:
+                        positive_aspects.append("• Stereo balance: good mono compatibility")
+            
+            # Check frequency balance
+            if freq_metric:
+                freq_status = freq_metric.get("status", "")
+                if freq_status in ["perfect", "pass"]:
+                    positive_aspects.append("• Tonal balance: healthy")
+            
+            # Check PLR (if reasonable for a master)
+            if plr_metric:
+                plr_value = plr_metric.get("value")
+                if isinstance(plr_value, (int, float)) and plr_value >= 7:
+                    positive_aspects.append(f"• Dynamic range: preserved ({plr_value:.1f} dB PLR)")
+            
+            if positive_aspects:
+                message += "✅ Technically correct aspects:\n"
+                message += "\n".join(positive_aspects)
+                message += "\n\n"
+            
+            # SECTION 3: Technical Observations
+            observations = []
+            
+            # PLR observation (over-compression)
+            if plr_metric:
+                plr_value = plr_metric.get("value")
+                if isinstance(plr_value, (int, float)) and plr_value < 7:
+                    observations.append(
+                        f"• PLR: {plr_value:.1f} dB - dynamics heavily reduced by aggressive limiting.\n"
+                        "  Normal in loud commercial masters, but reduces micro-dynamics."
+                    )
+            
+            # Frequency balance observation
+            if freq_metric:
+                freq_status = freq_metric.get("status", "")
+                if freq_status == "warning":
+                    freq_msg = freq_metric.get("message", "")
+                    observations.append(
+                        f"• Tonal balance: {freq_msg}\n"
+                        "  May be a creative decision, but verify translation across systems."
+                    )
+            
+            # Stereo correlation observation
+            if stereo_metric:
+                stereo_value = stereo_metric.get("value")
+                stereo_status = stereo_metric.get("status", "")
+                if isinstance(stereo_value, (int, float)) and stereo_value < 0.60:
+                    observations.append(
+                        f"• Very wide stereo field (correlation {stereo_value:.2f}).\n"
+                        "  Check mono playback compatibility and Bluetooth systems."
+                    )
+            
+            if observations:
+                message += "📊 Technical observations of this master:\n"
+                message += "\n".join(observations)
+                message += "\n\n"
+                message += "💡 These observations do NOT invalidate the master—they simply contextualize the technical decisions made during the process.\n\n"
+            
+            # SECTION 4: Bifurcation - If Mix
+            # Calculate how much to reduce (correct formula)
+            target_peak_dbfs = -6.0
+            if peak_value is not None:
+                reduction_needed = max(0.0, peak_value - target_peak_dbfs)
+                reduction_rounded = round(reduction_needed)
+            else:
+                reduction_rounded = 6
+            
+            message += (
+                "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                "⚠️ IF THIS FILE IS INTENDED TO BE A MIX:\n"
+                "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+                "If your intention is to send it to mastering, go back to the original session without "
+                "bus limiting and adjust the level before bouncing:\n\n"
+                "1. Return to your mix session\n"
+                "2. Insert a Gain/Utility plugin at the end of your master bus (AFTER all processing)\n"
+                f"3. Lower the level by approximately {reduction_rounded} dB\n"
+                "4. Verify peaks land around -6 dBFS\n"
+                "5. Re-export\n\n"
+                "This restores the headroom needed for proper mastering without distortion.\n\n"
+            )
+            
+            # SECTION 5: Bifurcation - If Master
+            message += (
+                "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                "✅ IF THIS IS YOUR FINAL MASTER:\n"
+                "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+            )
+            
+            if tp_value is not None and tp_value > -1.0:
+                message += (
+                    f"🔧 True Peak: {tp_str}\n\n"
+                    "📋 What platforms recommend: ≤ -1.0 dBTP\n\n"
+                    "📊 What the industry actually does:\n"
+                    "Many loud commercial masters (EDM, pop, trap, reggaeton) sit between -0.3 and +0.5 dBTP. "
+                    "Modern normalization algorithms handle this well.\n\n"
+                    "💡 Your decision:\n"
+                    "If your master translates well across systems and sounds the way you want, the file is "
+                    "functional for distribution. The risk of intersample clipping is low in modern codecs.\n\n"
+                    "If you prefer maximum technical safety: lower by 1–2 dB with a Gain/Utility plugin at the "
+                    "end of your chain and re-export.\n\n"
+                    "🎧 At the end of the day, your ears have the final say. If the master sounds balanced, "
+                    "impactful, and translates well across systems, trust your decision."
+                )
+            else:
+                message += "The file is ready for distribution."
+            
+            return message
+    
+    # ============= NORMAL MIX PROCESSING (NOT MASTERED) =============
+    # Count issues by severity
+    critical_issues = [f"{m['name']}: {m['message']}" for m in metrics if m.get("status") == "critical"]
+    warnings = [f"{m['name']}: {m['message']}" for m in metrics if m.get("status") == "warning"]
+    
+    # Build narrative based on score and issues
+    if lang == 'es':
+        # Spanish narrative
+        if score >= 95:
+            intro = "Tu mezcla está en un estado excelente para mastering."
+        elif score >= 85:
+            intro = "Tu mezcla está en muy buen punto para mastering."
+        elif score >= 75:
+            intro = "Tu mezcla está lista para mastering, aunque hay algunos puntos menores que podrías revisar."
+        elif score >= 60:
+            intro = "Tu mezcla necesita algunos ajustes antes de enviarla a mastering."
+        else:
+            intro = "Tu mezcla requiere atención en varios aspectos técnicos antes del mastering."
+        
+        # Technical assessment
+        tech_parts = []
+        
+        # Headroom & True Peak
+        headroom_metric = next((m for m in metrics if "Headroom" in m.get("internal_key", "")), None)
+        truepeak_metric = next((m for m in metrics if "True Peak" in m.get("internal_key", "")), None)
+        
+        if headroom_metric and headroom_metric.get("status") in ["perfect", "pass"]:
+            tech_parts.append("Headroom apropiado")
+        elif headroom_metric and headroom_metric.get("status") == "warning":
+            tech_parts.append("Headroom un poco ajustado")
+        elif headroom_metric and headroom_metric.get("status") == "critical":
+            tech_parts.append("Headroom insuficiente (riesgo de clipping)")
+        
+        # PLR / Dynamics
+        plr_metric = next((m for m in metrics if "PLR" in m.get("internal_key", "")), None)
+        if plr_metric and plr_metric.get("value") != "N/A":
+            if plr_metric.get("status") in ["perfect", "pass"]:
+                tech_parts.append("Excelente rango dinámico")
+            elif plr_metric.get("status") == "warning":
+                tech_parts.append("Rango dinámico algo comprimido")
+        
+        # Stereo
+        stereo_metric = next((m for m in metrics if "Stereo" in m.get("internal_key", "")), None)
+        if stereo_metric and stereo_metric.get("status") in ["perfect", "pass"]:
+            tech_parts.append("Imagen estéreo sólida y bien centrada")
+        elif stereo_metric and stereo_metric.get("status") == "warning":
+            tech_parts.append("Algunas inconsistencias de fase en imagen estéreo")
+        
+        # Frequency Balance
+        freq_metric = next((m for m in metrics if "Frequency" in m.get("internal_key", "")), None)
+        if freq_metric and freq_metric.get("status") in ["perfect", "pass"]:
+            tech_parts.append("Balance tonal generalmente saludable")
+        elif freq_metric and freq_metric.get("status") == "warning":
+            tech_parts.append("Balance tonal que podría mejorarse")
+        
+        tech_assessment = ", ".join(tech_parts) if tech_parts else "características técnicas aceptables"
+        
+        # Construir frase de manera correcta
+        if tech_parts:
+            tech_sentence = f"En general, la mezcla presenta:\n- " + "\n- ".join(tech_parts)
+        else:
+            tech_sentence = "La mezcla tiene características técnicas aceptables."
+        
+        # Issues summary with EXPLICIT list of ALL problems
+        if critical_issues:
+            issues_list = "\n".join([f"   • {issue}" for issue in critical_issues])
+            issues_sentence = f"\n\n⚠️ Se detectaron {len(critical_issues)} problema(s) crítico(s) que requieren atención inmediata:\n{issues_list}"
+        elif warnings:
+            # FIXED: Listar explícitamente los warnings con contexto
+            issues_details = []
+            
+            # Construir lista detallada de warnings
+            for m in metrics:
+                if m.get("status") == "warning":
+                    metric_name = m.get("name", "Métrica")
+                    metric_value = m.get("value")
+                    internal_key = m.get("internal_key", "")
+                    
+                    # Headroom warning
+                    if "Headroom" in internal_key:
+                        # metric_value already includes unit (e.g., "-2.5 dBFS")
+                        peak_val = str(metric_value) if not isinstance(metric_value, (int, float)) else f"{metric_value:.1f} dBFS"
+                        issues_details.append(
+                            f"• **Headroom general**: los picos están alrededor de {peak_val}. "
+                            f"Para un margen óptimo en mastering, ideal entre -6 y -4 dBFS."
+                        )
+                    
+                    # True Peak warning
+                    elif "True Peak" in internal_key:
+                        # metric_value already includes unit (e.g., "-2.3 dBTP")
+                        tp_val = str(metric_value) if not isinstance(metric_value, (int, float)) else f"{metric_value:.1f} dBTP"
+                        issues_details.append(
+                            f"• **True Peak**: está en {tp_val}. Para máxima seguridad en "
+                            f"conversiones de formato, se recomienda ≤-3.0 dBTP."
+                        )
+                    
+                    # PLR warning
+                    elif "PLR" in internal_key:
+                        plr_val = f"{metric_value:.1f}" if isinstance(metric_value, (int, float)) else str(metric_value)
+                        issues_details.append(
+                            f"• **Rango Dinámico (PLR)**: está en {plr_val} dB. "
+                            f"Para máxima flexibilidad en mastering, ideal 12-14 dB en modo strict."
+                        )
+                    
+                    # Stereo warning
+                    elif "Stereo" in internal_key or "Ancho" in internal_key:
+                        corr_val = f"{metric_value:.2f}" if isinstance(metric_value, (int, float)) else str(metric_value)
+                        issues_details.append(
+                            f"• **Campo Estéreo**: correlación {corr_val}. "
+                            f"Revisar compatibilidad mono y balance L/R."
+                        )
+                    
+                    # Frequency Balance warning
+                    elif "Frequency" in internal_key or "Balance" in internal_key:
+                        issues_details.append(
+                            f"• **Balance Tonal**: revisar distribución de frecuencias "
+                            f"(graves, medios, agudos)."
+                        )
+            
+            if issues_details:
+                issues_list_formatted = "\n".join(issues_details)
+                scope_note = "\n\n📍 **Alcance**: Estos puntos afectan a todo el track, no a secciones específicas." if strict else ""
+                issues_sentence = f"\n\n📋 **Puntos a revisar** (no críticos):\n{issues_list_formatted}{scope_note}"
+            else:
+                issues_sentence = f"\n\n📋 Hay {len(warnings)} punto(s) que podrías revisar, aunque no son críticos para el mastering."
+        else:
+            issues_sentence = "\n\n✅ No se detectaron problemas técnicos críticos."
+        
+        # Stereo Field Detailed Section (ONLY if issues detected)
+        stereo_detail = ""
+        if stereo_metric:
+            ms_ratio = stereo_metric.get("ms_ratio", 0)
+            lr_balance = stereo_metric.get("lr_balance_db", 0)
+            
+            # Show detailed section ONLY if there are stereo issues
+            has_stereo_issue = False
+            stereo_issues = []
+            
+            # Check M/S Ratio issues
+            if ms_ratio < 0.05:
+                has_stereo_issue = True
+                stereo_issues.append(
+                    "⚠️ La mezcla no tiene información estéreo (prácticamente mono).\n\n"
+                    "   🤔 ¿Es esto intencional?\n\n"
+                    "   Si SÍ es intencional:\n"
+                    "   • Perfecto - algunas producciones vintage o artísticas usan mono\n"
+                    "   • Solo confirma que sea la decisión correcta\n\n"
+                    "   Si NO es intencional, verifica:\n"
+                    "   • ¿Exportaste en mono por error? Revisa configuración de bounce\n"
+                    "   • ¿Tienes routing mal configurado en el DAW?\n"
+                    "   • ¿Todos los elementos están centrados sin paneo?\n\n"
+                    "   💡 Para mastering:\n"
+                    "   Si fue error, re-exporta en estéreo para aprovechar el paneo\n"
+                    "   y espacialización que diseñaste en la mezcla."
+                )
+            elif ms_ratio > 1.5:
+                has_stereo_issue = True
+                stereo_issues.append(
+                    f"⚠️ La información estéreo es muy amplia (M/S Ratio: {ms_ratio:.2f}).\n\n"
+                    "   Esto puede sonar impresionante en auriculares pero débil en parlantes\n"
+                    "   o sistemas mono (Bluetooth, teléfonos, algunos clubes).\n\n"
+                    "   🔍 Causas comunes:\n"
+                    "   • Demasiados plugins de ensanchamiento estéreo\n"
+                    "   • Exceso de reverb/delay en los sides\n"
+                    "   • Efectos estéreo muy agresivos\n\n"
+                    "   💡 Cómo corregirlo:\n"
+                    "   1. Reduce o quita plugins de 'stereo widening'\n"
+                    "   2. Baja el nivel de reverbs y delays panoramizados\n"
+                    "   3. Trae elementos importantes más al centro\n"
+                    "   4. Prueba la mezcla en MONO - si pierde mucho cuerpo, está muy ancha"
+                )
+            
+            # Check L/R Balance issues
+            if abs(lr_balance) > 3.0:
+                has_stereo_issue = True
+                side = "izquierdo" if lr_balance > 0 else "derecho"
+                stereo_issues.append(
+                    f"⚠️ La mezcla tiene más energía en el canal {side}\n"
+                    f"   ({abs(lr_balance):.1f} dB de diferencia).\n\n"
+                    "   🤔 ¿Es intencional?\n\n"
+                    "   Si SÍ (efecto artístico):\n"
+                    "   • Algunos productores usan paneo asimétrico intencionalmente\n"
+                    "   • Si es tu visión creativa, adelante\n\n"
+                    "   Si NO es intencional:\n"
+                    "   • Revisa el paneo general - puede haber demasiados elementos en un lado\n"
+                    "   • Verifica que no haya un canal con volumen incorrecto\n"
+                    "   • Chequea plugins que puedan estar afectando el balance\n"
+                    "   • Usa un medidor de fase/balance en el master para monitorear\n\n"
+                    "   💡 Recomendación:\n"
+                    "   Prueba la mezcla en diferentes sistemas (auriculares, parlantes, mono)\n"
+                    "   para confirmar que el desbalance funciona musicalmente."
+                )
+            
+            # Add stereo detail section if issues found
+            if has_stereo_issue:
+                stereo_detail = "\n\n📊 CAMPO ESTÉREO - Análisis Detallado:\n" + "\n\n".join(stereo_issues)
+        
+        # Recommendation
+        if score >= 85:
+            # Add technical details for high-scoring mixes
+            tech_details = build_technical_details(metrics, lang)
+            
+            if strict:
+                recommendation = "\n\n💡 Recomendación: Esta mezcla cumple con los estándares profesionales para entrega comercial. Puedes enviarla a mastering con confianza."
+            else:
+                recommendation = "\n\n💡 Recomendación: Envíala a mastering tal como está."
+        elif score >= 75:
+            tech_details = ""
+            recommendation = "\n\n💡 Recomendación: Revisa los puntos mencionados si buscas la máxima calidad, pero la mezcla es aceptable para mastering."
+        else:
+            tech_details = ""
+            recommendation = "\n\n💡 Recomendación: Atiende los problemas identificados antes de enviar a mastering para obtener los mejores resultados."
+        
+        # Mode note
+        if strict:
+            mode_note = "\n\n📊 Análisis realizado con estándares comerciales estrictos (modo strict)."
+        else:
+            mode_note = ""
+        
+        # Add filename reference at the beginning (natural narrative style)
+        filename_ref = f"🎵 Sobre \"{filename}\"\n\n"
+        
+        # Generate CTA based on score
+        cta = generate_cta(score, strict, lang, mode="write")
+        
+        return f"{filename_ref}{intro}\n\n{tech_sentence}{issues_sentence}{stereo_detail}{tech_details}{recommendation}{mode_note}{cta}"
+    
+    else:
+        # English narrative
+        if score >= 95:
+            intro = "Your mix is in excellent shape for mastering."
+        elif score >= 85:
+            intro = "Your mix is in very good shape for mastering."
+        elif score >= 75:
+            intro = "Your mix is ready for mastering, though there are a few minor points you could review."
+        elif score >= 60:
+            intro = "Your mix needs some adjustments before sending to mastering."
+        else:
+            intro = "Your mix requires attention to several technical aspects before mastering."
+        
+        # Technical assessment
+        tech_parts = []
+        
+        # Headroom & True Peak
+        headroom_metric = next((m for m in metrics if "Headroom" in m.get("internal_key", "")), None)
+        truepeak_metric = next((m for m in metrics if "True Peak" in m.get("internal_key", "")), None)
+        
+        if headroom_metric and headroom_metric.get("status") in ["perfect", "pass"]:
+            tech_parts.append("appropriate headroom")
+        elif headroom_metric and headroom_metric.get("status") == "warning":
+            tech_parts.append("slightly tight headroom")
+        elif headroom_metric and headroom_metric.get("status") == "critical":
+            tech_parts.append("insufficient headroom (clipping risk)")
+        
+        # PLR / Dynamics
+        plr_metric = next((m for m in metrics if "PLR" in m.get("internal_key", "")), None)
+        if plr_metric and plr_metric.get("value") != "N/A":
+            if plr_metric.get("status") in ["perfect", "pass"]:
+                tech_parts.append("excellent dynamic range")
+            elif plr_metric.get("status") == "warning":
+                tech_parts.append("somewhat compressed dynamic range")
+        
+        # Stereo
+        stereo_metric = next((m for m in metrics if "Stereo" in m.get("internal_key", "")), None)
+        if stereo_metric and stereo_metric.get("status") in ["perfect", "pass"]:
+            tech_parts.append("a solid, well-centered stereo image")
+        elif stereo_metric and stereo_metric.get("status") == "warning":
+            tech_parts.append("some phase inconsistencies in stereo image")
+        
+        # Frequency Balance
+        freq_metric = next((m for m in metrics if "Frequency" in m.get("internal_key", "")), None)
+        if freq_metric and freq_metric.get("status") in ["perfect", "pass"]:
+            tech_parts.append("generally healthy tonal balance")
+        elif freq_metric and freq_metric.get("status") == "warning":
+            tech_parts.append("tonal balance with room for improvement")
+        
+        tech_assessment = ", ".join(tech_parts) if tech_parts else "acceptable technical characteristics"
+        
+        # Construir frase de manera correcta
+        if tech_parts:
+            tech_sentence = f"Overall, the mix shows:\n- " + "\n- ".join([part.capitalize() for part in tech_parts])
+        else:
+            tech_sentence = "The mix has acceptable technical characteristics."
+        
+        # Issues summary with EXPLICIT list of ALL problems
+        if critical_issues:
+            issues_list = "\n".join([f"   • {issue}" for issue in critical_issues])
+            issues_sentence = f"\n\n⚠️ {len(critical_issues)} critical issue(s) detected that require immediate attention:\n{issues_list}"
+        elif warnings:
+            # FIXED: List warnings explicitly with context
+            issues_details = []
+            
+            # Build detailed warnings list
+            for m in metrics:
+                if m.get("status") == "warning":
+                    metric_name = m.get("name", "Metric")
+                    metric_value = m.get("value")
+                    internal_key = m.get("internal_key", "")
+                    
+                    # Headroom warning
+                    if "Headroom" in internal_key:
+                        # metric_value already includes unit (e.g., "-2.5 dBFS")
+                        peak_val = str(metric_value) if not isinstance(metric_value, (int, float)) else f"{metric_value:.1f} dBFS"
+                        issues_details.append(
+                            f"• **Overall headroom**: peak levels sit around {peak_val}. "
+                            f"For optimal mastering flexibility, peaks closer to -6 to -4 dBFS are recommended."
+                        )
+                    
+                    # True Peak warning
+                    elif "True Peak" in internal_key:
+                        # metric_value already includes unit (e.g., "-2.3 dBTP")
+                        tp_val = str(metric_value) if not isinstance(metric_value, (int, float)) else f"{metric_value:.1f} dBTP"
+                        issues_details.append(
+                            f"• **True Peak**: currently at {tp_val}. For maximum safety in "
+                            f"format conversions, ≤-3.0 dBTP is recommended."
+                        )
+                    
+                    # PLR warning
+                    elif "PLR" in internal_key:
+                        plr_val = f"{metric_value:.1f}" if isinstance(metric_value, (int, float)) else str(metric_value)
+                        issues_details.append(
+                            f"• **Dynamic Range (PLR)**: currently at {plr_val} dB. "
+                            f"For maximum mastering flexibility, 12-14 dB is ideal in strict mode."
+                        )
+                    
+                    # Stereo warning
+                    elif "Stereo" in internal_key or "Width" in internal_key:
+                        corr_val = f"{metric_value:.2f}" if isinstance(metric_value, (int, float)) else str(metric_value)
+                        issues_details.append(
+                            f"• **Stereo Field**: correlation {corr_val}. "
+                            f"Review mono compatibility and L/R balance."
+                        )
+                    
+                    # Frequency Balance warning
+                    elif "Frequency" in internal_key or "Balance" in internal_key:
+                        issues_details.append(
+                            f"• **Tonal Balance**: review frequency distribution "
+                            f"(lows, mids, highs)."
+                        )
+            
+            if issues_details:
+                issues_list_formatted = "\n".join(issues_details)
+                scope_note = "\n\n📍 **Scope**: These points apply to the entire track, not specific sections." if strict else ""
+                issues_sentence = f"\n\n📋 **Points to review** (non-critical):\n{issues_list_formatted}{scope_note}"
+            else:
+                issues_sentence = f"\n\n📋 There are {len(warnings)} point(s) you could review, though they're not critical for mastering."
+        else:
+            issues_sentence = "\n\n✅ No critical technical issues detected."
+        
+        # Stereo Field Detailed Section (ONLY if issues detected)
+        stereo_detail = ""
+        if stereo_metric:
+            ms_ratio = stereo_metric.get("ms_ratio", 0)
+            lr_balance = stereo_metric.get("lr_balance_db", 0)
+            
+            # Show detailed section ONLY if there are stereo issues
+            has_stereo_issue = False
+            stereo_issues = []
+            
+            # Check M/S Ratio issues
+            if ms_ratio < 0.05:
+                has_stereo_issue = True
+                stereo_issues.append(
+                    "⚠️ Mix has no stereo information (practically mono).\n\n"
+                    "   🤔 Is this intentional?\n\n"
+                    "   If YES, it's intentional:\n"
+                    "   • Perfect - some vintage or artistic productions use mono\n"
+                    "   • Just confirm it's the right decision for your project\n\n"
+                    "   If NOT intentional, check:\n"
+                    "   • Did you export in mono by mistake? Review bounce settings\n"
+                    "   • Is your DAW routing misconfigured?\n"
+                    "   • Are all elements completely centered with no panning?\n\n"
+                    "   💡 For mastering:\n"
+                    "   If it was an error, re-export in stereo to take advantage of all\n"
+                    "   the panning and spatialization you designed in your mix."
+                )
+            elif ms_ratio > 1.5:
+                has_stereo_issue = True
+                stereo_issues.append(
+                    f"⚠️ Stereo information is very wide (M/S Ratio: {ms_ratio:.2f}).\n\n"
+                    "   This may sound impressive on headphones but weak on speakers or\n"
+                    "   mono systems (Bluetooth, phones, some clubs).\n\n"
+                    "   🔍 Common causes:\n"
+                    "   • Too many stereo widening plugins\n"
+                    "   • Excessive reverb/delay on the sides\n"
+                    "   • Very aggressive stereo effects\n\n"
+                    "   💡 How to fix it:\n"
+                    "   1. Reduce or remove 'stereo widening' plugins\n"
+                    "   2. Lower the level of panned reverbs and delays\n"
+                    "   3. Bring important elements more to the center\n"
+                    "   4. Test the mix in MONO - if it loses a lot of body, it's too wide"
+                )
+            
+            # Check L/R Balance issues
+            if abs(lr_balance) > 3.0:
+                has_stereo_issue = True
+                side = "left" if lr_balance > 0 else "right"
+                stereo_issues.append(
+                    f"⚠️ Mix has more energy in the {side} channel\n"
+                    f"   ({abs(lr_balance):.1f} dB difference).\n\n"
+                    "   🤔 Is this intentional?\n\n"
+                    "   If YES (artistic effect):\n"
+                    "   • Some producers use asymmetric panning intentionally\n"
+                    "   • If it's your creative vision, go ahead\n\n"
+                    "   If NOT intentional:\n"
+                    "   • Check overall panning - there may be too many elements on one side\n"
+                    "   • Verify that a channel doesn't have incorrect volume\n"
+                    "   • Check plugins that might be affecting balance\n"
+                    "   • Use a phase/balance meter on the master to monitor\n\n"
+                    "   💡 Recommendation:\n"
+                    "   Test the mix on different systems (headphones, speakers, mono)\n"
+                    "   to confirm the imbalance works musically."
+                )
+            
+            # Add stereo detail section if issues found
+            if has_stereo_issue:
+                stereo_detail = "\n\n📊 STEREO FIELD - Detailed Analysis:\n" + "\n\n".join(stereo_issues)
+        
+        # Recommendation
+        if score >= 85:
+            # Add technical details for high-scoring mixes
+            tech_details = build_technical_details(metrics, lang)
+            
+            if strict:
+                recommendation = "\n\n💡 Recommendation: This mix meets professional standards for commercial delivery. You can send it to mastering with confidence."
+            else:
+                recommendation = "\n\n💡 Recommendation: Send it to mastering as-is."
+        elif score >= 75:
+            tech_details = ""
+            recommendation = "\n\n💡 Recommendation: Review the mentioned points if you're seeking maximum quality, but the mix is acceptable for mastering."
+        else:
+            tech_details = ""
+            recommendation = "\n\n💡 Recommendation: Address the identified issues before sending to mastering for best results."
+        
+        # Mode note
+        if strict:
+            mode_note = "\n\n📊 Analysis performed with strict commercial delivery standards (strict mode)."
+        else:
+            mode_note = ""
+        
+        # Add filename reference at the beginning (natural narrative style)
+        filename_ref = f"🎵 Regarding \"{filename}\"\n\n"
+        
+        # Generate CTA based on score
+        cta = generate_cta(score, strict, lang, mode="write")
+        
+        return f"{filename_ref}{intro}\n\n{tech_sentence}{issues_sentence}{stereo_detail}{tech_details}{recommendation}{mode_note}{cta}"
+
+
+def iter_audio_files(p: Path) -> List[Path]:
+    """Itera archivos de audio en path o directorio."""
+    exts = {".wav", ".aif", ".aiff", ".flac", ".mp3", ".ogg", ".m4a"}
+    if p.is_file():
+        return [p]
+    files = []
+    for f in sorted(p.glob("**/*")):
+        if f.suffix.lower() in exts and f.is_file():
+            files.append(f)
+    return files
+
+
+def generate_short_mode_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en', filename: str = "") -> str:
+    """
+    Generate short mode report with bullets showing positive aspects and areas to improve.
+    
+    Structure:
+    - Header (filename, score, verdict)
+    - Positive aspects (bullets)
+    - Areas to improve (bullets) 
+    - Recommendation
+    """
+    lang = _pick_lang(lang)
+    
+    score = report.get("score", 0)
+    verdict = report.get("verdict", "")
+    metrics = report.get("metrics", [])
+    
+    # Build positive aspects list
+    positive_aspects = []
+    areas_to_improve = []
+    
+    for metric in metrics:
+        status = metric.get("status", "")
+        name = metric.get("name", "")
+        message = metric.get("message", "")
+        
+        # Skip informational metrics
+        if status == "info":
+            continue
+            
+        # Add to appropriate list
+        if status in ["perfect", "pass", "good"]:
+            positive_aspects.append(f"• {name}: {message}")
+        elif status in ["warning", "critical", "catastrophic"]:
+            areas_to_improve.append(f"• {name}: {message}")
+    
+    # Build report
+    if lang == 'es':
+        header = ""
+        if filename:
+            header = f"🎵 Sobre \"{filename}\"\n\n"
+        
+        header += f"Puntuación: {score}/100\n"
+        header += f"Veredicto: {verdict}\n\n"
+        
+        body = ""
+        
+        if positive_aspects:
+            body += "✅ Aspectos Positivos:\n"
+            body += "\n".join(positive_aspects[:5])  # Limit to 5
+            body += "\n\n"
+        
+        if areas_to_improve:
+            body += "⚠️ Áreas a Mejorar:\n"
+            body += "\n".join(areas_to_improve[:5])  # Limit to 5
+            body += "\n\n"
+        
+        # Recommendation based on score
+        if score >= 85:
+            recommendation = "💡 Recomendación: Envíala a mastering tal como está."
+        elif score >= 70:
+            recommendation = "💡 Recomendación: Con algunos ajustes menores, estará lista para mastering."
+        elif score >= 50:
+            recommendation = "💡 Recomendación: Necesita varios ajustes antes de enviar a mastering."
+        else:
+            recommendation = "💡 Recomendación: Requiere trabajo significativo antes de mastering."
+        
+        # Generate CTA
+        cta = generate_cta(score, strict, lang, mode="short")
+        
+        return header + body + recommendation + "\n\n" + cta
+    
+    else:  # English
+        header = ""
+        if filename:
+            header = f"🎵 Regarding \"{filename}\"\n\n"
+        
+        header += f"Score: {score}/100\n"
+        header += f"Verdict: {verdict}\n\n"
+        
+        body = ""
+        
+        if positive_aspects:
+            body += "✅ Positive Aspects:\n"
+            body += "\n".join(positive_aspects[:5])
+            body += "\n\n"
+        
+        if areas_to_improve:
+            body += "⚠️ Areas to Improve:\n"
+            body += "\n".join(areas_to_improve[:5])
+            body += "\n\n"
+        
+        # Recommendation based on score
+        if score >= 85:
+            recommendation = "💡 Recommendation: Send it to mastering as-is."
+        elif score >= 70:
+            recommendation = "💡 Recommendation: With minor adjustments, it'll be ready for mastering."
+        elif score >= 50:
+            recommendation = "💡 Recommendation: Needs several adjustments before sending to mastering."
+        else:
+            recommendation = "💡 Recommendation: Requires significant work before mastering."
+        
+        # Generate CTA
+        cta = generate_cta(score, strict, lang, mode="short")
+        
+        return header + body + recommendation + "\n\n" + cta
+
+
+# =============================================================================
+# FUNCIÓN 3: generate_visual_report - INSERTAR DESPUÉS DE generate_short_mode_report
+# =============================================================================
+
+def generate_visual_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en', filename: str = "") -> str:
+    """
+    Generate visual mode report with bullets showing positive aspects and areas to review.
+    Educational and constructive tone.
+    """
+    lang = _pick_lang(lang)
+    
+    metrics = report.get("metrics", [])
+    
+    # Build positive aspects and areas to review
+    positive_aspects = []
+    areas_to_review = []
+    
+    for metric in metrics:
+        status = metric.get("status", "")
+        name = metric.get("name", "")
+        message = metric.get("message", "")
+        
+        # Skip informational metrics
+        if status == "info":
+            continue
+            
+        # Add to appropriate list with educational, positive framing
+        if status in ["perfect", "pass", "good"]:
+            # Extract the positive aspect concisely
+            if "Headroom" in name:
+                positive_aspects.append("Headroom apropiado para mastering" if lang == "es" else "Appropriate headroom for mastering")
+            elif "True Peak" in name:
+                positive_aspects.append("True Peak seguro para streaming" if lang == "es" else "Safe True Peak for streaming")
+            elif "PLR" in name or "dinám" in message.lower() or "dynamic" in message.lower():
+                positive_aspects.append("Excelente rango dinámico" if lang == "es" else "Excellent dynamic range")
+            elif "Stereo" in name or "stéreo" in name.lower():
+                positive_aspects.append("Imagen estéreo sólida y centrada" if lang == "es" else "Solid and centered stereo image")
+            elif "Frequency" in name or "Frecuen" in name:
+                positive_aspects.append("Balance tonal saludable" if lang == "es" else "Healthy tonal balance")
+            elif "LUFS" in name:
+                positive_aspects.append("Nivel apropiado para mastering" if lang == "es" else "Appropriate level for mastering")
+            elif "DC Offset" in name:
+                positive_aspects.append("Sin DC offset detectado" if lang == "es" else "No DC offset detected")
+        
+        elif status in ["warning", "critical", "catastrophic"]:
+            # Frame as "areas to review" with educational tone
+            if "Headroom" in name:
+                areas_to_review.append("Revisar headroom - Considerar dejar más espacio en los picos" if lang == "es" else "Review headroom - Consider leaving more headroom in peaks")
+            elif "True Peak" in name:
+                areas_to_review.append("Revisar True Peak - Ajustar limitadores para evitar clipping" if lang == "es" else "Review True Peak - Adjust limiters to avoid clipping")
+            elif "PLR" in name:
+                areas_to_review.append("Revisar dinámica - Considerar reducir compresión/limitación" if lang == "es" else "Review dynamics - Consider reducing compression/limiting")
+            elif "Stereo" in name or "stéreo" in name.lower():
+                areas_to_review.append("Revisar imagen estéreo - Verificar balance y correlación" if lang == "es" else "Review stereo image - Check balance and correlation")
+            elif "Frequency" in name or "Frecuen" in name:
+                areas_to_review.append("Revisar balance de frecuencias - Ajustar EQ si es necesario" if lang == "es" else "Review frequency balance - Adjust EQ if needed")
+            elif "LUFS" in name:
+                areas_to_review.append("Revisar nivel general - Ajustar gain staging" if lang == "es" else "Review overall level - Adjust gain staging")
+    
+    # Remove duplicates while preserving order
+    positive_aspects = list(dict.fromkeys(positive_aspects))
+    areas_to_review = list(dict.fromkeys(areas_to_review))
+    
+    # Build report
+    if lang == 'es':
+        # Add filename header if provided
+        report_text = ""
+        if filename:
+            report_text = f"🎵 Sobre \"{filename}\"\n\n"
+        
+        if positive_aspects:
+            report_text += "ASPECTOS POSITIVOS\n"
+            report_text += "─" * 50 + "\n"
+            for aspect in positive_aspects[:6]:  # Limit to 6
+                report_text += f"✓ {aspect}\n"
+            report_text += "\n"
+        
+        if areas_to_review:
+            report_text += "ASPECTOS PARA REVISAR\n"
+            report_text += "─" * 50 + "\n"
+            for aspect in areas_to_review[:6]:  # Limit to 6
+                report_text += f"→ {aspect}\n"
+        
         return report_text.strip()
+    
+    else:  # English
+        # Add filename header if provided
+        report_text = ""
+        if filename:
+            report_text = f"🎵 Regarding \"{filename}\"\n\n"
+        
+        if positive_aspects:
+            report_text += "POSITIVE ASPECTS\n"
+            report_text += "─" * 50 + "\n"
+            for aspect in positive_aspects[:6]:
+                report_text += f"✓ {aspect}\n"
+            report_text += "\n"
+        
+        if areas_to_review:
+            report_text += "AREAS TO REVIEW\n"
+            report_text += "─" * 50 + "\n"
+            for aspect in areas_to_review[:6]:
+                report_text += f"→ {aspect}\n"
+        
+        return report_text.strip()
+def main() -> None:
+    """Main entry point."""
+    ap = argparse.ArgumentParser(
+        description="Analyze mixes to verify they are ready for mastering delivery"
+    )
+    ap.add_argument("path", help="Archivo de audio o carpeta")
+    ap.add_argument(
+        "--oversample", 
+        default="auto",
+        help="Factor de sobremuestreo para true peak (default: auto, opciones: 1, 2, 4, auto)"
+    )
+    ap.add_argument(
+        "--genre",
+        choices=["rock", "pop", "edm", "electronic", "trap", "hip-hop", "jazz", "classical", "acoustic"],
+        help="Género musical para ajustar evaluación de frecuencias (opcional)"
+    )
+    ap.add_argument(
+        "--lang",
+        choices=["en", "es"],
+        default="en",
+        help="Output language / Idioma de salida (en/es)"
+    )
+
+    ap.add_argument("--json", dest="json_path", default=None, help="Guardar reporte JSON")
+    
+    ap.add_argument(
+        "--strict",
+        action="store_true",
+        help="Use stricter commercial-delivery thresholds (recommended for client/label delivery)."
+    )
+    ap.add_argument(
+        "--notes-only",
+        action="store_true",
+        help="Print feedback without score/verdict (observations only)."
+    )
+    ap.add_argument(
+        "--short",
+        action="store_true",
+        help="Short tips-only output (verdict + score + recommendations, no detailed metrics)."
+    )
+    ap.add_argument(
+        "--write",
+        action="store_true",
+        help="Narrative written feedback (engineer-style paragraph, perfect for emails/reports)."
+    )
+    args = ap.parse_args()
+
+    lang = _pick_lang(args.lang)
+
+    # Parse oversample
+    if args.oversample.lower() == "auto":
+        oversample = 0  # señal para auto-detect
+    else:
+        try:
+            oversample = int(args.oversample)
+            if oversample not in [1, 2, 4]:
+                raise ValueError
+        except ValueError:
+            print("❌ Error: --oversample debe ser 1, 2, 4 o 'auto'", file=sys.stderr)
+            sys.exit(1)
+
+    target = Path(args.path).expanduser()
+    
+    if not target.exists():
+        print(f"❌ Error: No existe {target}", file=sys.stderr)
+        sys.exit(1)
+    
+    files = iter_audio_files(target)
+    
+    if not files:
+        print("❌ No audio files found / No se encontraron archivos de audio en la ruta indicada.", file=sys.stderr)
+        sys.exit(1)
+
+    reports = []
+    for f in files:
+        try:
+            print(f"\n{UI_TEXT[lang]['analyzing']}: {f.name}...")
+            report = analyze_file(f, oversample=oversample, genre=args.genre, strict=args.strict, lang=lang)
+            reports.append(report)
+        except Exception as e:
+            print(f"❌ Error analyzing {f.name} / Error analizando {f.name}: {e}", file=sys.stderr)
+            continue
+
+    if not reports:
+        print("❌ No se pudo analizar ningún archivo", file=sys.stderr)
+        sys.exit(1)
+
+    # Build output (full vs notes-only)
+    def _notes_only_view(r: dict) -> dict:
+        out = {
+            "file": r.get("file", {}),
+            "issues": [],
+            "notes": {},
+        }
+        for mtr in r.get("metrics", []) or []:
+            if mtr.get("status") in ("warning", "critical"):
+                out["issues"].append({
+                    "name": mtr.get("name"),
+                    "status": mtr.get("status"),
+                    "value": mtr.get("value"),
+                    "message": mtr.get("message"),
+                })
+
+        meta = r.get("notes", {}) or {}
+        # Keep a few useful diagnostics (optional)
+        for k in ("clipping_detected", "dc_offset_detected", "lufs_is_real", "lufs_reliable",
+                  "oversample_factor", "auto_oversample"):
+            if k in meta:
+                out["notes"][k] = meta.get(k)
+
+        out["mode"] = "strict" if args.strict else "normal"
+
+        if not out["issues"]:
+            if lang == 'es':
+                out["summary"] = "✅ No se detectaron problemas. Esta mezcla está lista para entrega a mastering."
+            else:
+                out["summary"] = "✅ No issues detected. This mix is ready for mastering delivery."
+        else:
+            if lang == 'es':
+                out["summary"] = f"⚠️ {len(out['issues'])} problema(s) a revisar antes de la entrega a mastering."
+            else:
+                out["summary"] = f"⚠️ {len(out['issues'])} issue(s) to review before mastering delivery."
+        return out
+
+
+    def _localize_report(r: dict) -> dict:
+        """
+        Minimal post-processing for edge cases.
+        Most localization is now handled at the source.
+        """
+        # No changes needed - all localization done at source
+        return r
+
+    reports_out = []
+    for r in reports:
+        r_out = _notes_only_view(r) if args.notes_only else r
+        r_out = _localize_report(r_out)
+        reports_out.append(r_out)
+
+        # ==================== SHORT MODE ====================
+        # Tips-only output: verdict + score + recommendations
+        # Perfect for WhatsApp, web UI, quick feedback
+        if args.short:
+            # Check if this is a mastered track
+            score = r_out.get('score', 0)
+            metrics = r_out.get('metrics', [])
+            
+            # Detect mastered track (same logic as write_report)
+            lufs_metric = next((m for m in metrics if "LUFS" in m.get("internal_key", "")), None)
+            peak_metric = next((m for m in metrics if "Headroom" in m.get("internal_key", "")), None)
+            tp_metric = next((m for m in metrics if "True Peak" in m.get("internal_key", "")), None)
+            
+            lufs_value = None
+            if lufs_metric and lufs_metric.get("value") != "N/A":
+                try:
+                    lufs_value = float(lufs_metric.get("value", "").split()[0])
+                except:
+                    pass
+            
+            peak_value = None
+            if peak_metric:
+                try:
+                    peak_str = peak_metric.get("peak_db", "")
+                    peak_value = float(peak_str.replace(" dBFS", "").replace("dBFS", ""))
+                except:
+                    pass
+            
+            tp_value = None
+            if tp_metric:
+                try:
+                    tp_str = tp_metric.get("value", "")
+                    tp_value = float(tp_str.replace(" dBTP", "").replace("dBTP", ""))
+                except:
+                    pass
+            
+            is_mastered = False
+            if lufs_value is not None and lufs_value > -14:
+                if (peak_value is not None and peak_value > -1.0) or (tp_value is not None and tp_value > -1.0):
+                    is_mastered = True
+            
+            print()
+            # Show filename in short mode
+            if lang == 'es':
+                print(f"🎵 {f.name}")
+            else:
+                print(f"🎵 {f.name}")
+            print(UI_TEXT[lang]["short_header"])
+            print(UI_TEXT[lang]["short_separator"])
+            
+            if is_mastered:
+                # Special output for mastered tracks with updated CTA (no score/verdict)
+                print()
+                if lang == 'es':
+                    print("🎛️ Tipo: Máster Finalizado")
+                    print()
+                    print("💼 Este archivo parece ser un master o hotmix.")
+                    print()
+                    print("Si tu intención era enviar una mezcla para mastering, necesitas:")
+                    print("• Volver a la sesión sin limitador en el bus maestro")
+                    print("• Bajar ~6 dB (picos en -6 dBFS)")
+                    print("• Re-exportar la mezcla")
+                    print()
+                    print("¿Quieres hacer los ajustes, subirla de nuevo y revisar si ya está")
+                    print("lista para masterizar? O si prefieres, puedo ayudarte a dejarla")
+                    print("lista como mezcla para luego masterizarla.")
+                    print()
+                    print("Sube los archivos y con gusto te la preparo.")
+                else:
+                    print("🎛️ Type: Finished Master")
+                    print()
+                    print("💼 This file appears to be a master or hotmix.")
+                    print()
+                    print("If your goal was to send a mix for mastering, you need:")
+                    print("• Go back to session without limiter on master bus")
+                    print("• Lower ~6 dB (peaks at -6 dBFS)")
+                    print("• Re-export the mix")
+                    print()
+                    print("Want to make the adjustments yourself, re-upload it, and check if it's")
+                    print("ready for mastering? Or if you prefer, I can help you get it ready")
+                    print("as a mix and then master it.")
+                    print()
+                    print("Upload the files and I'll gladly prep it for you.")
+            else:
+                # Normal short output for mixes
+                print(f"\n📊 Score: {score}/100")
+                print(f"🎯 {r_out.get('verdict', '')}")
+                print()
+                recs = r_out.get("notes", {}).get("recommendations", [])
+                if recs:
+                    if lang == 'es':
+                        print("💡 Recomendaciones:")
+                    else:
+                        print("💡 Recommendations:")
+                    for rec in recs:
+                        print(f"  {rec}")
+                
+                # Add CTA for normal mixes
+                cta = generate_cta(score, args.strict, lang, mode="short")
+                print(cta)
+            
+            print()
+            continue  # Skip JSON output
+
+        # ==================== WRITE MODE ====================
+        # Narrative engineer-style feedback
+        # Perfect for emails, reports, web copy
+        if args.write:
+            narrative = write_report(r_out, args.strict, lang, filename=f.name)
+            print()
+            print(narrative)
+            print()
+            continue  # Skip JSON output
+
+        # ==================== NORMAL/NOTES-ONLY MODE ====================
+        # Full JSON output (default behavior)
+        print("\n" + "="*60)
+        print(UI_TEXT[lang]["analysis_results"])
+        print("="*60)
+        print(json.dumps(r_out, ensure_ascii=False, indent=2))
+
+    # Save JSON
+    if args.json_path:
+
+        outp = Path(args.json_path).expanduser()
+        try:
+            if len(reports_out) == 1:
+                outp.write_text(json.dumps(reports_out[0], ensure_ascii=False, indent=2), encoding="utf-8")
+            else:
+                outp.write_text(json.dumps(reports_out, ensure_ascii=False, indent=2), encoding="utf-8")
+            print(f"\n✅ Reporte guardado en: {outp}")
+        except Exception as e:
+            print(f"❌ Error guardando JSON: {e}", file=sys.stderr)
+
+
+if __name__ == "__main__":
+    main()
