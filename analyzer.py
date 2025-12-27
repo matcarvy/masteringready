@@ -2867,7 +2867,10 @@ def analyze_file_chunked(
         
         for chunk in problem_chunks[1:]:
             # If this chunk is consecutive (within gap_threshold seconds), extend region
-            if chunk['start_time'] - current_region['end'] < gap_threshold:
+            gap = chunk['start_time'] - current_region['end']
+            print(f"   Gap: {gap:.2f}s (threshold: {gap_threshold}s) - {'MERGE' if gap < gap_threshold else 'NEW REGION'}")
+            
+            if gap < gap_threshold:
                 current_region['end'] = chunk['end_time']
                 current_region['chunks'].append(chunk)
             else:
@@ -4567,4 +4570,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
