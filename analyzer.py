@@ -2664,76 +2664,106 @@ def analyze_file_chunked(
             results['ms_ratios'].append(chunk_ms)
             results['chunk_durations'].append(actual_chunk_duration)
             
-            # Track problem regions
-            # True Peak issues (above -1.0 dBTP threshold)
-            if chunk_tp_db > -1.0:
-                results['tp_problem_chunks'].append({
-                    'chunk': i + 1,
-                    'start_time': start_time,
-                    'end_time': start_time + actual_chunk_duration,
-                    'tp_db': chunk_tp_db
-                })
+            # ═══════════════════════════════════════════════════════════
+            # SUB-CHUNK TEMPORAL ANALYSIS (5-second windows)
+            # Provides terminal-level precision (±5s) for problem detection
+            # ═══════════════════════════════════════════════════════════
             
-            # Sample clipping (samples >= 0.999999)
-            if chunk_peak >= 0.999999:
-                results['clipping_chunks'].append({
-                    'chunk': i + 1,
-                    'start_time': start_time,
-                    'end_time': start_time + actual_chunk_duration,
-                    'peak': chunk_peak
-                })
+            window_duration = 5.0  # seconds
+            window_samples = int(window_duration * sr)
+            num_windows = int(np.ceil(y.shape[1] / window_samples))
             
-            # Stereo field issues
-            # 1. Correlation problems (too low < 0.3 or too high > 0.95)
-            if chunk_corr < 0.3:
-                results['correlation_problem_chunks'].append({
-                    'chunk': i + 1,
-                    'start_time': start_time,
-                    'end_time': start_time + actual_chunk_duration,
-                    'correlation': chunk_corr,
-                    'issue': 'low',
-                    'severity': 'critical' if chunk_corr < 0.1 else 'warning'
-                })
-            elif chunk_corr > 0.95:
-                results['correlation_problem_chunks'].append({
-                    'chunk': i + 1,
-                    'start_time': start_time,
-                    'end_time': start_time + actual_chunk_duration,
-                    'correlation': chunk_corr,
-                    'issue': 'high',
-                    'severity': 'warning'
-                })
-            
-            # 2. M/S Ratio problems (too low < 0.1 or too high > 1.2)
-            if chunk_ms < 0.1:
-                results['ms_ratio_problem_chunks'].append({
-                    'chunk': i + 1,
-                    'start_time': start_time,
-                    'end_time': start_time + actual_chunk_duration,
-                    'ms_ratio': chunk_ms,
-                    'issue': 'mono',
-                    'severity': 'warning'
-                })
-            elif chunk_ms > 1.2:
-                results['ms_ratio_problem_chunks'].append({
-                    'chunk': i + 1,
-                    'start_time': start_time,
-                    'end_time': start_time + actual_chunk_duration,
-                    'ms_ratio': chunk_ms,
-                    'issue': 'too_wide',
-                    'severity': 'warning'
-                })
-            
-            # 3. L/R Balance problems (abs > 2.0 dB)
-            if abs(chunk_lr) > 2.0:
-                results['lr_balance_problem_chunks'].append({
-                    'chunk': i + 1,
-                    'start_time': start_time,
-                    'end_time': start_time + actual_chunk_duration,
-                    'lr_balance_db': chunk_lr,
-                    'side': 'left' if chunk_lr > 0 else 'right',
-                    'severity': 'critical' if abs(chunk_lr) > 3.0 else 'warning'
-                })
+            for w in range(num_windows):
+                window_offset = w * window_samples
+                window_end = min(window_offset + window_samples, y.shape[1])
+                window = y[:, window_offset:window_end]
+                window_time = start_time + (window_offset / sr)
+                window_dur = (window_end - window_offset) / sr
+                
+                # Skip very short windows (< 1 second)
+                if window_dur < 1.0:
+                    continue
+                
+                # 1. True Peak temporal (per window)
+                window_tp = oversampled_true_peak_db(window, oversample)
+                if window_tp > -1.0:
+                    results['tp_problem_chunks'].append({
+                        'chunk': i + 1,
+                        'window': w + 1,
+                        'start_time': window_time,
+                        'end_time': window_time + window_dur,
+                        'tp_db': window_tp
+                    })
+                
+                # 2. Sample clipping temporal (per window)
+                window_peak = np.max(np.abs(window))
+                if window_peak >= 0.999999:
+                    results['clipping_chunks'].append({
+                        'chunk': i + 1,
+                        'window': w + 1,
+                        'start_time': window_time,
+                        'end_time': window_time + window_dur,
+                        'peak': window_peak
+                    })
+                
+                # 3. Stereo correlation temporal (per window)
+                window_corr = stereo_correlation(window)
+                if window_corr < 0.3:
+                    results['correlation_problem_chunks'].append({
+                        'chunk': i + 1,
+                        'window': w + 1,
+                        'start_time': window_time,
+                        'end_time': window_time + window_dur,
+                        'correlation': window_corr,
+                        'issue': 'low',
+                        'severity': 'critical' if window_corr < 0.1 else 'warning'
+                    })
+                elif window_corr > 0.95:
+                    results['correlation_problem_chunks'].append({
+                        'chunk': i + 1,
+                        'window': w + 1,
+                        'start_time': window_time,
+                        'end_time': window_time + window_dur,
+                        'correlation': window_corr,
+                        'issue': 'high',
+                        'severity': 'warning'
+                    })
+                
+                # 4. M/S Ratio temporal (per window)
+                window_ms, _, _ = calculate_ms_ratio(window)
+                if window_ms < 0.1:
+                    results['ms_ratio_problem_chunks'].append({
+                        'chunk': i + 1,
+                        'window': w + 1,
+                        'start_time': window_time,
+                        'end_time': window_time + window_dur,
+                        'ms_ratio': window_ms,
+                        'issue': 'mono',
+                        'severity': 'warning'
+                    })
+                elif window_ms > 1.2:
+                    results['ms_ratio_problem_chunks'].append({
+                        'chunk': i + 1,
+                        'window': w + 1,
+                        'start_time': window_time,
+                        'end_time': window_time + window_dur,
+                        'ms_ratio': window_ms,
+                        'issue': 'too_wide',
+                        'severity': 'warning'
+                    })
+                
+                # 5. L/R Balance temporal (per window)
+                window_lr = calculate_lr_balance(window)
+                if abs(window_lr) > 2.0:
+                    results['lr_balance_problem_chunks'].append({
+                        'chunk': i + 1,
+                        'window': w + 1,
+                        'start_time': window_time,
+                        'end_time': window_time + window_dur,
+                        'lr_balance_db': window_lr,
+                        'side': 'left' if window_lr > 0 else 'right',
+                        'severity': 'critical' if abs(window_lr) > 3.0 else 'warning'
+                    })
             
             print(f"   ✅ Peak: {chunk_peak_db:.1f} dBFS, TP: {chunk_tp_db:.1f} dBTP, LUFS: {chunk_lufs:.1f}")
             
