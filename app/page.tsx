@@ -112,8 +112,8 @@ const handleAnalyze = async () => {
             
             console.log(`📊 Poll ${pollAttempts}: ${statusData.status} - ${statusData.progress}%`)
             
-            // Update progress bar
-            setProgress(statusData.progress || 0)
+            // Update progress bar (don't allow it to go backwards)
+            setProgress(prev => Math.max(prev, statusData.progress || 0))
             
             if (statusData.status === 'complete') {
               clearInterval(pollInterval)
@@ -2136,3 +2136,4 @@ by Matías Carvajal
 }
 
 export default Home
+
