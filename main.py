@@ -451,7 +451,8 @@ async def start_analysis(
                     generate_visual_report,
                     result,
                     strict,
-                    lang
+                    lang,
+                    file.filename  # Add filename
                 )
                 report_visual = await loop.run_in_executor(None, visual_func)
                 
