@@ -2665,28 +2665,36 @@ def analyze_file_chunked(
             results['chunk_durations'].append(actual_chunk_duration)
             
             # ═══════════════════════════════════════════════════════════
-            # SUB-CHUNK TEMPORAL ANALYSIS (5-second windows)
-            # Provides terminal-level precision (±5s) for problem detection
+            # SUB-CHUNK TEMPORAL ANALYSIS (5-second windows with 50% overlap)
+            # Provides terminal-level precision (±2-3s) for problem detection
+            # Uses same parameters as terminal: 5s windows, 50% overlap, 0.0 dBTP threshold
             # ═══════════════════════════════════════════════════════════
             
             window_duration = 5.0  # seconds
+            hop_duration = 2.5     # 50% overlap (like terminal)
             window_samples = int(window_duration * sr)
-            num_windows = int(np.ceil(y.shape[1] / window_samples))
+            hop_samples = int(hop_duration * sr)
+            
+            # Calculate number of windows with overlap
+            num_samples = y.shape[1]
+            num_windows = int(np.ceil((num_samples - window_samples) / hop_samples)) + 1
             
             for w in range(num_windows):
-                window_offset = w * window_samples
-                window_end = min(window_offset + window_samples, y.shape[1])
+                window_offset = w * hop_samples
+                window_end = min(window_offset + window_samples, num_samples)
+                
+                # Skip if window is too short
+                if window_end - window_offset < sr:  # Less than 1 second
+                    continue
+                
                 window = y[:, window_offset:window_end]
                 window_time = start_time + (window_offset / sr)
                 window_dur = (window_end - window_offset) / sr
                 
-                # Skip very short windows (< 1 second)
-                if window_dur < 1.0:
-                    continue
-                
                 # 1. True Peak temporal (per window)
+                # Terminal uses threshold of 0.0 dBTP (not -1.0)
                 window_tp = oversampled_true_peak_db(window, oversample)
-                if window_tp > -1.0:
+                if window_tp > 0.0:  # Changed from -1.0 to 0.0 (terminal threshold)
                     results['tp_problem_chunks'].append({
                         'chunk': i + 1,
                         'window': w + 1,
