@@ -2841,12 +2841,18 @@ def analyze_file_chunked(
     print("============================================================")
     
     # Helper function to merge consecutive chunks into regions
-    def merge_chunks_into_regions(problem_chunks, gap_threshold=0.5):
+    def merge_chunks_into_regions(problem_chunks, gap_threshold=2.5):
         """
         Merge consecutive problem chunks into continuous regions.
         
-        Gap threshold of 0.5s provides better precision (±2-3s) vs 1.0s (±5s).
-        Shorter threshold = less aggressive merging = more accurate region boundaries.
+        Gap threshold of 2.5s matches terminal behavior:
+        - Small gaps (< 2.5s) are absorbed into continuous regions
+        - Larger gaps create separate regions
+        - Results in practical, user-friendly region reporting
+        
+        Example:
+          Windows: 30-35s, 35-40s, [gap 2s], 42-47s, 47-52s
+          Result: One region 30-52s (gap < 2.5s absorbed)
         """
         if not problem_chunks:
             return []
