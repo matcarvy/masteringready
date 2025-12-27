@@ -2854,6 +2854,7 @@ def analyze_file_chunked(
           Windows: 30-35s, 35-40s, [gap 2s], 42-47s, 47-52s
           Result: One region 30-52s (gap < 2.5s absorbed)
         """
+        print(f"🔧 merge_chunks_into_regions called with gap_threshold={gap_threshold}s")
         if not problem_chunks:
             return []
         
@@ -4566,3 +4567,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
