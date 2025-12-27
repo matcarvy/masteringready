@@ -3236,6 +3236,84 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                 message += "\n".join(positive_aspects)
                 message += "\n\n"
             
+            # SECTION 2.5: Temporal Analysis (if available from chunked mode)
+            if stereo_metric and "temporal_analysis" in stereo_metric:
+                temporal = stereo_metric["temporal_analysis"]
+                
+                message += "⚠️ ANÁLISIS TEMPORAL:\n\n"
+                
+                # Correlation temporal
+                if 'correlation' in temporal:
+                    corr_data = temporal['correlation']
+                    num_regions = corr_data.get('num_regions', 0)
+                    regions = corr_data.get('regions', [])
+                    
+                    if num_regions > 0:
+                        message += f"🔊 Correlación ({num_regions} región{'es' if num_regions > 1 else ''} problemática{'s' if num_regions > 1 else ''}):\n"
+                        for region in regions[:3]:  # Max 3 for mastered files (shorter)
+                            start_min = int(region['start'] // 60)
+                            start_sec = int(region['start'] % 60)
+                            end_min = int(region['end'] // 60)
+                            end_sec = int(region['end'] % 60)
+                            dur = int(region['duration'])
+                            corr = region['avg_correlation']
+                            issue = region['issue']
+                            
+                            message += f"   • {start_min}:{start_sec:02d} → {end_min}:{end_sec:02d} ({dur}s): "
+                            if issue == 'low':
+                                message += f"Correlación baja ({corr*100:.0f}%) - Posible phase issues\n"
+                            else:
+                                message += f"Correlación muy alta ({corr*100:.0f}%) - Casi mono\n"
+                        message += "\n"
+                
+                # M/S Ratio temporal
+                if 'ms_ratio' in temporal:
+                    ms_data = temporal['ms_ratio']
+                    num_regions = ms_data.get('num_regions', 0)
+                    regions = ms_data.get('regions', [])
+                    
+                    if num_regions > 0:
+                        message += f"📐 M/S Ratio ({num_regions} región{'es' if num_regions > 1 else ''} problemática{'s' if num_regions > 1 else ''}):\n"
+                        for region in regions[:3]:
+                            start_min = int(region['start'] // 60)
+                            start_sec = int(region['start'] % 60)
+                            end_min = int(region['end'] // 60)
+                            end_sec = int(region['end'] % 60)
+                            dur = int(region['duration'])
+                            ms = region['avg_ms_ratio']
+                            issue = region['issue']
+                            
+                            message += f"   • {start_min}:{start_sec:02d} → {end_min}:{end_sec:02d} ({dur}s): "
+                            if issue == 'mono':
+                                message += f"Ratio bajo ({ms:.2f}) - Muy mono\n"
+                            else:
+                                message += f"Ratio alto ({ms:.2f}) - Exceso de Side\n"
+                        message += "\n"
+                
+                # L/R Balance temporal
+                if 'lr_balance' in temporal:
+                    lr_data = temporal['lr_balance']
+                    num_regions = lr_data.get('num_regions', 0)
+                    regions = lr_data.get('regions', [])
+                    
+                    if num_regions > 0:
+                        message += f"⚖️ Balance L/R ({num_regions} región{'es' if num_regions > 1 else ''} problemática{'s' if num_regions > 1 else ''}):\n"
+                        for region in regions[:3]:
+                            start_min = int(region['start'] // 60)
+                            start_sec = int(region['start'] % 60)
+                            end_min = int(region['end'] // 60)
+                            end_sec = int(region['end'] % 60)
+                            dur = int(region['duration'])
+                            balance = region['avg_balance_db']
+                            side = region['side']
+                            
+                            message += f"   • {start_min}:{start_sec:02d} → {end_min}:{end_sec:02d} ({dur}s): "
+                            if side == 'left':
+                                message += f"Desbalance L: +{abs(balance):.1f} dB\n"
+                            else:
+                                message += f"Desbalance R: {balance:.1f} dB\n"
+                        message += "\n"
+            
             # SECTION 3: Technical Observations
             observations = []
             
