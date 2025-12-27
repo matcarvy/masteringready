@@ -2331,8 +2331,95 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
             if lr_balance is not None:
                 details += f"   • L/R Balance: {abs(lr_balance):.1f} dB\n"
             details += "\n"
-            details += "   → Imagen estéreo con buena compatibilidad mono.\n"
-            details += "     Se traducirá bien en diferentes sistemas.\n\n"
+            
+            # Check for temporal analysis (from chunked mode)
+            if "temporal_analysis" in stereo_metric:
+                temporal = stereo_metric["temporal_analysis"]
+                
+                details += "⚠️ ANÁLISIS TEMPORAL:\n\n"
+                
+                # Correlation temporal
+                if 'correlation' in temporal:
+                    corr_data = temporal['correlation']
+                    num_regions = corr_data.get('num_regions', 0)
+                    regions = corr_data.get('regions', [])
+                    
+                    if num_regions > 0:
+                        details += f"🔊 Correlación ({num_regions} región{'es' if num_regions > 1 else ''} problemática{'s' if num_regions > 1 else ''}):\n"
+                        for region in regions[:5]:
+                            start_min = int(region['start'] // 60)
+                            start_sec = int(region['start'] % 60)
+                            end_min = int(region['end'] // 60)
+                            end_sec = int(region['end'] % 60)
+                            dur = int(region['duration'])
+                            corr = region['avg_correlation']
+                            issue = region['issue']
+                            
+                            details += f"   • {start_min}:{start_sec:02d} → {end_min}:{end_sec:02d} ({dur}s): "
+                            if issue == 'low':
+                                details += f"Correlación baja ({corr*100:.0f}%)\n"
+                                details += "      → Posible phase issues\n"
+                            else:
+                                details += f"Correlación muy alta ({corr*100:.0f}%)\n"
+                                details += "      → Casi mono\n"
+                        details += "\n"
+                
+                # M/S Ratio temporal
+                if 'ms_ratio' in temporal:
+                    ms_data = temporal['ms_ratio']
+                    num_regions = ms_data.get('num_regions', 0)
+                    regions = ms_data.get('regions', [])
+                    
+                    if num_regions > 0:
+                        details += f"📐 M/S Ratio ({num_regions} región{'es' if num_regions > 1 else ''} problemática{'s' if num_regions > 1 else ''}):\n"
+                        for region in regions[:5]:
+                            start_min = int(region['start'] // 60)
+                            start_sec = int(region['start'] % 60)
+                            end_min = int(region['end'] // 60)
+                            end_sec = int(region['end'] % 60)
+                            dur = int(region['duration'])
+                            ms = region['avg_ms_ratio']
+                            issue = region['issue']
+                            
+                            details += f"   • {start_min}:{start_sec:02d} → {end_min}:{end_sec:02d} ({dur}s): "
+                            if issue == 'mono':
+                                details += f"Ratio bajo ({ms:.2f})\n"
+                                details += "      → Mezcla muy mono\n"
+                            else:
+                                details += f"Ratio alto ({ms:.2f})\n"
+                                details += "      → Exceso de información Side\n"
+                        details += "\n"
+                
+                # L/R Balance temporal
+                if 'lr_balance' in temporal:
+                    lr_data = temporal['lr_balance']
+                    num_regions = lr_data.get('num_regions', 0)
+                    regions = lr_data.get('regions', [])
+                    
+                    if num_regions > 0:
+                        details += f"⚖️ Balance L/R ({num_regions} región{'es' if num_regions > 1 else ''} problemática{'s' if num_regions > 1 else ''}):\n"
+                        for region in regions[:5]:
+                            start_min = int(region['start'] // 60)
+                            start_sec = int(region['start'] % 60)
+                            end_min = int(region['end'] // 60)
+                            end_sec = int(region['end'] % 60)
+                            dur = int(region['duration'])
+                            balance = region['avg_balance_db']
+                            side = region['side']
+                            
+                            details += f"   • {start_min}:{start_sec:02d} → {end_min}:{end_sec:02d} ({dur}s): "
+                            if side == 'left':
+                                details += f"Desbalance L: +{abs(balance):.1f} dB\n"
+                            else:
+                                details += f"Desbalance R: {balance:.1f} dB\n"
+                        details += "\n"
+                
+                details += "💡 Revisa los timestamps indicados en tu DAW.\n\n"
+            
+            else:
+                # No temporal analysis available
+                details += "   → Imagen estéreo con buena compatibilidad mono.\n"
+                details += "     Se traducirá bien en diferentes sistemas.\n\n"
         
         # FREQUENCY BALANCE
         freq_metric = next((m for m in metrics if "Frequency" in m.get("internal_key", "")), None)
