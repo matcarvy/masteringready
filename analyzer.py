@@ -3322,7 +3322,9 @@ def analyze_file_chunked(
         'correlations': [],
         'lr_balances': [],
         'ms_ratios': [],
-        'chunk_durations': []
+        'chunk_durations': [],
+        'tp_problem_chunks': [],      # Track chunks with TP > -1.0 dBTP
+        'clipping_chunks': []           # Track chunks with sample clipping
     }
     
     # 3. Process each chunk
@@ -3380,6 +3382,25 @@ def analyze_file_chunked(
             results['lr_balances'].append(chunk_lr)
             results['ms_ratios'].append(chunk_ms)
             results['chunk_durations'].append(actual_chunk_duration)
+            
+            # Track problem regions
+            # True Peak issues (above -1.0 dBTP threshold)
+            if chunk_tp_db > -1.0:
+                results['tp_problem_chunks'].append({
+                    'chunk': i + 1,
+                    'start_time': start_time,
+                    'end_time': start_time + actual_chunk_duration,
+                    'tp_db': chunk_tp_db
+                })
+            
+            # Sample clipping (samples >= 0.999999)
+            if chunk_peak >= 0.999999:
+                results['clipping_chunks'].append({
+                    'chunk': i + 1,
+                    'start_time': start_time,
+                    'end_time': start_time + actual_chunk_duration,
+                    'peak': chunk_peak
+                })
             
             print(f"   ✅ Peak: {chunk_peak_db:.1f} dBFS, TP: {chunk_tp_db:.1f} dBTP, LUFS: {chunk_lufs:.1f}")
             
@@ -3491,25 +3512,104 @@ def analyze_file_chunked(
     headroom = final_peak  # Both are negative in dBFS (e.g., -6.28 dBFS)
     st_h, msg_h, _ = status_headroom(final_peak, strict, lang)
     
-    metrics.append({
+    # Build clipping temporal analysis if there are clipping chunks
+    clipping_temporal = None
+    if results['clipping_chunks']:
+        # Merge consecutive chunks into regions
+        regions = []
+        if results['clipping_chunks']:
+            current_region = {
+                'start': results['clipping_chunks'][0]['start_time'],
+                'end': results['clipping_chunks'][0]['end_time']
+            }
+            
+            for chunk in results['clipping_chunks'][1:]:
+                # If consecutive, extend region
+                if chunk['start_time'] - current_region['end'] < 1.0:
+                    current_region['end'] = chunk['end_time']
+                else:
+                    regions.append(current_region)
+                    current_region = {
+                        'start': chunk['start_time'],
+                        'end': chunk['end_time']
+                    }
+            
+            regions.append(current_region)
+        
+        clipping_temporal = {
+            'num_regions': len(regions),
+            'regions': regions[:10]  # Limit to first 10
+        }
+    
+    headroom_metric = {
         "name": "Headroom",
         "internal_key": "Headroom",
         "value": f"{headroom:.1f} dBFS",  # Display as dBFS (negative)
         "status": st_h,
         "message": msg_h,
         "peak_db": f"{final_peak:.1f} dBFS"
-    })
+    }
+    
+    if clipping_temporal:
+        headroom_metric["clipping_temporal"] = clipping_temporal
+    
+    metrics.append(headroom_metric)
     
     # 2. True Peak
     st_tp, msg_tp, _, tp_hard = status_true_peak(final_tp, strict, lang)
     
-    metrics.append({
+    # Build temporal analysis if there are problem chunks
+    tp_temporal = None
+    if results['tp_problem_chunks']:
+        # Calculate percentage of track with TP issues
+        problem_duration = sum(
+            chunk['end_time'] - chunk['start_time'] 
+            for chunk in results['tp_problem_chunks']
+        )
+        percentage = (problem_duration / duration) * 100 if duration > 0 else 0
+        
+        # Merge consecutive chunks into regions
+        regions = []
+        if results['tp_problem_chunks']:
+            current_region = {
+                'start': results['tp_problem_chunks'][0]['start_time'],
+                'end': results['tp_problem_chunks'][0]['end_time']
+            }
+            
+            for chunk in results['tp_problem_chunks'][1:]:
+                # If this chunk is consecutive (within 1 second), extend region
+                if chunk['start_time'] - current_region['end'] < 1.0:
+                    current_region['end'] = chunk['end_time']
+                else:
+                    # Save current region and start new one
+                    regions.append(current_region)
+                    current_region = {
+                        'start': chunk['start_time'],
+                        'end': chunk['end_time']
+                    }
+            
+            # Don't forget last region
+            regions.append(current_region)
+        
+        tp_temporal = {
+            'total_time_above_threshold': problem_duration,
+            'percentage_above_threshold': percentage,
+            'num_regions': len(regions),
+            'regions': regions[:10]  # Limit to first 10 regions for brevity
+        }
+    
+    tp_metric = {
         "name": "True Peak",
         "internal_key": "True Peak",
         "value": f"{final_tp:.1f} dBTP",
         "status": st_tp,
         "message": msg_tp
-    })
+    }
+    
+    if tp_temporal:
+        tp_metric["temporal_analysis"] = tp_temporal
+    
+    metrics.append(tp_metric)
     
     # 3. DC Offset (assume not detected in chunked analysis)
     dc_data = {"detected": False, "max_offset": 0.0}
@@ -4041,7 +4141,7 @@ def generate_short_mode_report(report: Dict[str, Any], strict: bool = False, lan
         cta = generate_cta(score, strict, lang, mode="short")
         
         return header + body + recommendation + "\n\n" + cta
-def generate_visual_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en') -> str:
+def generate_visual_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en', filename: str = "") -> str:
     """
     Generate visual mode report with bullets showing positive aspects and areas to review.
     Educational and constructive tone.
@@ -4102,7 +4202,10 @@ def generate_visual_report(report: Dict[str, Any], strict: bool = False, lang: s
     
     # Build report
     if lang == 'es':
+        # Add filename header if provided
         report_text = ""
+        if filename:
+            report_text = f"🎵 Sobre \"{filename}\"\n\n"
         
         if positive_aspects:
             report_text += "ASPECTOS POSITIVOS\n"
@@ -4115,6 +4218,27 @@ def generate_visual_report(report: Dict[str, Any], strict: bool = False, lang: s
             report_text += "ASPECTOS PARA REVISAR\n"
             report_text += "─" * 50 + "\n"
             for aspect in areas_to_review[:6]:  # Limit to 6
+                report_text += f"→ {aspect}\n"
+        
+        return report_text.strip()
+    
+    else:  # English
+        # Add filename header if provided
+        report_text = ""
+        if filename:
+            report_text = f"🎵 Regarding \"{filename}\"\n\n"
+        
+        if positive_aspects:
+            report_text += "POSITIVE ASPECTS\n"
+            report_text += "─" * 50 + "\n"
+            for aspect in positive_aspects[:6]:
+                report_text += f"✓ {aspect}\n"
+            report_text += "\n"
+        
+        if areas_to_review:
+            report_text += "AREAS TO REVIEW\n"
+            report_text += "─" * 50 + "\n"
+            for aspect in areas_to_review[:6]:
                 report_text += f"→ {aspect}\n"
         
         return report_text.strip()
