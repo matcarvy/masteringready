@@ -3237,10 +3237,32 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                 message += "\n\n"
             
             # SECTION 2.5: Temporal Analysis (if available from chunked mode)
+            has_temporal = False
+            temporal_message = ""
+            
+            # Check for True Peak temporal analysis
+            if tp_metric and "temporal_analysis" in tp_metric:
+                tp_temporal_data = tp_metric["temporal_analysis"]
+                num_regions = tp_temporal_data.get('num_regions', 0)
+                percentage = tp_temporal_data.get('percentage_above_threshold', 0)
+                regions = tp_temporal_data.get('regions', [])
+                
+                if num_regions > 0:
+                    has_temporal = True
+                    temporal_message += f"🔊 True Peak: Presente durante {percentage:.0f}% del tiempo.\n"
+                    temporal_message += f"   Regiones afectadas ({num_regions}):\n"
+                    for region in regions[:3]:  # Max 3 regions
+                        start_min = int(region['start'] // 60)
+                        start_sec = int(region['start'] % 60)
+                        end_min = int(region['end'] // 60)
+                        end_sec = int(region['end'] % 60)
+                        temporal_message += f"   • {start_min}:{start_sec:02d} → {end_min}:{end_sec:02d}\n"
+                    temporal_message += "\n"
+                    temporal_message += "💡 El track está procesado a nivel de master con limitación agresiva.\n\n"
+            
+            # Check for Stereo temporal analysis
             if stereo_metric and "temporal_analysis" in stereo_metric:
                 temporal = stereo_metric["temporal_analysis"]
-                
-                message += "⚠️ ANÁLISIS TEMPORAL:\n\n"
                 
                 # Correlation temporal
                 if 'correlation' in temporal:
@@ -3249,8 +3271,9 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                     regions = corr_data.get('regions', [])
                     
                     if num_regions > 0:
-                        message += f"🔊 Correlación ({num_regions} región{'es' if num_regions > 1 else ''} problemática{'s' if num_regions > 1 else ''}):\n"
-                        for region in regions[:3]:  # Max 3 for mastered files (shorter)
+                        has_temporal = True
+                        temporal_message += f"🎧 Correlación ({num_regions} región{'es' if num_regions > 1 else ''} problemática{'s' if num_regions > 1 else ''}):\n"
+                        for region in regions[:3]:
                             start_min = int(region['start'] // 60)
                             start_sec = int(region['start'] % 60)
                             end_min = int(region['end'] // 60)
@@ -3259,12 +3282,12 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                             corr = region['avg_correlation']
                             issue = region['issue']
                             
-                            message += f"   • {start_min}:{start_sec:02d} → {end_min}:{end_sec:02d} ({dur}s): "
+                            temporal_message += f"   • {start_min}:{start_sec:02d} → {end_min}:{end_sec:02d} ({dur}s): "
                             if issue == 'low':
-                                message += f"Correlación baja ({corr*100:.0f}%) - Posible phase issues\n"
+                                temporal_message += f"Correlación baja ({corr*100:.0f}%)\n"
                             else:
-                                message += f"Correlación muy alta ({corr*100:.0f}%) - Casi mono\n"
-                        message += "\n"
+                                temporal_message += f"Correlación muy alta ({corr*100:.0f}%)\n"
+                        temporal_message += "\n"
                 
                 # M/S Ratio temporal
                 if 'ms_ratio' in temporal:
@@ -3273,7 +3296,8 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                     regions = ms_data.get('regions', [])
                     
                     if num_regions > 0:
-                        message += f"📐 M/S Ratio ({num_regions} región{'es' if num_regions > 1 else ''} problemática{'s' if num_regions > 1 else ''}):\n"
+                        has_temporal = True
+                        temporal_message += f"📐 M/S Ratio ({num_regions} región{'es' if num_regions > 1 else ''} problemática{'s' if num_regions > 1 else ''}):\n"
                         for region in regions[:3]:
                             start_min = int(region['start'] // 60)
                             start_sec = int(region['start'] % 60)
@@ -3283,12 +3307,12 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                             ms = region['avg_ms_ratio']
                             issue = region['issue']
                             
-                            message += f"   • {start_min}:{start_sec:02d} → {end_min}:{end_sec:02d} ({dur}s): "
+                            temporal_message += f"   • {start_min}:{start_sec:02d} → {end_min}:{end_sec:02d} ({dur}s): "
                             if issue == 'mono':
-                                message += f"Ratio bajo ({ms:.2f}) - Muy mono\n"
+                                temporal_message += f"Ratio bajo ({ms:.2f})\n"
                             else:
-                                message += f"Ratio alto ({ms:.2f}) - Exceso de Side\n"
-                        message += "\n"
+                                temporal_message += f"Ratio alto ({ms:.2f})\n"
+                        temporal_message += "\n"
                 
                 # L/R Balance temporal
                 if 'lr_balance' in temporal:
@@ -3297,7 +3321,8 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                     regions = lr_data.get('regions', [])
                     
                     if num_regions > 0:
-                        message += f"⚖️ Balance L/R ({num_regions} región{'es' if num_regions > 1 else ''} problemática{'s' if num_regions > 1 else ''}):\n"
+                        has_temporal = True
+                        temporal_message += f"⚖️ Balance L/R ({num_regions} región{'es' if num_regions > 1 else ''} problemática{'s' if num_regions > 1 else ''}):\n"
                         for region in regions[:3]:
                             start_min = int(region['start'] // 60)
                             start_sec = int(region['start'] % 60)
@@ -3307,12 +3332,17 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                             balance = region['avg_balance_db']
                             side = region['side']
                             
-                            message += f"   • {start_min}:{start_sec:02d} → {end_min}:{end_sec:02d} ({dur}s): "
+                            temporal_message += f"   • {start_min}:{start_sec:02d} → {end_min}:{end_sec:02d} ({dur}s): "
                             if side == 'left':
-                                message += f"Desbalance L: +{abs(balance):.1f} dB\n"
+                                temporal_message += f"Desbalance L: +{abs(balance):.1f} dB\n"
                             else:
-                                message += f"Desbalance R: {balance:.1f} dB\n"
-                        message += "\n"
+                                temporal_message += f"Desbalance R: {balance:.1f} dB\n"
+                        temporal_message += "\n"
+            
+            # Add temporal analysis section if there's any temporal data
+            if has_temporal:
+                message += "⚠️ ANÁLISIS TEMPORAL:\n\n"
+                message += temporal_message
             
             # SECTION 3: Technical Observations
             observations = []
