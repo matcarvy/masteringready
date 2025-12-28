@@ -248,11 +248,28 @@ ${new Date().toLocaleDateString()}
 `
     }
     
+    // Get translated filename
+    const getModeFilename = (mode: string) => {
+      const modeNames = {
+        es: {
+          visual: 'rapido',
+          short: 'resumen',
+          write: 'completo'
+        },
+        en: {
+          visual: 'quick',
+          short: 'summary',
+          write: 'complete'
+        }
+      }
+      return modeNames[lang][mode as keyof typeof modeNames.es] || mode
+    }
+    
     const blob = new Blob([content], { type: 'text/plain' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `masteringready-${reportView}-${Date.now()}.txt`
+    a.download = `masteringready-${getModeFilename(reportView)}-${Date.now()}.txt`
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
@@ -346,7 +363,7 @@ by Matías Carvajal
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `masteringready-complete-report-${Date.now()}.txt`
+    a.download = `masteringready-${lang === 'es' ? 'detallado' : 'detailed'}-${Date.now()}.txt`
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
@@ -355,6 +372,19 @@ by Matías Carvajal
 
   const scrollToAnalyzer = () => {
     document.getElementById('analyze')?.scrollIntoView({ behavior: 'smooth' })
+  }
+
+  // Clean report text from decorative lines for better mobile display
+  const cleanReportText = (text: string): string => {
+    if (!text) return ''
+    
+    return text
+      // Remove decorative lines
+      .replace(/[═─]{3,}/g, '')
+      // Remove excessive newlines
+      .replace(/\n{3,}/g, '\n\n')
+      // Trim
+      .trim()
   }
 
   const isFileTooLarge = file && file.size > 500 * 1024 * 1024 // 500MB hard limit
@@ -383,31 +413,32 @@ by Matías Carvajal
         boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
         zIndex: 50
       }}>
-        <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 1.5rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: '64px' }}>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
+        <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 1rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: '64px', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <span style={{
-                fontSize: '1.5rem',
+                fontSize: 'clamp(1.25rem, 4vw, 1.5rem)',
                 fontWeight: 'bold',
                 background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text'
+                backgroundClip: 'text',
+                whiteSpace: 'nowrap'
               }}>
                 🎵 MasteringReady
               </span>
             </div>
-            <div style={{ display: 'flex', gap: '2rem', alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: 'clamp(0.5rem, 2vw, 1rem)', alignItems: 'center' }}>
               <button
                 onClick={() => setLang(lang === 'es' ? 'en' : 'es')}
                 style={{
-                  fontSize: '0.875rem',
+                  fontSize: 'clamp(0.75rem, 2vw, 0.875rem)',
                   fontWeight: '500',
                   color: '#6b7280',
                   cursor: 'pointer',
                   border: 'none',
                   background: 'none',
-                  padding: '0.5rem 1rem'
+                  padding: 'clamp(0.25rem, 1vw, 0.5rem) clamp(0.5rem, 2vw, 1rem)'
                 }}
               >
                 {lang === 'es' ? 'EN' : 'ES'}
@@ -417,12 +448,14 @@ by Matías Carvajal
                 style={{
                   background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                   color: 'white',
-                  padding: '0.5rem 1.5rem',
+                  padding: 'clamp(0.4rem, 1.5vw, 0.5rem) clamp(0.75rem, 3vw, 1.5rem)',
                   borderRadius: '9999px',
                   fontWeight: '600',
+                  fontSize: 'clamp(0.75rem, 2vw, 0.875rem)',
                   border: 'none',
                   cursor: 'pointer',
-                  transition: 'transform 0.2s, box-shadow 0.2s'
+                  transition: 'transform 0.2s, box-shadow 0.2s',
+                  whiteSpace: 'nowrap'
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.transform = 'translateY(-2px)'
@@ -433,7 +466,7 @@ by Matías Carvajal
                   e.currentTarget.style.boxShadow = 'none'
                 }}
               >
-                {lang === 'es' ? 'Analizar Gratis' : 'Analyze Free'}
+                {lang === 'es' ? 'Analizar' : 'Analyze'}
               </button>
             </div>
           </div>
@@ -1289,24 +1322,24 @@ by Matías Carvajal
                   <div style={{
                     background: '#f9fafb',
                     borderRadius: '0.75rem',
-                    padding: '1.5rem',
+                    padding: 'clamp(1rem, 3vw, 1.5rem)',
                     marginBottom: '1.5rem'
                   }}>
-                    <h3 style={{ fontWeight: '600', fontSize: '1.125rem', marginBottom: '1rem' }}>
-                      {lang === 'es' ? 'Análisis Rápido' : 'Quick Analysis'}
+                    <h3 style={{ fontWeight: '600', fontSize: 'clamp(1rem, 2.5vw, 1.125rem)', marginBottom: '1rem' }}>
+                      {lang === 'es' ? '⚡ Análisis Rápido' : '⚡ Quick Analysis'}
                     </h3>
                     <pre style={{
                       whiteSpace: 'pre-wrap',
                       wordBreak: 'break-word',
                       overflowWrap: 'break-word',
-                      fontSize: '0.875rem',
+                      fontSize: 'clamp(0.8rem, 2vw, 0.875rem)',
                       lineHeight: '1.6',
                       fontFamily: 'Inter, system-ui, sans-serif',
                       overflowX: 'auto',
                       maxWidth: '100%',
                       margin: 0
                     }}>
-                      {(result as any).report_visual || result.report_short || result.report}
+                      {cleanReportText((result as any).report_visual || result.report_short || result.report)}
                     </pre>
                   </div>
                 )}
@@ -1316,24 +1349,24 @@ by Matías Carvajal
                   <div style={{
                     background: '#f9fafb',
                     borderRadius: '0.75rem',
-                    padding: '1.5rem',
+                    padding: 'clamp(1rem, 3vw, 1.5rem)',
                     marginBottom: '1.5rem'
                   }}>
-                    <h3 style={{ fontWeight: '600', fontSize: '1.125rem', marginBottom: '1rem' }}>
-                      {lang === 'es' ? 'Análisis Resumen' : 'Summary Analysis'}
+                    <h3 style={{ fontWeight: '600', fontSize: 'clamp(1rem, 2.5vw, 1.125rem)', marginBottom: '1rem' }}>
+                      {lang === 'es' ? '📝 Análisis Resumen' : '📝 Summary Analysis'}
                     </h3>
                     <pre style={{
                       whiteSpace: 'pre-wrap',
                       wordBreak: 'break-word',
                       overflowWrap: 'break-word',
-                      fontSize: '0.875rem',
+                      fontSize: 'clamp(0.8rem, 2vw, 0.875rem)',
                       lineHeight: '1.6',
                       fontFamily: 'Inter, system-ui, sans-serif',
                       overflowX: 'auto',
                       maxWidth: '100%',
                       margin: 0
                     }}>
-                      {result.report_short || result.report}
+                      {cleanReportText(result.report_short || result.report)}
                     </pre>
                   </div>
                 )}
@@ -1343,24 +1376,24 @@ by Matías Carvajal
                   <div style={{
                     background: '#f9fafb',
                     borderRadius: '0.75rem',
-                    padding: '1.5rem',
+                    padding: 'clamp(1rem, 3vw, 1.5rem)',
                     marginBottom: '1.5rem'
                   }}>
-                    <h3 style={{ fontWeight: '600', fontSize: '1.125rem', marginBottom: '1rem' }}>
-                      {lang === 'es' ? 'Análisis Completo' : 'Complete Analysis'}
+                    <h3 style={{ fontWeight: '600', fontSize: 'clamp(1rem, 2.5vw, 1.125rem)', marginBottom: '1rem' }}>
+                      {lang === 'es' ? '📄 Análisis Completo' : '📄 Complete Analysis'}
                     </h3>
                     <pre style={{
                       whiteSpace: 'pre-wrap',
                       wordBreak: 'break-word',
                       overflowWrap: 'break-word',
-                      fontSize: '0.875rem',
+                      fontSize: 'clamp(0.8rem, 2vw, 0.875rem)',
                       lineHeight: '1.6',
                       fontFamily: 'Inter, system-ui, sans-serif',
                       overflowX: 'auto',
                       maxWidth: '100%',
                       margin: 0
                     }}>
-                      {result.report_write || result.report}
+                      {cleanReportText(result.report_write || result.report)}
                     </pre>
                   </div>
                 )}
