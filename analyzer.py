@@ -4296,6 +4296,236 @@ def generate_visual_report(report: Dict[str, Any], strict: bool = False, lang: s
                 report_text += f"→ {aspect}\n"
         
         return report_text.strip()
+
+
+def generate_complete_pdf(
+    report: Dict[str, Any],
+    output_path: str,
+    strict: bool = False,
+    lang: str = 'en',
+    filename: str = ""
+) -> bool:
+    """
+    Generate a complete PDF report with all analysis modes.
+    
+    Args:
+        report: Analysis report dictionary
+        output_path: Path where PDF will be saved
+        strict: Whether strict mode is enabled
+        lang: Language ('es' or 'en')
+        filename: Original audio filename
+    
+    Returns:
+        bool: True if successful, False otherwise
+    """
+    try:
+        from reportlab.lib.pagesizes import letter
+        from reportlab.lib.units import inch
+        from reportlab.lib import colors
+        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib.enums import TA_CENTER, TA_LEFT
+        from datetime import datetime
+    except ImportError:
+        print("❌ Error: reportlab no está instalado. Instala con: pip install reportlab --break-system-packages")
+        return False
+    
+    try:
+        # Create PDF
+        doc = SimpleDocTemplate(
+            output_path,
+            pagesize=letter,
+            rightMargin=0.75*inch,
+            leftMargin=0.75*inch,
+            topMargin=0.75*inch,
+            bottomMargin=0.75*inch
+        )
+        
+        story = []
+        styles = getSampleStyleSheet()
+        
+        # Custom styles
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            fontSize=24,
+            textColor=colors.HexColor('#667eea'),
+            spaceAfter=12,
+            alignment=TA_CENTER,
+            fontName='Helvetica-Bold'
+        )
+        
+        subtitle_style = ParagraphStyle(
+            'CustomSubtitle',
+            parent=styles['Heading2'],
+            fontSize=14,
+            textColor=colors.HexColor('#374151'),
+            spaceAfter=6,
+            alignment=TA_CENTER
+        )
+        
+        section_style = ParagraphStyle(
+            'SectionTitle',
+            parent=styles['Heading2'],
+            fontSize=16,
+            textColor=colors.HexColor('#667eea'),
+            spaceAfter=12,
+            fontName='Helvetica-Bold'
+        )
+        
+        body_style = ParagraphStyle(
+            'CustomBody',
+            parent=styles['BodyText'],
+            fontSize=10,
+            leading=14,
+            spaceAfter=8
+        )
+        
+        # Header
+        story.append(Paragraph("🎵 MASTERINGREADY", title_style))
+        story.append(Paragraph(
+            "Reporte Completo de Análisis" if lang == 'es' else "Complete Analysis Report",
+            subtitle_style
+        ))
+        story.append(Spacer(1, 0.3*inch))
+        
+        # File Info
+        story.append(Paragraph(
+            "INFORMACIÓN DEL ARCHIVO" if lang == 'es' else "FILE INFORMATION",
+            section_style
+        ))
+        
+        file_info_data = [
+            ["Archivo" if lang == 'es' else "File", filename or report.get('filename', 'Unknown')],
+            ["Fecha" if lang == 'es' else "Date", datetime.now().strftime('%d/%m/%Y %H:%M')],
+            ["Puntuación" if lang == 'es' else "Score", f"{report.get('score', 0)}/100"],
+            ["Veredicto" if lang == 'es' else "Verdict", report.get('verdict', 'N/A')]
+        ]
+        
+        file_table = Table(file_info_data, colWidths=[2*inch, 4.5*inch])
+        file_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#f3f4f6')),
+            ('TEXTCOLOR', (0, 0), (0, -1), colors.HexColor('#374151')),
+            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+            ('FONTNAME', (1, 0), (1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#d1d5db')),
+            ('LEFTPADDING', (0, 0), (-1, -1), 8),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+            ('TOPPADDING', (0, 0), (-1, -1), 6),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+        ]))
+        
+        story.append(file_table)
+        story.append(Spacer(1, 0.3*inch))
+        
+        # Metrics Table
+        if report.get('metrics'):
+            story.append(Paragraph(
+                "MÉTRICAS TÉCNICAS" if lang == 'es' else "TECHNICAL METRICS",
+                section_style
+            ))
+            
+            metrics_data = [[
+                "Métrica" if lang == 'es' else "Metric",
+                "Valor" if lang == 'es' else "Value",
+                "Estado" if lang == 'es' else "Status"
+            ]]
+            
+            for metric in report['metrics'][:8]:
+                status_emoji = {
+                    'perfect': '✅',
+                    'pass': '✅',
+                    'warning': '⚠️',
+                    'critical': '❌',
+                    'catastrophic': '❌',
+                    'info': 'ℹ️'
+                }.get(metric.get('status', 'info'), 'ℹ️')
+                
+                metrics_data.append([
+                    metric.get('name', 'N/A'),
+                    metric.get('value', 'N/A'),
+                    status_emoji
+                ])
+            
+            metrics_table = Table(metrics_data, colWidths=[2.5*inch, 2.5*inch, 1.5*inch])
+            metrics_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#667eea')),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, 0), 11),
+                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                ('ALIGN', (2, 0), (2, -1), 'CENTER'),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#d1d5db')),
+                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f9fafb')]),
+                ('LEFTPADDING', (0, 0), (-1, -1), 8),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+                ('TOPPADDING', (0, 0), (-1, -1), 6),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+            ]))
+            
+            story.append(metrics_table)
+            story.append(Spacer(1, 0.3*inch))
+        
+        # Analysis Modes
+        for mode_key, mode_title_es, mode_title_en in [
+            ('report_visual', 'ANÁLISIS RÁPIDO', 'QUICK ANALYSIS'),
+            ('report_short', 'ANÁLISIS RESUMEN', 'SUMMARY ANALYSIS'),
+            ('report_write', 'ANÁLISIS COMPLETO', 'COMPLETE ANALYSIS')
+        ]:
+            if report.get(mode_key):
+                story.append(PageBreak())
+                story.append(Paragraph(
+                    mode_title_es if lang == 'es' else mode_title_en,
+                    section_style
+                ))
+                
+                # Clean text
+                text = report[mode_key].replace('═', '').replace('─', '').strip()
+                for line in text.split('\n'):
+                    if line.strip():
+                        try:
+                            story.append(Paragraph(line, body_style))
+                        except:
+                            # Fallback for problematic characters
+                            clean_line = line.encode('ascii', 'ignore').decode('ascii')
+                            story.append(Paragraph(clean_line, body_style))
+                
+                story.append(Spacer(1, 0.2*inch))
+        
+        # Footer
+        story.append(Spacer(1, 0.4*inch))
+        
+        footer_style = ParagraphStyle(
+            'Footer',
+            parent=styles['Normal'],
+            fontSize=9,
+            textColor=colors.HexColor('#6b7280'),
+            alignment=TA_CENTER
+        )
+        
+        story.append(Paragraph("─" * 80, footer_style))
+        story.append(Paragraph(
+            "Analizado con MasteringReady" if lang == 'es' else "Analyzed with MasteringReady",
+            footer_style
+        ))
+        story.append(Paragraph("www.masteringready.com", footer_style))
+        story.append(Paragraph("by Matías Carvajal", footer_style))
+        
+        # Build PDF
+        doc.build(story)
+        return True
+        
+    except Exception as e:
+        print(f"❌ Error generando PDF: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+
+
 def main() -> None:
     """Main entry point."""
     ap = argparse.ArgumentParser(
@@ -4320,6 +4550,7 @@ def main() -> None:
     )
 
     ap.add_argument("--json", dest="json_path", default=None, help="Guardar reporte JSON")
+    ap.add_argument("--pdf", dest="pdf_path", default=None, help="Guardar reporte completo en PDF")
     
     ap.add_argument(
         "--strict",
@@ -4568,6 +4799,27 @@ def main() -> None:
             print(f"\n✅ Reporte guardado en: {outp}")
         except Exception as e:
             print(f"❌ Error guardando JSON: {e}", file=sys.stderr)
+
+    # PDF generation
+    if args.pdf_path:
+        pdf_path = Path(args.pdf_path).expanduser()
+        try:
+            if len(reports_out) == 1:
+                success = generate_complete_pdf(
+                    reports_out[0],
+                    str(pdf_path),
+                    strict=args.strict,
+                    lang=lang,
+                    filename=reports_out[0].get('filename', '')
+                )
+                if success:
+                    print(f"\n✅ PDF guardado en: {pdf_path}")
+                else:
+                    print(f"❌ Error generando PDF", file=sys.stderr)
+            else:
+                print("⚠️ PDF solo soporta un archivo a la vez", file=sys.stderr)
+        except Exception as e:
+            print(f"❌ Error guardando PDF: {e}", file=sys.stderr)
 
 
 if __name__ == "__main__":
