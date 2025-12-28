@@ -407,22 +407,27 @@ by Matías Carvajal
       .replace(/[═─━]{3,}/g, '')              // Lines with 3+ chars (including ━)
       .replace(/^[═─━\s]+$/gm, '')            // Lines that are ONLY decorative chars
       .replace(/[═─━]{2,}/g, '')              // Lines with 2+ chars (more aggressive)
-      // Fix headers: Add emojis and proper casing
-      .replace(/ASPECTOS POSITIVOS/g, '\n✅ Aspectos Positivos\n')
-      .replace(/POSITIVE ASPECTS/g, '\n✅ Positive Aspects\n')
-      .replace(/ASPECTOS PARA REVISAR/g, '\n⚠️ Aspectos para Revisar\n')
-      .replace(/AREAS TO REVIEW/g, '\n⚠️ Areas to Review\n')
-      // Fix additional headers that might be missing emojis
-      .replace(/SI ESTE ARCHIVO CORRESPONDE A UNA MEZCLA:/g, '\n⚠️ Si este archivo corresponde a una mezcla:\n')
-      .replace(/IF THIS FILE IS A MIX:/g, '\n⚠️ If this file is a mix:\n')
-      .replace(/SI ESTE ES TU MASTER FINAL:/g, '\n✅ Si este es tu master final:\n')
-      .replace(/IF THIS IS YOUR FINAL MASTER:/g, '\n✅ If this is your final master:\n')
-      // Remove excessive newlines (but allow double newlines for spacing)
-      .replace(/\n{4,}/g, '\n\n\n')
+      // Fix headers: Add emojis and proper casing (ONLY if not already present)
+      .replace(/(?<!✅\s)ASPECTOS POSITIVOS/g, '✅ Aspectos Positivos')
+      .replace(/(?<!✅\s)POSITIVE ASPECTS/g, '✅ Positive Aspects')
+      .replace(/(?<!⚠️\s)ASPECTOS PARA REVISAR/g, '⚠️ Aspectos para Revisar')
+      .replace(/(?<!⚠️\s)AREAS TO REVIEW/g, '⚠️ Areas to Review')
+      // Fix additional headers (ONLY if not already present)
+      .replace(/(?<!⚠️\s)SI ESTE ARCHIVO CORRESPONDE A UNA MEZCLA:/g, '⚠️ Si este archivo corresponde a una mezcla:')
+      .replace(/(?<!⚠️\s)IF THIS FILE IS A MIX:/g, '⚠️ If this file is a mix:')
+      .replace(/(?<!✅\s)SI ESTE ES TU MASTER FINAL:/g, '✅ Si este es tu master final:')
+      .replace(/(?<!✅\s)IF THIS IS YOUR FINAL MASTER:/g, '✅ If this is your final master:')
+      // Remove duplicate emojis
+      .replace(/✅\s*✅/g, '✅')
+      .replace(/⚠️\s*⚠️/g, '⚠️')
+      // Remove excessive newlines (max 2 consecutive)
+      .replace(/\n{3,}/g, '\n\n')
       // Remove lines that are just spaces
       .split('\n')
       .map(line => line.trim())
       .join('\n')
+      // Final cleanup - max 2 newlines
+      .replace(/\n{3,}/g, '\n\n')
       // Trim
       .trim()
   }
