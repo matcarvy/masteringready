@@ -602,7 +602,7 @@ by Matías Carvajal
                   background: '#f3e8ff',
                   borderRadius: '0.5rem'
                 }}>
-                  <p style={{ fontSize: '0.875rem', color: '#6b21a8', fontWeight: '500' }}>
+                  <p style={{ fontSize: '1rem', color: '#6b21a8', fontWeight: '600' }}>
                     ✅ {lang === 'es' 
                       ? 'Lista para mastering profesional'
                       : 'Ready for professional mastering'}
