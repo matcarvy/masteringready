@@ -1205,24 +1205,24 @@ by Matías Carvajal
                   borderRadius: '0.75rem',
                   border: `1px solid ${result.score >= 85 ? '#a7f3d0' : result.score >= 60 ? '#fcd34d' : '#fca5a5'}`,
                   background: getScoreBg(result.score),
-                  padding: '1.5rem',
+                  padding: '1.25rem',
                   marginBottom: '1.5rem'
                 }}>
                   <div style={{
                     display: 'grid',
-                    gridTemplateColumns: '1fr 1fr',
-                    gap: '2rem',
+                    gridTemplateColumns: '1fr auto',
+                    gap: '1rem',
                     alignItems: 'center',
                     marginBottom: '1rem'
                   }}>
                     <div style={{ textAlign: 'left' }}>
-                      <span style={{ color: '#374151', fontWeight: '500', fontSize: '1.125rem' }}>
+                      <span style={{ color: '#374151', fontWeight: '500', fontSize: 'clamp(0.875rem, 2.5vw, 1.125rem)' }}>
                         {lang === 'es' ? 'Puntuación' : 'Score'}
                       </span>
                     </div>
                     <div style={{ textAlign: 'right' }}>
                       <span style={{
-                        fontSize: '3rem',
+                        fontSize: 'clamp(2rem, 6vw, 3rem)',
                         fontWeight: 'bold',
                         color: getScoreColor(result.score)
                       }}>
@@ -1251,6 +1251,7 @@ by Matías Carvajal
                 {/* Report View Toggle */}
                 <div style={{
                   display: 'flex',
+                  flexWrap: 'wrap',
                   gap: '0.5rem',
                   marginBottom: '1.5rem',
                   background: '#f3f4f6',
@@ -1262,14 +1263,15 @@ by Matías Carvajal
                       key={view}
                       onClick={() => setReportView(view)}
                       style={{
-                        flex: 1,
-                        padding: '0.5rem 1rem',
+                        flex: '1 1 calc(33.333% - 0.5rem)',
+                        minWidth: '90px',
+                        padding: '0.625rem 0.75rem',
                         borderRadius: '0.375rem',
                         border: 'none',
                         background: reportView === view ? 'white' : 'transparent',
                         color: reportView === view ? '#667eea' : '#6b7280',
                         fontWeight: reportView === view ? '600' : '500',
-                        fontSize: '0.875rem',
+                        fontSize: 'clamp(0.75rem, 2vw, 0.875rem)',
                         cursor: 'pointer',
                         transition: 'all 0.2s',
                         boxShadow: reportView === view ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
@@ -1370,7 +1372,7 @@ by Matías Carvajal
                     onClick={handleDownload}
                     style={{
                       flex: 1,
-                      minWidth: '200px',
+                      minWidth: '160px',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -1381,7 +1383,7 @@ by Matías Carvajal
                       border: '2px solid #667eea',
                       borderRadius: '0.75rem',
                       fontWeight: '600',
-                      fontSize: '0.9rem',
+                      fontSize: 'clamp(0.8rem, 2vw, 0.9rem)',
                       cursor: 'pointer',
                       transition: 'all 0.2s'
                     }}
@@ -1405,7 +1407,7 @@ by Matías Carvajal
                     onClick={handleDownloadFull}
                     style={{
                       flex: 1,
-                      minWidth: '200px',
+                      minWidth: '160px',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -1416,7 +1418,7 @@ by Matías Carvajal
                       border: 'none',
                       borderRadius: '0.75rem',
                       fontWeight: '600',
-                      fontSize: '0.9rem',
+                      fontSize: 'clamp(0.8rem, 2vw, 0.9rem)',
                       cursor: 'pointer',
                       transition: 'all 0.2s',
                       boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)'
@@ -1431,40 +1433,9 @@ by Matías Carvajal
                     }}
                   >
                     <Download size={18} />
-                    {lang === 'es' ? 'Reporte Completo' : 'Complete Report'}
+                    {lang === 'es' ? 'Análisis Detallado' : 'Detailed Analysis'}
                   </button>
                 </div>
-
-                {/* Download */}
-                <button
-                  onClick={handleDownload}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '0.5rem',
-                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                    color: 'white',
-                    padding: '0.75rem 1.5rem',
-                    borderRadius: '0.75rem',
-                    fontWeight: '500',
-                    border: 'none',
-                    cursor: 'pointer',
-                    transition: 'all 0.3s',
-                    boxShadow: '0 4px 15px rgba(102, 126, 234, 0.3)'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'scale(1.05)'
-                    e.currentTarget.style.boxShadow = '0 6px 25px rgba(102, 126, 234, 0.4)'
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'scale(1)'
-                    e.currentTarget.style.boxShadow = '0 4px 15px rgba(102, 126, 234, 0.3)'
-                  }}
-                >
-                  <Download size={16} />
-                  {lang === 'es' ? 'Descargar Reporte' : 'Download Report'}
-                </button>
               </div>
 
               {/* CTA Mastering - FIRST */}
@@ -1989,24 +1960,27 @@ by Matías Carvajal
                   {lang === 'es' ? '¿Qué tan útil fue el análisis?' : 'How useful was the analysis?'}
                 </label>
                 <div style={{ 
-                  display: 'flex', 
-                  gap: '0.5rem', 
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(2rem, 1fr))',
+                  gap: 'clamp(0.25rem, 1vw, 0.5rem)', 
                   justifyContent: 'center',
-                  marginBottom: '0.5rem'
+                  marginBottom: '0.5rem',
+                  maxWidth: '100%'
                 }}>
                   {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
                     <button
                       key={num}
                       onClick={() => setFeedback({...feedback, rating: num})}
                       style={{
-                        width: '2.5rem',
-                        height: '2.5rem',
+                        width: '100%',
+                        minWidth: '2rem',
+                        height: 'clamp(2rem, 8vw, 2.5rem)',
                         borderRadius: '0.5rem',
                         border: feedback.rating === num ? '2px solid #667eea' : '1px solid #d1d5db',
                         background: feedback.rating === num ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'white',
                         color: feedback.rating === num ? 'white' : '#374151',
                         fontWeight: '600',
-                        fontSize: '0.875rem',
+                        fontSize: 'clamp(0.75rem, 2vw, 0.875rem)',
                         cursor: 'pointer',
                         transition: 'all 0.2s'
                       }}
