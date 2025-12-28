@@ -2866,11 +2866,13 @@ def analyze_file_chunked(
         }
         
         for chunk in problem_chunks[1:]:
-            # If this chunk is consecutive (within gap_threshold seconds), extend region
-            gap = chunk['start_time'] - current_region['end']
-            print(f"   Gap: {gap:.2f}s (threshold: {gap_threshold}s) - {'MERGE' if gap < gap_threshold else 'NEW REGION'}")
+            # Calculate gap between end of current region and start of next chunk
+            # With 50% overlap, chunks can overlap (negative gap), treat as 0
+            gap = max(0, chunk['start_time'] - current_region['end'])
+            print(f"   Gap: {gap:.2f}s (threshold: {gap_threshold}s) - {'MERGE' if gap <= gap_threshold else 'NEW REGION'}")
             
-            if gap < gap_threshold:
+            # Use <= to include exact threshold (2.5s gap should merge)
+            if gap <= gap_threshold:
                 current_region['end'] = chunk['end_time']
                 current_region['chunks'].append(chunk)
             else:
@@ -3305,7 +3307,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                     has_temporal = True
                     temporal_message += f"🔊 True Peak: Presente durante {percentage:.0f}% del tiempo.\n"
                     temporal_message += f"   Regiones afectadas ({num_regions}):\n"
-                    for region in regions[:3]:  # Max 3 regions
+                    for region in regions[:10]:  # Max 10 regions
                         start_min = int(region['start'] // 60)
                         start_sec = int(region['start'] % 60)
                         end_min = int(region['end'] // 60)
@@ -3327,7 +3329,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                     if num_regions > 0:
                         has_temporal = True
                         temporal_message += f"🎧 Correlación ({num_regions} región{'es' if num_regions > 1 else ''} problemática{'s' if num_regions > 1 else ''}):\n"
-                        for region in regions[:3]:
+                        for region in regions[:10]:
                             start_min = int(region['start'] // 60)
                             start_sec = int(region['start'] % 60)
                             end_min = int(region['end'] // 60)
@@ -3352,7 +3354,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                     if num_regions > 0:
                         has_temporal = True
                         temporal_message += f"📐 M/S Ratio ({num_regions} región{'es' if num_regions > 1 else ''} problemática{'s' if num_regions > 1 else ''}):\n"
-                        for region in regions[:3]:
+                        for region in regions[:10]:
                             start_min = int(region['start'] // 60)
                             start_sec = int(region['start'] % 60)
                             end_min = int(region['end'] // 60)
@@ -3377,7 +3379,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                     if num_regions > 0:
                         has_temporal = True
                         temporal_message += f"⚖️ Balance L/R ({num_regions} región{'es' if num_regions > 1 else ''} problemática{'s' if num_regions > 1 else ''}):\n"
-                        for region in regions[:3]:
+                        for region in regions[:10]:
                             start_min = int(region['start'] // 60)
                             start_sec = int(region['start'] % 60)
                             end_min = int(region['end'] // 60)
