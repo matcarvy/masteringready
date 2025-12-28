@@ -296,46 +296,101 @@ ${new Date().toLocaleDateString()}
   }
 
   const handleDownloadFull = async () => {
-    if (!result || !requestIdRef.current) {
-      console.error('❌ No result or request ID available')
+    if (!result) {
+      console.error('❌ No result available')
       alert(lang === 'es' ? 'Error: análisis no disponible' : 'Error: analysis not available')
       return
     }
     
     try {
-      console.log('📄 Requesting PDF download...', requestIdRef.current)
-      
-      const formData = new FormData()
-      formData.append('request_id', requestIdRef.current)
-      formData.append('lang', lang)
+      // Try PDF first if endpoint is available
+      if (requestIdRef.current) {
+        console.log('📄 Attempting PDF download...', requestIdRef.current)
+        
+        try {
+          const formData = new FormData()
+          formData.append('request_id', requestIdRef.current)
+          formData.append('lang', lang)
 
-      const response = await fetch('/api/download/pdf', {
-        method: 'POST',
-        body: formData
-      })
+          const response = await fetch('/api/download/pdf', {
+            method: 'POST',
+            body: formData
+          })
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${await response.text()}`)
+          if (response.ok) {
+            // PDF download successful
+            const blob = await response.blob()
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.href = url
+            const filename = result.filename?.replace(/\.(wav|mp3|flac)$/i, '') || 'analisis'
+            a.download = `masteringready-${lang === 'es' ? 'detallado' : 'detailed'}-${filename}.pdf`
+            document.body.appendChild(a)
+            a.click()
+            document.body.removeChild(a)
+            URL.revokeObjectURL(url)
+            
+            console.log('✅ PDF downloaded successfully')
+            return
+          } else {
+            console.warn('⚠️ PDF endpoint returned error, falling back to TXT')
+          }
+        } catch (pdfError) {
+          console.warn('⚠️ PDF download failed, falling back to TXT:', pdfError)
+        }
       }
+      
+      // Fallback to TXT download
+      console.log('📄 Downloading complete TXT report...')
+      
+      const content = `${'═'.repeat(50)}
+   MASTERINGREADY - ${lang === 'es' ? 'Reporte Completo' : 'Complete Report'}
+${'═'.repeat(50)}
 
-      // Download PDF
-      const blob = await response.blob()
+${lang === 'es' ? 'INFORMACIÓN DEL ARCHIVO' : 'FILE INFORMATION'}
+${lang === 'es' ? 'Archivo' : 'File'}: ${result.filename || 'N/A'}
+${lang === 'es' ? 'Fecha' : 'Date'}: ${new Date().toLocaleDateString(lang === 'es' ? 'es-ES' : 'en-US', { 
+  year: 'numeric', 
+  month: 'long', 
+  day: 'numeric' 
+})}
+${lang === 'es' ? 'Puntuación' : 'Score'}: ${result.score}/100
+${lang === 'es' ? 'Veredicto' : 'Verdict'}: ${result.verdict}
+
+${lang === 'es' ? 'ANÁLISIS RÁPIDO' : 'QUICK ANALYSIS'}
+${cleanReportText((result as any).report_visual || '')}
+
+${lang === 'es' ? 'ANÁLISIS RESUMEN' : 'SUMMARY ANALYSIS'}
+${cleanReportText(result.report_short || '')}
+
+${lang === 'es' ? 'ANÁLISIS COMPLETO' : 'COMPLETE ANALYSIS'}
+${cleanReportText(result.report_write || result.report || '')}
+
+${'─'.repeat(50)}
+${lang === 'es' ? 'Analizado con' : 'Analyzed with'} MasteringReady
+www.masteringready.com
+by Matías Carvajal
+`
+      
+      const blob = new Blob([content], { type: 'text/plain' })
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
       const filename = result.filename?.replace(/\.(wav|mp3|flac)$/i, '') || 'analisis'
-      a.download = `masteringready-${lang === 'es' ? 'detallado' : 'detailed'}-${filename}.pdf`
+      a.download = `masteringready-${lang === 'es' ? 'detallado' : 'detailed'}-${filename}.txt`
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
       
-      console.log('✅ PDF downloaded successfully')
+      console.log('✅ TXT downloaded successfully')
+      
     } catch (error) {
-      console.error('❌ Error downloading PDF:', error)
+      // Only show error if TXT download also failed
+      console.error('❌ Complete download failed:', error)
       alert(lang === 'es' 
-        ? 'Error al descargar PDF. Intenta de nuevo.' 
-        : 'Error downloading PDF. Please try again.')
+        ? 'Error al descargar archivo. Por favor intenta de nuevo.' 
+        : 'Error downloading file. Please try again.')
     }
   }
 
@@ -353,20 +408,20 @@ ${new Date().toLocaleDateString()}
       .replace(/^[═─━\s]+$/gm, '')            // Lines that are ONLY decorative chars
       .replace(/[═─━]{2,}/g, '')              // Lines with 2+ chars (more aggressive)
       // Fix headers: Add emojis and proper casing
-      .replace(/ASPECTOS POSITIVOS/g, '✅ Aspectos Positivos')
-      .replace(/POSITIVE ASPECTS/g, '✅ Positive Aspects')
-      .replace(/ASPECTOS PARA REVISAR/g, '⚠️ Aspectos para Revisar')
-      .replace(/AREAS TO REVIEW/g, '⚠️ Areas to Review')
+      .replace(/ASPECTOS POSITIVOS/g, '\n✅ Aspectos Positivos\n')
+      .replace(/POSITIVE ASPECTS/g, '\n✅ Positive Aspects\n')
+      .replace(/ASPECTOS PARA REVISAR/g, '\n⚠️ Aspectos para Revisar\n')
+      .replace(/AREAS TO REVIEW/g, '\n⚠️ Areas to Review\n')
       // Fix additional headers that might be missing emojis
-      .replace(/SI ESTE ARCHIVO CORRESPONDE A UNA MEZCLA:/g, '⚠️ Si este archivo corresponde a una mezcla:')
-      .replace(/IF THIS FILE IS A MIX:/g, '⚠️ If this file is a mix:')
-      .replace(/SI ESTE ES TU MASTER FINAL:/g, '✅ Si este es tu master final:')
-      .replace(/IF THIS IS YOUR FINAL MASTER:/g, '✅ If this is your final master:')
-      // Remove excessive newlines
-      .replace(/\n{3,}/g, '\n\n')
-      // Remove lines that are just spaces/newlines
+      .replace(/SI ESTE ARCHIVO CORRESPONDE A UNA MEZCLA:/g, '\n⚠️ Si este archivo corresponde a una mezcla:\n')
+      .replace(/IF THIS FILE IS A MIX:/g, '\n⚠️ If this file is a mix:\n')
+      .replace(/SI ESTE ES TU MASTER FINAL:/g, '\n✅ Si este es tu master final:\n')
+      .replace(/IF THIS IS YOUR FINAL MASTER:/g, '\n✅ If this is your final master:\n')
+      // Remove excessive newlines (but allow double newlines for spacing)
+      .replace(/\n{4,}/g, '\n\n\n')
+      // Remove lines that are just spaces
       .split('\n')
-      .filter(line => line.trim().length > 0)
+      .map(line => line.trim())
       .join('\n')
       // Trim
       .trim()
