@@ -1,398 +1,828 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Download, Check, Upload, Zap, Shield, TrendingUp } from 'lucide-react'
-import { analyzeFile } from '@/lib/api'
-import { startAnalysisPolling, getAnalysisStatus } from '@/lib/api'
-import { compressAudioFile } from '@/lib/audio-compression'
+import React, { useRef, useState } from 'react'
+import { ArrowRight, Check, Shield, Upload, Zap, FileAudio2, Loader2, BarChart2, Download, AlertCircle, XCircle, Music2, Gauge, TrendingUp, ChevronDown } from 'lucide-react'
 
-function Home() {
-  const [file, setFile] = useState<File | null>(null)
-  const [lang, setLang] = useState<'es' | 'en'>('es')
-  const [mode, setMode] = useState<'short' | 'write'>('write')
-  const [strict, setStrict] = useState(false)
-  
-  const [loading, setLoading] = useState(false)
-  const [progress, setProgress] = useState(0)
-  const [result, setResult] = useState<any>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [compressing, setCompressing] = useState(false)
-  const [compressionProgress, setCompressionProgress] = useState(0)
-  const [showContactModal, setShowContactModal] = useState(false)
-  const [showFeedbackModal, setShowFeedbackModal] = useState(false)
-  const [reportView, setReportView] = useState<'visual' | 'short' | 'write'>('visual')
-  const [feedbackSubmitted, setFeedbackSubmitted] = useState(false)
-  const [feedback, setFeedback] = useState({ rating: 0, liked: '', change: '', add: '' })
+type Language = 'es' | 'en'
 
-  // Scroll to results when analysis completes
-  useEffect(() => {
-    if (result) {
-      const resultsElement = document.getElementById('analysis-results')
-      if (resultsElement) {
-        setTimeout(() => {
-          resultsElement.scrollIntoView({ 
-            behavior: 'smooth', 
-            block: 'start',
-            inline: 'nearest'
-          })
-        }, 100)
+interface Metric {
+  name: string
+  value: string
+  status: 'pass' | 'warn' | 'fail' | 'info'
+  message: string
+}
+
+interface SectionAnalysis {
+  name: string
+  status: 'pass' | 'warn' | 'fail'
+  message: string
+}
+
+interface AnalysisResult {
+  file: {
+    path: string
+    duration_seconds?: number
+    sample_rate_hz?: number
+    channels?: number
+    genre?: string
+  }
+  metrics: Metric[]
+  technical_summary: string[]
+  musical_summary: string[]
+  suggestions: string[]
+  sections?: SectionAnalysis[]
+  raw_text?: string
+  short_feedback?: string
+  score?: number
+  severity?: 'low' | 'medium' | 'high'
+  recommendations?: string[]
+  notes?: string[]
+}
+
+const gradientBg = {
+  background: 'radial-gradient(circle at top left, rgba(129, 140, 248, 0.25) 0, transparent 55%), radial-gradient(circle at bottom right, rgba(244, 114, 182, 0.18) 0, transparent 55%), linear-gradient(135deg, #0f172a 0%, #020617 100%)'
+}
+
+const cardStyle = {
+  background: 'rgba(15, 23, 42, 0.9)',
+  borderRadius: '1.25rem',
+  border: '1px solid rgba(148, 163, 184, 0.5)',
+  boxShadow: '0 22px 80px rgba(15, 23, 42, 0.95)',
+  backdropFilter: 'blur(24px)'
+}
+
+const pillStyle = {
+  background: 'linear-gradient(90deg, rgba(59, 130, 246, 0.08), rgba(236, 72, 153, 0.12))',
+  borderRadius: '999px',
+  padding: '0.35rem 0.75rem',
+  border: '1px solid rgba(148, 163, 184, 0.7)'
+}
+
+const badgeStyle = {
+  borderRadius: '999px',
+  padding: '0.25rem 0.75rem',
+  border: '1px solid rgba(148, 163, 184, 0.5)'
+}
+
+const labelStyle = {
+  fontSize: '0.75rem',
+  letterSpacing: '0.08em',
+  textTransform: 'uppercase' as const
+}
+
+const iconBadgeStyle = {
+  padding: '0.4rem',
+  borderRadius: '999px',
+  border: '1px solid rgba(148, 163, 184, 0.6)',
+  background: 'radial-gradient(circle at top, rgba(148, 163, 184, 0.45), rgba(15, 23, 42, 0.95))'
+}
+
+// Helper to get metric icon and colors
+const getMetricStatusStyles = (status: Metric['status']) => {
+  switch (status) {
+    case 'pass':
+      return {
+        icon: '✅',
+        borderColor: '#22c55e',
+        bg: 'rgba(22, 163, 74, 0.08)',
+        textColor: '#16a34a'
       }
-    }
-  }, [result])
-
-const handleAnalyze = async () => {
-  if (!file) return
-
-  setLoading(true)
-  setProgress(0)
-  setError(null)
-
-  try {
-    let fileToAnalyze = file
-    
-    // Check if file needs compression
-    const maxSize = 30 * 1024 * 1024  // 30MB threshold
-    if (file.size > maxSize) {
-      setCompressing(true)
-      setCompressionProgress(0)
-      
-      // Simulate compression progress
-      const compressionInterval = setInterval(() => {
-        setCompressionProgress(prev => Math.min(prev + 10, 90))
-      }, 500)
-      
-      try {
-        const { file: compressedFile, compressed, originalSize, newSize } = 
-          await compressAudioFile(file, 20)
-        
-        clearInterval(compressionInterval)
-        setCompressionProgress(100)
-        
-        if (compressed) {
-          console.log(`Compressed: ${(originalSize/1024/1024).toFixed(1)}MB → ${(newSize/1024/1024).toFixed(1)}MB`)
-        }
-        
-        fileToAnalyze = compressedFile
-        
-        // Wait a moment to show completion
-        await new Promise(resolve => setTimeout(resolve, 500))
-        setCompressing(false)
-        setCompressionProgress(0)
-      } catch (compressionError) {
-        clearInterval(compressionInterval)
-        setCompressing(false)
-        setCompressionProgress(0)
-        throw new Error(
-          lang === 'es'
-            ? 'Error al comprimir el archivo. Por favor, intenta con un archivo más pequeño.'
-            : 'Error compressing file. Please try a smaller file.'
-        )
+    case 'warn':
+      return {
+        icon: '⚠️',
+        borderColor: '#f97316',
+        bg: 'rgba(245, 158, 11, 0.08)',
+        textColor: '#ea580c'
       }
-    }
-
-    // START ANALYSIS (returns job_id immediately)
-    console.log('🚀 Starting analysis with polling...')
-    const startData = await startAnalysisPolling(fileToAnalyze, { lang, mode, strict })
-    const jobId = startData.job_id
-    
-    console.log(`🆔 Job ID: ${jobId}`)
-    setProgress(10)
-    
-    // POLL FOR RESULT
-    let pollAttempts = 0
-    const maxPollAttempts = 60  // 60 attempts * 3 sec = 3 min max
-    
-    const pollForResult = async (): Promise<any> => {
-      return new Promise((resolve, reject) => {
-        const pollInterval = setInterval(async () => {
-          pollAttempts++
-          
-          try {
-            const statusData = await getAnalysisStatus(jobId)
-            
-            console.log(`📊 Poll ${pollAttempts}: ${statusData.status} - ${statusData.progress}%`)
-            
-            // Update progress bar (don't allow it to go backwards)
-            setProgress(prev => Math.max(prev, statusData.progress || 0))
-            
-            if (statusData.status === 'complete') {
-              clearInterval(pollInterval)
-              console.log('✅ Analysis complete!')
-              resolve(statusData.result)
-              
-            } else if (statusData.status === 'error') {
-              clearInterval(pollInterval)
-              console.error('❌ Analysis error:', statusData.error)
-              reject(new Error(statusData.error || 'Analysis failed'))
-              
-            } else if (pollAttempts >= maxPollAttempts) {
-              clearInterval(pollInterval)
-              console.error('⏱️ Polling timeout')
-              reject(new Error(
-                lang === 'es'
-                  ? 'El análisis está tardando más de lo esperado. Por favor, intenta de nuevo.'
-                  : 'Analysis is taking longer than expected. Please try again.'
-              ))
-            }
-            
-          } catch (pollError: any) {
-            clearInterval(pollInterval)
-            console.error('❌ Polling error:', pollError)
-            reject(pollError)
-          }
-          
-        }, 3000)  // Poll every 3 seconds
-      })
-    }
-    
-    // Wait for result
-    const data = await pollForResult()
-    
-    setProgress(100)
-    setResult(data)
-    
-    // Scroll to results
-    setTimeout(() => {
-      const resultsElement = document.getElementById('results')
-      if (resultsElement) {
-        resultsElement.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    case 'fail':
+      return {
+        icon: '❌',
+        borderColor: '#ef4444',
+        bg: 'rgba(239, 68, 68, 0.08)',
+        textColor: '#b91c1c'
       }
-    }, 100)
-    
-  } catch (err: any) {
-    console.error('Analysis error:', err)
-    setError(err.message || (lang === 'es' ? 'Error al analizar' : 'Analysis error'))
-  } finally {
-    setLoading(false)
-    setProgress(0)
-    setCompressing(false)
-    setCompressionProgress(0)
+    default:
+      return {
+        icon: 'ℹ️',
+        borderColor: '#64748b',
+        bg: 'rgba(148, 163, 184, 0.08)',
+        textColor: '#475569'
+      }
   }
 }
 
-  const handleReset = () => {
-    setFile(null)
-    setResult(null)
-    setError(null)
-    setLoading(false)
-    setProgress(0)
-  }
-
-  const handleDownload = () => {
-    if (!result) return
-    
-    let content = ''
-    
-    if (reportView === 'visual') {
-      // Quick mode download
-      content = `${lang === 'es' ? 'ANÁLISIS RÁPIDO' : 'QUICK ANALYSIS'}
-${'═'.repeat(50)}
-
-${lang === 'es' ? 'Archivo' : 'File'}: ${result.filename || 'N/A'}
-${lang === 'es' ? 'Puntuación' : 'Score'}: ${result.score}/100
-${lang === 'es' ? 'Veredicto' : 'Verdict'}: ${result.verdict}
-
-${lang === 'es' ? 'MÉTRICAS PRINCIPALES' : 'MAIN METRICS'}
-${'─'.repeat(50)}
-${result.metrics?.headroom ? `Headroom:              ${result.metrics.headroom} dB\n` : ''}${result.metrics?.true_peak ? `True Peak:             ${result.metrics.true_peak} dBTP\n` : ''}${result.metrics?.stereo_balance ? `${lang === 'es' ? 'Balance Estéreo' : 'Stereo Balance'}:       ${result.metrics.stereo_balance}\n` : ''}${result.metrics?.lufs ? `LUFS:                  ${result.metrics.lufs} LUFS\n` : ''}${result.metrics?.correlation ? `${lang === 'es' ? 'Correlación' : 'Correlation'}:           ${result.metrics.correlation}\n` : ''}${result.metrics?.dynamic_range ? `${lang === 'es' ? 'Rango Dinámico' : 'Dynamic Range'}:        ${result.metrics.dynamic_range} dB\n` : ''}
-${'─'.repeat(50)}
-${lang === 'es' ? 'Generado por' : 'Generated by'} MasteringReady
-${new Date().toLocaleDateString()}
-`
-    } else if (reportView === 'short') {
-      // Summary mode download
-      content = `${lang === 'es' ? 'ANÁLISIS RESUMEN' : 'SUMMARY ANALYSIS'}
-${'═'.repeat(50)}
-
-${lang === 'es' ? 'Archivo' : 'File'}: ${result.filename || 'N/A'}
-${lang === 'es' ? 'Puntuación' : 'Score'}: ${result.score}/100
-${lang === 'es' ? 'Veredicto' : 'Verdict'}: ${result.verdict}
-
-${'─'.repeat(50)}
-${result.report_short || result.report}
-
-${'─'.repeat(50)}
-${lang === 'es' ? 'Generado por' : 'Generated by'} MasteringReady
-${new Date().toLocaleDateString()}
-`
-    } else {
-      // Complete mode download
-      content = `${lang === 'es' ? 'ANÁLISIS COMPLETO' : 'COMPLETE ANALYSIS'}
-${'═'.repeat(50)}
-
-${lang === 'es' ? 'Archivo' : 'File'}: ${result.filename || 'N/A'}
-${lang === 'es' ? 'Puntuación' : 'Score'}: ${result.score}/100
-${lang === 'es' ? 'Veredicto' : 'Verdict'}: ${result.verdict}
-
-${'─'.repeat(50)}
-${result.report_write || result.report}
-
-${'─'.repeat(50)}
-${lang === 'es' ? 'Generado por' : 'Generated by'} MasteringReady
-${new Date().toLocaleDateString()}
-`
-    }
-    
-    const blob = new Blob([content], { type: 'text/plain' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `masteringready-${reportView}-${Date.now()}.txt`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
-  }
-
-  const handleDownloadFull = () => {
-    if (!result) return
-    
-    // Extract positive aspects from report
-    const extractPositiveAspects = () => {
-      if (result.score < 60) return ''
-      
-      const report = result.report || result.report_short || ''
-      const positives = []
-      
-      if (report.includes('headroom') || report.includes('Headroom')) {
-        positives.push(lang === 'es' ? '✓ Headroom apropiado para mastering' : '✓ Appropriate headroom for mastering')
-      }
-      if (report.includes('dinámico') || report.includes('dynamic') || report.includes('rango')) {
-        positives.push(lang === 'es' ? '✓ Excelente rango dinámico' : '✓ Excellent dynamic range')
-      }
-      if (report.includes('estéreo') || report.includes('stereo') || report.includes('imagen')) {
-        positives.push(lang === 'es' ? '✓ Imagen estéreo sólida y centrada' : '✓ Solid and centered stereo image')
-      }
-      if (report.includes('balance') || report.includes('Balance')) {
-        positives.push(lang === 'es' ? '✓ Balance tonal saludable' : '✓ Healthy tonal balance')
-      }
-      
-      if (positives.length === 0) {
-        positives.push(lang === 'es' ? '✓ Mezcla técnicamente sólida' : '✓ Technically solid mix')
-      }
-      
-      return positives.length > 0 ? `
-${lang === 'es' ? 'ASPECTOS POSITIVOS' : 'POSITIVE ASPECTS'}
-${'─'.repeat(50)}
-${positives.join('\n')}
-` : ''
-    }
-    
-    const content = `${'═'.repeat(50)}
-   MASTERINGREADY - ${lang === 'es' ? 'Reporte Completo' : 'Complete Report'}
-${'═'.repeat(50)}
-
-${lang === 'es' ? 'INFORMACIÓN DEL ARCHIVO' : 'FILE INFORMATION'}
-${'─'.repeat(50)}
-${lang === 'es' ? 'Archivo' : 'File'}: ${result.filename || 'N/A'}
-${lang === 'es' ? 'Fecha' : 'Date'}: ${new Date().toLocaleDateString(lang === 'es' ? 'es-ES' : 'en-US', { 
-  year: 'numeric', 
-  month: 'long', 
-  day: 'numeric' 
-})}
-${lang === 'es' ? 'Puntuación' : 'Score'}: ${result.score}/100
-${lang === 'es' ? 'Veredicto' : 'Verdict'}: ${result.verdict}
-${extractPositiveAspects()}
-${lang === 'es' ? 'MÉTRICAS TÉCNICAS' : 'TECHNICAL METRICS'}
-${'─'.repeat(50)}
-${(() => {
-  const metrics = result.metrics || [];
-  const lines = [];
-  
-  metrics.forEach(m => {
-    const name = m.name || '';
-    const value = m.value || '';
-    
-    // Skip informational or N/A metrics
-    if (m.status === 'info' || value === 'N/A') return;
-    
-    // Format metric line with padding
-    const padding = ' '.repeat(Math.max(0, 30 - name.length));
-    lines.push(`${name}:${padding}${value}`);
-  });
-  
-  return lines.length > 0 
-    ? lines.join('\n') 
-    : (lang === 'es' 
-        ? 'Todas las métricas dentro de rango óptimo' 
-        : 'All metrics within optimal range');
-})()}
-${lang === 'es' ? 'ANÁLISIS DETALLADO' : 'DETAILED ANALYSIS'}
-${'─'.repeat(50)}
-${result.report}
-
-${'─'.repeat(50)}
-${lang === 'es' ? 'Analizado con' : 'Analyzed with'} MasteringReady
-www.masteringready.com
-by Matías Carvajal
-`
-    
-    const blob = new Blob([content], { type: 'text/plain' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `masteringready-complete-report-${Date.now()}.txt`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
-  }
+export default function Page() {
+  const [file, setFile] = useState<File | null>(null)
+  const [result, setResult] = useState<AnalysisResult | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [lang, setLang] = useState<Language>('es')
+  const [error, setError] = useState<string | null>(null)
+  const [showRawText, setShowRawText] = useState(false)
+  const [showAdvanced, setShowAdvanced] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
+  const [firstAnalysisDone, setFirstAnalysisDone] = useState(false)
+  const [progress, setProgress] = useState(0)
+  const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'compressing' | 'analyzing' | 'generating' | 'completed'>('idle')
+  const [compressing, setCompressing] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const analyzerRef = useRef<HTMLDivElement | null>(null)
 
   const scrollToAnalyzer = () => {
-    document.getElementById('analyze')?.scrollIntoView({ behavior: 'smooth' })
+    analyzerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
-  const isFileTooLarge = file && file.size > 500 * 1024 * 1024 // 500MB hard limit
-  const needsCompression = file && file.size > 30 * 1024 * 1024 && file.size <= 500 * 1024 * 1024  // 30MB threshold
-
-  const getScoreColor = (score: number) => {
-    if (score >= 85) return '#10b981'
-    if (score >= 60) return '#f59e0b'
-    return '#ef4444'
+  // Progress message helper
+  const getProgressMessage = (progress: number) => {
+    if (progress < 5) {
+      return lang === 'es' ? 'Cargando archivo...' : 'Loading file...'
+    } else if (progress < 10) {
+      return compressing
+        ? (lang === 'es' ? 'Comprimiendo archivo...' : 'Compressing file...')
+        : (lang === 'es' ? 'Preparando análisis...' : 'Preparing analysis...')
+    } else if (progress < 70) {
+      return lang === 'es' ? 'Analizando audio...' : 'Analyzing audio...'
+    } else {
+      return lang === 'es' ? 'Generando reportes...' : 'Generating reports...'
+    }
   }
 
-  const getScoreBg = (score: number) => {
-    if (score >= 85) return '#ecfdf5'
-    if (score >= 60) return '#fffbeb'
-    return '#fef2f2'
+  const handleFileChange = (f: File | null) => {
+    setUploadError(null)
+    setError(null)
+    setResult(null)
+    setFirstAnalysisDone(false)
+    setProgress(0)
+    setUploadStatus('idle')
+
+    if (!f) {
+      setFile(null)
+      return
+    }
+
+    const maxSize = 100 * 1024 * 1024
+    if (f.size > maxSize) {
+      setUploadError(
+        lang === 'es'
+          ? 'El archivo es demasiado grande. El tamaño máximo permitido es de 100 MB.'
+          : 'File is too large. Maximum allowed size is 100 MB.'
+      )
+      setFile(null)
+      return
+    }
+
+    const validTypes = ['audio/wav', 'audio/x-wav', 'audio/wave', 'audio/flac', 'audio/mpeg', 'audio/mp3', 'audio/aac', 'audio/ogg']
+    if (!validTypes.includes(f.type)) {
+      setUploadError(
+        lang === 'es'
+          ? 'Formato de archivo no soportado. Usa WAV, FLAC, MP3, AAC u OGG.'
+          : 'Unsupported file format. Please use WAV, FLAC, MP3, AAC or OGG.'
+      )
+      setFile(null)
+      return
+    }
+
+    setFile(f)
+  }
+
+  const compressAudioIfNeeded = async (inputFile: File): Promise<File> => {
+    const maxSize = 50 * 1024 * 1024
+
+    if (inputFile.size <= maxSize) {
+      return inputFile
+    }
+
+    setCompressing(true)
+    setUploadStatus('compressing')
+    setProgress(8)
+
+    try {
+      let audioContext: AudioContext
+      try {
+        audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
+      } catch (err) {
+        console.warn('AudioContext not available, skipping compression', err)
+        return inputFile
+      }
+
+      const arrayBuffer = await inputFile.arrayBuffer()
+      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer)
+
+      const sampleRate = 44100
+      const targetBitrate = 128000
+      const durationSeconds = audioBuffer.duration
+      const estimatedMp3Size = (targetBitrate * durationSeconds) / 8
+
+      if (estimatedMp3Size >= inputFile.size) {
+        return inputFile
+      }
+
+      const offlineContext = new OfflineAudioContext(
+        audioBuffer.numberOfChannels,
+        Math.floor(audioBuffer.duration * sampleRate),
+        sampleRate
+      )
+
+      const source = offlineContext.createBufferSource()
+      source.buffer = audioBuffer
+      source.connect(offlineContext.destination)
+      source.start(0)
+
+      const renderedBuffer = await offlineContext.startRendering()
+
+      const wavBuffer = audioBufferToWav(renderedBuffer)
+
+      const compressedFile = new File([wavBuffer], inputFile.name.replace(/\.[^/.]+$/, '') + '_compressed.wav', {
+        type: 'audio/wav',
+        lastModified: Date.now()
+      })
+
+      return compressedFile
+    } catch (error) {
+      console.error('Error while compressing audio:', error)
+      return inputFile
+    } finally {
+      setCompressing(false)
+    }
+  }
+
+  const audioBufferToWav = (buffer: AudioBuffer): ArrayBuffer => {
+    const numOfChan = buffer.numberOfChannels
+    const length = buffer.length * numOfChan * 2 + 44
+    const bufferArray = new ArrayBuffer(length)
+    const view = new DataView(bufferArray)
+
+    const writeString = (view: DataView, offset: number, string: string) => {
+      for (let i = 0; i < string.length; i++) {
+        view.setUint8(offset + i, string.charCodeAt(i))
+      }
+    }
+
+    let offset = 0
+
+    writeString(view, offset, 'RIFF')
+    offset += 4
+    view.setUint32(offset, 36 + buffer.length * numOfChan * 2, true)
+    offset += 4
+    writeString(view, offset, 'WAVE')
+    offset += 4
+    writeString(view, offset, 'fmt ')
+    offset += 4
+
+    view.setUint32(offset, 16, true)
+    offset += 4
+    view.setUint16(offset, 1, true)
+    offset += 2
+
+    view.setUint16(offset, numOfChan, true)
+    offset += 2
+    view.setUint32(offset, buffer.sampleRate, true)
+    offset += 4
+
+    view.setUint32(offset, buffer.sampleRate * numOfChan * 2, true)
+    offset += 4
+    view.setUint16(offset, numOfChan * 2, true)
+    offset += 2
+    view.setUint16(offset, 16, true)
+    offset += 2
+
+    writeString(view, offset, 'data')
+    offset += 4
+    view.setUint32(offset, buffer.length * numOfChan * 2, true)
+    offset += 4
+
+    const channels = []
+    for (let i = 0; i < numOfChan; i++) {
+      channels.push(buffer.getChannelData(i))
+    }
+
+    let sample = 0
+    while (sample < buffer.length) {
+      for (let ch = 0; ch < numOfChan; ch++) {
+        const s = Math.max(-1, Math.min(1, channels[ch][sample]))
+        view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7fff, true)
+        offset += 2
+      }
+      sample++
+    }
+
+    return bufferArray
+  }
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (loading) return
+    const f = e.dataTransfer.files?.[0]
+    if (f) {
+      handleFileChange(f)
+    }
+  }
+
+  const resetState = () => {
+    setResult(null)
+    setError(null)
+    setShowRawText(false)
+    setShowAdvanced(false)
+    setUploadError(null)
+    setProgress(0)
+    setUploadStatus('idle')
+    setCompressing(false)
+  }
+
+  const trans = {
+    es: {
+      heroPill: 'Metodología probada en más de 300 producciones profesionales',
+      heroTitle: '¿Tu mezcla está lista para el mastering?',
+      heroSubtitle: 'Análisis técnico en 60 segundos + recomendaciones basadas en metodologías profesionales',
+      heroCTA: 'Pruébalo sin costo',
+      heroFeature1: 'Privacy-first',
+      heroFeature2: 'Inglés y Español',
+      demoScore: 'Puntuación',
+      demoMetrics: {
+        headroom: 'Headroom',
+        truePeak: 'True Peak',
+        stereoBalance: 'Balance Estéreo'
+      },
+      demoStatus: 'Lista para mastering profesional',
+      whyTitle: '¿Por qué MasteringReady?',
+      whySubtitle: 'Metodología profesional basada en 300+ producciones',
+      feature1Title: 'Análisis en 60 segundos o menos',
+      feature1Desc: 'Headroom, LUFS, True Peak, balance de frecuencias, estéreo y más.',
+      feature2Title: 'Privacy-First',
+      feature2Desc: 'Tu audio se analiza solo en memoria y se elimina inmediatamente.',
+      feature3Title: 'Metodología Profesional',
+      feature3Desc: 'Basado en técnicas de ingenieros top.',
+      analyzerTitle: 'Analiza Tu Mezcla Ahora',
+      analyzerSubtitle: 'Sube tu archivo y obtén un reporte profesional en 60 segundos o menos',
+      privacyBadgeTitle: 'Privacy-First Analyzer',
+      privacyBadgeDesc: 'Tu audio se analiza solo en memoria y se elimina inmediatamente.',
+      dropTitle: 'Arrastra tu mezcla aquí',
+      dropSubtitle: 'WAV, FLAC, MP3, AAC u OGG hasta 100 MB',
+      or: 'o',
+      browseButton: 'Selecciona un archivo',
+      loadingMessage: 'Analizando tu mezcla... Esto normalmente toma menos de 60 segundos.',
+      loadingFooter: 'Puedes seguir navegando. Te mostraremos el resultado aquí mismo.',
+      analysisReadyTitle: 'Tu análisis está listo',
+      analysisReadySubtitle: 'Esto es lo que encontramos en tu mezcla.',
+      technicalSummaryTitle: 'Resumen Técnico',
+      musicalSummaryTitle: 'Resumen Musical / Contextual',
+      suggestionsTitle: 'Recomendaciones para Mejorar',
+      sectionsTitle: 'Análisis por Secciones',
+      rawTextToggle: 'Ver análisis técnico en texto completo',
+      rawTextHide: 'Ocultar análisis técnico completo',
+      advancedToggle: 'Ver detalles avanzados',
+      advancedHide: 'Ocultar detalles avanzados',
+      backButton: 'Analizar otra mezcla',
+      errorTitle: 'Ocurrió un error',
+      errorRetry: 'Intenta de nuevo',
+      uploadErrorTitle: 'Error de archivo',
+      uploadErrorDescription: 'Por favor revisa el formato y tamaño del archivo.',
+      scoreLabel: 'Score',
+      severityLow: 'Ajustes menores recomendados',
+      severityMedium: 'Mejoras importantes sugeridas',
+      severityHigh: 'Requiere correcciones críticas',
+      fileInfoTitle: 'Información del archivo',
+      durationLabel: 'Duración',
+      sampleRateLabel: 'Sample Rate',
+      channelsLabel: 'Canales',
+      genreLabel: 'Género (si fue detectado)',
+      noGenre: 'No especificado',
+      downloadTxt: 'Descargar reporte como TXT',
+      shortFeedbackTitle: 'Resumen Ejecutivo',
+      recommendationsTitle: 'Recomendaciones Clave',
+      notesTitle: 'Notas adicionales',
+      phase: {
+        idle: 'Listo para analizar tu mezcla.',
+        uploading: 'Subiendo archivo...',
+        compressing: 'Comprimiendo archivo...',
+        analyzing: 'Analizando audio...',
+        generating: 'Generando reportes...',
+        completed: 'Análisis completado.'
+      },
+      metricLabels: {
+        headroom: 'Headroom',
+        lufs: 'LUFS Integrado',
+        truePeak: 'True Peak',
+        crestFactor: 'Crest Factor',
+        stereoWidth: 'Anchura Estéreo',
+        phase: 'Fase',
+        dynamics: 'Dinámica',
+        tonalBalance: 'Balance Tonal'
+      },
+      downloadNote: 'El reporte TXT incluye todos los detalles técnicos y recomendaciones.',
+      introPill: 'Desarrollado por ingeniero de mastering con crédito Latin Grammy',
+      ctaSecondary: 'Analizar Gratis',
+      progressTimeHint: 'Puede tardar hasta 60 segundos'
+    },
+    en: {
+      heroPill: 'Methodology proven in over 300 professional productions',
+      heroTitle: 'Is your mix ready for mastering?',
+      heroSubtitle: 'Technical analysis in 60 seconds + recommendations based on professional methodologies',
+      heroCTA: 'Try it free',
+      heroFeature1: 'Privacy-first',
+      heroFeature2: 'English & Spanish',
+      demoScore: 'Score',
+      demoMetrics: {
+        headroom: 'Headroom',
+        truePeak: 'True Peak',
+        stereoBalance: 'Stereo Balance'
+      },
+      demoStatus: 'Ready for professional mastering',
+      whyTitle: 'Why MasteringReady?',
+      whySubtitle: 'Professional methodology based on 300+ productions',
+      feature1Title: 'Analysis in 60 seconds or less',
+      feature1Desc: 'Headroom, LUFS, True Peak, frequency balance, stereo and more.',
+      feature2Title: 'Privacy-First',
+      feature2Desc: 'Your audio is analyzed in-memory only and deleted immediately.',
+      feature3Title: 'Professional Methodology',
+      feature3Desc: 'Based on techniques from top engineers.',
+      analyzerTitle: 'Analyze Your Mix Now',
+      analyzerSubtitle: 'Upload your file and get a professional report in 60 seconds or less',
+      privacyBadgeTitle: 'Privacy-First Analyzer',
+      privacyBadgeDesc: 'Your audio is analyzed in-memory only and deleted immediately.',
+      dropTitle: 'Drag your mix here',
+      dropSubtitle: 'WAV, FLAC, MP3, AAC or OGG up to 100 MB',
+      or: 'or',
+      browseButton: 'Choose a file',
+      loadingMessage: 'Analyzing your mix... This usually takes less than 60 seconds.',
+      loadingFooter: 'You can keep browsing. We’ll show the result right here.',
+      analysisReadyTitle: 'Your analysis is ready',
+      analysisReadySubtitle: 'Here’s what we found in your mix.',
+      technicalSummaryTitle: 'Technical Summary',
+      musicalSummaryTitle: 'Musical / Context Summary',
+      suggestionsTitle: 'Suggestions To Improve',
+      sectionsTitle: 'Section-Based Analysis',
+      rawTextToggle: 'View full technical analysis text',
+      rawTextHide: 'Hide full technical analysis',
+      advancedToggle: 'View advanced details',
+      advancedHide: 'Hide advanced details',
+      backButton: 'Analyze another mix',
+      errorTitle: 'An error occurred',
+      errorRetry: 'Try again',
+      uploadErrorTitle: 'File error',
+      uploadErrorDescription: 'Please check the file format and size.',
+      scoreLabel: 'Score',
+      severityLow: 'Minor adjustments recommended',
+      severityMedium: 'Important improvements suggested',
+      severityHigh: 'Requires critical fixes',
+      fileInfoTitle: 'File Info',
+      durationLabel: 'Duration',
+      sampleRateLabel: 'Sample Rate',
+      channelsLabel: 'Channels',
+      genreLabel: 'Genre (if detected)',
+      noGenre: 'Not specified',
+      downloadTxt: 'Download report as TXT',
+      shortFeedbackTitle: 'Executive Summary',
+      recommendationsTitle: 'Key Recommendations',
+      notesTitle: 'Additional Notes',
+      phase: {
+        idle: 'Ready to analyze your mix.',
+        uploading: 'Uploading file...',
+        compressing: 'Compressing file...',
+        analyzing: 'Analyzing audio...',
+        generating: 'Generating reports...',
+        completed: 'Analysis completed.'
+      },
+      metricLabels: {
+        headroom: 'Headroom',
+        lufs: 'Integrated LUFS',
+        truePeak: 'True Peak',
+        crestFactor: 'Crest Factor',
+        stereoWidth: 'Stereo Width',
+        phase: 'Phase',
+        dynamics: 'Dynamics',
+        tonalBalance: 'Tonal Balance'
+      },
+      downloadNote: 'The TXT report includes all technical details and recommendations.',
+      introPill: 'Built by a mastering engineer with Latin Grammy credit',
+      ctaSecondary: 'Analyze Free',
+      progressTimeHint: 'May take up to 60 seconds'
+    }
+  }
+
+  const t = trans[lang]
+
+  const handleAnalyze = async () => {
+    if (!file) return
+
+    resetState()
+    setLoading(true)
+    setUploadStatus('uploading')
+    setProgress(3)
+    setFirstAnalysisDone(false)
+
+    try {
+      const compressedFile = await compressAudioIfNeeded(file)
+
+      const formData = new FormData()
+      formData.append('file', compressedFile)
+      formData.append('lang', lang)
+
+      function generateRequestId() {
+        return `req_${Date.now()}_${Math.random().toString(36).slice(2)}`
+      }
+
+      const requestId = generateRequestId()
+      formData.append('request_id', requestId)
+
+      setUploadStatus('analyzing')
+      setProgress((prev) => Math.max(prev, 15))
+
+      const res = await fetch('/api/analyze', {
+        method: 'POST',
+        body: formData
+      })
+
+      if (!res.ok) {
+        const text = await res.text()
+        throw new Error(text || 'Failed to analyze mix')
+      }
+
+      const initialData = await res.json()
+
+      setProgress(40)
+      setUploadStatus('analyzing')
+
+      const pollInterval = setInterval(async () => {
+        try {
+          const statusResponse = await fetch(`/api/status?request_id=${requestId}`, {
+            method: 'GET'
+          })
+
+          if (!statusResponse.ok) {
+            console.warn('Status check failed')
+            return
+          }
+
+          const statusData = await statusResponse.json()
+          const status = statusData.status || 'analyzing'
+
+          if (status === 'completed') {
+            clearInterval(pollInterval)
+            if (statusData.result) {
+              setResult(statusData.result)
+            } else if (initialData.result) {
+              setResult(initialData.result)
+            } else {
+              throw new Error('No analysis result received.')
+            }
+
+            setUploadStatus('completed')
+            setProgress(100)
+            setLoading(false)
+            setFirstAnalysisDone(true)
+          } else if (status === 'failed') {
+            clearInterval(pollInterval)
+            throw new Error(statusData.error || 'Analysis failed.')
+          } else {
+            setUploadStatus('analyzing')
+            setProgress((prev) => {
+              if (prev < 80) {
+                return prev + 7
+              }
+              return prev
+            })
+          }
+        } catch (error) {
+          console.error('Error during status polling:', error)
+        }
+      }, 2000)
+    } catch (err: any) {
+      console.error(err)
+      setError(err.message || (lang === 'es' ? 'Error analizando la mezcla.' : 'Error analyzing the mix.'))
+      setLoading(false)
+      setUploadStatus('idle')
+      setProgress(0)
+    }
+  }
+
+  const downloadTxtReport = () => {
+    if (!result) return
+
+    const lines: string[] = []
+
+    lines.push(lang === 'es' ? '🎵 REPORTE DE ANÁLISIS DE MEZCLA' : '🎵 MIX ANALYSIS REPORT')
+    lines.push('='.repeat(60))
+    lines.push('')
+
+    if (result.file?.path) {
+      lines.push((lang === 'es' ? 'Archivo: ' : 'File: ') + result.file.path)
+    }
+    lines.push('')
+
+    if (typeof result.score === 'number') {
+      lines.push((lang === 'es' ? 'Puntuación global: ' : 'Overall score: ') + `${result.score}/100`)
+      if (result.severity) {
+        const severityMap = {
+          low: lang === 'es' ? 'Ajustes menores recomendados' : 'Minor adjustments recommended',
+          medium: lang === 'es' ? 'Mejoras importantes sugeridas' : 'Important improvements suggested',
+          high: lang === 'es' ? 'Requiere correcciones críticas' : 'Requires critical fixes'
+        }
+        lines.push((lang === 'es' ? 'Severidad: ' : 'Severity: ') + severityMap[result.severity])
+      }
+      lines.push('')
+    }
+
+    if (result.metrics?.length) {
+      lines.push(lang === 'es' ? 'Métricas técnicas:' : 'Technical metrics:')
+      lines.push('-'.repeat(40))
+      result.metrics.forEach((m) => {
+        lines.push(`• ${m.name}: ${m.value} (${m.status.toUpperCase()})`)
+        lines.push(`  ${m.message}`)
+      })
+      lines.push('')
+    }
+
+    if (result.technical_summary?.length) {
+      lines.push(lang === 'es' ? 'Resumen técnico:' : 'Technical summary:')
+      lines.push('-'.repeat(40))
+      result.technical_summary.forEach((item) => lines.push(`• ${item}`))
+      lines.push('')
+    }
+
+    if (result.musical_summary?.length) {
+      lines.push(lang === 'es' ? 'Resumen musical / contextual:' : 'Musical / contextual summary:')
+      lines.push('-'.repeat(40))
+      result.musical_summary.forEach((item) => lines.push(`• ${item}`))
+      lines.push('')
+    }
+
+    if (result.suggestions?.length) {
+      lines.push(lang === 'es' ? 'Recomendaciones:' : 'Suggestions:')
+      lines.push('-'.repeat(40))
+      result.suggestions.forEach((item) => lines.push(`• ${item}`))
+      lines.push('')
+    }
+
+    if (result.sections?.length) {
+      lines.push(lang === 'es' ? 'Análisis por secciones:' : 'Section analysis:')
+      lines.push('-'.repeat(40))
+      result.sections.forEach((sec) => {
+        lines.push(`• ${sec.name} [${sec.status.toUpperCase()}]`)
+        lines.push(`  ${sec.message}`)
+      })
+      lines.push('')
+    }
+
+    if (result.raw_text) {
+      lines.push(lang === 'es' ? 'Análisis completo:' : 'Full analysis text:')
+      lines.push('-'.repeat(40))
+      lines.push(result.raw_text)
+      lines.push('')
+    }
+
+    if (result.short_feedback) {
+      lines.push(lang === 'es' ? 'Resumen ejecutivo:' : 'Executive summary:')
+      lines.push('-'.repeat(40))
+      lines.push(result.short_feedback)
+      lines.push('')
+    }
+
+    if (result.recommendations?.length) {
+      lines.push(lang === 'es' ? 'Recomendaciones clave:' : 'Key recommendations:')
+      lines.push('-'.repeat(40))
+      result.recommendations.forEach((item) => lines.push(`• ${item}`))
+      lines.push('')
+    }
+
+    if (result.notes?.length) {
+      lines.push(lang === 'es' ? 'Notas adicionales:' : 'Additional notes:')
+      lines.push('-'.repeat(40))
+      result.notes.forEach((item) => lines.push(`• ${item}`))
+      lines.push('')
+    }
+
+    const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+
+    const baseName = result.file?.path ? result.file.path.replace(/\.[^/.]+$/, '') : 'mix_analysis'
+    a.download = `${baseName}_report.txt`
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    URL.revokeObjectURL(url)
+  }
+
+  const formatDuration = (seconds: number | undefined): string => {
+    if (!seconds || isNaN(seconds)) return lang === 'es' ? 'No disponible' : 'Not available'
+    const m = Math.floor(seconds / 60)
+    const s = Math.floor(seconds % 60)
+    return `${m}:${s.toString().padStart(2, '0')} min`
+  }
+
+  const formatSampleRate = (hz: number | undefined): string => {
+    if (!hz || isNaN(hz)) return lang === 'es' ? 'No disponible' : 'Not available'
+    return `${hz / 1000} kHz`
+  }
+
+  const formatChannels = (ch: number | undefined): string => {
+    if (!ch || isNaN(ch)) return lang === 'es' ? 'No disponible' : 'Not available'
+    if (ch === 1) return lang === 'es' ? 'Mono (1 canal)' : 'Mono (1 channel)'
+    if (ch === 2) return lang === 'es' ? 'Estéreo (2 canales)' : 'Stereo (2 channels)'
+    return `${ch} ${lang === 'es' ? 'canales' : 'channels'}`
+  }
+
+  const getSeverityTag = (severity: AnalysisResult['severity']) => {
+    if (!severity) return null
+
+    const map = {
+      low: {
+        label: lang === 'es' ? 'Ajustes menores' : 'Minor adjustments',
+        color: '#22c55e',
+        bg: 'rgba(34, 197, 94, 0.12)'
+      },
+      medium: {
+        label: lang === 'es' ? 'Mejoras importantes' : 'Important improvements',
+        color: '#f97316',
+        bg: 'rgba(249, 115, 22, 0.12)'
+      },
+      high: {
+        label: lang === 'es' ? 'Crítico' : 'Critical',
+        color: '#ef4444',
+        bg: 'rgba(239, 68, 68, 0.12)'
+      }
+    } as const
+
+    const s = map[severity]
+
+    return (
+      <div
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '0.4rem',
+          padding: '0.25rem 0.75rem',
+          borderRadius: '999px',
+          background: s.bg,
+          color: s.color,
+          fontSize: '0.75rem',
+          fontWeight: 600,
+          border: `1px solid ${s.color}33`
+        }}
+      >
+        <AlertCircle size={14} />
+        <span>{s.label}</span>
+      </div>
+    )
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#ffffff', fontFamily: 'Inter, system-ui, sans-serif' }}>
-      {/* Navigation */}
-      <nav style={{
-        position: 'fixed',
-        width: '100%',
-        background: 'rgba(255, 255, 255, 0.95)',
-        backdropFilter: 'blur(10px)',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-        zIndex: 50
-      }}>
-        <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 1.5rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: '64px' }}>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-              <span style={{
-                fontSize: '1.5rem',
-                fontWeight: 'bold',
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text'
-              }}>
-                🎵 MasteringReady
-              </span>
+    <main style={{ minHeight: '100vh', color: 'white', ...gradientBg }}>
+      <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '1.5rem 1.5rem 3rem' }}>
+        <nav
+          style={{
+            position: 'sticky',
+            top: 0,
+            zIndex: 10,
+            padding: '0.75rem 0',
+            marginBottom: '1rem',
+            background: 'linear-gradient(to bottom, rgba(15, 23, 42, 0.98), rgba(15, 23, 42, 0.92), transparent 100%)',
+            backdropFilter: 'blur(18px)',
+            borderBottom: '1px solid rgba(148, 163, 184, 0.35)'
+          }}
+        >
+          <div
+            style={{
+              maxWidth: '1280px',
+              margin: '0 auto',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              gap: '1rem'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <div style={iconBadgeStyle}>
+                <Music2 size={24} color="#e5e7eb" />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <span
+                  style={{
+                    fontSize: '1.1rem',
+                    fontWeight: 700,
+                    letterSpacing: '0.08em',
+                    textTransform: 'uppercase',
+                    color: '#e5e7eb'
+                  }}
+                >
+                  🎵 MasteringReady
+                </span>
+                <span style={{ fontSize: '0.75rem', color: '#9ca3af' }}>{t.introPill}</span>
+              </div>
             </div>
-            <div style={{ display: 'flex', gap: '2rem', alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
               <button
                 onClick={() => setLang(lang === 'es' ? 'en' : 'es')}
                 style={{
-                  fontSize: '0.875rem',
-                  fontWeight: '500',
-                  color: '#6b7280',
+                  ...badgeStyle,
+                  fontSize: '0.85rem',
+                  fontWeight: 500,
+                  color: '#e5e7eb',
+                  background: 'rgba(15, 23, 42, 0.9)',
                   cursor: 'pointer',
-                  border: 'none',
-                  background: 'none',
-                  padding: '0.5rem 1rem'
+                  borderColor: 'rgba(148, 163, 184, 0.7)'
                 }}
               >
                 {lang === 'es' ? 'EN' : 'ES'}
@@ -400,1740 +830,1769 @@ by Matías Carvajal
               <button
                 onClick={scrollToAnalyzer}
                 style={{
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  color: 'white',
-                  padding: '0.5rem 1.5rem',
-                  borderRadius: '9999px',
-                  fontWeight: '600',
+                  borderRadius: '999px',
                   border: 'none',
+                  padding: '0.5rem 1.5rem',
+                  fontSize: '0.9rem',
+                  fontWeight: 600,
                   cursor: 'pointer',
-                  transition: 'transform 0.2s, box-shadow 0.2s'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-2px)'
-                  e.currentTarget.style.boxShadow = '0 10px 25px rgba(102, 126, 234, 0.4)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)'
-                  e.currentTarget.style.boxShadow = 'none'
+                  background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #ec4899 100%)',
+                  color: 'white',
+                  boxShadow: '0 12px 45px rgba(79, 70, 229, 0.55)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.35rem'
                 }}
               >
-                {lang === 'es' ? 'Analizar Gratis' : 'Analyze Free'}
+                {t.ctaSecondary}
+                <ArrowRight size={16} />
               </button>
             </div>
           </div>
-        </div>
-      </nav>
+        </nav>
 
-      {/* Hero Section */}
-      <section style={{
-        paddingTop: '8rem',
-        paddingBottom: '5rem',
-        paddingLeft: '1.5rem',
-        paddingRight: '1.5rem',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-      }}>
-        <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-            gap: '3rem',
-            alignItems: 'center'
-          }}>
-            {/* Left: Copy */}
-            <div style={{ color: 'white' }}>
-              <div style={{
-                display: 'inline-block',
-                background: 'rgba(255, 255, 255, 0.2)',
-                backdropFilter: 'blur(10px)',
-                borderRadius: '9999px',
-                padding: '0.5rem 1rem',
-                marginBottom: '1.5rem'
-              }}>
-                <span style={{ fontSize: '0.875rem', fontWeight: '500' }}>
-                  ✨ {lang === 'es' 
-                    ? 'Metodología probada en más de 300 producciones profesionales'
-                    : 'Methodology proven in over 300 professional productions'}
-                </span>
-              </div>
-              
-              <h1 style={{
-                fontSize: 'clamp(2.5rem, 5vw, 3.75rem)',
-                fontWeight: 'bold',
-                marginBottom: '1.5rem',
-                lineHeight: '1.2'
-              }}>
-                {lang === 'es'
-                  ? '¿Tu mezcla está lista para el mastering?'
-                  : 'Is your mix ready for mastering?'}
-              </h1>
-              
-              <p style={{
-                fontSize: 'clamp(1.125rem, 2vw, 1.5rem)',
-                marginBottom: '2rem',
-                color: '#e9d5ff'
-              }}>
-                {lang === 'es'
-                  ? 'Análisis técnico en 30 segundos + recomendaciones basadas en metodología profesional'
-                  : 'Technical analysis in 30 seconds + recommendations based on professional methodology'}
-              </p>
-              
-              <button
-                onClick={scrollToAnalyzer}
+        <section
+          style={{
+            paddingTop: '3.5rem',
+            paddingBottom: '4rem',
+            paddingLeft: '0.25rem',
+            paddingRight: '0.25rem'
+          }}
+        >
+          <div
+            style={{
+              maxWidth: '1280px',
+              margin: '0 auto',
+              display: 'grid',
+              gridTemplateColumns: 'minmax(0, 1.4fr) minmax(0, 1fr)',
+              gap: '3rem',
+              alignItems: 'center'
+            }}
+          >
+            <div>
+              <div
                 style={{
-                  background: 'white',
-                  color: '#667eea',
-                  padding: '1rem 2rem',
-                  borderRadius: '9999px',
-                  fontWeight: 'bold',
-                  fontSize: '1.125rem',
-                  border: 'none',
-                  cursor: 'pointer',
-                  marginBottom: '2rem',
-                  transition: 'all 0.3s',
-                  boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'scale(1.05)'
-                  e.currentTarget.style.boxShadow = '0 8px 30px rgba(0,0,0,0.2)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'scale(1)'
-                  e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.1)'
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  ...pillStyle,
+                  marginBottom: '1.5rem'
                 }}
               >
-                {lang === 'es' ? 'Analiza Tu Mezcla Gratis' : 'Analyze Your Mix Free'}
-              </button>
-              
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem', fontSize: '0.875rem' }}>
-                {[
-                  lang === 'es' ? 'Sin tarjeta requerida' : 'No credit card required',
-                  'Privacy-first',
-                  lang === 'es' ? 'Español e Inglés' : 'Spanish & English'
-                ].map((text, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <Check size={20} />
-                    {text}
+                <span style={{ fontSize: '0.85rem', color: '#e5e7eb' }}>✨ {t.heroPill}</span>
+              </div>
+
+              <h1
+                style={{
+                  fontSize: 'clamp(2.7rem, 4vw, 3.8rem)',
+                  fontWeight: 800,
+                  marginBottom: '1rem',
+                  letterSpacing: '-0.03em',
+                  lineHeight: 1.05
+                }}
+              >
+                {t.heroTitle}
+              </h1>
+
+              <p
+                style={{
+                  fontSize: '1.05rem',
+                  lineHeight: 1.7,
+                  color: '#e5e7eb',
+                  maxWidth: '36rem',
+                  marginBottom: '1.75rem'
+                }}
+              >
+                {t.heroSubtitle}
+              </p>
+
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.75rem' }}>
+                <button
+                  onClick={scrollToAnalyzer}
+                  style={{
+                    borderRadius: '999px',
+                    border: 'none',
+                    padding: '0.9rem 1.8rem',
+                    fontSize: '1rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    background: 'white',
+                    color: '#4f46e5',
+                    boxShadow: '0 18px 60px rgba(15, 23, 42, 0.65)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    transform: 'translateY(0)',
+                    transition: 'transform 0.2s ease, box-shadow 0.2s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-1px)'
+                    e.currentTarget.style.boxShadow = '0 20px 70px rgba(15, 23, 42, 0.9)'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)'
+                    e.currentTarget.style.boxShadow = '0 18px 60px rgba(15, 23, 42, 0.65)'
+                  }}
+                >
+                  <Zap size={18} />
+                  {t.heroCTA}
+                </button>
+
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    padding: '0.75rem 1rem',
+                    borderRadius: '999px',
+                    background: 'rgba(15, 23, 42, 0.8)',
+                    border: '1px solid rgba(148, 163, 184, 0.5)'
+                  }}
+                >
+                  <Gauge size={18} color="#a5b4fc" />
+                  <span style={{ fontSize: '0.85rem', color: '#e5e7eb' }}>
+                    {lang === 'es' ? 'Optimizado para mezcla antes del mastering' : 'Optimized for pre-mastering mixes'}
+                  </span>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.1rem', fontSize: '0.85rem' }}>
+                {['Privacy-first', lang === 'es' ? 'Inglés y Español' : 'English & Spanish'].map((text, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      padding: '0.45rem 0.9rem',
+                      borderRadius: '999px',
+                      border: '1px solid rgba(148, 163, 184, 0.7)',
+                      background: 'rgba(15, 23, 42, 0.9)'
+                    }}
+                  >
+                    <Check size={16} color="#22c55e" />
+                    <span style={{ color: '#e5e7eb' }}>{text}</span>
                   </div>
                 ))}
               </div>
             </div>
-            
-            {/* Right: Demo Card */}
+
             <div>
-              <div style={{
-                background: 'white',
-                borderRadius: '1rem',
-                boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
-                padding: '2rem',
-                transition: 'transform 0.3s'
-              }}>
-                <div style={{ marginBottom: '1.5rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                    <span style={{ color: '#6b7280', fontWeight: '500' }}>
-                      {lang === 'es' ? 'Puntuación' : 'Score'}
-                    </span>
-                    <span style={{
-                      fontSize: '2.25rem',
-                      fontWeight: 'bold',
-                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                      WebkitBackgroundClip: 'text',
-                      WebkitTextFillColor: 'transparent',
-                      backgroundClip: 'text'
-                    }}>
-                      97/100
-                    </span>
-                  </div>
-                  <div style={{
-                    width: '100%',
-                    height: '0.75rem',
-                    background: '#e5e7eb',
-                    borderRadius: '9999px',
-                    overflow: 'hidden'
-                  }}>
-                    <div style={{
-                      width: '97%',
-                      height: '100%',
-                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                      transition: 'width 1s ease-out'
-                    }} />
-                  </div>
-                </div>
-                
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                  {[
-                    { label: 'Headroom', value: '-6.2 dB' },
-                    { label: 'True Peak', value: '-3.1 dBTP' },
-                    { label: lang === 'es' ? 'Balance Estéreo' : 'Stereo Balance', value: '0.75' }
-                  ].map((item, i) => (
-                    <div key={i} style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      padding: '0.75rem',
-                      background: '#ecfdf5',
-                      borderRadius: '0.5rem'
-                    }}>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#065f46' }}>
-                        <Check size={20} color="#10b981" />
-                        {item.label}
-                      </span>
-                      <span style={{ color: '#047857', fontWeight: '600' }}>{item.value}</span>
+              <div
+                style={{
+                  ...cardStyle,
+                  padding: '1.8rem',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  borderRadius: '1.5rem'
+                }}
+              >
+                <div
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    opacity: 0.46,
+                    background: 'radial-gradient(circle at top, rgba(129, 140, 248, 0.25), transparent 55%)'
+                  }}
+                />
+                <div style={{ position: 'relative', zIndex: 1 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.75rem' }}>
+                    <div>
+                      <div
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.35rem',
+                          padding: '0.35rem 0.7rem',
+                          borderRadius: '999px',
+                          border: '1px solid rgba(148, 163, 184, 0.6)',
+                          background: 'rgba(15, 23, 42, 0.9)'
+                        }}
+                      >
+                        <FileAudio2 size={16} color="#a5b4fc" />
+                        <span style={{ fontSize: '0.75rem', color: '#e5e7eb' }}>Demo Mix</span>
+                      </div>
+                      <h3
+                        style={{
+                          marginTop: '0.75rem',
+                          fontSize: '0.95rem',
+                          fontWeight: 600,
+                          color: '#e5e7eb'
+                        }}
+                      >
+                        {lang === 'es' ? '"Indie Pop - Verso Principal"' : '"Indie Pop - Main Verse"'}
+                      </h3>
+                      <p style={{ fontSize: '0.8rem', color: '#9ca3af' }}>
+                        {lang === 'es' ? 'Simulación de resultados de una mezcla lista para mastering.' : 'Simulated results for a mix ready for mastering.'}
+                      </p>
                     </div>
-                  ))}
-                </div>
-                
-                <div style={{
-                  marginTop: '1.5rem',
-                  padding: '1rem',
-                  background: '#f3e8ff',
-                  borderRadius: '0.5rem'
-                }}>
-                  <p style={{ fontSize: '0.875rem', color: '#6b21a8', fontWeight: '500' }}>
-                    ✅ {lang === 'es' 
-                      ? 'Lista para mastering profesional'
-                      : 'Ready for professional mastering'}
-                  </p>
+                    <div style={{ textAlign: 'right' }}>
+                      <span
+                        style={{
+                          fontSize: '0.75rem',
+                          color: '#9ca3af'
+                        }}
+                      >
+                        {t.demoScore}
+                      </span>
+                      <div
+                        style={{
+                          fontSize: '1.8rem',
+                          fontWeight: 800,
+                          background: 'linear-gradient(135deg, #22c55e 0%, #bef264 100%)',
+                          WebkitBackgroundClip: 'text',
+                          WebkitTextFillColor: 'transparent',
+                          backgroundClip: 'text',
+                          marginTop: '0.15rem'
+                        }}
+                      >
+                        97/100
+                      </div>
+                      <div
+                        style={{
+                          marginTop: '0.45rem',
+                          padding: '0.2rem 0.5rem',
+                          borderRadius: '999px',
+                          background: 'rgba(22, 163, 74, 0.1)',
+                          border: '1px solid rgba(22, 163, 74, 0.6)',
+                          fontSize: '0.75rem',
+                          color: '#bbf7d0'
+                        }}
+                      >
+                        {lang === 'es' ? 'Lista para masterizar' : 'Ready to be mastered'}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div
+                    style={{
+                      width: '100%',
+                      height: '0.6rem',
+                      borderRadius: '999px',
+                      background: 'rgba(15, 23, 42, 0.9)',
+                      overflow: 'hidden',
+                      border: '1px solid rgba(148, 163, 184, 0.7)',
+                      marginBottom: '1.5rem'
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: '97%',
+                        height: '100%',
+                        background: 'linear-gradient(90deg, #22c55e 0%, #84cc16 40%, #a3e635 100%)',
+                        boxShadow: '0 0 20px rgba(190, 242, 100, 0.8)'
+                      }}
+                    />
+                  </div>
+
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+                      gap: '0.75rem',
+                      marginBottom: '1.35rem'
+                    }}
+                  >
+                    {[
+                      { label: t.demoMetrics.headroom, value: '-6.2 dBFS' },
+                      { label: t.demoMetrics.truePeak, value: '-3.1 dBTP' },
+                      { label: t.demoMetrics.stereoBalance, value: '0.75' }
+                    ].map((item, i) => (
+                      <div
+                        key={i}
+                        style={{
+                          padding: '0.55rem 0.7rem',
+                          borderRadius: '0.9rem',
+                          border: '1px solid rgba(22, 163, 74, 0.3)',
+                          background: 'linear-gradient(135deg, rgba(22, 163, 74, 0.12), rgba(15, 23, 42, 0.95))',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '0.15rem'
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontSize: '0.75rem',
+                            color: '#bbf7d0',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.35rem'
+                          }}
+                        >
+                          <Check size={14} color="#22c55e" />
+                          {item.label}
+                        </span>
+                        <span
+                          style={{
+                            fontSize: '0.9rem',
+                            color: '#e5e7eb',
+                            fontWeight: 600
+                          }}
+                        >
+                          {item.value}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div
+                    style={{
+                      marginTop: '0.75rem',
+                      padding: '0.75rem',
+                      borderRadius: '0.9rem',
+                      background: 'linear-gradient(90deg, rgba(129, 140, 248, 0.12), rgba(236, 72, 153, 0.14))',
+                      border: '1px solid rgba(129, 140, 248, 0.55)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.6rem'
+                    }}
+                  >
+                    <BarChart2 size={18} color="#c7d2fe" />
+                    <p
+                      style={{
+                        fontSize: '0.8rem',
+                        color: '#e5e7eb'
+                      }}
+                    >
+                      {lang === 'es'
+                        ? 'Este es un ejemplo de cómo se ve una mezcla técnicamente lista para masterizar.'
+                        : 'This is an example of what a technically mastering-ready mix looks like.'}
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Features Section */}
-      <section id="features" style={{
-        padding: '5rem 1.5rem',
-        background: '#f9fafb'
-      }}>
-        <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: '4rem' }}>
-            <h2 style={{ fontSize: '2.25rem', fontWeight: 'bold', marginBottom: '1rem' }}>
-              {lang === 'es' ? '¿Por qué MasteringReady?' : 'Why MasteringReady?'}
-            </h2>
-            <p style={{ fontSize: '1.25rem', color: '#6b7280' }}>
-              {lang === 'es'
-                ? 'Metodología profesional basada en 300+ producciones'
-                : 'Professional methodology based on 300+ productions'}
-            </p>
-          </div>
+        <section
+          id="features"
+          style={{
+            padding: '3.5rem 0.5rem 3.75rem',
+            background: 'linear-gradient(to bottom, rgba(15, 23, 42, 0.98), rgba(15, 23, 42, 0.92))',
+            borderRadius: '1.5rem',
+            border: '1px solid rgba(148, 163, 184, 0.35)',
+            marginBottom: '3.5rem'
+          }}
+        >
+          <div style={{ maxWidth: '1152px', margin: '0 auto' }}>
+            <div style={{ textAlign: 'center', marginBottom: '3.25rem' }}>
+              <div
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  ...pillStyle,
+                  background: 'transparent',
+                  borderColor: 'rgba(148, 163, 184, 0.6)'
+                }}
+              >
+                <Gauge size={16} color="#a5b4fc" />
+                <span style={{ fontSize: '0.8rem', color: '#e5e7eb' }}>
+                  {lang === 'es' ? 'Diseñado para mezcla antes del mastering' : 'Designed for pre-mastering mixes'}
+                </span>
+              </div>
+              <h2
+                style={{
+                  fontSize: '2rem',
+                  fontWeight: 800,
+                  marginTop: '1.2rem',
+                  marginBottom: '0.75rem',
+                  letterSpacing: '-0.03em'
+                }}
+              >
+                {t.whyTitle}
+              </h2>
+              <p
+                style={{
+                  fontSize: '1rem',
+                  color: '#9ca3af',
+                  maxWidth: '34rem',
+                  margin: '0 auto'
+                }}
+              >
+                {t.whySubtitle}
+              </p>
+            </div>
 
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-            gap: '2rem'
-          }}>
-            {[
-              {
-                icon: <Zap size={48} color="#667eea" />,
-                title: lang === 'es' ? 'Análisis en 30 Segundos' : 'Analysis in 30 Seconds',
-                desc: lang === 'es'
-                  ? 'Headroom, LUFS, True Peak, balance de frecuencias, estéreo y más.'
-                  : 'Headroom, LUFS, True Peak, frequency balance, stereo and more.'
-              },
-              {
-                icon: <Shield size={48} color="#667eea" />,
-                title: 'Privacy-First',
-                desc: lang === 'es'
-                  ? 'Tu audio se analiza solo en memoria y se elimina inmediatamente.'
-                  : 'Your audio is analyzed in-memory only and deleted immediately.'
-              },
-              {
-                icon: <TrendingUp size={48} color="#667eea" />,
-                title: lang === 'es' ? 'Metodología Profesional' : 'Professional Methodology',
-                desc: lang === 'es'
-                  ? 'Basado en técnicas de ingenieros top.'
-                  : 'Based on techniques from top engineers.'
-              }
-            ].map((feature, i) => (
-              <div key={i} style={{
-                background: 'white',
-                padding: '2rem',
-                borderRadius: '1rem',
-                boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-                transition: 'transform 0.3s, box-shadow 0.3s',
-                cursor: 'pointer'
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+                gap: '1.8rem'
               }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-5px)'
-                e.currentTarget.style.boxShadow = '0 20px 40px rgba(0,0,0,0.12)'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)'
-                e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.08)'
-              }}>
-                <div style={{ marginBottom: '1rem' }}>{feature.icon}</div>
-                <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '0.75rem' }}>
-                  {feature.title}
-                </h3>
-                <p style={{ color: '#6b7280', lineHeight: '1.6' }}>{feature.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Analyzer Section - Same as before but with inline styles */}
-      <section id="analyze" style={{ padding: '5rem 1.5rem', background: 'white' }}>
-        <div style={{ maxWidth: '896px', margin: '0 auto' }}>
-          {!result ? (
-            <>
-              <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
-                <h2 style={{ fontSize: '2.25rem', fontWeight: 'bold', marginBottom: '1rem' }}>
-                  {lang === 'es' ? 'Analiza Tu Mezcla Ahora' : 'Analyze Your Mix Now'}
-                </h2>
-                <p style={{ fontSize: '1.25rem', color: '#6b7280' }}>
-                  {lang === 'es'
-                    ? 'Sube tu archivo y obtén un reporte profesional en 30 segundos'
-                    : 'Upload your file and get a professional report in 30 seconds'}
-                </p>
-              </div>
-
-              {/* Privacy Badge */}
-              <div style={{
-                background: '#ecfdf5',
-                border: '1px solid #a7f3d0',
-                borderRadius: '0.5rem',
-                padding: '1rem',
-                marginBottom: '2rem'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                  <Shield size={20} color="#059669" />
-                  <span style={{ fontWeight: '600', color: '#064e3b' }}>
-                    🔒 Privacy-First Analyzer
-                  </span>
-                </div>
-                <p style={{ fontSize: '0.875rem', color: '#065f46' }}>
-                  {lang === 'es'
-                    ? 'Tu audio se analiza solo en memoria y se elimina inmediatamente.'
-                    : 'Your audio is analyzed in-memory only and deleted immediately.'}
-                </p>
-              </div>
-
-              {/* File Upload */}
-              <div style={{
-                background: 'white',
-                borderRadius: '1rem',
-                boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
-                padding: '2rem',
-                marginBottom: '1.5rem'
-              }}>
+            >
+              {[
+                {
+                  icon: <Zap size={32} color="#a5b4fc" />,
+                  title: t.feature1Title,
+                  desc: t.feature1Desc
+                },
+                {
+                  icon: <Shield size={32} color="#a5b4fc" />,
+                  title: t.feature2Title,
+                  desc: t.feature2Desc
+                },
+                {
+                  icon: <TrendingUp size={32} color="#a5b4fc" />,
+                  title: t.feature3Title,
+                  desc: t.feature3Desc
+                }
+              ].map((feature, i) => (
                 <div
-                  onClick={() => !loading && document.getElementById('file-input')?.click()}
-                  onDragOver={(e) => {
-                    e.preventDefault()
-                    e.stopPropagation()
-                    if (!loading) {
-                      e.currentTarget.style.borderColor = '#a855f7'
-                      e.currentTarget.style.background = '#faf5ff'
-                    }
-                  }}
-                  onDragLeave={(e) => {
-                    e.preventDefault()
-                    e.stopPropagation()
-                    e.currentTarget.style.borderColor = '#d1d5db'
-                    e.currentTarget.style.background = 'transparent'
-                  }}
-                  onDrop={(e) => {
-                    e.preventDefault()
-                    e.stopPropagation()
-                    e.currentTarget.style.borderColor = '#d1d5db'
-                    e.currentTarget.style.background = 'transparent'
-                    
-                    if (!loading && e.dataTransfer.files && e.dataTransfer.files[0]) {
-                      const droppedFile = e.dataTransfer.files[0]
-                      setFile(droppedFile)
-                      
-                      // Scroll to analyze section
-                      setTimeout(() => {
-                        const analyzeSection = document.getElementById('analyze-section')
-                        if (analyzeSection) {
-                          analyzeSection.scrollIntoView({ 
-                            behavior: 'smooth', 
-                            block: 'center'
-                          })
-                        }
-                      }, 100)
-                    }
-                  }}
+                  key={i}
                   style={{
-                    border: '2px dashed #d1d5db',
-                    borderRadius: '0.75rem',
-                    padding: '3rem',
-                    textAlign: 'center',
-                    cursor: loading ? 'not-allowed' : 'pointer',
-                    opacity: loading ? 0.5 : 1,
-                    transition: 'all 0.3s'
+                    background: 'radial-gradient(circle at top left, rgba(129, 140, 248, 0.18), rgba(15, 23, 42, 1))',
+                    borderRadius: '1.25rem',
+                    border: '1px solid rgba(148, 163, 184, 0.55)',
+                    padding: '1.7rem',
+                    boxShadow: '0 18px 65px rgba(15, 23, 42, 0.85)',
+                    transform: 'translateY(0)',
+                    transition: 'transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease',
+                    cursor: 'default'
                   }}
                   onMouseEnter={(e) => {
-                    if (!loading) {
-                      e.currentTarget.style.borderColor = '#a855f7'
-                      e.currentTarget.style.background = '#faf5ff'
-                    }
+                    e.currentTarget.style.transform = 'translateY(-2px)'
+                    e.currentTarget.style.boxShadow = '0 24px 80px rgba(15, 23, 42, 1)'
+                    ;(e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(129, 140, 248, 0.85)'
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = '#d1d5db'
-                    e.currentTarget.style.background = 'transparent'
+                    e.currentTarget.style.transform = 'translateY(0)'
+                    e.currentTarget.style.boxShadow = '0 18px 65px rgba(15, 23, 42, 0.85)'
+                    ;(e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(148, 163, 184, 0.55)'
                   }}
                 >
-                  <input
-                    id="file-input"
-                    type="file"
-                    accept=".wav,.mp3,.aiff"
-                    onChange={(e) => {
-                      const selectedFile = e.target.files?.[0] || null
-                      setFile(selectedFile)
-                      
-                      // Scroll to analyze section when file is selected
-                      if (selectedFile) {
-                        setTimeout(() => {
-                          const analyzeSection = document.getElementById('analyze-section')
-                          if (analyzeSection) {
-                            analyzeSection.scrollIntoView({ 
-                              behavior: 'smooth', 
-                              block: 'center'
-                            })
-                          }
-                        }, 100)
+                  <div
+                    style={{
+                      marginBottom: '1rem',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: '0.6rem',
+                      borderRadius: '999px',
+                      background: 'radial-gradient(circle at top, rgba(129, 140, 248, 0.2), rgba(15, 23, 42, 1))',
+                      border: '1px solid rgba(129, 140, 248, 0.75)'
+                    }}
+                  >
+                    {feature.icon}
+                  </div>
+                  <h3
+                    style={{
+                      fontSize: '1.1rem',
+                      fontWeight: 700,
+                      marginBottom: '0.5rem',
+                      color: '#e5e7eb'
+                    }}
+                  >
+                    {feature.title}
+                  </h3>
+                  <p
+                    style={{
+                      fontSize: '0.9rem',
+                      color: '#9ca3af',
+                      lineHeight: 1.6
+                    }}
+                  >
+                    {feature.desc}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section
+          id="analyze"
+          ref={analyzerRef}
+          style={{
+            padding: '3.75rem 0.5rem 4rem',
+            background: 'rgba(15, 23, 42, 0.98)',
+            borderRadius: '1.5rem',
+            border: '1px solid rgba(148, 163, 184, 0.4)',
+            marginBottom: '3.5rem'
+          }}
+        >
+          <div style={{ maxWidth: '896px', margin: '0 auto' }}>
+            {!result ? (
+              <>
+                <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
+                  <h2
+                    style={{
+                      fontSize: '2rem',
+                      fontWeight: 800,
+                      marginBottom: '0.75rem',
+                      letterSpacing: '-0.03em'
+                    }}
+                  >
+                    {t.analyzerTitle}
+                  </h2>
+                  <p
+                    style={{
+                      fontSize: '1rem',
+                      color: '#9ca3af',
+                      maxWidth: '32rem',
+                      margin: '0 auto'
+                    }}
+                  >
+                    {t.analyzerSubtitle}
+                  </p>
+                </div>
+
+                <div
+                  style={{
+                    background: 'rgba(15, 23, 42, 1)',
+                    borderRadius: '1.5rem',
+                    border: '1px solid rgba(148, 163, 184, 0.55)',
+                    padding: '2rem',
+                    boxShadow: '0 18px 70px rgba(0, 0, 0, 0.9)'
+                  }}
+                >
+                  <div
+                    style={{
+                      background: 'linear-gradient(135deg, rgba(22, 163, 74, 0.14), rgba(15, 23, 42, 0.95))',
+                      border: '1px solid rgba(34, 197, 94, 0.65)',
+                      borderRadius: '0.9rem',
+                      padding: '0.85rem 1rem',
+                      marginBottom: '1.5rem'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.2rem' }}>
+                      <Shield size={18} color="#bbf7d0" />
+                      <span
+                        style={{
+                          fontSize: '0.85rem',
+                          fontWeight: 600,
+                          color: '#bbf7d0'
+                        }}
+                      >
+                        🔒 {t.privacyBadgeTitle}
+                      </span>
+                    </div>
+                    <p
+                      style={{
+                        fontSize: '0.8rem',
+                        color: '#dcfce7'
+                      }}
+                    >
+                      {t.privacyBadgeDesc}
+                    </p>
+                  </div>
+
+                  <div
+                    onClick={() => !loading && fileInputRef.current?.click()}
+                    onDragOver={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      if (!loading) {
+                        e.currentTarget.style.borderColor = '#a855f7'
+                        e.currentTarget.style.background = 'rgba(30, 64, 175, 0.65)'
                       }
                     }}
-                    style={{ display: 'none' }}
-                    disabled={loading}
-                  />
-                  
-                  <Upload size={64} color="#9ca3af" style={{ margin: '0 auto 1rem' }} />
-                  <p style={{ fontSize: '1.125rem', fontWeight: '500', marginBottom: '0.5rem' }}>
-                    {lang === 'es' ? 'Sube tu mezcla' : 'Upload your mix'}
-                  </p>
-                  <p style={{ fontSize: '0.875rem', color: '#6b7280' }}>
-                    {lang === 'es'
-                      ? 'Arrastra y suelta o haz click para seleccionar'
-                      : 'Drag and drop or click to select'}
-                  </p>
-                  <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.5rem' }}>
-                    WAV, MP3 o AIFF (máx 50MB)
-                  </p>
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '0.5rem',
-                    marginTop: '1rem',
-                    padding: '0.75rem',
-                    background: '#f0fdf4',
-                    borderRadius: '0.5rem',
-                    border: '1px solid #86efac'
-                  }}>
-                    <span style={{ fontSize: '1rem' }}>🔒</span>
-                    <p style={{ fontSize: '0.75rem', color: '#166534', margin: 0 }}>
-                      {lang === 'es'
-                        ? 'Tus archivos se borran automáticamente de nuestros servidores después del análisis'
-                        : 'Your files are automatically deleted from our servers after analysis'}
-                    </p>
-                  </div>
-                </div>
-              </div>
+                    onDragLeave={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      e.currentTarget.style.borderColor = 'rgba(148, 163, 184, 0.6)'
+                      e.currentTarget.style.background = 'rgba(15, 23, 42, 0.9)'
+                    }}
+                    onDrop={handleDrop}
+                    style={{
+                      border: '2px dashed rgba(148, 163, 184, 0.6)',
+                      borderRadius: '1.25rem',
+                      padding: '1.75rem 1.5rem',
+                      marginBottom: '1.5rem',
+                      background: 'rgba(15, 23, 42, 0.9)',
+                      cursor: loading ? 'not-allowed' : 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    <div style={{ textAlign: 'center' }}>
+                      <div
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          padding: '0.65rem',
+                          borderRadius: '999px',
+                          background: 'radial-gradient(circle at top, rgba(129, 140, 248, 0.2), rgba(15, 23, 42, 1))',
+                          border: '1px solid rgba(129, 140, 248, 0.75)',
+                          marginBottom: '0.85rem'
+                        }}
+                      >
+                        {loading ? <Loader2 size={22} className="animate-spin" color="#e5e7eb" /> : <Upload size={22} color="#e5e7eb" />}
+                      </div>
+                      <h3
+                        style={{
+                          fontSize: '1rem',
+                          fontWeight: 600,
+                          marginBottom: '0.35rem'
+                        }}
+                      >
+                        {t.dropTitle}
+                      </h3>
+                      <p
+                        style={{
+                          fontSize: '0.85rem',
+                          color: '#9ca3af',
+                          marginBottom: '1rem'
+                        }}
+                      >
+                        {t.dropSubtitle}
+                      </p>
 
-              {/* Selected File */}
-              {file && (
-                <div style={{
-                  borderRadius: '0.5rem',
-                  border: `1px solid ${isFileTooLarge ? '#fca5a5' : needsCompression ? '#fbbf24' : '#93c5fd'}`,
-                  background: isFileTooLarge ? '#fef2f2' : needsCompression ? '#fffbeb' : '#eff6ff',
-                  padding: '1rem',
-                  marginBottom: '1.5rem'
-                }}>
-                  <p style={{
-                    fontSize: '0.875rem',
-                    fontWeight: '500',
-                    color: isFileTooLarge ? '#7f1d1d' : needsCompression ? '#78350f' : '#1e3a8a'
-                  }}>
-                    {lang === 'es' ? 'Archivo seleccionado:' : 'Selected file:'}
-                  </p>
-                  <p style={{
-                    fontSize: '1.125rem',
-                    fontWeight: 'bold',
-                    color: isFileTooLarge ? '#7f1d1d' : needsCompression ? '#78350f' : '#1e3a8a'
-                  }}>
-                    {file.name}
-                  </p>
-                  <p style={{
-                    fontSize: '0.875rem',
-                    color: isFileTooLarge ? '#991b1b' : needsCompression ? '#92400e' : '#1e40af'
-                  }}>
-                    {(file.size / 1024 / 1024).toFixed(2)} MB
-                  </p>
-                  {needsCompression && !isFileTooLarge && (
-                    <div style={{
-                      marginTop: '0.5rem',
-                      background: '#fef3c7',
-                      border: '1px solid #fbbf24',
-                      borderRadius: '0.25rem',
-                      padding: '0.75rem'
-                    }}>
-                      <p style={{ fontSize: '0.875rem', color: '#78350f', fontWeight: '600', marginBottom: '0.25rem' }}>
-                        ℹ️ {lang === 'es' 
-                          ? 'Archivo grande detectado'
-                          : 'Large file detected'}
-                      </p>
-                      <p style={{ fontSize: '0.75rem', color: '#92400e' }}>
-                        {lang === 'es'
-                          ? `Tu archivo será comprimido automáticamente de ${(file.size / 1024 / 1024).toFixed(1)}MB a ~${Math.min(35, (file.size / 1024 / 1024) * 0.3).toFixed(1)}MB antes del análisis. Esto toma ~10-15 segundos.`
-                          : `Your file will be automatically compressed from ${(file.size / 1024 / 1024).toFixed(1)}MB to ~${Math.min(35, (file.size / 1024 / 1024) * 0.3).toFixed(1)}MB before analysis. Takes ~10-15 seconds.`}
-                      </p>
-                    </div>
-                  )}
-                  {isFileTooLarge && (
-                    <div style={{
-                      marginTop: '0.5rem',
-                      background: '#fee2e2',
-                      border: '1px solid #fca5a5',
-                      borderRadius: '0.25rem',
-                      padding: '0.75rem'
-                    }}>
-                      <p style={{ fontSize: '0.875rem', color: '#7f1d1d', fontWeight: '600', marginBottom: '0.25rem' }}>
-                        ⚠️ {lang === 'es' 
-                          ? 'Archivo demasiado grande'
-                          : 'File too large'}
-                      </p>
-                      <p style={{ fontSize: '0.75rem', color: '#991b1b' }}>
-                        {lang === 'es'
-                          ? `El límite máximo es 500MB. Tu archivo tiene ${(file.size / 1024 / 1024).toFixed(1)}MB. Por favor, usa un archivo más pequeño.`
-                          : `Maximum limit is 500MB. Your file is ${(file.size / 1024 / 1024).toFixed(1)}MB. Please use a smaller file.`}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Options */}
-              {file && !isFileTooLarge && (
-                <div 
-                  id="analyze-section"
-                  style={{
-                    background: 'white',
-                    borderRadius: '0.75rem',
-                    boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-                    padding: '1.5rem',
-                    marginBottom: '1.5rem'
-                  }}
-                >
-                  <h3 style={{ fontWeight: '600', fontSize: '1.125rem', marginBottom: '1rem' }}>
-                    {lang === 'es' ? 'Opciones de Análisis' : 'Analysis Options'}
-                  </h3>
-                  
-                  <div style={{ marginBottom: '1rem' }}>
-                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem' }}>
-                      {lang === 'es' ? 'Modo de Reporte' : 'Report Mode'}
-                    </label>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem' }}>
-                      {['visual', 'short', 'write'].map((m) => (
-                        <button
-                          key={m}
-                          onClick={() => {
-                            setReportView(m as 'visual' | 'short' | 'write')
-                            if (m !== 'visual') {
-                              setMode(m as 'short' | 'write')
-                            }
-                          }}
+                      {file && (
+                        <div
                           style={{
-                            padding: '0.5rem 1rem',
-                            borderRadius: '0.5rem',
-                            border: 'none',
-                            background: reportView === m ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : '#f3f4f6',
-                            color: reportView === m ? 'white' : '#111827',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s',
-                            fontSize: '0.875rem'
+                            marginTop: '0.5rem',
+                            padding: '0.6rem 0.8rem',
+                            borderRadius: '0.75rem',
+                            background: 'rgba(15, 23, 42, 0.95)',
+                            border: '1px solid rgba(148, 163, 184, 0.7)',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            fontSize: '0.85rem'
                           }}
                         >
-                          {m === 'visual' ? (lang === 'es' ? '⚡ Rápido' : '⚡ Quick') :
-                           m === 'short' ? (lang === 'es' ? '📝 Resumen' : '📝 Summary') :
-                           (lang === 'es' ? '📄 Completo' : '📄 Complete')}
-                        </button>
-                      ))}
+                          <FileAudio2 size={16} color="#e5e7eb" />
+                          <span
+                            style={{
+                              maxWidth: '16rem',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                              color: '#e5e7eb'
+                            }}
+                          >
+                            {file.name}
+                          </span>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              if (!loading) {
+                                setFile(null)
+                              }
+                            }}
+                            style={{
+                              border: 'none',
+                              background: 'transparent',
+                              cursor: 'pointer',
+                              padding: 0
+                            }}
+                          >
+                            <XCircle size={16} color="#f97316" />
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
 
-                  <div>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                      <input
-                        type="checkbox"
-                        checked={strict}
-                        onChange={(e) => setStrict(e.target.checked)}
-                        style={{ width: '1rem', height: '1rem', borderRadius: '0.25rem' }}
-                      />
-                      <span style={{ fontSize: '0.875rem', fontWeight: '500' }}>
-                        {lang === 'es' ? 'Modo Strict' : 'Strict Mode'}
-                      </span>
-                    </label>
-                    <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem', marginLeft: '1.5rem' }}>
-                      {lang === 'es'
-                        ? 'Estándares comerciales más exigentes'
-                        : 'More demanding commercial standards'}
-                    </p>
-                  </div>
-                </div>
-              )}
+                  {uploadError && (
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        gap: '0.5rem',
+                        background: 'rgba(127, 29, 29, 0.3)',
+                        borderRadius: '0.75rem',
+                        border: '1px solid rgba(239, 68, 68, 0.7)',
+                        padding: '0.75rem',
+                        marginBottom: '1.25rem'
+                      }}
+                    >
+                      <AlertCircle size={16} color="#fecaca" />
+                      <div>
+                        <p
+                          style={{
+                            fontSize: '0.85rem',
+                            fontWeight: 600,
+                            color: '#fecaca'
+                          }}
+                        >
+                          {t.uploadErrorTitle}
+                        </p>
+                        <p
+                          style={{
+                            fontSize: '0.8rem',
+                            color: '#fecaca'
+                          }}
+                        >
+                          {t.uploadErrorDescription}
+                        </p>
+                      </div>
+                    </div>
+                  )}
 
-              {/* Analyze Button */}
-              {file && !isFileTooLarge && (
-                <button
-                  onClick={handleAnalyze}
-                  disabled={loading || compressing}
-                  style={{
-                    width: '100%',
-                    background: (loading || compressing) ? '#d1d5db' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                    color: (loading || compressing) ? '#6b7280' : 'white',
-                    padding: '1rem',
-                    borderRadius: '0.75rem',
-                    fontWeight: '600',
-                    fontSize: '1.125rem',
-                    border: 'none',
-                    cursor: (loading || compressing) ? 'not-allowed' : 'pointer',
-                    transition: 'all 0.3s',
-                    boxShadow: (loading || compressing) ? 'none' : '0 4px 20px rgba(102, 126, 234, 0.3)',
-                    opacity: (loading || compressing) ? 0.6 : 1
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!loading && !compressing) {
-                      e.currentTarget.style.transform = 'scale(1.02)'
-                      e.currentTarget.style.boxShadow = '0 8px 30px rgba(102, 126, 234, 0.4)'
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'scale(1)'
-                    e.currentTarget.style.boxShadow = (loading || compressing) ? 'none' : '0 4px 20px rgba(102, 126, 234, 0.3)'
-                  }}
-                >
-                  {compressing ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', width: '100%' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                        <svg style={{ animation: 'spin 1s linear infinite', height: '1.5rem', width: '1.5rem' }} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                          <circle style={{ opacity: 0.25 }} cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path style={{ opacity: 0.75 }} fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        <span style={{ fontSize: '1.125rem', fontWeight: '600' }}>
-                          {lang === 'es' ? 'Comprimiendo...' : 'Compressing...'}
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      gap: '1.5rem'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={loading}
+                        style={{
+                          borderRadius: '999px',
+                          border: '1px solid rgba(148, 163, 184, 0.8)',
+                          padding: '0.6rem 1.35rem',
+                          fontSize: '0.9rem',
+                          fontWeight: 600,
+                          cursor: loading ? 'not-allowed' : 'pointer',
+                          background: 'rgba(15, 23, 42, 0.95)',
+                          color: '#e5e7eb',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.4rem'
+                        }}
+                      >
+                        <FileAudio2 size={16} />
+                        {t.browseButton}
+                      </button>
+                      <span
+                        style={{
+                          fontSize: '0.8rem',
+                          color: '#6b7280'
+                        }}
+                      >
+                        {t.or}{' '}
+                        <span
+                          style={{
+                            color: '#e5e7eb'
+                          }}
+                        >
+                          {lang === 'es' ? 'arrastra tu archivo arriba.' : 'drag and drop your file above.'}
+                        </span>
+                      </span>
+                    </div>
+                    <button
+                      onClick={handleAnalyze}
+                      disabled={!file || loading}
+                      style={{
+                        borderRadius: '999px',
+                        border: 'none',
+                        padding: '0.7rem 1.6rem',
+                        fontSize: '0.9rem',
+                        fontWeight: 700,
+                        cursor: !file || loading ? 'not-allowed' : 'pointer',
+                        background: !file || loading ? 'rgba(55, 65, 81, 0.9)' : 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #ec4899 100%)',
+                        color: 'white',
+                        boxShadow: !file || loading ? 'none' : '0 14px 45px rgba(79, 70, 229, 0.75)',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        opacity: !file ? 0.7 : 1
+                      }}
+                    >
+                      {loading ? (
+                        <>
+                          <Loader2 size={16} className="animate-spin" />
+                          {lang === 'es' ? 'Analizando...' : 'Analyzing...'}
+                        </>
+                      ) : (
+                        <>
+                          <BarChart2 size={16} />
+                          {lang === 'es' ? 'Analizar mezcla' : 'Analyze mix'}
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  {loading && (
+                    <div
+                      style={{
+                        marginTop: '1.75rem',
+                        paddingTop: '1.2rem',
+                        borderTop: '1px dashed rgba(75, 85, 99, 0.8)'
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          marginBottom: '0.6rem'
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontSize: '0.8rem',
+                            color: '#9ca3af'
+                          }}
+                        >
+                          {t.loadingMessage}
+                        </span>
+                        <span
+                          style={{
+                            fontSize: '0.8rem',
+                            color: '#e5e7eb',
+                            fontVariantNumeric: 'tabular-nums'
+                          }}
+                        >
+                          {progress}%
                         </span>
                       </div>
-                      <div style={{ width: '100%' }}>
-                        <div style={{
+                      <div
+                        style={{
                           width: '100%',
-                          background: '#e5e7eb',
-                          borderRadius: '9999px',
-                          height: '1rem',
-                          overflow: 'hidden'
-                        }}>
-                          <div style={{
-                            background: 'linear-gradient(90deg, #667eea 0%, #764ba2 100%)',
-                            height: '1rem',
-                            borderRadius: '9999px',
-                            transition: 'width 0.3s ease-out',
-                            width: `${compressionProgress}%`,
-                            boxShadow: '0 2px 8px rgba(102, 126, 234, 0.4)'
-                          }} />
-                        </div>
-                        <div style={{ 
-                          display: 'flex', 
-                          justifyContent: 'space-between', 
-                          marginTop: '0.75rem',
-                          fontSize: '0.875rem',
-                          opacity: 0.9
-                        }}>
-                          <span style={{ fontWeight: '600' }}>{compressionProgress}%</span>
-                          <span>
-                            {lang === 'es' 
-                              ? `${(file.size / 1024 / 1024).toFixed(1)}MB → ~${Math.min(35, (file.size / 1024 / 1024) * 0.3).toFixed(1)}MB`
-                              : `${(file.size / 1024 / 1024).toFixed(1)}MB → ~${Math.min(35, (file.size / 1024 / 1024) * 0.3).toFixed(1)}MB`}
+                          height: '0.6rem',
+                          borderRadius: '999px',
+                          background: 'rgba(15, 23, 42, 0.9)',
+                          overflow: 'hidden',
+                          border: '1px solid rgba(148, 163, 184, 0.75)'
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: `${Math.min(progress, 100)}%`,
+                            height: '100%',
+                            background:
+                              'linear-gradient(90deg, #4f46e5 0%, #7c3aed 40%, #ec4899 80%, #f97316 100%)',
+                            boxShadow: '0 0 25px rgba(236, 72, 153, 0.75)',
+                            transition: 'width 0.25s ease'
+                          }}
+                        />
+                      </div>
+                      <p
+                        style={{
+                          textAlign: 'center',
+                          color: '#6b7280',
+                          marginTop: '0.5rem',
+                          fontSize: '0.8rem'
+                        }}
+                      >
+                        {getProgressMessage(progress)}
+                      </p>
+                      <p
+                        style={{
+                          textAlign: 'center',
+                          color: '#9ca3af',
+                          fontSize: '0.8rem'
+                        }}
+                      >
+                        {t.progressTimeHint}
+                      </p>
+                      <p
+                        style={{
+                          marginTop: '0.5rem',
+                          fontSize: '0.8rem',
+                          color: '#6b7280'
+                        }}
+                      >
+                        {t.loadingFooter}
+                      </p>
+                    </div>
+                  )}
+
+                  <input
+                    ref={fileInputRef}
+                    id="file-input"
+                    type="file"
+                    accept=".wav,.flac,.mp3,.aac,.ogg"
+                    style={{ display: 'none' }}
+                    onChange={(e) => {
+                      const f = e.target.files?.[0] || null
+                      handleFileChange(f)
+                    }}
+                  />
+                </div>
+              </>
+            ) : (
+              <>
+                <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
+                  <div
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      ...pillStyle,
+                      background: 'transparent'
+                    }}
+                  >
+                    <BarChart2 size={16} color="#a5b4fc" />
+                    <span
+                      style={{
+                        fontSize: '0.8rem',
+                        color: '#e5e7eb'
+                      }}
+                    >
+                      {lang === 'es' ? 'Análisis completado' : 'Analysis completed'}
+                    </span>
+                  </div>
+                  <h2
+                    style={{
+                      fontSize: '2rem',
+                      fontWeight: 800,
+                      marginTop: '1rem',
+                      marginBottom: '0.75rem',
+                      letterSpacing: '-0.03em'
+                    }}
+                  >
+                    {t.analysisReadyTitle}
+                  </h2>
+                  <p
+                    style={{
+                      fontSize: '1rem',
+                      color: '#9ca3af',
+                      maxWidth: '34rem',
+                      margin: '0 auto'
+                    }}
+                  >
+                    {t.analysisReadySubtitle}
+                  </p>
+                </div>
+
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'minmax(0, 1.1fr) minmax(0, 0.8fr)',
+                    gap: '1.75rem',
+                    alignItems: 'flex-start'
+                  }}
+                >
+                  <div
+                    style={{
+                      background: 'rgba(15, 23, 42, 1)',
+                      borderRadius: '1.25rem',
+                      border: '1px solid rgba(148, 163, 184, 0.6)',
+                      padding: '1.5rem',
+                      boxShadow: '0 18px 60px rgba(0, 0, 0, 0.8)'
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'flex-start',
+                        marginBottom: '1rem'
+                      }}
+                    >
+                      <div>
+                        <p
+                          style={{
+                            ...labelStyle,
+                            color: '#9ca3af',
+                            marginBottom: '0.25rem'
+                          }}
+                        >
+                          {t.scoreLabel.toUpperCase()}
+                        </p>
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'baseline',
+                            gap: '0.35rem'
+                          }}
+                        >
+                          <span
+                            style={{
+                              fontSize: '2.4rem',
+                              fontWeight: 800,
+                              background: 'linear-gradient(135deg, #22c55e 0%, #84cc16 40%, #a3e635 100%)',
+                              WebkitBackgroundClip: 'text',
+                              WebkitTextFillColor: 'transparent',
+                              backgroundClip: 'text'
+                            }}
+                          >
+                            {result.score ?? '—'}
+                          </span>
+                          <span
+                            style={{
+                              fontSize: '1rem',
+                              color: '#6b7280'
+                            }}
+                          >
+                            /100
                           </span>
                         </div>
                       </div>
+                      <div style={{ textAlign: 'right' }}>{getSeverityTag(result.severity)}</div>
                     </div>
-                  ) : loading ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', width: '100%' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                        <svg style={{ animation: 'spin 1s linear infinite', height: '1.5rem', width: '1.5rem' }} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                          <circle style={{ opacity: 0.25 }} cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path style={{ opacity: 0.75 }} fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        <span style={{ fontSize: '1.125rem', fontWeight: '600' }}>
-                          {lang === 'es' ? 'Analizando...' : 'Analyzing...'}
-                        </span>
-                      </div>
-                      <div style={{ width: '100%' }}>
-                        <div style={{
-                          width: '100%',
-                          background: '#e5e7eb',
-                          borderRadius: '9999px',
-                          height: '1rem',
-                          overflow: 'hidden'
-                        }}>
-                          <div style={{
-                            background: 'linear-gradient(90deg, #667eea 0%, #764ba2 100%)',
-                            height: '1rem',
-                            borderRadius: '9999px',
-                            transition: 'width 0.3s ease-out',
-                            width: `${progress}%`,
-                            boxShadow: '0 2px 8px rgba(102, 126, 234, 0.4)'
-                          }} />
-                        </div>
-                        <div style={{ 
-                          display: 'flex', 
-                          justifyContent: 'space-between', 
-                          marginTop: '0.75rem',
-                          fontSize: '0.875rem',
-                          opacity: 0.9
-                        }}>
-                          <span style={{ fontWeight: '600' }}>{progress}%</span>
-                          <span>{lang === 'es' ? 'Hasta 30 segundos' : 'Up to 30 seconds'}</span>
-                        </div>
-                      </div>
+
+                    <div
+                      style={{
+                        width: '100%',
+                        height: '0.6rem',
+                        borderRadius: '999px',
+                        background: 'rgba(15, 23, 42, 0.95)',
+                        overflow: 'hidden',
+                        border: '1px solid rgba(148, 163, 184, 0.7)',
+                        marginBottom: '1rem'
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: `${Math.min(result.score ?? 0, 100)}%`,
+                          height: '100%',
+                          background:
+                            'linear-gradient(90deg, #22c55e 0%, #84cc16 40%, #a3e635 70%, #facc15 90%, #f97316 100%)',
+                          boxShadow: '0 0 25px rgba(190, 242, 100, 0.85)'
+                        }}
+                      />
                     </div>
-                  ) : (
-                    <>
-                      {needsCompression ? (
-                        <>
-                          {lang === 'es' ? '🗜️ Comprimir y Analizar' : '🗜️ Compress & Analyze'}
-                        </>
-                      ) : (
-                        lang === 'es' ? 'Analizar Mezcla' : 'Analyze Mix'
-                      )}
-                    </>
-                  )}
-                </button>
-              )}
 
-              {/* Message when file is too large (>500MB) */}
-              {file && isFileTooLarge && (
-                <div style={{
-                  width: '100%',
-                  background: '#fee2e2',
-                  border: '2px solid #ef4444',
-                  borderRadius: '0.75rem',
-                  padding: '1rem',
-                  textAlign: 'center'
-                }}>
-                  <p style={{ 
-                    fontSize: '1.125rem', 
-                    fontWeight: '600', 
-                    color: '#7f1d1d',
-                    marginBottom: '0.5rem'
-                  }}>
-                    🚫 {lang === 'es' ? 'Archivo demasiado grande' : 'File too large'}
-                  </p>
-                  <p style={{ fontSize: '0.875rem', color: '#991b1b' }}>
-                    {lang === 'es'
-                      ? `El límite máximo es 500MB. Tu archivo tiene ${(file.size / 1024 / 1024).toFixed(1)}MB.`
-                      : `Maximum limit is 500MB. Your file is ${(file.size / 1024 / 1024).toFixed(1)}MB.`}
-                  </p>
-                  <p style={{ fontSize: '0.75rem', color: '#991b1b', marginTop: '0.5rem' }}>
-                    {lang === 'es'
-                      ? 'Contáctanos en support@masteringready.com para archivos más grandes.'
-                      : 'Contact us at support@masteringready.com for larger files.'}
-                  </p>
-                </div>
-              )}
+                    {result.short_feedback && (
+                      <div
+                        style={{
+                          padding: '0.8rem 0.9rem',
+                          borderRadius: '0.9rem',
+                          background: 'linear-gradient(135deg, rgba(129, 140, 248, 0.14), rgba(15, 23, 42, 0.95))',
+                          border: '1px solid rgba(129, 140, 248, 0.7)',
+                          marginBottom: '1rem'
+                        }}
+                      >
+                        <p
+                          style={{
+                            fontSize: '0.8rem',
+                            fontWeight: 600,
+                            color: '#e5e7eb',
+                            marginBottom: '0.3rem'
+                          }}
+                        >
+                          {t.shortFeedbackTitle}
+                        </p>
+                        <p
+                          style={{
+                            fontSize: '0.85rem',
+                            color: '#e5e7eb'
+                          }}
+                        >
+                          {result.short_feedback}
+                        </p>
+                      </div>
+                    )}
 
-              {/* Error */}
-              {error && (
-                <div style={{
-                  background: '#fef2f2',
-                  border: '1px solid #fca5a5',
-                  borderRadius: '0.5rem',
-                  padding: '1rem',
-                  marginTop: '1rem'
-                }}>
-                  <p style={{ color: '#7f1d1d', fontWeight: '500' }}>Error:</p>
-                  <p style={{ color: '#991b1b' }}>{error}</p>
-                </div>
-              )}
-            </>
-          ) : (
-            /* Results - Same structure but inline styles */
-            <div id="analysis-results" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-              <div style={{
-                background: 'white',
-                borderRadius: '1rem',
-                boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
-                padding: '2rem'
-              }}>
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  marginBottom: '1.5rem'
-                }}>
-                  <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>
-                    {lang === 'es' ? 'Resultados del Análisis' : 'Analysis Results'}
-                  </h2>
-                  <button
-                    onClick={handleReset}
+                    {result.metrics?.length > 0 && (
+                      <div
+                        style={{
+                          display: 'grid',
+                          gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+                          gap: '0.75rem'
+                        }}
+                      >
+                        {result.metrics.slice(0, 4).map((metric, idx) => {
+                          const styles = getMetricStatusStyles(metric.status)
+                          return (
+                            <div
+                              key={`${metric.name}-${idx}`}
+                              style={{
+                                padding: '0.75rem 0.9rem',
+                                borderRadius: '0.9rem',
+                                background: styles.bg,
+                                border: `1px solid ${styles.borderColor}66`
+                              }}
+                            >
+                              <div
+                                style={{
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
+                                  alignItems: 'center',
+                                  marginBottom: '0.2rem'
+                                }}
+                              >
+                                <span
+                                  style={{
+                                    fontSize: '0.8rem',
+                                    color: styles.textColor,
+                                    fontWeight: 600
+                                  }}
+                                >
+                                  {metric.name}
+                                </span>
+                                <span
+                                  style={{
+                                    fontSize: '0.8rem',
+                                    color: '#e5e7eb',
+                                    fontWeight: 500
+                                  }}
+                                >
+                                  {metric.value}
+                                </span>
+                              </div>
+                              <p
+                                style={{
+                                  fontSize: '0.75rem',
+                                  color: '#e5e7eb'
+                                }}
+                              >
+                                {metric.message}
+                              </p>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  <div
                     style={{
-                      fontSize: '0.875rem',
-                      color: '#a855f7',
-                      border: 'none',
-                      background: 'none',
-                      cursor: 'pointer',
-                      textDecoration: 'underline',
-                      fontWeight: '500'
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '1rem'
                     }}
                   >
-                    {lang === 'es' ? 'Analizar otro archivo' : 'Analyze another file'}
-                  </button>
-                </div>
-
-                {/* Score Card */}
-                <div style={{
-                  borderRadius: '0.75rem',
-                  border: `1px solid ${result.score >= 85 ? '#a7f3d0' : result.score >= 60 ? '#fcd34d' : '#fca5a5'}`,
-                  background: getScoreBg(result.score),
-                  padding: '1.5rem',
-                  marginBottom: '1.5rem'
-                }}>
-                  <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: '1fr 1fr',
-                    gap: '2rem',
-                    alignItems: 'center',
-                    marginBottom: '1rem'
-                  }}>
-                    <div style={{ textAlign: 'left' }}>
-                      <span style={{ color: '#374151', fontWeight: '500', fontSize: '1.125rem' }}>
-                        {lang === 'es' ? 'Puntuación' : 'Score'}
-                      </span>
-                    </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <span style={{
-                        fontSize: '3rem',
-                        fontWeight: 'bold',
-                        color: getScoreColor(result.score)
-                      }}>
-                        {result.score}/100
-                      </span>
-                    </div>
-                  </div>
-                  <div style={{
-                    width: '100%',
-                    background: '#e5e7eb',
-                    borderRadius: '9999px',
-                    height: '0.75rem',
-                    marginBottom: '0.75rem'
-                  }}>
-                    <div style={{
-                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                      height: '0.75rem',
-                      borderRadius: '9999px',
-                      width: `${result.score}%`,
-                      transition: 'width 0.5s'
-                    }} />
-                  </div>
-                  <p style={{ fontSize: '1.125rem', fontWeight: '600' }}>{result.verdict}</p>
-                </div>
-
-                {/* Report View Toggle */}
-                <div style={{
-                  display: 'flex',
-                  gap: '0.5rem',
-                  marginBottom: '1.5rem',
-                  background: '#f3f4f6',
-                  padding: '0.25rem',
-                  borderRadius: '0.5rem'
-                }}>
-                  {(['visual', 'short', 'write'] as const).map((view) => (
-                    <button
-                      key={view}
-                      onClick={() => setReportView(view)}
+                    <div
                       style={{
-                        flex: 1,
-                        padding: '0.5rem 1rem',
-                        borderRadius: '0.375rem',
+                        background: 'rgba(15, 23, 42, 1)',
+                        borderRadius: '1.25rem',
+                        border: '1px solid rgba(148, 163, 184, 0.6)',
+                        padding: '1.25rem',
+                        boxShadow: '0 18px 60px rgba(0, 0, 0, 0.8)'
+                      }}
+                    >
+                      <p
+                        style={{
+                          ...labelStyle,
+                          color: '#9ca3af',
+                          marginBottom: '0.75rem'
+                        }}
+                      >
+                        {t.fileInfoTitle.toUpperCase()}
+                      </p>
+                      <div
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '0.45rem',
+                          fontSize: '0.85rem',
+                          color: '#e5e7eb'
+                        }}
+                      >
+                        {result.file?.path && (
+                          <div>
+                            <span style={{ color: '#9ca3af' }}>{lang === 'es' ? 'Archivo: ' : 'File: '}</span>
+                            <span>{result.file.path}</span>
+                          </div>
+                        )}
+                        <div>
+                          <span style={{ color: '#9ca3af' }}>{t.durationLabel}: </span>
+                          <span>{formatDuration(result.file?.duration_seconds)}</span>
+                        </div>
+                        <div>
+                          <span style={{ color: '#9ca3af' }}>{t.sampleRateLabel}: </span>
+                          <span>{formatSampleRate(result.file?.sample_rate_hz)}</span>
+                        </div>
+                        <div>
+                          <span style={{ color: '#9ca3af' }}>{t.channelsLabel}: </span>
+                          <span>{formatChannels(result.file?.channels)}</span>
+                        </div>
+                        <div>
+                          <span style={{ color: '#9ca3af' }}>{t.genreLabel}: </span>
+                          <span>{result.file?.genre || t.noGenre}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '0.75rem'
+                      }}
+                    >
+                      <button
+                        onClick={downloadTxtReport}
+                        style={{
+                          borderRadius: '999px',
+                          border: '1px solid rgba(148, 163, 184, 0.7)',
+                          padding: '0.65rem 1.1rem',
+                          fontSize: '0.85rem',
+                          fontWeight: 500,
+                          cursor: 'pointer',
+                          background: 'rgba(15, 23, 42, 0.95)',
+                          color: '#e5e7eb',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '0.4rem'
+                        }}
+                      >
+                        <Download size={16} />
+                        {t.downloadTxt}
+                      </button>
+                      <p
+                        style={{
+                          fontSize: '0.75rem',
+                          color: '#6b7280',
+                          textAlign: 'center'
+                        }}
+                      >
+                        {t.downloadNote}
+                      </p>
+                    </div>
+
+                    <button
+                      onClick={() => {
+                        setResult(null)
+                        setFile(null)
+                        setFirstAnalysisDone(true)
+                        setProgress(0)
+                        setUploadStatus('idle')
+                      }}
+                      style={{
+                        marginTop: '0.5rem',
+                        borderRadius: '999px',
                         border: 'none',
-                        background: reportView === view ? 'white' : 'transparent',
-                        color: reportView === view ? '#667eea' : '#6b7280',
-                        fontWeight: reportView === view ? '600' : '500',
-                        fontSize: '0.875rem',
+                        padding: '0.6rem 1.2rem',
+                        fontSize: '0.85rem',
+                        fontWeight: 500,
                         cursor: 'pointer',
-                        transition: 'all 0.2s',
-                        boxShadow: reportView === view ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+                        background: 'rgba(17, 24, 39, 0.95)',
+                        color: '#9ca3af'
                       }}
                     >
-                      {view === 'visual' ? (lang === 'es' ? '⚡ Rápido' : '⚡ Quick') :
-                       view === 'short' ? (lang === 'es' ? '📝 Resumen' : '📝 Summary') :
-                       (lang === 'es' ? '📄 Completo' : '📄 Complete')}
+                      {t.backButton}
                     </button>
-                  ))}
+                  </div>
                 </div>
 
-                {/* Visual Mode */}
-                {reportView === 'visual' && (
-                  <div style={{
-                    background: '#f9fafb',
-                    borderRadius: '0.75rem',
-                    padding: '1.5rem',
-                    marginBottom: '1.5rem'
-                  }}>
-                    <h3 style={{ fontWeight: '600', fontSize: '1.125rem', marginBottom: '1rem' }}>
-                      {lang === 'es' ? 'Análisis Rápido' : 'Quick Analysis'}
-                    </h3>
-                    <pre style={{
-                      whiteSpace: 'pre-wrap',
-                      wordBreak: 'break-word',
-                      overflowWrap: 'break-word',
-                      fontSize: '0.875rem',
-                      lineHeight: '1.6',
-                      fontFamily: 'Inter, system-ui, sans-serif',
-                      overflowX: 'auto',
-                      maxWidth: '100%',
-                      margin: 0
-                    }}>
-                      {(result as any).report_visual || result.report_short || result.report}
-                    </pre>
-                  </div>
-                )}
-
-                {/* Short Mode */}
-                {reportView === 'short' && (
-                  <div style={{
-                    background: '#f9fafb',
-                    borderRadius: '0.75rem',
-                    padding: '1.5rem',
-                    marginBottom: '1.5rem'
-                  }}>
-                    <h3 style={{ fontWeight: '600', fontSize: '1.125rem', marginBottom: '1rem' }}>
-                      {lang === 'es' ? 'Análisis Resumen' : 'Summary Analysis'}
-                    </h3>
-                    <pre style={{
-                      whiteSpace: 'pre-wrap',
-                      wordBreak: 'break-word',
-                      overflowWrap: 'break-word',
-                      fontSize: '0.875rem',
-                      lineHeight: '1.6',
-                      fontFamily: 'Inter, system-ui, sans-serif',
-                      overflowX: 'auto',
-                      maxWidth: '100%',
-                      margin: 0
-                    }}>
-                      {result.report_short || result.report}
-                    </pre>
-                  </div>
-                )}
-
-                {/* Write Mode */}
-                {reportView === 'write' && (
-                  <div style={{
-                    background: '#f9fafb',
-                    borderRadius: '0.75rem',
-                    padding: '1.5rem',
-                    marginBottom: '1.5rem'
-                  }}>
-                    <h3 style={{ fontWeight: '600', fontSize: '1.125rem', marginBottom: '1rem' }}>
-                      {lang === 'es' ? 'Análisis Completo' : 'Complete Analysis'}
-                    </h3>
-                    <pre style={{
-                      whiteSpace: 'pre-wrap',
-                      wordBreak: 'break-word',
-                      overflowWrap: 'break-word',
-                      fontSize: '0.875rem',
-                      lineHeight: '1.6',
-                      fontFamily: 'Inter, system-ui, sans-serif',
-                      overflowX: 'auto',
-                      maxWidth: '100%',
-                      margin: 0
-                    }}>
-                      {result.report_write || result.report}
-                    </pre>
-                  </div>
-                )}
-
-                {/* Download Buttons */}
-                <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
-                  {/* Download Current View */}
-                  <button
-                    onClick={handleDownload}
-                    style={{
-                      flex: 1,
-                      minWidth: '200px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '0.5rem',
-                      padding: '0.875rem 1.25rem',
-                      background: 'white',
-                      color: '#667eea',
-                      border: '2px solid #667eea',
-                      borderRadius: '0.75rem',
-                      fontWeight: '600',
-                      fontSize: '0.9rem',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = '#f3f4f6'
-                      e.currentTarget.style.transform = 'translateY(-1px)'
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = 'white'
-                      e.currentTarget.style.transform = 'translateY(0)'
-                    }}
-                  >
-                    <Download size={18} />
-                    {lang === 'es' 
-                      ? `Descargar ${reportView === 'visual' ? 'Rápido' : reportView === 'short' ? 'Resumen' : 'Completo'}`
-                      : `Download ${reportView === 'visual' ? 'Quick' : reportView === 'short' ? 'Summary' : 'Complete'}`}
-                  </button>
-
-                  {/* Download Full Report */}
-                  <button
-                    onClick={handleDownloadFull}
-                    style={{
-                      flex: 1,
-                      minWidth: '200px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '0.5rem',
-                      padding: '0.875rem 1.25rem',
-                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '0.75rem',
-                      fontWeight: '600',
-                      fontSize: '0.9rem',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s',
-                      boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = 'translateY(-2px)'
-                      e.currentTarget.style.boxShadow = '0 6px 20px rgba(102, 126, 234, 0.4)'
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = 'translateY(0)'
-                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.3)'
-                    }}
-                  >
-                    <Download size={18} />
-                    {lang === 'es' ? 'Reporte Completo' : 'Complete Report'}
-                  </button>
-                </div>
-
-                {/* Download */}
-                <button
-                  onClick={handleDownload}
+                <div
                   style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '0.5rem',
-                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                    color: 'white',
-                    padding: '0.75rem 1.5rem',
-                    borderRadius: '0.75rem',
-                    fontWeight: '500',
-                    border: 'none',
-                    cursor: 'pointer',
-                    transition: 'all 0.3s',
-                    boxShadow: '0 4px 15px rgba(102, 126, 234, 0.3)'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'scale(1.05)'
-                    e.currentTarget.style.boxShadow = '0 6px 25px rgba(102, 126, 234, 0.4)'
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'scale(1)'
-                    e.currentTarget.style.boxShadow = '0 4px 15px rgba(102, 126, 234, 0.3)'
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+                    gap: '1.5rem',
+                    marginTop: '2rem'
                   }}
                 >
-                  <Download size={16} />
-                  {lang === 'es' ? 'Descargar Reporte' : 'Download Report'}
-                </button>
-              </div>
-
-              {/* CTA Mastering - FIRST */}
-              {result.score >= 60 && (
-                <div style={{
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  color: 'white',
-                  borderRadius: '1rem',
-                  padding: '2rem',
-                  marginBottom: '1.5rem'
-                }}>
-                  <h3 style={{ fontSize: '1.5rem', fontWeight: '600', marginBottom: '0.75rem' }}>
-                    🎧 {lang === 'es' 
-                      ? '¿Te gustaría que mastericemos esta canción?'
-                      : 'Would you like us to master this song?'}
-                  </h3>
-                  <p style={{ marginBottom: '1rem', color: '#e9d5ff' }}>
-                    {lang === 'es'
-                      ? 'Tu mezcla está en buen punto. Trabajemos juntos en el mastering.'
-                      : 'Your mix is in good shape. Let\'s work together on mastering.'}
-                  </p>
-                  <button 
-                    onClick={() => setShowContactModal(true)}
+                  <div
                     style={{
-                      background: 'white',
-                      color: '#667eea',
-                      padding: '0.75rem 2rem',
-                      borderRadius: '9999px',
-                      fontWeight: '600',
-                      border: 'none',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = 'scale(1.05)'
-                      e.currentTarget.style.background = '#f3f4f6'
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = 'scale(1)'
-                      e.currentTarget.style.background = 'white'
+                      background: 'rgba(15, 23, 42, 1)',
+                      borderRadius: '1.25rem',
+                      border: '1px solid rgba(148, 163, 184, 0.6)',
+                      padding: '1.25rem'
                     }}
                   >
-                    {lang === 'es' ? 'Solicitar Mastering' : 'Request Mastering'}
-                  </button>
-                </div>
-              )}
-
-              {/* Feedback Button - SECOND */}
-              {!feedbackSubmitted && (
-                <div style={{
-                  textAlign: 'center',
-                  marginBottom: '1.5rem'
-                }}>
-                  <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.75rem' }}>
-                    {lang === 'es'
-                      ? 'Estamos en beta. ¿Cómo te fue con el análisis?'
-                      : 'We\'re in beta. How was your analysis experience?'}
-                  </p>
-                  <button
-                    onClick={() => setShowFeedbackModal(true)}
-                    style={{
-                      background: 'white',
-                      color: '#667eea',
-                      padding: '0.75rem 2rem',
-                      borderRadius: '9999px',
-                      fontWeight: '600',
-                      border: '2px solid #667eea',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s',
-                      fontSize: '0.95rem'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = '#f3f4f6'
-                      e.currentTarget.style.transform = 'translateY(-2px)'
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = 'white'
-                      e.currentTarget.style.transform = 'translateY(0)'
-                    }}
-                  >
-                    💬 {lang === 'es' ? 'Dejarnos Feedback' : 'Give Feedback'}
-                  </button>
-                </div>
-              )}
-
-              {/* Thank you message after feedback */}
-              {feedbackSubmitted && (
-                <div style={{
-                  background: '#f0fdf4',
-                  borderRadius: '1rem',
-                  padding: '1.5rem',
-                  marginBottom: '1.5rem',
-                  border: '1px solid #86efac',
-                  textAlign: 'center'
-                }}>
-                  <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>🙏</div>
-                  <h3 style={{ fontSize: '1.25rem', fontWeight: '600', color: '#166534', marginBottom: '0.5rem' }}>
-                    {lang === 'es' ? '¡Gracias por tu feedback!' : 'Thank you for your feedback!'}
-                  </h3>
-                  <p style={{ fontSize: '0.875rem', color: '#15803d' }}>
-                    {lang === 'es'
-                      ? 'Tu opinión nos ayuda a mejorar MasteringReady para todos.'
-                      : 'Your input helps us improve MasteringReady for everyone.'}
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer style={{
-        background: '#111827',
-        color: 'white',
-        padding: '3rem 1.5rem',
-        textAlign: 'center'
-      }}>
-        <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
-          <div style={{ 
-            display: 'grid', 
-            gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-            gap: '2rem',
-            marginBottom: '3rem'
-          }}>
-            {/* Brand */}
-            <div>
-              <div style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1rem' }}>
-                🎵 MasteringReady
-              </div>
-              <p style={{ color: '#9ca3af', fontSize: '0.875rem', lineHeight: '1.6' }}>
-                {lang === 'es'
-                  ? 'Prepara tu mezcla para el mastering profesional. Análisis técnico en segundos.'
-                  : 'Prepare your mix for professional mastering. Technical analysis in seconds.'}
-              </p>
-            </div>
-
-            {/* Contact */}
-            <div>
-              <h4 style={{ fontWeight: '600', marginBottom: '1rem', color: '#f3f4f6' }}>
-                {lang === 'es' ? 'Contacto' : 'Contact'}
-              </h4>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                <a 
-                  href="mailto:mat@matcarvy.com"
-                  style={{ 
-                    color: '#9ca3af', 
-                    textDecoration: 'none',
-                    fontSize: '0.875rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    transition: 'color 0.2s'
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.color = '#667eea'}
-                  onMouseLeave={(e) => e.currentTarget.style.color = '#9ca3af'}
-                >
-                  <span>📧</span>
-                  <span>mat@matcarvy.com</span>
-                </a>
-                <a 
-                  href="https://wa.me/573155576115"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ 
-                    color: '#9ca3af', 
-                    textDecoration: 'none',
-                    fontSize: '0.875rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    transition: 'color 0.2s'
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.color = '#667eea'}
-                  onMouseLeave={(e) => e.currentTarget.style.color = '#9ca3af'}
-                >
-                  <span>📱</span>
-                  <span>WhatsApp</span>
-                </a>
-                <a 
-                  href="https://instagram.com/matcarvy"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ 
-                    color: '#9ca3af', 
-                    textDecoration: 'none',
-                    fontSize: '0.875rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    transition: 'color 0.2s'
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.color = '#667eea'}
-                  onMouseLeave={(e) => e.currentTarget.style.color = '#9ca3af'}
-                >
-                  <span>📷</span>
-                  <span>@matcarvy</span>
-                </a>
-              </div>
-            </div>
-
-            {/* Resources */}
-            <div>
-              <h4 style={{ fontWeight: '600', marginBottom: '1rem', color: '#f3f4f6' }}>
-                {lang === 'es' ? 'Acerca de' : 'About'}
-              </h4>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                <p style={{ color: '#9ca3af', fontSize: '0.875rem', lineHeight: '1.6' }}>
-                  {lang === 'es'
-                    ? 'Análisis profesional de mezclas basado en la metodología Mastering Ready.'
-                    : 'Professional mix analysis based on the Mastering Ready methodology.'}
-                </p>
-                <p style={{ color: '#9ca3af', fontSize: '0.875rem' }}>
-                  masteringready.com
-                </p>
-              </div>
-            </div>
-          </div>
-          
-          <div style={{ borderTop: '1px solid #374151', paddingTop: '2rem', textAlign: 'center' }}>
-            <p style={{ color: '#9ca3af', marginBottom: '0.5rem' }}>
-              © 2025 MasteringReady by Matías Carvajal.
-            </p>
-            <p style={{ fontSize: '0.875rem', color: '#6b7280' }}>
-              {lang === 'es' 
-                ? 'Basado en la metodología "Mastering Ready"'
-                : 'Based on the "Mastering Ready" methodology'}
-            </p>
-          </div>
-        </div>
-      </footer>
-
-      {/* Contact Modal */}
-      {showContactModal && (
-        <div 
-          onClick={() => setShowContactModal(false)}
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0, 0, 0, 0.6)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 100,
-            padding: '1.5rem'
-          }}
-        >
-          <div 
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              background: 'white',
-              borderRadius: '1rem',
-              padding: '2rem',
-              maxWidth: '500px',
-              width: '100%',
-              boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
-              position: 'relative'
-            }}
-          >
-            {/* Close button */}
-            <button
-              onClick={() => setShowContactModal(false)}
-              style={{
-                position: 'absolute',
-                top: '1rem',
-                right: '1rem',
-                background: 'none',
-                border: 'none',
-                fontSize: '1.5rem',
-                cursor: 'pointer',
-                color: '#6b7280',
-                width: '2rem',
-                height: '2rem',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderRadius: '0.5rem',
-                transition: 'all 0.2s'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = '#f3f4f6'
-                e.currentTarget.style.color = '#111827'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'none'
-                e.currentTarget.style.color = '#6b7280'
-              }}
-            >
-              ✕
-            </button>
-
-            {/* Header */}
-            <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-              <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>🎧</div>
-              <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>
-                {lang === 'es' ? '¡Trabajemos juntos!' : 'Let\'s work together!'}
-              </h3>
-              <p style={{ color: '#6b7280' }}>
-                {lang === 'es' 
-                  ? 'Elige cómo prefieres contactarme:'
-                  : 'Choose how you prefer to contact me:'}
-              </p>
-            </div>
-
-            {/* Contact options */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              {/* WhatsApp */}
-              <a
-                href={`https://wa.me/573155576115?text=${encodeURIComponent(
-                  lang === 'es'
-                    ? `Hola! Acabo de analizar mi mezcla en MasteringReady y me gustaría hablar sobre el mastering.\n\nPuntuación obtenida: ${result?.score || 'N/A'}/100`
-                    : `Hi! I just analyzed my mix on MasteringReady and would like to talk about mastering.\n\nScore obtained: ${result?.score || 'N/A'}/100`
-                )}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '1rem',
-                  padding: '1rem 1.5rem',
-                  background: '#f0fdf4',
-                  border: '1px solid #86efac',
-                  borderRadius: '0.75rem',
-                  textDecoration: 'none',
-                  color: '#166534',
-                  transition: 'all 0.2s',
-                  cursor: 'pointer'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = '#dcfce7'
-                  e.currentTarget.style.transform = 'translateY(-2px)'
-                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(34, 197, 94, 0.2)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = '#f0fdf4'
-                  e.currentTarget.style.transform = 'translateY(0)'
-                  e.currentTarget.style.boxShadow = 'none'
-                }}
-              >
-                <div style={{ fontSize: '2rem' }}>📱</div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: '600', marginBottom: '0.25rem' }}>WhatsApp</div>
-                  <div style={{ fontSize: '0.875rem', color: '#15803d' }}>
-                    {lang === 'es' ? 'Mensaje directo instantáneo' : 'Instant direct message'}
-                  </div>
-                </div>
-              </a>
-
-              {/* Email */}
-              <a
-                href={`mailto:mat@matcarvy.com?subject=${encodeURIComponent(
-                  lang === 'es' 
-                    ? 'Solicitud de Mastering - MasteringReady'
-                    : 'Mastering Request - MasteringReady'
-                )}&body=${encodeURIComponent(
-                  lang === 'es'
-                    ? `Hola Matías,\n\nAcabo de analizar mi mezcla en MasteringReady y me gustaría hablar sobre el proceso de mastering.\n\nPuntuación obtenida: ${result?.score || 'N/A'}/100\nArchivo: ${result?.filename || 'N/A'}\n\nGracias!`
-                    : `Hi Matías,\n\nI just analyzed my mix on MasteringReady and would like to discuss the mastering process.\n\nScore obtained: ${result?.score || 'N/A'}/100\nFile: ${result?.filename || 'N/A'}\n\nThanks!`
-                )}`}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '1rem',
-                  padding: '1rem 1.5rem',
-                  background: '#eff6ff',
-                  border: '1px solid #93c5fd',
-                  borderRadius: '0.75rem',
-                  textDecoration: 'none',
-                  color: '#1e40af',
-                  transition: 'all 0.2s',
-                  cursor: 'pointer'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = '#dbeafe'
-                  e.currentTarget.style.transform = 'translateY(-2px)'
-                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.2)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = '#eff6ff'
-                  e.currentTarget.style.transform = 'translateY(0)'
-                  e.currentTarget.style.boxShadow = 'none'
-                }}
-              >
-                <div style={{ fontSize: '2rem' }}>📧</div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: '600', marginBottom: '0.25rem' }}>Email</div>
-                  <div style={{ fontSize: '0.875rem', color: '#1e3a8a' }}>mat@matcarvy.com</div>
-                </div>
-              </a>
-
-              {/* Instagram */}
-              <a
-                href="https://instagram.com/matcarvy"
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '1rem',
-                  padding: '1rem 1.5rem',
-                  background: '#fdf2f8',
-                  border: '1px solid #f9a8d4',
-                  borderRadius: '0.75rem',
-                  textDecoration: 'none',
-                  color: '#9f1239',
-                  transition: 'all 0.2s',
-                  cursor: 'pointer'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = '#fce7f3'
-                  e.currentTarget.style.transform = 'translateY(-2px)'
-                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(236, 72, 153, 0.2)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = '#fdf2f8'
-                  e.currentTarget.style.transform = 'translateY(0)'
-                  e.currentTarget.style.boxShadow = 'none'
-                }}
-              >
-                <div style={{ fontSize: '2rem' }}>📷</div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: '600', marginBottom: '0.25rem' }}>Instagram</div>
-                  <div style={{ fontSize: '0.875rem', color: '#be123c' }}>@matcarvy</div>
-                </div>
-              </a>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Feedback Modal */}
-      {showFeedbackModal && (
-        <div 
-          onClick={() => {
-            setShowFeedbackModal(false)
-            setFeedback({ rating: 0, liked: '', change: '', add: '' })
-          }}
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0, 0, 0, 0.6)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 100,
-            padding: '1.5rem'
-          }}
-        >
-          <div 
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              background: 'white',
-              borderRadius: '1rem',
-              padding: '2rem',
-              maxWidth: '500px',
-              width: '100%',
-              boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
-              position: 'relative',
-              maxHeight: '90vh',
-              overflowY: 'auto'
-            }}
-          >
-            {/* Close button */}
-            <button
-              onClick={() => {
-                setShowFeedbackModal(false)
-                setFeedback({ rating: 0, liked: '', change: '', add: '' })
-              }}
-              style={{
-                position: 'absolute',
-                top: '1rem',
-                right: '1rem',
-                background: 'none',
-                border: 'none',
-                fontSize: '1.5rem',
-                cursor: 'pointer',
-                color: '#6b7280',
-                width: '2rem',
-                height: '2rem',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderRadius: '0.5rem',
-                transition: 'all 0.2s'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = '#f3f4f6'
-                e.currentTarget.style.color = '#111827'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'none'
-                e.currentTarget.style.color = '#6b7280'
-              }}
-            >
-              ✕
-            </button>
-
-            {/* Header */}
-            <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-              <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>💬</div>
-              <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>
-                {lang === 'es' ? '¿Cómo te fue?' : 'How was it?'}
-              </h3>
-              <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>
-                {lang === 'es' 
-                  ? 'Tu feedback nos ayuda a mejorar MasteringReady'
-                  : 'Your feedback helps us improve MasteringReady'}
-              </p>
-            </div>
-
-            {/* Form */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              {/* Rating 1-10 */}
-              <div>
-                <label style={{ fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.75rem', display: 'block', textAlign: 'center' }}>
-                  {lang === 'es' ? '¿Qué tan útil fue el análisis?' : 'How useful was the analysis?'}
-                </label>
-                <div style={{ 
-                  display: 'flex', 
-                  gap: '0.5rem', 
-                  justifyContent: 'center',
-                  marginBottom: '0.5rem'
-                }}>
-                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
-                    <button
-                      key={num}
-                      onClick={() => setFeedback({...feedback, rating: num})}
+                    <h3
                       style={{
-                        width: '2.5rem',
-                        height: '2.5rem',
-                        borderRadius: '0.5rem',
-                        border: feedback.rating === num ? '2px solid #667eea' : '1px solid #d1d5db',
-                        background: feedback.rating === num ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'white',
-                        color: feedback.rating === num ? 'white' : '#374151',
-                        fontWeight: '600',
-                        fontSize: '0.875rem',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s'
-                      }}
-                      onMouseEnter={(e) => {
-                        if (feedback.rating !== num) {
-                          e.currentTarget.style.borderColor = '#667eea'
-                          e.currentTarget.style.transform = 'scale(1.1)'
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        if (feedback.rating !== num) {
-                          e.currentTarget.style.borderColor = '#d1d5db'
-                          e.currentTarget.style.transform = 'scale(1)'
-                        }
+                        fontSize: '0.95rem',
+                        fontWeight: 600,
+                        marginBottom: '0.75rem',
+                        color: '#e5e7eb'
                       }}
                     >
-                      {num}
-                    </button>
-                  ))}
+                      {t.technicalSummaryTitle}
+                    </h3>
+                    <ul
+                      style={{
+                        listStyle: 'none',
+                        padding: 0,
+                        margin: 0,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '0.5rem',
+                        fontSize: '0.85rem',
+                        color: '#e5e7eb'
+                      }}
+                    >
+                      {result.technical_summary?.map((item, idx) => (
+                        <li
+                          key={idx}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'flex-start',
+                            gap: '0.45rem'
+                          }}
+                        >
+                          <span
+                            style={{
+                              fontSize: '0.8rem',
+                              color: '#a5b4fc',
+                              marginTop: '0.15rem'
+                            }}
+                          >
+                            •
+                          </span>
+                          <span>{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <div
+                    style={{
+                      background: 'rgba(15, 23, 42, 1)',
+                      borderRadius: '1.25rem',
+                      border: '1px solid rgba(148, 163, 184, 0.6)',
+                      padding: '1.25rem'
+                    }}
+                  >
+                    <h3
+                      style={{
+                        fontSize: '0.95rem',
+                        fontWeight: 600,
+                        marginBottom: '0.75rem',
+                        color: '#e5e7eb'
+                      }}
+                    >
+                      {t.musicalSummaryTitle}
+                    </h3>
+                    <ul
+                      style={{
+                        listStyle: 'none',
+                        padding: 0,
+                        margin: 0,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '0.5rem',
+                        fontSize: '0.85rem',
+                        color: '#e5e7eb'
+                      }}
+                    >
+                      {result.musical_summary?.map((item, idx) => (
+                        <li
+                          key={idx}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'flex-start',
+                            gap: '0.45rem'
+                          }}
+                        >
+                          <span
+                            style={{
+                              fontSize: '0.8rem',
+                              color: '#a5b4fc',
+                              marginTop: '0.15rem'
+                            }}
+                          >
+                            •
+                          </span>
+                          <span>{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 </div>
-                <div style={{ 
-                  display: 'flex', 
-                  justifyContent: 'space-between',
-                  fontSize: '0.75rem',
-                  color: '#6b7280',
-                  paddingLeft: '0.5rem',
-                  paddingRight: '0.5rem'
-                }}>
-                  <span>😞 {lang === 'es' ? 'No útil' : 'Not useful'}</span>
-                  <span>{lang === 'es' ? 'Muy útil' : 'Very useful'} 😍</span>
+
+                <div
+                  style={{
+                    background: 'rgba(15, 23, 42, 1)',
+                    borderRadius: '1.25rem',
+                    border: '1px solid rgba(148, 163, 184, 0.6)',
+                    padding: '1.25rem',
+                    marginTop: '1.75rem'
+                  }}
+                >
+                  <h3
+                    style={{
+                      fontSize: '0.95rem',
+                      fontWeight: 600,
+                      marginBottom: '0.75rem',
+                      color: '#e5e7eb'
+                    }}
+                  >
+                    {t.suggestionsTitle}
+                  </h3>
+                  <ul
+                    style={{
+                      listStyle: 'none',
+                      padding: 0,
+                      margin: 0,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.5rem',
+                      fontSize: '0.85rem',
+                      color: '#e5e7eb'
+                    }}
+                  >
+                    {result.suggestions?.map((item, idx) => (
+                      <li
+                        key={idx}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'flex-start',
+                          gap: '0.45rem'
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontSize: '0.8rem',
+                            color: '#f97316',
+                            marginTop: '0.15rem'
+                          }}
+                        >
+                          →
+                        </span>
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
-              </div>
 
-              <div>
-                <label style={{ fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem', display: 'block' }}>
-                  {lang === 'es' ? '¿Qué te gustó?' : 'What did you like?'}
-                  <span style={{ color: '#ef4444' }}> *</span>
-                </label>
-                <textarea
-                  value={feedback.liked}
-                  onChange={(e) => setFeedback({...feedback, liked: e.target.value})}
-                  placeholder={lang === 'es' ? 'Ej: La velocidad del análisis...' : 'E.g: The analysis speed...'}
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    borderRadius: '0.5rem',
-                    border: '1px solid #d1d5db',
-                    fontSize: '0.875rem',
-                    fontFamily: 'Inter, system-ui, sans-serif',
-                    minHeight: '80px',
-                    resize: 'vertical'
-                  }}
-                />
-              </div>
+                {result.sections?.length ? (
+                  <div
+                    style={{
+                      background: 'rgba(15, 23, 42, 1)',
+                      borderRadius: '1.25rem',
+                      border: '1px solid rgba(148, 163, 184, 0.6)',
+                      padding: '1.25rem',
+                      marginTop: '1.75rem'
+                    }}
+                  >
+                    <h3
+                      style={{
+                        fontSize: '0.95rem',
+                        fontWeight: 600,
+                        marginBottom: '0.75rem',
+                        color: '#e5e7eb'
+                      }}
+                    >
+                      {t.sectionsTitle}
+                    </h3>
+                    <div
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '0.75rem'
+                      }}
+                    >
+                      {result.sections.map((sec, idx) => {
+                        const statusMap = {
+                          pass: {
+                            label: lang === 'es' ? 'OK' : 'OK',
+                            color: '#22c55e',
+                            bg: 'rgba(34, 197, 94, 0.1)'
+                          },
+                          warn: {
+                            label: lang === 'es' ? 'Revisar' : 'Check',
+                            color: '#f97316',
+                            bg: 'rgba(249, 115, 22, 0.1)'
+                          },
+                          fail: {
+                            label: lang === 'es' ? 'Crítico' : 'Critical',
+                            color: '#ef4444',
+                            bg: 'rgba(239, 68, 68, 0.1)'
+                          }
+                        } as const
 
-              <div>
-                <label style={{ fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem', display: 'block' }}>
-                  {lang === 'es' ? '¿Qué cambiarías?' : 'What would you change?'}
-                  <span style={{ color: '#9ca3af', fontSize: '0.75rem' }}> ({lang === 'es' ? 'opcional' : 'optional'})</span>
-                </label>
-                <textarea
-                  value={feedback.change}
-                  onChange={(e) => setFeedback({...feedback, change: e.target.value})}
-                  placeholder={lang === 'es' ? 'Opcional' : 'Optional'}
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    borderRadius: '0.5rem',
-                    border: '1px solid #d1d5db',
-                    fontSize: '0.875rem',
-                    fontFamily: 'Inter, system-ui, sans-serif',
-                    minHeight: '80px',
-                    resize: 'vertical'
-                  }}
-                />
-              </div>
+                        const styleObj = statusMap[sec.status]
 
-              <div>
-                <label style={{ fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem', display: 'block' }}>
-                  {lang === 'es' ? '¿Qué agregarías?' : 'What would you add?'}
-                  <span style={{ color: '#9ca3af', fontSize: '0.75rem' }}> ({lang === 'es' ? 'opcional' : 'optional'})</span>
-                </label>
-                <textarea
-                  value={feedback.add}
-                  onChange={(e) => setFeedback({...feedback, add: e.target.value})}
-                  placeholder={lang === 'es' ? 'Opcional' : 'Optional'}
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    borderRadius: '0.5rem',
-                    border: '1px solid #d1d5db',
-                    fontSize: '0.875rem',
-                    fontFamily: 'Inter, system-ui, sans-serif',
-                    minHeight: '80px',
-                    resize: 'vertical'
-                  }}
-                />
-              </div>
+                        return (
+                          <div
+                            key={idx}
+                            style={{
+                              padding: '0.85rem 0.9rem',
+                              borderRadius: '0.9rem',
+                              background: styleObj.bg,
+                              border: `1px solid ${styleObj.color}66`
+                            }}
+                          >
+                            <div
+                              style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                marginBottom: '0.25rem'
+                              }}
+                            >
+                              <span
+                                style={{
+                                  fontSize: '0.85rem',
+                                  fontWeight: 600,
+                                  color: '#e5e7eb'
+                                }}
+                              >
+                                {sec.name}
+                              </span>
+                              <span
+                                style={{
+                                  fontSize: '0.75rem',
+                                  fontWeight: 600,
+                                  color: styleObj.color
+                                }}
+                              >
+                                {styleObj.label.toUpperCase()}
+                              </span>
+                            </div>
+                            <p
+                              style={{
+                                fontSize: '0.8rem',
+                                color: '#e5e7eb'
+                              }}
+                            >
+                              {sec.message}
+                            </p>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                ) : null}
 
-              <button
-                onClick={() => {
-                  const feedbackText = `FEEDBACK BETA - MasteringReady\n\n⭐ Utilidad: ${feedback.rating}/10\n\n✅ Qué gustó:\n${feedback.liked}\n\n🔄 Qué cambiaría:\n${feedback.change || 'N/A'}\n\n➕ Qué agregaría:\n${feedback.add || 'N/A'}\n\nScore obtenido: ${result?.score || 'N/A'}/100`
-                  window.open(`https://wa.me/573155576115?text=${encodeURIComponent(feedbackText)}`, '_blank')
-                  setFeedbackSubmitted(true)
-                  setShowFeedbackModal(false)
-                }}
-                disabled={!feedback.liked || feedback.rating === 0}
+                {(result.raw_text || result.recommendations?.length || result.notes?.length) && (
+                  <div
+                    style={{
+                      marginTop: '1.75rem',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '1rem'
+                    }}
+                  >
+                    {result.raw_text && (
+                      <div>
+                        <button
+                          onClick={() => setShowRawText((prev) => !prev)}
+                          style={{
+                            borderRadius: '0.75rem',
+                            border: '1px solid rgba(148, 163, 184, 0.7)',
+                            padding: '0.6rem 0.9rem',
+                            fontSize: '0.85rem',
+                            fontWeight: 500,
+                            cursor: 'pointer',
+                            background: 'rgba(15, 23, 42, 0.95)',
+                            color: '#e5e7eb',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.4rem'
+                          }}
+                        >
+                          <ChevronDown
+                            size={16}
+                            style={{
+                              transform: showRawText ? 'rotate(180deg)' : 'rotate(0deg)',
+                              transition: 'transform 0.18s ease'
+                            }}
+                          />
+                          {showRawText ? t.rawTextHide : t.rawTextToggle}
+                        </button>
+                        {showRawText && (
+                          <pre
+                            style={{
+                              marginTop: '0.75rem',
+                              padding: '1rem',
+                              borderRadius: '0.75rem',
+                              background: 'rgba(15, 23, 42, 1)',
+                              border: '1px solid rgba(148, 163, 184, 0.5)',
+                              whiteSpace: 'pre-wrap',
+                              fontSize: '0.8rem',
+                              color: '#e5e7eb',
+                              maxHeight: '400px',
+                              overflowY: 'auto'
+                            }}
+                          >
+                            {result.raw_text}
+                          </pre>
+                        )}
+                      </div>
+                    )}
+
+                    {(result.recommendations?.length || result.notes?.length) && (
+                      <div
+                        style={{
+                          background: 'rgba(15, 23, 42, 1)',
+                          borderRadius: '1.25rem',
+                          border: '1px solid rgba(148, 163, 184, 0.6)',
+                          padding: '1.25rem'
+                        }}
+                      >
+                        <button
+                          onClick={() => setShowAdvanced((prev) => !prev)}
+                          style={{
+                            borderRadius: '0.75rem',
+                            border: '1px solid rgba(148, 163, 184, 0.7)',
+                            padding: '0.6rem 0.9rem',
+                            fontSize: '0.85rem',
+                            fontWeight: 500,
+                            cursor: 'pointer',
+                            background: 'rgba(17, 24, 39, 0.95)',
+                            color: '#e5e7eb',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.4rem',
+                            marginBottom: showAdvanced ? '0.75rem' : 0
+                          }}
+                        >
+                          <ChevronDown
+                            size={16}
+                            style={{
+                              transform: showAdvanced ? 'rotate(180deg)' : 'rotate(0deg)',
+                              transition: 'transform 0.18s ease'
+                            }}
+                          />
+                          {showAdvanced ? t.advancedHide : t.advancedToggle}
+                        </button>
+
+                        {showAdvanced && (
+                          <div
+                            style={{
+                              marginTop: '0.5rem',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: '1rem',
+                              fontSize: '0.85rem',
+                              color: '#e5e7eb'
+                            }}
+                          >
+                            {result.recommendations?.length && (
+                              <div>
+                                <h4
+                                  style={{
+                                    fontSize: '0.9rem',
+                                    fontWeight: 600,
+                                    marginBottom: '0.5rem',
+                                    color: '#e5e7eb'
+                                  }}
+                                >
+                                  {t.recommendationsTitle}
+                                </h4>
+                                <ul
+                                  style={{
+                                    listStyle: 'none',
+                                    padding: 0,
+                                    margin: 0,
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    gap: '0.45rem'
+                                  }}
+                                >
+                                  {result.recommendations.map((item, idx) => (
+                                    <li
+                                      key={idx}
+                                      style={{
+                                        display: 'flex',
+                                        alignItems: 'flex-start',
+                                        gap: '0.45rem'
+                                      }}
+                                    >
+                                      <span
+                                        style={{
+                                          fontSize: '0.8rem',
+                                          color: '#a5b4fc',
+                                          marginTop: '0.15rem'
+                                        }}
+                                      >
+                                        •
+                                      </span>
+                                      <span>{item}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+
+                            {result.notes?.length && (
+                              <div>
+                                <h4
+                                  style={{
+                                    fontSize: '0.9rem',
+                                    fontWeight: 600,
+                                    marginBottom: '0.5rem',
+                                    color: '#e5e7eb'
+                                  }}
+                                >
+                                  {t.notesTitle}
+                                </h4>
+                                <ul
+                                  style={{
+                                    listStyle: 'none',
+                                    padding: 0,
+                                    margin: 0,
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    gap: '0.45rem'
+                                  }}
+                                >
+                                  {result.notes.map((item, idx) => (
+                                    <li
+                                      key={idx}
+                                      style={{
+                                        display: 'flex',
+                                        alignItems: 'flex-start',
+                                        gap: '0.45rem'
+                                      }}
+                                    >
+                                      <span
+                                        style={{
+                                          fontSize: '0.8rem',
+                                          color: '#a5b4fc',
+                                          marginTop: '0.15rem'
+                                        }}
+                                      >
+                                        •
+                                      </span>
+                                      <span>{item}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
+
+            {error && (
+              <div
                 style={{
-                  background: (feedback.liked && feedback.rating > 0) ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : '#d1d5db',
-                  color: 'white',
-                  padding: '0.875rem 1.5rem',
-                  borderRadius: '0.75rem',
-                  fontWeight: '600',
-                  border: 'none',
-                  cursor: (feedback.liked && feedback.rating > 0) ? 'pointer' : 'not-allowed',
-                  transition: 'all 0.2s',
-                  fontSize: '1rem',
-                  marginTop: '0.5rem'
-                }}
-                onMouseEnter={(e) => {
-                  if (feedback.liked && feedback.rating > 0) {
-                    e.currentTarget.style.transform = 'translateY(-2px)'
-                    e.currentTarget.style.boxShadow = '0 6px 20px rgba(102, 126, 234, 0.4)'
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)'
-                  e.currentTarget.style.boxShadow = 'none'
+                  marginTop: '1.5rem',
+                  padding: '0.85rem 1rem',
+                  borderRadius: '0.9rem',
+                  background: 'rgba(127, 29, 29, 0.3)',
+                  border: '1px solid rgba(239, 68, 68, 0.7)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.6rem'
                 }}
               >
-                {lang === 'es' ? 'Enviar Feedback' : 'Send Feedback'}
-              </button>
-            </div>
+                <AlertCircle size={18} color="#fecaca" />
+                <div>
+                  <p
+                    style={{
+                      fontSize: '0.85rem',
+                      fontWeight: 600,
+                      color: '#fecaca'
+                    }}
+                  >
+                    {t.errorTitle}
+                  </p>
+                  <p
+                    style={{
+                      fontSize: '0.8rem',
+                      color: '#fee2e2'
+                    }}
+                  >
+                    {error}
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
-        </div>
-      )}
+        </section>
 
-      <style jsx global>{`
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
-    </div>
+        <footer
+          style={{
+            paddingTop: '2rem',
+            paddingBottom: '1rem',
+            borderTop: '1px solid rgba(31, 41, 55, 0.9)',
+            color: '#6b7280',
+            fontSize: '0.8rem',
+            display: 'flex',
+            justifyContent: 'space-between',
+            gap: '1rem',
+            flexWrap: 'wrap'
+          }}
+        >
+          <div>
+            <span>© {new Date().getFullYear()} MasteringReady.</span>
+            <span> {lang === 'es' ? 'Creado por un ingeniero de mastering.' : 'Built by a mastering engineer.'}</span>
+          </div>
+          <div
+            style={{
+              display: 'flex',
+              gap: '1rem'
+            }}
+          >
+            <span>{lang === 'es' ? 'Versión Beta' : 'Beta Version'}</span>
+            <span>{lang === 'es' ? 'Enfoque: mezcla lista para mastering' : 'Focus: mastering-ready mix'}</span>
+          </div>
+        </footer>
+      </div>
+    </main>
   )
 }
 
-export default Home
 
