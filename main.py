@@ -14,9 +14,9 @@ Author: Matías Carvajal García (@matcarvy)
 Version: 7.3.2-final
 """
 
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
 import tempfile
 from pathlib import Path
 import logging
@@ -36,7 +36,7 @@ logger = logging.getLogger(__name__)
 
 # Import analyzer module
 try:
-    from analyzer import analyze_file, write_report, generate_cta, generate_short_mode_report, generate_visual_report
+    from analyzer import analyze_file, write_report, generate_cta, generate_short_mode_report, generate_visual_report, generate_complete_pdf
     logger.info("✅ Analyzer module imported successfully")
 except ImportError as e:
     logger.error(f"❌ Failed to import analyzer: {e}")
@@ -537,6 +537,102 @@ async def get_analysis_status(job_id: str):
         response['error'] = job['error']
     
     return response
+
+
+@app.post("/api/download/pdf")
+async def download_pdf(
+    request_id: str = Form(...),
+    lang: str = Form('es'),
+    background_tasks: BackgroundTasks = None
+):
+    """
+    Generate and download complete PDF report.
+    
+    Args:
+        request_id: The analysis request ID
+        lang: Language ('es' or 'en')
+        background_tasks: FastAPI background tasks
+    
+    Returns:
+        FileResponse with PDF file
+    """
+    logger.info(f"📄 PDF download request: {request_id}, lang: {lang}")
+    
+    # Check if request_id exists in jobs
+    async with jobs_lock:
+        if request_id not in jobs:
+            logger.error(f"❌ Request ID not found: {request_id}")
+            raise HTTPException(status_code=404, detail="Analysis not found")
+        
+        job = jobs[request_id]
+        
+        if job['status'] != 'completed':
+            logger.error(f"❌ Analysis not completed: {request_id}")
+            raise HTTPException(status_code=400, detail="Analysis not completed yet")
+        
+        result = job['result']
+    
+    # Create temporary PDF file
+    pdf_file = tempfile.NamedTemporaryFile(delete=False, suffix='.pdf')
+    pdf_path = pdf_file.name
+    pdf_file.close()
+    
+    try:
+        # Generate PDF using analyzer function
+        logger.info(f"🔨 Generating PDF: {pdf_path}")
+        
+        success = generate_complete_pdf(
+            report=result,
+            output_path=pdf_path,
+            strict=False,  # Could be passed from frontend if needed
+            lang=lang,
+            filename=result.get('filename', 'analisis')
+        )
+        
+        if not success:
+            logger.error(f"❌ PDF generation failed for {request_id}")
+            raise HTTPException(status_code=500, detail="Failed to generate PDF")
+        
+        # Prepare filename
+        filename_base = result.get('filename', 'analisis').replace('.wav', '').replace('.mp3', '')
+        pdf_filename = f"masteringready-{'detallado' if lang == 'es' else 'detailed'}-{filename_base}.pdf"
+        
+        logger.info(f"✅ PDF generated successfully: {pdf_filename}")
+        
+        # Clean up function
+        def cleanup():
+            try:
+                import os
+                os.unlink(pdf_path)
+                logger.info(f"🧹 Cleaned up temporary PDF: {pdf_path}")
+            except Exception as e:
+                logger.error(f"⚠️ Failed to cleanup PDF: {e}")
+        
+        # Return PDF file with background cleanup
+        if background_tasks:
+            background_tasks.add_task(cleanup)
+        
+        return FileResponse(
+            pdf_path,
+            media_type='application/pdf',
+            filename=pdf_filename,
+            headers={
+                "Content-Disposition": f"attachment; filename={pdf_filename}"
+            }
+        )
+        
+    except Exception as e:
+        # Clean up on error
+        try:
+            import os
+            os.unlink(pdf_path)
+        except:
+            pass
+        
+        logger.error(f"❌ Error generating PDF: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"PDF generation error: {str(e)}")
 
 
 # ============== RUN ==============
