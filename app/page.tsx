@@ -468,9 +468,23 @@ by Matías Carvajal
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
                 backgroundClip: 'text',
-                whiteSpace: 'nowrap'
+                whiteSpace: 'nowrap',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.4rem'
               }}>
                 🎵 MasteringReady
+                <span style={{
+                  fontSize: '0.5em',
+                  fontWeight: '600',
+                  color: '#667eea',
+                  backgroundColor: '#f0f4ff',
+                  padding: '0.15em 0.4em',
+                  borderRadius: '0.25em',
+                  verticalAlign: 'middle'
+                }}>
+                  BETA
+                </span>
               </span>
             </div>
             <div style={{ display: 'flex', gap: 'clamp(0.5rem, 2vw, 1rem)', alignItems: 'center' }}>
