@@ -518,7 +518,7 @@ export default function Page() {
       formData.append('file', compressedFile)
       formData.append('lang', lang)
 
-      function generateRequestId() {
+      const generateRequestId = () => {
         return `req_${Date.now()}_${Math.random().toString(36).slice(2)}`
       }
 
