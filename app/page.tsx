@@ -363,7 +363,6 @@ ${new Date().toLocaleDateString()}
       } else {
         console.warn('⚠️ No request ID available, skipping PDF, using TXT')
       }
-      }
       
       // Fallback to TXT download
       console.log('📄 Downloading complete TXT report...')
