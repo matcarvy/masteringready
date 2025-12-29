@@ -4382,7 +4382,7 @@ def generate_complete_pdf(
         )
         
         # Header
-        story.append(Paragraph("🎵 MASTERINGREADY", title_style))
+        story.append(Paragraph("MASTERINGREADY", title_style))
         story.append(Paragraph(
             "Reporte Completo de Análisis" if lang == 'es' else "Complete Analysis Report",
             subtitle_style
@@ -4395,11 +4395,25 @@ def generate_complete_pdf(
             section_style
         ))
         
+        # Clean verdict text from emojis
+        verdict_text = report.get('verdict', 'N/A')
+        verdict_emoji_replacements = {
+            '✅': '[OK]',
+            '⚠️': '[!]',
+            '❌': '[X]',
+            '🎯': '',
+            '✓': '[+]',
+            '🎵': ''
+        }
+        for emoji, replacement in verdict_emoji_replacements.items():
+            verdict_text = verdict_text.replace(emoji, replacement)
+        verdict_text = verdict_text.strip()
+        
         file_info_data = [
             ["Archivo" if lang == 'es' else "File", filename or report.get('filename', 'Unknown')],
             ["Fecha" if lang == 'es' else "Date", datetime.now().strftime('%d/%m/%Y %H:%M')],
             ["Puntuación" if lang == 'es' else "Score", f"{report.get('score', 0)}/100"],
-            ["Veredicto" if lang == 'es' else "Verdict", report.get('verdict', 'N/A')]
+            ["Veredicto" if lang == 'es' else "Verdict", verdict_text]
         ]
         
         file_table = Table(file_info_data, colWidths=[2*inch, 4.5*inch])
@@ -4435,19 +4449,20 @@ def generate_complete_pdf(
             ]]
             
             for metric in report['metrics'][:8]:
-                status_emoji = {
-                    'perfect': '✅',
-                    'pass': '✅',
-                    'warning': '⚠️',
-                    'critical': '❌',
-                    'catastrophic': '❌',
-                    'info': 'ℹ️'
-                }.get(metric.get('status', 'info'), 'ℹ️')
+                # Use text instead of emojis for PDF compatibility
+                status_text = {
+                    'perfect': '[OK]',
+                    'pass': '[OK]',
+                    'warning': '[!]',
+                    'critical': '[X]',
+                    'catastrophic': '[X]',
+                    'info': '[i]'
+                }.get(metric.get('status', 'info'), '[i]')
                 
                 metrics_data.append([
                     metric.get('name', 'N/A'),
                     metric.get('value', 'N/A'),
-                    status_emoji
+                    status_text
                 ])
             
             metrics_table = Table(metrics_data, colWidths=[2.5*inch, 2.5*inch, 1.5*inch])
