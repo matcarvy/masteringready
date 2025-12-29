@@ -312,7 +312,9 @@ ${new Date().toLocaleDateString()}
           formData.append('request_id', requestIdRef.current)
           formData.append('lang', lang)
 
-          const response = await fetch('/api/download/pdf', {
+          // Use full backend URL instead of relative path
+          const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'https://masteringready.onrender.com'
+          const response = await fetch(`${backendUrl}/api/download/pdf`, {
             method: 'POST',
             body: formData
           })
@@ -478,11 +480,13 @@ by Matías Carvajal
                   fontSize: '0.5em',
                   fontWeight: '700',
                   color: '#ffffff',
+                  WebkitTextFillColor: '#ffffff',
                   backgroundColor: '#667eea',
                   padding: '0.2em 0.5em',
                   borderRadius: '0.3em',
                   verticalAlign: 'middle',
-                  letterSpacing: '0.05em'
+                  letterSpacing: '0.05em',
+                  textTransform: 'uppercase'
                 }}>
                   BETA
                 </span>
