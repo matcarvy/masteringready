@@ -74,10 +74,26 @@ except ImportError as e:
     sys.stdout.flush()
     # Fallback: simple text replacement
     def clean_text_for_pdf(text):
+        # Use ASCII-safe characters that Helvetica CAN render
         replacements = {
-            '✅': '✓', '⚠️': '⚠', '⚠': '⚠', '❌': '✗', 'ℹ️': 'ℹ', 'ℹ': 'ℹ',
-            '🎵': '♪', '🎧': '♪', '🔊': '♪', '💡': 'ℹ', '🔧': '⚙', 
-            '📋': '□', '📊': '', '🎯': '★', '→': '→',
+            # Status symbols - use ASCII alternatives
+            '✅': '[OK]', 
+            '⚠️': '[!]', '⚠': '[!]',
+            '❌': '[X]', '✗': '[X]',
+            'ℹ️': '[i]', 'ℹ': '[i]',
+            '✓': '[OK]',
+            
+            # Audio/Music - use text
+            '🎵': '[Audio]', '🎧': '[Audio]', '🔊': '[Audio]', '♪': '[Audio]',
+            
+            # Other symbols - use text
+            '💡': '[*]', '🔧': '[Tool]', '📋': '[-]', '📊': '[Chart]',
+            '🎯': '[*]', '★': '[*]',
+            
+            # Arrows - use ASCII
+            '→': '->',
+            
+            # Remove decorative
             '■': '', '═': '', '─': '', '━': ''
         }
         for emoji, symbol in replacements.items():
@@ -4370,12 +4386,28 @@ def generate_complete_pdf(
         from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
         from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
         from reportlab.lib.enums import TA_CENTER, TA_LEFT
+        from reportlab.pdfbase import pdfmetrics
+        from reportlab.pdfbase.ttfonts import TTFont
         from datetime import datetime
     except ImportError:
         print("❌ Error: reportlab no está instalado. Instala con: pip install reportlab --break-system-packages")
         return False
     
     try:
+        # Register DejaVu Sans font for Unicode support
+        dejavu_path = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+        dejavu_bold_path = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+        
+        try:
+            pdfmetrics.registerFont(TTFont('DejaVu', dejavu_path))
+            pdfmetrics.registerFont(TTFont('DejaVu-Bold', dejavu_bold_path))
+            use_unicode_font = True
+            print("✅ DejaVu Sans font registered for Unicode support", flush=True)
+        except Exception as e:
+            print(f"⚠️  Could not register DejaVu font: {e}", flush=True)
+            print("   Falling back to Helvetica (ASCII only)", flush=True)
+            use_unicode_font = False
+        
         # Create PDF
         doc = SimpleDocTemplate(
             output_path,
@@ -4389,7 +4421,11 @@ def generate_complete_pdf(
         story = []
         styles = getSampleStyleSheet()
         
-        # Custom styles
+        # Select font based on availability
+        base_font = 'DejaVu' if use_unicode_font else 'Helvetica'
+        bold_font = 'DejaVu-Bold' if use_unicode_font else 'Helvetica-Bold'
+        
+        # Custom styles with Unicode font
         title_style = ParagraphStyle(
             'CustomTitle',
             parent=styles['Heading1'],
@@ -4397,7 +4433,7 @@ def generate_complete_pdf(
             textColor=colors.HexColor('#667eea'),
             spaceAfter=12,
             alignment=TA_CENTER,
-            fontName='Helvetica-Bold'
+            fontName=bold_font
         )
         
         subtitle_style = ParagraphStyle(
@@ -4406,7 +4442,8 @@ def generate_complete_pdf(
             fontSize=14,
             textColor=colors.HexColor('#374151'),
             spaceAfter=6,
-            alignment=TA_CENTER
+            alignment=TA_CENTER,
+            fontName=base_font
         )
         
         section_style = ParagraphStyle(
@@ -4415,7 +4452,7 @@ def generate_complete_pdf(
             fontSize=16,
             textColor=colors.HexColor('#667eea'),
             spaceAfter=12,
-            fontName='Helvetica-Bold'
+            fontName=bold_font
         )
         
         body_style = ParagraphStyle(
@@ -4423,7 +4460,8 @@ def generate_complete_pdf(
             parent=styles['BodyText'],
             fontSize=10,
             leading=14,
-            spaceAfter=8
+            spaceAfter=8,
+            fontName=base_font
         )
         
         # Header
@@ -4455,8 +4493,8 @@ def generate_complete_pdf(
         file_table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#f3f4f6')),
             ('TEXTCOLOR', (0, 0), (0, -1), colors.HexColor('#374151')),
-            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
-            ('FONTNAME', (1, 0), (1, -1), 'Helvetica'),
+            ('FONTNAME', (0, 0), (0, -1), bold_font),
+            ('FONTNAME', (1, 0), (1, -1), base_font),
             ('FONTSIZE', (0, 0), (-1, -1), 10),
             ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
@@ -4508,7 +4546,8 @@ def generate_complete_pdf(
             metrics_table.setStyle(TableStyle([
                 ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#667eea')),
                 ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTNAME', (0, 0), (-1, 0), bold_font),
+                ('FONTNAME', (0, 1), (-1, -1), base_font),
                 ('FONTSIZE', (0, 0), (-1, 0), 11),
                 ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
                 ('ALIGN', (2, 0), (2, -1), 'CENTER'),
