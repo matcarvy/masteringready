@@ -62,7 +62,26 @@ except Exception:
     HAS_PYLOUDNORM = False
 
 # Unicode emoji support for PDFs
-from unicode_emoji_map import clean_text_for_pdf, PDF_UNICODE_MAP
+try:
+    from unicode_emoji_map import clean_text_for_pdf, PDF_UNICODE_MAP
+    print("✅ unicode_emoji_map imported successfully")
+except ImportError as e:
+    print(f"❌ Failed to import unicode_emoji_map: {e}")
+    print("⚠️  Using fallback text conversion")
+    # Fallback: simple text replacement
+    def clean_text_for_pdf(text):
+        replacements = {
+            '✅': '✓', '⚠️': '⚠', '⚠': '⚠', '❌': '✗', 'ℹ️': 'ℹ', 'ℹ': 'ℹ',
+            '🎵': '♪', '🎧': '♪', '🔊': '♪', '💡': 'ℹ', '🔧': '⚙', 
+            '📋': '□', '📊': '', '🎯': '★', '→': '→',
+            '■': '', '═': '', '─': '', '━': ''
+        }
+        for emoji, symbol in replacements.items():
+            text = text.replace(emoji, symbol)
+        # Remove variation selectors
+        text = text.replace('\ufe0f', '').replace('\ufe0e', '')
+        return text
+    PDF_UNICODE_MAP = {}
 
 
 # ----------------------------
@@ -4321,6 +4340,16 @@ def generate_complete_pdf(
     Returns:
         bool: True if successful, False otherwise
     """
+    print(f"\n🔍 DEBUG: generate_complete_pdf called")
+    print(f"   Lang: {lang}, Filename: {filename}")
+    print(f"   Report has {len(report.get('metrics', []))} metrics")
+    print(f"   Report has report_write: {bool(report.get('report_write'))}")
+    
+    # Test clean_text_for_pdf is working
+    test_emoji = "⚠️ Test 🔊"
+    cleaned_test = clean_text_for_pdf(test_emoji)
+    print(f"   clean_text_for_pdf test: '{test_emoji}' → '{cleaned_test}'")
+    
     try:
         from reportlab.lib.pagesizes import letter
         from reportlab.lib.units import inch
