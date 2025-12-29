@@ -64,10 +64,14 @@ except Exception:
 # Unicode emoji support for PDFs
 try:
     from unicode_emoji_map import clean_text_for_pdf, PDF_UNICODE_MAP
-    print("✅ unicode_emoji_map imported successfully")
+    import sys
+    print("✅ unicode_emoji_map imported successfully", flush=True)
+    sys.stdout.flush()
 except ImportError as e:
-    print(f"❌ Failed to import unicode_emoji_map: {e}")
-    print("⚠️  Using fallback text conversion")
+    import sys
+    print(f"❌ Failed to import unicode_emoji_map: {e}", flush=True)
+    print("⚠️  Using fallback text conversion", flush=True)
+    sys.stdout.flush()
     # Fallback: simple text replacement
     def clean_text_for_pdf(text):
         replacements = {
@@ -4340,15 +4344,24 @@ def generate_complete_pdf(
     Returns:
         bool: True if successful, False otherwise
     """
-    print(f"\n🔍 DEBUG: generate_complete_pdf called")
-    print(f"   Lang: {lang}, Filename: {filename}")
-    print(f"   Report has {len(report.get('metrics', []))} metrics")
-    print(f"   Report has report_write: {bool(report.get('report_write'))}")
+    import sys
+    print(f"\n🔍 DEBUG: generate_complete_pdf called", flush=True)
+    print(f"   Lang: {lang}, Filename: {filename}", flush=True)
+    print(f"   Report has {len(report.get('metrics', []))} metrics", flush=True)
+    print(f"   Report has report_write: {bool(report.get('report_write'))}", flush=True)
+    sys.stdout.flush()
     
     # Test clean_text_for_pdf is working
     test_emoji = "⚠️ Test 🔊"
     cleaned_test = clean_text_for_pdf(test_emoji)
-    print(f"   clean_text_for_pdf test: '{test_emoji}' → '{cleaned_test}'")
+    print(f"   clean_text_for_pdf test: '{test_emoji}' → '{cleaned_test}'", flush=True)
+    sys.stdout.flush()
+    
+    # Check if report content has emojis BEFORE cleaning
+    if report.get('report_write'):
+        sample = report['report_write'][:100]
+        print(f"   report_write sample BEFORE: {repr(sample)}", flush=True)
+        sys.stdout.flush()
     
     try:
         from reportlab.lib.pagesizes import letter
@@ -4526,7 +4539,27 @@ def generate_complete_pdf(
                 
                 # Clean text - use Unicode symbols
                 text = report[mode_key]
+                
+                # DEBUG: Show text BEFORE cleaning
+                import sys
+                sample_before = text[:200] if len(text) > 200 else text
+                print(f"\n🔍 DEBUG {mode_key} BEFORE clean:", flush=True)
+                print(f"   Sample: {repr(sample_before)}", flush=True)
+                print(f"   Has ■: {'■' in text}", flush=True)
+                print(f"   Has ⚠️: {'⚠️' in text or '⚠' in text}", flush=True)
+                print(f"   Has 🔊: {'🔊' in text}", flush=True)
+                sys.stdout.flush()
+                
                 text = clean_text_for_pdf(text)
+                
+                # DEBUG: Show text AFTER cleaning  
+                sample_after = text[:200] if len(text) > 200 else text
+                print(f"\n🔍 DEBUG {mode_key} AFTER clean:", flush=True)
+                print(f"   Sample: {repr(sample_after)}", flush=True)
+                print(f"   Has ■: {'■' in text}", flush=True)
+                print(f"   Has ⚠: {'⚠' in text}", flush=True)
+                print(f"   Has ♪: {'♪' in text}", flush=True)
+                sys.stdout.flush()
                 
                 # Remove multiple consecutive newlines
                 while '\n\n\n' in text:
