@@ -566,8 +566,9 @@ async def download_pdf(
         
         job = jobs[request_id]
         
-        if job['status'] != 'completed':
-            logger.error(f"❌ Analysis not completed: {request_id}")
+        # Accept both 'complete' and 'completed' for compatibility
+        if job['status'] not in ['complete', 'completed']:
+            logger.error(f"❌ Analysis not completed: {request_id} (status: {job['status']})")
             raise HTTPException(status_code=400, detail="Analysis not completed yet")
         
         result = job['result']
