@@ -4452,9 +4452,13 @@ def generate_complete_pdf(
                     'info': 'ℹ'
                 }.get(metric.get('status', 'info'), 'ℹ')
                 
+                # Clean all metric fields to ensure no emojis slip through
+                metric_name = clean_text_for_pdf(str(metric.get('name', 'N/A')))
+                metric_value = clean_text_for_pdf(str(metric.get('value', 'N/A')))
+                
                 metrics_data.append([
-                    metric.get('name', 'N/A'),
-                    metric.get('value', 'N/A'),
+                    metric_name,
+                    metric_value,
                     status_text
                 ])
             
