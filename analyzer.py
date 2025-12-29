@@ -4483,10 +4483,32 @@ def generate_complete_pdf(
                     section_style
                 ))
                 
-                # Clean text - remove all decorative characters
+                # Clean text - remove decorative characters and replace emojis
                 text = report[mode_key]
-                # Remove decorative lines and blocks
-                text = text.replace('═', '').replace('─', '').replace('■', '').replace('━', '')
+                
+                # Replace emojis with text equivalents (ReportLab doesn't support emojis)
+                emoji_replacements = {
+                    '🎵': '[Audio]',
+                    '🎯': '[Target]',
+                    '✅': '[OK]',
+                    '⚠️': '[!]',
+                    '✓': '[+]',
+                    '→': '->',
+                    '🔊': '[Volume]',
+                    '💡': '[Note]',
+                    '🔧': '[Tool]',
+                    '📋': '[Info]',
+                    '📊': '[Stats]',
+                    '🎧': '[Audio]',
+                    '■': '',
+                    '═': '',
+                    '─': '',
+                    '━': ''
+                }
+                
+                for emoji, replacement in emoji_replacements.items():
+                    text = text.replace(emoji, replacement)
+                
                 # Remove multiple consecutive newlines
                 while '\n\n\n' in text:
                     text = text.replace('\n\n\n', '\n\n')
