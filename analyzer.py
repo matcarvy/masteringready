@@ -4483,16 +4483,25 @@ def generate_complete_pdf(
                     section_style
                 ))
                 
-                # Clean text
-                text = report[mode_key].replace('═', '').replace('─', '').strip()
+                # Clean text - remove all decorative characters
+                text = report[mode_key]
+                # Remove decorative lines and blocks
+                text = text.replace('═', '').replace('─', '').replace('■', '').replace('━', '')
+                # Remove multiple consecutive newlines
+                while '\n\n\n' in text:
+                    text = text.replace('\n\n\n', '\n\n')
+                text = text.strip()
+                
                 for line in text.split('\n'):
-                    if line.strip():
+                    line_stripped = line.strip()
+                    if line_stripped:
                         try:
-                            story.append(Paragraph(line, body_style))
+                            story.append(Paragraph(line_stripped, body_style))
                         except:
                             # Fallback for problematic characters
-                            clean_line = line.encode('ascii', 'ignore').decode('ascii')
-                            story.append(Paragraph(clean_line, body_style))
+                            clean_line = line_stripped.encode('ascii', 'ignore').decode('ascii')
+                            if clean_line.strip():
+                                story.append(Paragraph(clean_line, body_style))
                 
                 story.append(Spacer(1, 0.2*inch))
         
@@ -4507,7 +4516,6 @@ def generate_complete_pdf(
             alignment=TA_CENTER
         )
         
-        story.append(Paragraph("─" * 80, footer_style))
         story.append(Paragraph(
             "Analizado con MasteringReady" if lang == 'es' else "Analyzed with MasteringReady",
             footer_style
