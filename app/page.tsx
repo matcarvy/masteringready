@@ -476,12 +476,13 @@ by Matías Carvajal
                 🎵 MasteringReady
                 <span style={{
                   fontSize: '0.5em',
-                  fontWeight: '600',
-                  color: '#667eea',
-                  backgroundColor: '#f0f4ff',
-                  padding: '0.15em 0.4em',
-                  borderRadius: '0.25em',
-                  verticalAlign: 'middle'
+                  fontWeight: '700',
+                  color: '#ffffff',
+                  backgroundColor: '#667eea',
+                  padding: '0.2em 0.5em',
+                  borderRadius: '0.3em',
+                  verticalAlign: 'middle',
+                  letterSpacing: '0.05em'
                 }}>
                   BETA
                 </span>
