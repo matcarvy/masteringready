@@ -52,10 +52,25 @@ PDF_UNICODE_MAP = {
     '💡': 'ℹ',  # LIGHT BULB → INFO
     '🔧': '⚙',  # WRENCH → GEAR
     '📋': '□',  # CLIPBOARD → WHITE SQUARE
-    '📊': '■',  # BAR CHART → BLACK SQUARE
+    '📊': '▪',  # BAR CHART → SMALL BLACK SQUARE
+    '📍': '●',  # PUSHPIN → BULLET
     '★': '★',   # BLACK STAR (keep as-is)
     '⚙': '⚙',   # GEAR (keep as-is)
     '□': '□',   # WHITE SQUARE (keep as-is)
+    '●': '●',   # BULLET (keep as-is)
+    '▪': '▪',   # SMALL BLACK SQUARE (keep as-is)
+    
+    # Number emojis (keycap emojis)
+    '1️⃣': '1.',  # KEYCAP 1
+    '2️⃣': '2.',  # KEYCAP 2
+    '3️⃣': '3.',  # KEYCAP 3
+    '4️⃣': '4.',  # KEYCAP 4
+    '5️⃣': '5.',  # KEYCAP 5
+    '6️⃣': '6.',  # KEYCAP 6
+    '7️⃣': '7.',  # KEYCAP 7
+    '8️⃣': '8.',  # KEYCAP 8
+    '9️⃣': '9.',  # KEYCAP 9
+    '0️⃣': '0.',  # KEYCAP 0
     
     # Decorative - remove completely
     '■': '',
@@ -80,6 +95,27 @@ def clean_text_for_pdf(text: str) -> str:
     """
     if not text:
         return text
+    
+    # Step 0: Handle keycap emojis FIRST (they're compound: digit + FE0F + 20E3)
+    # Replace them before general normalization
+    keycap_map = {
+        '0\ufe0f\u20e3': '0.',
+        '1\ufe0f\u20e3': '1.',
+        '2\ufe0f\u20e3': '2.',
+        '3\ufe0f\u20e3': '3.',
+        '4\ufe0f\u20e3': '4.',
+        '5\ufe0f\u20e3': '5.',
+        '6\ufe0f\u20e3': '6.',
+        '7\ufe0f\u20e3': '7.',
+        '8\ufe0f\u20e3': '8.',
+        '9\ufe0f\u20e3': '9.',
+    }
+    for keycap, replacement in keycap_map.items():
+        text = text.replace(keycap, replacement)
+    
+    # Also handle without variation selector
+    for digit in '0123456789':
+        text = text.replace(f'{digit}\u20e3', f'{digit}.')
     
     # Step 1: Normalize emojis (remove variation selectors)
     text = normalize_emojis(text)
