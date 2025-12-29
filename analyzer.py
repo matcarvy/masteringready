@@ -61,6 +61,9 @@ try:
 except Exception:
     HAS_PYLOUDNORM = False
 
+# Unicode emoji support for PDFs
+from unicode_emoji_map import clean_text_for_pdf, PDF_UNICODE_MAP
+
 
 # ----------------------------
 # Utility Functions
@@ -4395,19 +4398,9 @@ def generate_complete_pdf(
             section_style
         ))
         
-        # Clean verdict text from emojis
+        # Clean verdict text - use Unicode symbols
         verdict_text = report.get('verdict', 'N/A')
-        verdict_emoji_replacements = {
-            '✅': '[OK]',
-            '⚠️': '[!]',
-            '❌': '[X]',
-            '🎯': '',
-            '✓': '[+]',
-            '🎵': ''
-        }
-        for emoji, replacement in verdict_emoji_replacements.items():
-            verdict_text = verdict_text.replace(emoji, replacement)
-        verdict_text = verdict_text.strip()
+        verdict_text = clean_text_for_pdf(verdict_text).strip()
         
         file_info_data = [
             ["Archivo" if lang == 'es' else "File", filename or report.get('filename', 'Unknown')],
@@ -4449,15 +4442,15 @@ def generate_complete_pdf(
             ]]
             
             for metric in report['metrics'][:8]:
-                # Use text instead of emojis for PDF compatibility
+                # Use Unicode symbols for status
                 status_text = {
-                    'perfect': '[OK]',
-                    'pass': '[OK]',
-                    'warning': '[!]',
-                    'critical': '[X]',
-                    'catastrophic': '[X]',
-                    'info': '[i]'
-                }.get(metric.get('status', 'info'), '[i]')
+                    'perfect': '✓',
+                    'pass': '✓',
+                    'warning': '⚠',
+                    'critical': '✗',
+                    'catastrophic': '✗',
+                    'info': 'ℹ'
+                }.get(metric.get('status', 'info'), 'ℹ')
                 
                 metrics_data.append([
                     metric.get('name', 'N/A'),
@@ -4498,31 +4491,9 @@ def generate_complete_pdf(
                     section_style
                 ))
                 
-                # Clean text - remove decorative characters and replace emojis
+                # Clean text - use Unicode symbols
                 text = report[mode_key]
-                
-                # Replace emojis with text equivalents (ReportLab doesn't support emojis)
-                emoji_replacements = {
-                    '🎵': '[Audio]',
-                    '🎯': '[Target]',
-                    '✅': '[OK]',
-                    '⚠️': '[!]',
-                    '✓': '[+]',
-                    '→': '->',
-                    '🔊': '[Volume]',
-                    '💡': '[Note]',
-                    '🔧': '[Tool]',
-                    '📋': '[Info]',
-                    '📊': '[Stats]',
-                    '🎧': '[Audio]',
-                    '■': '',
-                    '═': '',
-                    '─': '',
-                    '━': ''
-                }
-                
-                for emoji, replacement in emoji_replacements.items():
-                    text = text.replace(emoji, replacement)
+                text = clean_text_for_pdf(text)
                 
                 # Remove multiple consecutive newlines
                 while '\n\n\n' in text:
