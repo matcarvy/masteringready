@@ -301,11 +301,23 @@ ${new Date().toLocaleDateString()}
       alert(lang === 'es' ? 'Error: análisis no disponible' : 'Error: analysis not available')
       return
     }
+
+    // Verify that analysis is actually complete
+    if (!result.score || !result.verdict) {
+      console.error('❌ Analysis incomplete, missing score or verdict')
+      alert(lang === 'es' 
+        ? 'El análisis aún no está completo. Por favor espera unos segundos.' 
+        : 'Analysis not yet complete. Please wait a few seconds.')
+      return
+    }
     
     try {
       // Try PDF first if endpoint is available
       if (requestIdRef.current) {
-        console.log('📄 Attempting PDF download...', requestIdRef.current)
+        console.log('📄 Attempting PDF download...')
+        console.log('🆔 Request ID:', requestIdRef.current)
+        console.log('🌍 Language:', lang)
+        console.log('📊 Score:', result.score, 'Verdict:', result.verdict)
         
         try {
           const formData = new FormData()
@@ -314,10 +326,15 @@ ${new Date().toLocaleDateString()}
 
           // Use full backend URL instead of relative path
           const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'https://masteringready.onrender.com'
-          const response = await fetch(`${backendUrl}/api/download/pdf`, {
+          const pdfUrl = `${backendUrl}/api/download/pdf`
+          console.log('🔗 Calling:', pdfUrl)
+          
+          const response = await fetch(pdfUrl, {
             method: 'POST',
             body: formData
           })
+
+          console.log('📡 Response status:', response.status)
 
           if (response.ok) {
             // PDF download successful
@@ -335,11 +352,17 @@ ${new Date().toLocaleDateString()}
             console.log('✅ PDF downloaded successfully')
             return
           } else {
+            const errorText = await response.text()
+            console.error('❌ PDF error response:', errorText)
             console.warn('⚠️ PDF endpoint returned error, falling back to TXT')
           }
         } catch (pdfError) {
-          console.warn('⚠️ PDF download failed, falling back to TXT:', pdfError)
+          console.error('❌ PDF exception:', pdfError)
+          console.warn('⚠️ PDF download failed, falling back to TXT')
         }
+      } else {
+        console.warn('⚠️ No request ID available, skipping PDF, using TXT')
+      }
       }
       
       // Fallback to TXT download
