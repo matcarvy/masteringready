@@ -207,22 +207,25 @@ export default function Results({ data, onReset, lang: parentLang }: ResultsProp
         )}
       </div>
 
-      {/* CTA for Mastering Service */}
-      {data.score >= 60 && (
+      {/* CTA for Mastering Service - Dynamic from backend */}
+      {data.cta && data.cta.message && (
         <div className="bg-gradient-purple text-white rounded-lg p-4 sm:p-6">
-          <h3 className="text-lg sm:text-xl font-semibold mb-3">
-            {currentLang === 'es' 
-              ? '🎧 ¿Te gustaría que mastericemos esta canción?'
-              : '🎧 Would you like us to master this song?'}
-          </h3>
-          <p className="mb-4 text-sm sm:text-base">
-            {currentLang === 'es'
-              ? 'Tu mezcla está en buen punto. Si quieres que trabajemos juntos en el mastering, podemos ayudarte a llevarla al siguiente nivel.'
-              : 'Your mix is in good shape. If you want us to work together on mastering, we can help you take it to the next level.'}
-          </p>
-          <button className="bg-white text-purple-600 px-4 sm:px-6 py-3 rounded-lg 
-                           font-semibold hover:bg-gray-100 transition text-sm sm:text-base">
-            {currentLang === 'es' ? 'Solicitar Mastering' : 'Request Mastering'}
+          <div className="whitespace-pre-line mb-4 text-base sm:text-lg leading-relaxed">
+            {data.cta.message}
+          </div>
+          <button 
+            onClick={() => {
+              // TODO: Integrate with your contact/booking system
+              // For now, opens email with pre-filled subject
+              const subject = encodeURIComponent(
+                `${data.cta.button} - ${data.filename || 'Mi canción'}`
+              )
+              window.location.href = `mailto:info@masteringready.com?subject=${subject}`
+            }}
+            className="bg-white text-purple-600 px-4 sm:px-6 py-3 rounded-lg 
+                       font-semibold hover:bg-gray-100 transition text-sm sm:text-base"
+          >
+            {data.cta.button}
           </button>
         </div>
       )}
