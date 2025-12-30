@@ -466,11 +466,16 @@ async def start_analysis(
                 async with jobs_lock:
                     jobs[job_id]['status'] = 'complete'
                     jobs[job_id]['progress'] = 100
+                    
+                    # DEBUG: Log CTA data
+                    cta_data = result.get("cta", {})
+                    logger.info(f"🔍 [{job_id}] CTA data: {cta_data}")
+                    
                     jobs[job_id]['result'] = {
                         "success": True,
                         "score": result["score"],
                         "verdict": result["verdict"],
-                        "cta": result.get("cta", {}),  # Add CTA from analyzer
+                        "cta": cta_data,  # Add CTA from analyzer
                         "report": report,
                         "report_visual": report_visual,  # NEW: Bullets mode
                         "report_short": report_short,     # Summary mode
