@@ -470,6 +470,7 @@ async def start_analysis(
                         "success": True,
                         "score": result["score"],
                         "verdict": result["verdict"],
+                        "cta": result.get("cta", {}),  # Add CTA from analyzer
                         "report": report,
                         "report_visual": report_visual,  # NEW: Bullets mode
                         "report_short": report_short,     # Summary mode
