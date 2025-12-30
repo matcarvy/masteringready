@@ -14,8 +14,10 @@ export default function Results({ data, onReset, lang: parentLang }: ResultsProp
   const currentLang = parentLang || data.lang || 'es'
 
   // DEBUG: Log the entire data object to see CTA
-  console.log('🔍 Results component data:', data)
-  console.log('🔍 CTA from data:', data.cta)
+  console.log('🔍 Results component received data:', data)
+  console.log('🔍 CTA data:', data.cta)
+  console.log('🔍 CTA message:', data.cta?.message)
+  console.log('🔍 CTA button:', data.cta?.button)
 
   const handleDownload = (mode: 'visual' | 'short' | 'write' | 'complete') => {
     let content = ''
@@ -26,7 +28,11 @@ export default function Results({ data, onReset, lang: parentLang }: ResultsProp
       content = generateCompleteReport(data, currentLang)
       filename = `masteringready-complete-${data.filename || 'analisis'}-${Date.now()}.txt`
     } else {
-      content = data.reports?.[mode] || data.report
+      content = data.report_visual || data.report_short || data.report_write || data.report || ''
+      if (mode === 'visual') content = data.report_visual || data.report || ''
+      if (mode === 'short') content = data.report_short || data.report || ''
+      if (mode === 'write') content = data.report_write || data.report || ''
+      
       filename = `masteringready-${mode}-${data.filename || 'analisis'}-${Date.now()}.txt`
     }
     
@@ -55,36 +61,42 @@ export default function Results({ data, onReset, lang: parentLang }: ResultsProp
   const getMainMetrics = () => {
     if (!data.metrics) return []
     
+    // Extract key metrics from the metrics array
+    const metricsMap: any = {}
+    data.metrics.forEach((m: any) => {
+      metricsMap[m.internal_key] = m.value
+    })
+    
     return [
       { 
         label: 'Headroom', 
-        value: data.metrics.headroom || 'N/A',
-        unit: 'dBFS'
+        value: metricsMap['Headroom'] || 'N/A',
+        unit: ''
       },
       { 
         label: 'True Peak', 
-        value: data.metrics.true_peak || 'N/A',
-        unit: 'dBTP'
-      },
-      { 
-        label: currentLang === 'es' ? 'Balance Estéreo' : 'Stereo Balance', 
-        value: data.metrics.correlation || 'N/A',
+        value: metricsMap['True Peak'] || 'N/A',
         unit: ''
       },
       { 
         label: 'LUFS', 
-        value: data.metrics.lufs || 'N/A',
-        unit: 'LUFS'
+        value: metricsMap['LUFS (Integrated)'] || 'N/A',
+        unit: ''
       },
       { 
         label: 'PLR', 
-        value: data.metrics.plr || 'N/A',
-        unit: 'dB'
+        value: metricsMap['PLR'] || 'N/A',
+        unit: ''
       },
       { 
-        label: currentLang === 'es' ? 'Correlación' : 'Correlation', 
-        value: data.metrics.stereo_width || 'N/A',
-        unit: '%'
+        label: currentLang === 'es' ? 'Campo Estéreo' : 'Stereo Width', 
+        value: metricsMap['Stereo Width'] || 'N/A',
+        unit: ''
+      },
+      { 
+        label: currentLang === 'es' ? 'Balance Frecuencial' : 'Frequency Balance', 
+        value: metricsMap['Frequency Balance'] || 'N/A',
+        unit: ''
       }
     ]
   }
@@ -164,8 +176,8 @@ export default function Results({ data, onReset, lang: parentLang }: ResultsProp
                   <div className="flex items-center gap-2 mb-1 sm:mb-2">
                     <span className="text-xs sm:text-sm font-medium text-gray-700">{metric.label}</span>
                   </div>
-                  <div className="text-xl sm:text-2xl font-bold text-purple-700">
-                    {metric.value}{metric.unit && ` ${metric.unit}`}
+                  <div className="text-sm sm:text-base font-bold text-purple-700 break-words">
+                    {metric.value}
                   </div>
                 </div>
               ))}
@@ -177,7 +189,7 @@ export default function Results({ data, onReset, lang: parentLang }: ResultsProp
         {(activeTab === 'short' || activeTab === 'write') && (
           <div className="bg-gray-50 rounded-lg p-3 sm:p-6">
             <pre className="whitespace-pre-wrap text-xs sm:text-sm leading-relaxed font-sans overflow-x-auto">
-              {data.reports?.[activeTab] || data.report}
+              {activeTab === 'short' ? data.report_short : data.report_write}
             </pre>
           </div>
         )}
@@ -213,9 +225,11 @@ export default function Results({ data, onReset, lang: parentLang }: ResultsProp
 
       {/* CTA for Mastering Service - Dynamic from backend with better mobile spacing */}
       {data.cta && data.cta.message && data.cta.button && (
-        <div className="bg-gradient-purple text-white rounded-lg p-4 sm:p-6 shadow-lg">
+        <div className="bg-gradient-to-br from-purple-600 to-indigo-700 text-white rounded-lg p-4 sm:p-6 shadow-xl">
           <div className="flex items-start gap-3 sm:gap-4 mb-3 sm:mb-4">
-            <span className="text-2xl sm:text-3xl">🎧</span>
+            <span className="text-2xl sm:text-3xl flex-shrink-0">
+              {data.cta.action === 'mastering' ? '🎧' : '🔧'}
+            </span>
             <div className="flex-1">
               <div className="whitespace-pre-line text-sm sm:text-lg leading-relaxed">
                 {data.cta.message}
@@ -225,11 +239,11 @@ export default function Results({ data, onReset, lang: parentLang }: ResultsProp
           <button 
             onClick={() => {
               // TODO: Integrate with your contact/booking system
-              // For now, opens email with pre-filled subject
-              const subject = encodeURIComponent(
-                `${data.cta.button} - ${data.filename || 'Mi canción'}`
+              // For now, opens WhatsApp with pre-filled message
+              const message = encodeURIComponent(
+                `Hola! Me gustaría solicitar: ${data.cta.button}\n\nArchivo: ${data.filename || 'Mi canción'}\nPuntuación: ${data.score}/100`
               )
-              window.location.href = `mailto:info@masteringready.com?subject=${subject}`
+              window.open(`https://wa.me/573155576115?text=${message}`, '_blank')
             }}
             className="w-full sm:w-auto bg-white text-purple-600 px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg 
                        font-semibold hover:bg-gray-100 transition text-sm sm:text-base shadow-md"
@@ -239,10 +253,20 @@ export default function Results({ data, onReset, lang: parentLang }: ResultsProp
         </div>
       )}
 
-      {/* DEBUG: Show if CTA exists but isn't rendering */}
-      {!data.cta?.message && (
+      {/* DEBUG: Show if CTA data exists but conditions aren't met */}
+      {data.cta && (!data.cta.message || !data.cta.button) && (
         <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-lg p-3 text-xs">
-          🔍 Debug: CTA not found in data. Check console logs.
+          🔍 Debug: CTA exists but message or button is missing<br/>
+          Message: {data.cta.message ? '✓' : '✗'}<br/>
+          Button: {data.cta.button ? '✓' : '✗'}<br/>
+          Action: {data.cta.action || 'none'}
+        </div>
+      )}
+
+      {/* DEBUG: Show if no CTA at all */}
+      {!data.cta && (
+        <div className="bg-red-50 border border-red-200 text-red-800 rounded-lg p-3 text-xs">
+          🔍 Debug: No CTA object found in data. Check console logs for full data structure.
         </div>
       )}
     </div>
@@ -251,8 +275,6 @@ export default function Results({ data, onReset, lang: parentLang }: ResultsProp
 
 // Helper function to generate complete report
 function generateCompleteReport(data: any, lang: string): string {
-  const reports = data.reports || {}
-  
   let complete = ''
   complete += '╔═══════════════════════════════════════════════════════╗\n'
   complete += '   MASTERINGREADY - ' + (lang === 'es' ? 'Reporte Completo' : 'Complete Report') + '\n'
@@ -266,22 +288,22 @@ function generateCompleteReport(data: any, lang: string): string {
   complete += `${lang === 'es' ? 'Veredicto' : 'Verdict'}: ${data.verdict}\n\n`
   
   // Add all three modes
-  if (reports.visual) {
+  if (data.report_visual) {
     complete += '\n' + (lang === 'es' ? 'ANÁLISIS RÁPIDO' : 'QUICK ANALYSIS') + '\n'
     complete += '╔═══════════════════════════════════════════════════════╗\n'
-    complete += reports.visual + '\n\n'
+    complete += data.report_visual + '\n\n'
   }
   
-  if (reports.short) {
+  if (data.report_short) {
     complete += '\n' + (lang === 'es' ? 'ANÁLISIS RESUMEN' : 'SUMMARY ANALYSIS') + '\n'
     complete += '╔═══════════════════════════════════════════════════════╗\n'
-    complete += reports.short + '\n\n'
+    complete += data.report_short + '\n\n'
   }
   
-  if (reports.write) {
+  if (data.report_write) {
     complete += '\n' + (lang === 'es' ? 'ANÁLISIS COMPLETO' : 'COMPLETE ANALYSIS') + '\n'
     complete += '╔═══════════════════════════════════════════════════════╗\n'
-    complete += reports.write + '\n\n'
+    complete += data.report_write + '\n\n'
   }
   
   complete += '─────────────────────────────────────────────────────────\n'
