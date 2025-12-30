@@ -4304,10 +4304,11 @@ def generate_short_mode_report(report: Dict[str, Any], strict: bool = False, lan
         else:
             recommendation = "💡 Recomendación: Requiere trabajo significativo antes de mastering."
         
-        # Generate CTA
-        cta = generate_cta(score, strict, lang, mode="short")
+        # Generate CTA - modo short nunca muestra CTA, solo lo agregamos al resultado
+        cta_data = generate_cta(score, strict, lang, mode="short")
+        cta_message = ""  # Short mode doesn't show CTA in text
         
-        return header + body + recommendation + "\n\n" + cta
+        return header + body + recommendation + cta_message
     
     else:  # English
         header = ""
@@ -4339,10 +4340,11 @@ def generate_short_mode_report(report: Dict[str, Any], strict: bool = False, lan
         else:
             recommendation = "💡 Recommendation: Requires significant work before mastering."
         
-        # Generate CTA
-        cta = generate_cta(score, strict, lang, mode="short")
+        # Generate CTA - modo short nunca muestra CTA, solo lo agregamos al resultado
+        cta_data = generate_cta(score, strict, lang, mode="short")
+        cta_message = ""  # Short mode doesn't show CTA in text
         
-        return header + body + recommendation + "\n\n" + cta
+        return header + body + recommendation + cta_message
 
 
 # =============================================================================
@@ -5003,9 +5005,10 @@ def main() -> None:
                     for rec in recs:
                         print(f"  {rec}")
                 
-                # Add CTA for normal mixes
-                cta = generate_cta(score, args.strict, lang, mode="short")
-                print(cta)
+                # Add CTA for normal mixes (CLI doesn't show CTA, only for web)
+                cta_data = generate_cta(score, args.strict, lang, mode="short")
+                if cta_data and cta_data.get('message'):
+                    print(f"\n{cta_data['message']}")
             
             print()
             continue  # Skip JSON output
