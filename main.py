@@ -202,10 +202,15 @@ async def analyze_mix_endpoint(
             else:
                 report = report_write
             
+            # Get CTA data from result
+            cta_data = result.get("cta", {})
+            logger.info(f"🔍 CTA data from analyzer: {cta_data}")
+            
             return {
                 "success": True,
                 "score": result["score"],
                 "verdict": result["verdict"],
+                "cta": cta_data,  # Add CTA to response
                 "report": report,  # Primary report (for backward compat)
                 "report_short": report_short,  # NUEVO: Always included
                 "report_write": report_write,  # NUEVO: Always included
