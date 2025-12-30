@@ -1557,50 +1557,7 @@ by Matías Carvajal
                 </div>
               </div>
 
-              {/* CTA Mastering - FIRST */}
-              {result.score >= 60 && (
-                <div style={{
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  color: 'white',
-                  borderRadius: '1rem',
-                  padding: '2rem',
-                  marginBottom: '1.5rem'
-                }}>
-                  <h3 style={{ fontSize: '1.5rem', fontWeight: '600', marginBottom: '0.75rem' }}>
-                    🎧 {lang === 'es' 
-                      ? '¿Te gustaría que mastericemos esta canción?'
-                      : 'Would you like us to master this song?'}
-                  </h3>
-                  <p style={{ marginBottom: '1rem', color: '#e9d5ff' }}>
-                    {lang === 'es'
-                      ? 'Tu mezcla está en buen punto. Trabajemos juntos en el mastering.'
-                      : 'Your mix is in good shape. Let\'s work together on mastering.'}
-                  </p>
-                  <button 
-                    onClick={() => setShowContactModal(true)}
-                    style={{
-                      background: 'white',
-                      color: '#667eea',
-                      padding: '0.75rem 2rem',
-                      borderRadius: '9999px',
-                      fontWeight: '600',
-                      border: 'none',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = 'scale(1.05)'
-                      e.currentTarget.style.background = '#f3f4f6'
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = 'scale(1)'
-                      e.currentTarget.style.background = 'white'
-                    }}
-                  >
-                    {lang === 'es' ? 'Solicitar Mastering' : 'Request Mastering'}
-                  </button>
-                </div>
-              )}
+              {/* CTA removed - now handled by Results component with dynamic backend data */}
 
               {/* Feedback Button - SECOND */}
               {!feedbackSubmitted && (
