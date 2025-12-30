@@ -538,21 +538,39 @@ async def get_analysis_status(job_id: str):
         )
     
     async with jobs_lock:
-        job = jobs[job_id].copy()  # Copy to avoid lock issues
+        job = jobs[job_id]
+        
+        response = {
+            "job_id": job_id,
+            "status": job['status'],
+            "progress": job['progress'],
+            "filename": job['filename']
+        }
+        
+        if job['status'] == 'complete':
+            # Explicitly serialize the result to ensure CTA is included
+            result = job['result']
+            response['result'] = {
+                "success": result.get("success", True),
+                "score": result.get("score"),
+                "verdict": result.get("verdict"),
+                "cta": result.get("cta", {}),  # Explicitly include CTA
+                "report": result.get("report"),
+                "report_visual": result.get("report_visual"),
+                "report_short": result.get("report_short"),
+                "report_write": result.get("report_write"),
+                "metrics": result.get("metrics", []),
+                "filename": result.get("filename"),
+                "mode": result.get("mode"),
+                "lang": result.get("lang"),
+                "strict": result.get("strict"),
+                "privacy_note": result.get("privacy_note"),
+                "methodology": result.get("methodology")
+            }
+        elif job['status'] == 'error':
+            response['error'] = job['error']
     
-    response = {
-        "job_id": job_id,
-        "status": job['status'],
-        "progress": job['progress'],
-        "filename": job['filename']
-    }
-    
-    if job['status'] == 'complete':
-        response['result'] = job['result']
-    elif job['status'] == 'error':
-        response['error'] = job['error']
-    
-    return response
+    return JSONResponse(content=response)
 
 
 @app.post("/api/download/pdf")
