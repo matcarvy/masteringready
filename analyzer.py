@@ -2106,6 +2106,9 @@ def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, s
     # Clipping detection
     hard_fail = bool(clipping) or bool(tp_hard)
     score, verdict = score_report(metrics, hard_fail, strict, lang)  # ← FIXED: Added strict and lang
+    
+    # Generate CTA for frontend
+    cta_data = generate_cta(score, strict, lang, mode="write")
 
     return {
         "file": {
@@ -2118,6 +2121,7 @@ def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, s
         "metrics": metrics,
         "score": score,
         "verdict": verdict,
+        "cta": cta_data,  # Add CTA data for frontend
         "notes": {
             "lufs_is_real": has_real_lufs,
             "lufs_reliable": lufs_reliable,
@@ -2192,95 +2196,197 @@ def generate_recommendations(metrics: List[Dict[str, Any]], score: int, genre: O
 
 
 
-def generate_cta(score: int, strict: bool, lang: str, mode: str = "write") -> str:
+def generate_cta(score: int, strict: bool, lang: str, mode: str = "write") -> Dict[str, str]:
     """
-    Generate conversational CTA based on mix score and mode.
+    Generate conversational CTA with button text based on mix score.
     
-    CRITICAL:
-    - Short mode: NO CTA (returns empty string)
-    - Write mode score ≥85: NO CTA (mix is ready)
-    - Write mode score <85: CTA with next steps
+    Returns:
+        dict: {"message": "CTA text", "button": "Button text", "action": "mastering|preparation|review"}
+    
+    Score ranges:
+    - 95-100: Perfect - offer mastering
+    - 85-94: Ready - offer mastering
+    - 75-84: Acceptable - offer preparation
+    - 60-74: Minor adjustments - offer adjustments
+    - 40-59: Significant work - offer review
+    - 20-39: Urgent correction - offer review
+    - 0-19: Critical - offer project review
     """
     # SHORT MODE: Never show CTA
     if mode == "short":
-        return ""
+        return {"message": "", "button": "", "action": ""}
     
-    # WRITE MODE: Only show CTA if score <85
     if lang == 'es':
-        # Spanish CTAs
-        if score >= 85:
-            # Mix is ready - no CTA needed
-            return ""
+        # Spanish CTAs - Español Colombiano
+        if score >= 95:
+            # Perfect for mastering
+            return {
+                "message": (
+                    "🎧 ¿Quieres darle el toque final?\n"
+                    "Tu mezcla está bien balanceada. Puedo masterizarla para que suene coherente "
+                    "y competitiva en plataformas de streaming."
+                ),
+                "button": "Masterizar mi canción",
+                "action": "mastering"
+            }
+        
+        elif score >= 85:
+            # Ready for mastering
+            return {
+                "message": (
+                    "🎧 ¿Quieres que masterice tu canción?\n"
+                    "Tu mezcla está bien preparada. Puedo trabajar con libertad para que suene "
+                    "coherente y competitiva en plataformas de streaming."
+                ),
+                "button": "Masterizar mi canción",
+                "action": "mastering"
+            }
+        
+        elif score >= 75:
+            # Acceptable - needs minor tweaks before mastering
+            return {
+                "message": (
+                    "🔧 ¿Necesitas ajustar algunos detalles antes del mastering?\n"
+                    "Tu mezcla está cerca, pero hay algunos puntos técnicos por revisar. "
+                    "Puedo ayudarte a prepararla correctamente, y luego hablamos del mastering."
+                ),
+                "button": "Preparar mi mezcla",
+                "action": "preparation"
+            }
         
         elif score >= 60:
-            # Mix needs adjustments
-            return (
-                "\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-                "🔧 SIGUIENTES PASOS\n"
-                "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
-                "Esta mezcla necesita algunos ajustes antes de estar lista para mastering.\n\n"
-                "Tienes dos caminos claros:\n\n"
-                "1️⃣ Puedes hacer los ajustes recomendados en tu sesión, re-exportar la mezcla "
-                "y volver a analizarla aquí para confirmar que ya está lista.\n\n"
-                "2️⃣ Si prefieres, puedes compartirme los archivos de tu sesión y con gusto hago "
-                "los ajustes necesarios para dejarla lista, y luego la masterizamos.\n\n"
-                "La idea es que llegue al mastering con el espacio correcto para trabajar fino "
-                "y que la música respire."
-            )
+            # Minor adjustments needed
+            return {
+                "message": (
+                    "🔧 ¿Te ayudo a preparar tu mezcla?\n"
+                    "Hay varios aspectos técnicos por ajustar antes del mastering. "
+                    "Puedo revisar tu sesión y hacer los cambios necesarios para dejarla lista."
+                ),
+                "button": "Realizar mis ajustes",
+                "action": "preparation"
+            }
+        
+        elif score >= 40:
+            # Significant work needed
+            return {
+                "message": (
+                    "🔧 ¿Revisamos tu mezcla juntos?\n"
+                    "El mastering no es una varita mágica - tu mezcla necesita trabajo técnico primero. "
+                    "Puedo ayudarte a corregir los problemas desde la sesión."
+                ),
+                "button": "Revisar mi mezcla",
+                "action": "review"
+            }
+        
+        elif score >= 20:
+            # Urgent correction required
+            return {
+                "message": (
+                    "🔧 ¿Necesitas ayuda con tu sesión de mezcla?\n"
+                    "Tu mezcla requiere atención en varios aspectos técnicos. "
+                    "Puedo revisar tu proyecto y trabajar contigo para resolver los problemas detectados."
+                ),
+                "button": "Revisar mi mezcla",
+                "action": "review"
+            }
         
         else:
-            # Mix requires significant work
-            return (
-                "\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-                "🔧 SIGUIENTES PASOS\n"
-                "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
-                "Esta mezcla necesita atención en varios aspectos técnicos antes del mastering.\n\n"
-                "Tienes dos caminos claros:\n\n"
-                "1️⃣ Puedes hacer los ajustes recomendados en tu sesión, re-exportar la mezcla "
-                "y volver a analizarla aquí para confirmar que ya está lista.\n\n"
-                "2️⃣ Si prefieres, puedes compartirme los archivos de tu sesión y con gusto hago "
-                "los ajustes necesarios para dejarla lista, y luego la masterizamos.\n\n"
-                "La idea es que llegue al mastering con el espacio correcto para trabajar fino "
-                "y que la música respire."
-            )
+            # Critical - multiple issues
+            return {
+                "message": (
+                    "🔧 ¿Hablamos de tu proyecto?\n"
+                    "Detecté varios problemas críticos que necesitan resolverse en la etapa de mezcla. "
+                    "Puedo ayudarte a corregirlos paso a paso."
+                ),
+                "button": "Revisar mi proyecto",
+                "action": "review"
+            }
     
     else:
-        # English CTAs
-        if score >= 85:
-            # Mix is ready - no CTA needed
-            return ""
+        # English CTAs - American English
+        if score >= 95:
+            # Perfect for mastering
+            return {
+                "message": (
+                    "🎧 Ready for the final touch?\n"
+                    "Your mix is well balanced. I can master it to sound coherent and competitive "
+                    "on streaming platforms."
+                ),
+                "button": "Master my song",
+                "action": "mastering"
+            }
+        
+        elif score >= 85:
+            # Ready for mastering
+            return {
+                "message": (
+                    "🎧 Want me to master your song?\n"
+                    "Your mix is well prepared. I can work freely to make it sound coherent and "
+                    "competitive on streaming platforms."
+                ),
+                "button": "Master my song",
+                "action": "mastering"
+            }
+        
+        elif score >= 75:
+            # Acceptable - needs minor tweaks before mastering
+            return {
+                "message": (
+                    "🔧 Need to adjust some details before mastering?\n"
+                    "Your mix is close, but there are some technical points to review. "
+                    "I can help you prepare it correctly, then we'll talk about mastering."
+                ),
+                "button": "Prepare my mix",
+                "action": "preparation"
+            }
         
         elif score >= 60:
-            # Mix needs adjustments
-            return (
-                "\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-                "🔧 NEXT STEPS\n"
-                "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
-                "This mix needs a few adjustments before it's truly mastering-ready.\n\n"
-                "You have two clear options:\n\n"
-                "1️⃣ Apply the recommended tweaks in your session, re-export the mix, and "
-                "re-run the analysis to confirm it's ready.\n\n"
-                "2️⃣ If you prefer, you can share your session files and I'll help make the "
-                "necessary adjustments to get it ready, then we can move on to mastering.\n\n"
-                "The goal is for the mix to arrive with proper space so the mastering can be "
-                "done with finesse and musicality."
-            )
+            # Minor adjustments needed
+            return {
+                "message": (
+                    "🔧 Need help preparing your mix?\n"
+                    "There are several technical aspects to adjust before mastering. "
+                    "I can review your session and make the necessary changes to get it ready."
+                ),
+                "button": "Make my adjustments",
+                "action": "preparation"
+            }
+        
+        elif score >= 40:
+            # Significant work needed
+            return {
+                "message": (
+                    "🔧 Let's review your mix together?\n"
+                    "Mastering isn't a magic wand - your mix needs technical work first. "
+                    "I can help you fix the issues from the session."
+                ),
+                "button": "Review my mix",
+                "action": "review"
+            }
+        
+        elif score >= 20:
+            # Urgent correction required
+            return {
+                "message": (
+                    "🔧 Need help with your mix session?\n"
+                    "Your mix requires attention to several technical aspects. "
+                    "I can review your project and work with you to solve the detected issues."
+                ),
+                "button": "Review my mix",
+                "action": "review"
+            }
         
         else:
-            # Mix requires significant work
-            return (
-                "\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-                "🔧 NEXT STEPS\n"
-                "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
-                "This mix requires attention to several technical aspects before mastering.\n\n"
-                "You have two clear options:\n\n"
-                "1️⃣ Apply the recommended tweaks in your session, re-export the mix, and "
-                "re-run the analysis to confirm it's ready.\n\n"
-                "2️⃣ If you prefer, you can share your session files and I'll help make the "
-                "necessary adjustments to get it ready, then we can move on to mastering.\n\n"
-                "The goal is for the mix to arrive with proper space so the mastering can be "
-                "done with finesse and musicality."
-            )
+            # Critical - multiple issues
+            return {
+                "message": (
+                    "🔧 Let's talk about your project?\n"
+                    "I detected several critical issues that need to be resolved in the mixing stage. "
+                    "I can help you fix them step by step."
+                ),
+                "button": "Review my project",
+                "action": "review"
+            }
 
 
 def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
@@ -3182,6 +3288,9 @@ def analyze_file_chunked(
     from analyzer import score_report
     score, verdict = score_report(metrics, hard_fail, strict, lang)
     
+    # Generate CTA for frontend
+    cta_data = generate_cta(score, strict, lang, mode="write")
+    
     # Build full result using the same structure as analyze_file
     result = {
         "file": {
@@ -3205,6 +3314,7 @@ def analyze_file_chunked(
         "verdict": verdict,
         "territory": territory,
         "is_mastered": is_mastered,
+        "cta": cta_data,  # Add CTA data for frontend
         "chunked": True,
         "num_chunks": num_chunks,
         "notes": {
@@ -3888,9 +3998,10 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
         filename_ref = f"🎵 Sobre \"{filename}\"\n\n"
         
         # Generate CTA based on score
-        cta = generate_cta(score, strict, lang, mode="write")
+        cta_data = generate_cta(score, strict, lang, mode="write")
+        cta_message = f"\n\n{cta_data['message']}" if cta_data['message'] else ""
         
-        return f"{filename_ref}{intro}\n\n{tech_sentence}{issues_sentence}{stereo_detail}{tech_details}{recommendation}{mode_note}{cta}"
+        return f"{filename_ref}{intro}\n\n{tech_sentence}{issues_sentence}{stereo_detail}{tech_details}{recommendation}{mode_note}{cta_message}"
     
     else:
         # English narrative
@@ -4109,9 +4220,10 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
         filename_ref = f"🎵 Regarding \"{filename}\"\n\n"
         
         # Generate CTA based on score
-        cta = generate_cta(score, strict, lang, mode="write")
+        cta_data = generate_cta(score, strict, lang, mode="write")
+        cta_message = f"\n\n{cta_data['message']}" if cta_data['message'] else ""
         
-        return f"{filename_ref}{intro}\n\n{tech_sentence}{issues_sentence}{stereo_detail}{tech_details}{recommendation}{mode_note}{cta}"
+        return f"{filename_ref}{intro}\n\n{tech_sentence}{issues_sentence}{stereo_detail}{tech_details}{recommendation}{mode_note}{cta_message}"
 
 
 def iter_audio_files(p: Path) -> List[Path]:
@@ -4608,10 +4720,17 @@ def generate_complete_pdf(
                 for line in text.split('\n'):
                     line_stripped = line.strip()
                     if line_stripped:
+                        # DEBUG: Check if line starts with number
+                        if line_stripped and line_stripped[0].isdigit():
+                            print(f"   📌 Line starts with digit: {repr(line_stripped[:50])}", flush=True)
+                            sys.stdout.flush()
+                        
                         try:
                             story.append(Paragraph(line_stripped, body_style))
-                        except:
+                        except Exception as e:
                             # Fallback for problematic characters
+                            print(f"   ⚠️  Paragraph creation failed: {repr(line_stripped[:50])} - Error: {e}", flush=True)
+                            sys.stdout.flush()
                             clean_line = line_stripped.encode('ascii', 'ignore').decode('ascii')
                             if clean_line.strip():
                                 story.append(Paragraph(clean_line, body_style))
