@@ -202,15 +202,10 @@ async def analyze_mix_endpoint(
             else:
                 report = report_write
             
-            # Get CTA data from result
-            cta_data = result.get("cta", {})
-            logger.info(f"🔍 CTA data from analyzer: {cta_data}")
-            
             return {
                 "success": True,
                 "score": result["score"],
                 "verdict": result["verdict"],
-                "cta": cta_data,  # Add CTA to response
                 "report": report,  # Primary report (for backward compat)
                 "report_short": report_short,  # NUEVO: Always included
                 "report_write": report_write,  # NUEVO: Always included
@@ -476,11 +471,21 @@ async def start_analysis(
                     cta_data = result.get("cta", {})
                     logger.info(f"🔍 [{job_id}] CTA data: {cta_data}")
                     
+                    # Ensure CTA is properly serialized as a dict
+                    cta_dict = {}
+                    if cta_data:
+                        cta_dict = {
+                            "message": cta_data.get("message", ""),
+                            "button": cta_data.get("button", ""),
+                            "action": cta_data.get("action", "")
+                        }
+                        logger.info(f"🔍 [{job_id}] CTA dict: {cta_dict}")
+                    
                     jobs[job_id]['result'] = {
                         "success": True,
                         "score": result["score"],
                         "verdict": result["verdict"],
-                        "cta": cta_data,  # Add CTA from analyzer
+                        "cta": cta_dict,  # Use explicitly created dict
                         "report": report,
                         "report_visual": report_visual,  # NEW: Bullets mode
                         "report_short": report_short,     # Summary mode
