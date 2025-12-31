@@ -13,27 +13,18 @@ export default function Results({ data, onReset, lang: parentLang }: ResultsProp
   const [activeTab, setActiveTab] = useState<'visual' | 'short' | 'write'>('visual')
   const currentLang = parentLang || data.lang || 'es'
 
-  // 🔍 DEBUG: Log CTA data
-  console.log('🔍 CTA Check:', {
-    cta_message: data.cta_message,
-    cta_button: data.cta_button,
-    cta_action: data.cta_action,
-    hasCTA: !!(data.cta_message && data.cta_button),
-    fullData: data
-  })
-
   const handleDownload = (mode: 'visual' | 'short' | 'write' | 'complete') => {
     let content = ''
     let filename = ''
     
     if (mode === 'complete') {
+      // Complete report with everything
       content = generateCompleteReport(data, currentLang)
       filename = `masteringready-complete-${data.filename || 'analisis'}-${Date.now()}.txt`
     } else {
       if (mode === 'visual') content = data.report_visual || data.report || ''
       if (mode === 'short') content = data.report_short || data.report || ''
       if (mode === 'write') content = data.report_write || data.report || ''
-      
       filename = `masteringready-${mode}-${data.filename || 'analisis'}-${Date.now()}.txt`
     }
     
@@ -58,10 +49,11 @@ export default function Results({ data, onReset, lang: parentLang }: ResultsProp
     return 'bg-red-50 border-red-200'
   }
 
-  // Get main metrics for visual mode from metrics array
+  // Get main metrics for visual mode
   const getMainMetrics = () => {
     if (!data.metrics || !Array.isArray(data.metrics)) return []
     
+    // Extract metrics from array
     const metricsMap: any = {}
     data.metrics.forEach((m: any) => {
       if (m && m.internal_key) {
@@ -70,26 +62,50 @@ export default function Results({ data, onReset, lang: parentLang }: ResultsProp
     })
     
     return [
-      { label: 'Headroom', value: metricsMap['Headroom'] || 'N/A' },
-      { label: 'True Peak', value: metricsMap['True Peak'] || 'N/A' },
-      { label: 'LUFS', value: metricsMap['LUFS (Integrated)'] || 'N/A' },
-      { label: 'PLR', value: metricsMap['PLR'] || 'N/A' },
-      { label: currentLang === 'es' ? 'Campo Estéreo' : 'Stereo Width', value: metricsMap['Stereo Width'] || 'N/A' },
-      { label: currentLang === 'es' ? 'Balance Frecuencial' : 'Frequency Balance', value: metricsMap['Frequency Balance'] || 'N/A' }
+      { 
+        label: 'Headroom', 
+        value: metricsMap['Headroom'] || 'N/A',
+        unit: ''
+      },
+      { 
+        label: 'True Peak', 
+        value: metricsMap['True Peak'] || 'N/A',
+        unit: ''
+      },
+      { 
+        label: currentLang === 'es' ? 'Balance Estéreo' : 'Stereo Balance', 
+        value: metricsMap['Stereo Width'] || 'N/A',
+        unit: ''
+      },
+      { 
+        label: 'LUFS', 
+        value: metricsMap['LUFS (Integrated)'] || 'N/A',
+        unit: ''
+      },
+      { 
+        label: 'PLR', 
+        value: metricsMap['PLR'] || 'N/A',
+        unit: ''
+      },
+      { 
+        label: currentLang === 'es' ? 'Balance Frecuencial' : 'Frequency Balance', 
+        value: metricsMap['Frequency Balance'] || 'N/A',
+        unit: ''
+      }
     ]
   }
 
   const tabLabels = {
-    visual: currentLang === 'es' ? '⚡ Rápido' : '⚡ Quick',
-    short: currentLang === 'es' ? '📝 Resumen' : '📝 Summary',
-    write: currentLang === 'es' ? '📄 Completo' : '📄 Complete'
+    visual: currentLang === 'es' ? 'Rápido' : 'Quick',
+    short: currentLang === 'es' ? 'Resumen' : 'Summary',
+    write: currentLang === 'es' ? 'Completo' : 'Complete'
   }
 
   return (
     <div className="mt-8 space-y-6" id="analysis-results">
-      <div className="bg-white rounded-xl border shadow-xl p-6">
+      <div className="bg-white rounded-lg border shadow-lg p-4 sm:p-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-          <h2 className="text-2xl font-bold">
+          <h2 className="text-xl sm:text-2xl font-bold">
             {currentLang === 'es' ? 'Resultados del Análisis' : 'Analysis Results'}
           </h2>
           <button
@@ -100,38 +116,40 @@ export default function Results({ data, onReset, lang: parentLang }: ResultsProp
           </button>
         </div>
 
-        {/* Score Card */}
-        <div className={`rounded-xl border-2 p-6 mb-6 ${getScoreBg(data.score)}`}>
-          <div className="flex justify-between items-center mb-4">
-            <span className="text-lg font-medium text-gray-700">
-              {currentLang === 'es' ? 'Puntuación' : 'Score'}
-            </span>
-            <span className={`text-5xl font-bold ${getScoreColor(data.score)}`}>
-              {data.score}/100
-            </span>
+        {/* Score Card - Mobile Optimized */}
+        <div className={`rounded-lg border p-4 sm:p-6 mb-6 ${getScoreBg(data.score)}`}>
+          <div className="grid grid-cols-2 gap-4 items-center mb-4">
+            <div className="text-left">
+              <span className="text-gray-700 font-medium text-base sm:text-lg">
+                {currentLang === 'es' ? 'Puntuación' : 'Score'}
+              </span>
+            </div>
+            <div className="text-right">
+              <span className={`text-4xl sm:text-5xl font-bold ${getScoreColor(data.score)}`}>
+                {data.score}/100
+              </span>
+            </div>
           </div>
-          <div className="w-full bg-gray-200 rounded-full h-3 mb-4">
+          <div className="w-full bg-gray-200 rounded-full h-3 mb-3">
             <div 
-              className="bg-gradient-to-r from-purple-600 to-indigo-600 h-3 rounded-full transition-all duration-500" 
+              className="bg-gradient-purple h-3 rounded-full transition-all duration-500" 
               style={{ width: `${data.score}%` }}
             ></div>
           </div>
-          <p className="text-lg font-semibold flex items-center gap-2">
-            {data.verdict}
-          </p>
+          <p className="text-base sm:text-lg font-semibold">{data.verdict}</p>
         </div>
 
-        {/* Tabs */}
+        {/* Tabs - Mobile Responsive */}
         <div className="border-b border-gray-200 mb-6">
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2 sm:gap-0">
             {(['visual', 'short', 'write'] as const).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`px-6 py-3 font-medium transition rounded-t-lg text-sm sm:text-base
+                className={`px-4 sm:px-6 py-3 font-medium transition text-sm sm:text-base flex-1 sm:flex-initial
                   ${activeTab === tab
-                    ? 'bg-purple-50 border-b-2 border-purple-600 text-purple-600'
-                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                    ? 'border-b-2 border-purple-600 text-purple-600'
+                    : 'text-gray-500 hover:text-gray-700'
                   }`}
               >
                 {tabLabels[tab]}
@@ -140,18 +158,20 @@ export default function Results({ data, onReset, lang: parentLang }: ResultsProp
           </div>
         </div>
 
-        {/* Visual Mode */}
+        {/* Visual Mode - Main Metrics */}
         {activeTab === 'visual' && (
           <div className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {getMainMetrics().map((metric, i) => (
                 <div
                   key={i}
-                  className="p-4 bg-gradient-to-br from-purple-50 via-indigo-50 to-blue-50 rounded-xl border border-purple-100 shadow-sm"
+                  className="p-4 bg-gradient-to-br from-purple-50 to-indigo-50 rounded-lg border border-purple-100"
                 >
-                  <div className="text-sm font-medium text-gray-600 mb-2">{metric.label}</div>
-                  <div className="text-xl font-bold text-purple-700 break-words">
-                    {metric.value}
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-sm font-medium text-gray-700">{metric.label}</span>
+                  </div>
+                  <div className="text-2xl font-bold text-purple-700">
+                    {metric.value}{metric.unit && ` ${metric.unit}`}
                   </div>
                 </div>
               ))}
@@ -159,32 +179,32 @@ export default function Results({ data, onReset, lang: parentLang }: ResultsProp
           </div>
         )}
 
-        {/* Short/Write Mode */}
+        {/* Short/Write Mode - Report Text */}
         {(activeTab === 'short' || activeTab === 'write') && (
-          <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-6 border">
-            <pre className="whitespace-pre-wrap text-sm leading-relaxed font-sans">
+          <div className="bg-gray-50 rounded-lg p-4 sm:p-6">
+            <pre className="whitespace-pre-wrap text-xs sm:text-sm leading-relaxed font-sans overflow-x-auto">
               {activeTab === 'short' ? data.report_short : data.report_write}
             </pre>
           </div>
         )}
 
-        {/* Download Buttons */}
+        {/* Download Buttons - Mobile Optimized */}
         <div className="flex flex-col sm:flex-row gap-3 mt-6">
           <button
             onClick={() => handleDownload(activeTab)}
-            className="flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-6 py-3 
-                     rounded-xl font-semibold hover:shadow-lg hover:scale-105 transition-all"
+            className="flex items-center justify-center gap-2 bg-gradient-purple text-white px-4 sm:px-6 py-3 
+                     rounded-lg font-medium hover:opacity-90 transition text-sm sm:text-base"
           >
-            <Download className="w-5 h-5" />
-            {currentLang === 'es' ? `Descargar ${tabLabels[activeTab].replace(/[⚡📝📄] /, '')}` : `Download ${tabLabels[activeTab].replace(/[⚡📝📄] /, '')}`}
+            <Download className="w-4 h-4" />
+            {currentLang === 'es' ? `Descargar ${tabLabels[activeTab]}` : `Download ${tabLabels[activeTab]}`}
           </button>
           
           <button
             onClick={() => handleDownload('complete')}
             className="flex items-center justify-center gap-2 bg-white text-purple-600 border-2 border-purple-600 
-                     px-6 py-3 rounded-xl font-semibold hover:bg-purple-50 hover:shadow-lg transition-all"
+                     px-4 sm:px-6 py-3 rounded-lg font-medium hover:bg-purple-50 transition text-sm sm:text-base"
           >
-            <FileText className="w-5 h-5" />
+            <FileText className="w-4 h-4" />
             {currentLang === 'es' ? 'Análisis Detallado' : 'Detailed Analysis'}
           </button>
         </div>
@@ -197,17 +217,15 @@ export default function Results({ data, onReset, lang: parentLang }: ResultsProp
         )}
       </div>
 
-      {/* CTA - Beautiful gradient card */}
+      {/* CTA for Mastering Service - Dynamic from backend */}
       {data.cta_message && data.cta_button && (
-        <div className="bg-gradient-to-br from-purple-600 via-indigo-600 to-purple-700 text-white rounded-xl p-6 shadow-2xl border border-purple-400">
-          <div className="flex items-start gap-4 mb-4">
-            <div className="text-4xl">
+        <div className="bg-gradient-purple text-white rounded-lg p-4 sm:p-6">
+          <div className="flex items-start gap-3 mb-4">
+            <span className="text-2xl sm:text-3xl">
               {data.cta_action === 'mastering' ? '🎧' : '🔧'}
-            </div>
-            <div className="flex-1">
-              <div className="text-lg leading-relaxed whitespace-pre-line">
-                {data.cta_message}
-              </div>
+            </span>
+            <div className="flex-1 whitespace-pre-line text-base sm:text-lg leading-relaxed">
+              {data.cta_message}
             </div>
           </div>
           <button 
@@ -217,8 +235,8 @@ export default function Results({ data, onReset, lang: parentLang }: ResultsProp
               )
               window.open(`https://wa.me/573155576115?text=${message}`, '_blank')
             }}
-            className="w-full sm:w-auto bg-white text-purple-600 px-8 py-4 rounded-xl 
-                       font-bold hover:bg-gray-100 hover:shadow-xl transition-all text-lg"
+            className="bg-white text-purple-600 px-4 sm:px-6 py-3 rounded-lg 
+                       font-semibold hover:bg-gray-100 transition text-sm sm:text-base"
           >
             {data.cta_button}
           </button>
@@ -231,36 +249,37 @@ export default function Results({ data, onReset, lang: parentLang }: ResultsProp
 // Helper function to generate complete report
 function generateCompleteReport(data: any, lang: string): string {
   let complete = ''
-  complete += '╔═══════════════════════════════════════════════════════╗\n'
+  complete += '══════════════════════════════════════════════════\n'
   complete += '   MASTERINGREADY - ' + (lang === 'es' ? 'Reporte Completo' : 'Complete Report') + '\n'
-  complete += '╚═══════════════════════════════════════════════════════╝\n\n'
+  complete += '══════════════════════════════════════════════════\n\n'
   
   complete += (lang === 'es' ? 'INFORMACIÓN DEL ARCHIVO' : 'FILE INFORMATION') + '\n'
-  complete += '─────────────────────────────────────────────────────────\n'
+  complete += '──────────────────────────────────────────────────\n'
   complete += `${lang === 'es' ? 'Archivo' : 'File'}: ${data.filename || 'Unknown'}\n`
   complete += `${lang === 'es' ? 'Fecha' : 'Date'}: ${new Date().toLocaleDateString(lang)}\n`
   complete += `${lang === 'es' ? 'Puntuación' : 'Score'}: ${data.score}/100\n`
   complete += `${lang === 'es' ? 'Veredicto' : 'Verdict'}: ${data.verdict}\n\n`
   
+  // Add all three modes
   if (data.report_visual) {
     complete += '\n' + (lang === 'es' ? 'ANÁLISIS RÁPIDO' : 'QUICK ANALYSIS') + '\n'
-    complete += '╔═══════════════════════════════════════════════════════╗\n'
+    complete += '══════════════════════════════════════════════════\n'
     complete += data.report_visual + '\n\n'
   }
   
   if (data.report_short) {
     complete += '\n' + (lang === 'es' ? 'ANÁLISIS RESUMEN' : 'SUMMARY ANALYSIS') + '\n'
-    complete += '╔═══════════════════════════════════════════════════════╗\n'
+    complete += '══════════════════════════════════════════════════\n'
     complete += data.report_short + '\n\n'
   }
   
   if (data.report_write) {
     complete += '\n' + (lang === 'es' ? 'ANÁLISIS COMPLETO' : 'COMPLETE ANALYSIS') + '\n'
-    complete += '╔═══════════════════════════════════════════════════════╗\n'
+    complete += '══════════════════════════════════════════════════\n'
     complete += data.report_write + '\n\n'
   }
   
-  complete += '─────────────────────────────────────────────────────────\n'
+  complete += '──────────────────────────────────────────────────\n'
   complete += (lang === 'es' ? 'Analizado con' : 'Analyzed with') + ' MasteringReady\n'
   complete += 'www.masteringready.com\n'
   complete += 'by Matías Carvajal\n'
