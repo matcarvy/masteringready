@@ -467,29 +467,25 @@ async def start_analysis(
                     jobs[job_id]['status'] = 'complete'
                     jobs[job_id]['progress'] = 100
                     
-                    # Get CTA data
+                    # DEBUG: Log CTA data
                     cta_data = result.get("cta", {})
                     logger.info(f"🔍 [{job_id}] CTA data: {cta_data}")
                     
-                    # Extract CTA fields separately to avoid serialization issues
-                    cta_message = ""
-                    cta_button = ""
-                    cta_action = ""
-                    
-                    if cta_data and isinstance(cta_data, dict):
-                        cta_message = str(cta_data.get("message", ""))
-                        cta_button = str(cta_data.get("button", ""))
-                        cta_action = str(cta_data.get("action", ""))
-                        logger.info(f"🔍 [{job_id}] CTA fields - message: {len(cta_message)} chars, button: {cta_button}, action: {cta_action}")
+                    # Ensure CTA is properly serialized as a dict
+                    cta_dict = {}
+                    if cta_data:
+                        cta_dict = {
+                            "message": cta_data.get("message", ""),
+                            "button": cta_data.get("button", ""),
+                            "action": cta_data.get("action", "")
+                        }
+                        logger.info(f"🔍 [{job_id}] CTA dict: {cta_dict}")
                     
                     jobs[job_id]['result'] = {
                         "success": True,
                         "score": result["score"],
                         "verdict": result["verdict"],
-                        # Store CTA as separate fields instead of nested object
-                        "cta_message": cta_message,
-                        "cta_button": cta_button,
-                        "cta_action": cta_action,
+                        "cta": cta_dict,  # Use explicitly created dict
                         "report": report,
                         "report_visual": report_visual,  # NEW: Bullets mode
                         "report_short": report_short,     # Summary mode
@@ -542,21 +538,39 @@ async def get_analysis_status(job_id: str):
         )
     
     async with jobs_lock:
-        job = jobs[job_id].copy()  # Copy to avoid lock issues
+        job = jobs[job_id]
+        
+        response = {
+            "job_id": job_id,
+            "status": job['status'],
+            "progress": job['progress'],
+            "filename": job['filename']
+        }
+        
+        if job['status'] == 'complete':
+            # Explicitly serialize the result to ensure CTA is included
+            result = job['result']
+            response['result'] = {
+                "success": result.get("success", True),
+                "score": result.get("score"),
+                "verdict": result.get("verdict"),
+                "cta": result.get("cta", {}),  # Explicitly include CTA
+                "report": result.get("report"),
+                "report_visual": result.get("report_visual"),
+                "report_short": result.get("report_short"),
+                "report_write": result.get("report_write"),
+                "metrics": result.get("metrics", []),
+                "filename": result.get("filename"),
+                "mode": result.get("mode"),
+                "lang": result.get("lang"),
+                "strict": result.get("strict"),
+                "privacy_note": result.get("privacy_note"),
+                "methodology": result.get("methodology")
+            }
+        elif job['status'] == 'error':
+            response['error'] = job['error']
     
-    response = {
-        "job_id": job_id,
-        "status": job['status'],
-        "progress": job['progress'],
-        "filename": job['filename']
-    }
-    
-    if job['status'] == 'complete':
-        response['result'] = job['result']
-    elif job['status'] == 'error':
-        response['error'] = job['error']
-    
-    return response
+    return JSONResponse(content=response)
 
 
 @app.post("/api/download/pdf")
