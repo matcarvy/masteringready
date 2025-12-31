@@ -13,15 +13,6 @@ export default function Results({ data, onReset, lang: parentLang }: ResultsProp
   const [activeTab, setActiveTab] = useState<'visual' | 'short' | 'write'>('visual')
   const currentLang = parentLang || data.lang || 'es'
 
-  // 🔍 DEBUG: Log CTA data to see what we're receiving
-  console.log('🔍 CTA Check:', {
-    cta_message: data.cta_message,
-    cta_button: data.cta_button,
-    cta_action: data.cta_action,
-    hasCTA: !!(data.cta_message && data.cta_button),
-    fullData: data
-  })
-
   const handleDownload = (mode: 'visual' | 'short' | 'write' | 'complete') => {
     let content = ''
     let filename = ''
@@ -216,25 +207,28 @@ export default function Results({ data, onReset, lang: parentLang }: ResultsProp
         )}
       </div>
 
-      {/* CTA for Mastering Service - Dynamic from backend */}
-      {data.cta && data.cta.message && (
-        <div className="bg-gradient-purple text-white rounded-lg p-4 sm:p-6">
-          <div className="whitespace-pre-line mb-4 text-base sm:text-lg leading-relaxed">
-            {data.cta.message}
+      {/* CTA for Mastering Service - Read from separate fields */}
+      {data.cta_message && data.cta_button && (
+        <div className="bg-gradient-purple text-white rounded-lg p-4 sm:p-6 shadow-lg">
+          <div className="flex items-start gap-3 mb-4">
+            <span className="text-2xl sm:text-3xl">
+              {data.cta_action === 'mastering' ? '🎧' : '🔧'}
+            </span>
+            <div className="flex-1 whitespace-pre-line text-base sm:text-lg leading-relaxed">
+              {data.cta_message}
+            </div>
           </div>
           <button 
             onClick={() => {
-              // TODO: Integrate with your contact/booking system
-              // For now, opens email with pre-filled subject
-              const subject = encodeURIComponent(
-                `${data.cta.button} - ${data.filename || 'Mi canción'}`
+              const message = encodeURIComponent(
+                `Hola! Me gustaría solicitar: ${data.cta_button}\n\nArchivo: ${data.filename || 'Mi canción'}\nPuntuación: ${data.score}/100`
               )
-              window.location.href = `mailto:info@masteringready.com?subject=${subject}`
+              window.open(`https://wa.me/573155576115?text=${message}`, '_blank')
             }}
             className="bg-white text-purple-600 px-4 sm:px-6 py-3 rounded-lg 
-                       font-semibold hover:bg-gray-100 transition text-sm sm:text-base"
+                       font-semibold hover:bg-gray-100 transition text-sm sm:text-base shadow-md"
           >
-            {data.cta.button}
+            {data.cta_button}
           </button>
         </div>
       )}
