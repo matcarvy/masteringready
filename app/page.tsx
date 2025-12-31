@@ -1300,8 +1300,8 @@ by Matías Carvajal
                 }}>
                   <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.75rem' }}>
                     {lang === 'es'
-                      ? 'Estamos en beta. ¿Cómo te fue con el análisis?'
-                      : 'We're in beta. How was your analysis experience?'}
+                      ? "Estamos en beta. ¿Cómo te fue con el análisis?"
+                      : "We're in beta. How was your analysis experience?"}
                   </p>
                   <button
                     onClick={() => setShowFeedbackModal(true)}
