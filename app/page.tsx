@@ -5,7 +5,6 @@ import { Download, Check, Upload, Zap, Shield, TrendingUp } from 'lucide-react'
 import { analyzeFile } from '@/lib/api'
 import { startAnalysisPolling, getAnalysisStatus } from '@/lib/api'
 import { compressAudioFile } from '@/lib/audio-compression'
-import Results from '@/components/Results'
 
 function Home() {
   const [file, setFile] = useState<File | null>(null)
@@ -1288,11 +1287,279 @@ by Matías Carvajal
               )}
             </>
           ) : (
-            <>
-              {/* Use Results component */}
-              <Results data={result} onReset={handleReset} lang={lang} />
+            /* Results - Same structure but inline styles */
+            <div id="analysis-results" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              <div style={{
+                background: 'white',
+                borderRadius: '1rem',
+                boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
+                padding: '2rem'
+              }}>
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  marginBottom: '1.5rem'
+                }}>
+                  <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>
+                    {lang === 'es' ? 'Resultados del Análisis' : 'Analysis Results'}
+                  </h2>
+                  <button
+                    onClick={handleReset}
+                    style={{
+                      fontSize: '0.875rem',
+                      color: '#a855f7',
+                      border: 'none',
+                      background: 'none',
+                      cursor: 'pointer',
+                      textDecoration: 'underline',
+                      fontWeight: '500'
+                    }}
+                  >
+                    {lang === 'es' ? 'Analizar otro archivo' : 'Analyze another file'}
+                  </button>
+                </div>
 
-              {/* Feedback Button */}
+                {/* Score Card */}
+                <div style={{
+                  borderRadius: '0.75rem',
+                  border: `1px solid ${result.score >= 85 ? '#a7f3d0' : result.score >= 60 ? '#fcd34d' : '#fca5a5'}`,
+                  background: getScoreBg(result.score),
+                  padding: '1.25rem',
+                  marginBottom: '1.5rem'
+                }}>
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1fr auto',
+                    gap: '1rem',
+                    alignItems: 'center',
+                    marginBottom: '1rem'
+                  }}>
+                    <div style={{ textAlign: 'left' }}>
+                      <span style={{ color: '#374151', fontWeight: '500', fontSize: 'clamp(0.875rem, 2.5vw, 1.125rem)' }}>
+                        {lang === 'es' ? 'Puntuación' : 'Score'}
+                      </span>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <span style={{
+                        fontSize: 'clamp(2rem, 6vw, 3rem)',
+                        fontWeight: 'bold',
+                        color: getScoreColor(result.score)
+                      }}>
+                        {result.score}/100
+                      </span>
+                    </div>
+                  </div>
+                  <div style={{
+                    width: '100%',
+                    background: '#e5e7eb',
+                    borderRadius: '9999px',
+                    height: '0.75rem',
+                    marginBottom: '0.75rem'
+                  }}>
+                    <div style={{
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      height: '0.75rem',
+                      borderRadius: '9999px',
+                      width: `${result.score}%`,
+                      transition: 'width 0.5s'
+                    }} />
+                  </div>
+                  <p style={{ fontSize: '1.125rem', fontWeight: '600' }}>{result.verdict}</p>
+                </div>
+
+                {/* Report View Toggle */}
+                <div style={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: '0.5rem',
+                  marginBottom: '1.5rem',
+                  background: '#f3f4f6',
+                  padding: '0.25rem',
+                  borderRadius: '0.5rem'
+                }}>
+                  {(['visual', 'short', 'write'] as const).map((view) => (
+                    <button
+                      key={view}
+                      onClick={() => setReportView(view)}
+                      style={{
+                        flex: '1 1 calc(33.333% - 0.5rem)',
+                        minWidth: '90px',
+                        padding: '0.625rem 0.75rem',
+                        borderRadius: '0.375rem',
+                        border: 'none',
+                        background: reportView === view ? 'white' : 'transparent',
+                        color: reportView === view ? '#667eea' : '#6b7280',
+                        fontWeight: reportView === view ? '600' : '500',
+                        fontSize: 'clamp(0.75rem, 2vw, 0.875rem)',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        boxShadow: reportView === view ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+                      }}
+                    >
+                      {view === 'visual' ? (lang === 'es' ? '⚡ Rápido' : '⚡ Quick') :
+                       view === 'short' ? (lang === 'es' ? '📝 Resumen' : '📝 Summary') :
+                       (lang === 'es' ? '📄 Completo' : '📄 Complete')}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Visual Mode */}
+                {reportView === 'visual' && (
+                  <div style={{
+                    background: '#f9fafb',
+                    borderRadius: '0.75rem',
+                    padding: 'clamp(1rem, 3vw, 1.5rem)',
+                    marginBottom: '1.5rem'
+                  }}>
+                    <h3 style={{ fontWeight: '600', fontSize: 'clamp(1rem, 2.5vw, 1.125rem)', marginBottom: '1rem' }}>
+                      {lang === 'es' ? '⚡ Análisis Rápido' : '⚡ Quick Analysis'}
+                    </h3>
+                    <pre style={{
+                      whiteSpace: 'pre-wrap',
+                      wordBreak: 'break-word',
+                      overflowWrap: 'break-word',
+                      fontSize: 'clamp(0.8rem, 2vw, 0.875rem)',
+                      lineHeight: '1.6',
+                      fontFamily: 'Inter, system-ui, sans-serif',
+                      overflowX: 'auto',
+                      maxWidth: '100%',
+                      margin: 0
+                    }}>
+                      {cleanReportText((result as any).report_visual || result.report_short || result.report)}
+                    </pre>
+                  </div>
+                )}
+
+                {/* Short Mode */}
+                {reportView === 'short' && (
+                  <div style={{
+                    background: '#f9fafb',
+                    borderRadius: '0.75rem',
+                    padding: 'clamp(1rem, 3vw, 1.5rem)',
+                    marginBottom: '1.5rem'
+                  }}>
+                    <h3 style={{ fontWeight: '600', fontSize: 'clamp(1rem, 2.5vw, 1.125rem)', marginBottom: '1rem' }}>
+                      {lang === 'es' ? '📝 Análisis Resumen' : '📝 Summary Analysis'}
+                    </h3>
+                    <pre style={{
+                      whiteSpace: 'pre-wrap',
+                      wordBreak: 'break-word',
+                      overflowWrap: 'break-word',
+                      fontSize: 'clamp(0.8rem, 2vw, 0.875rem)',
+                      lineHeight: '1.6',
+                      fontFamily: 'Inter, system-ui, sans-serif',
+                      overflowX: 'auto',
+                      maxWidth: '100%',
+                      margin: 0
+                    }}>
+                      {cleanReportText(result.report_short || result.report)}
+                    </pre>
+                  </div>
+                )}
+
+                {/* Write Mode */}
+                {reportView === 'write' && (
+                  <div style={{
+                    background: '#f9fafb',
+                    borderRadius: '0.75rem',
+                    padding: 'clamp(1rem, 3vw, 1.5rem)',
+                    marginBottom: '1.5rem'
+                  }}>
+                    <h3 style={{ fontWeight: '600', fontSize: 'clamp(1rem, 2.5vw, 1.125rem)', marginBottom: '1rem' }}>
+                      {lang === 'es' ? '📄 Análisis Completo' : '📄 Complete Analysis'}
+                    </h3>
+                    <pre style={{
+                      whiteSpace: 'pre-wrap',
+                      wordBreak: 'break-word',
+                      overflowWrap: 'break-word',
+                      fontSize: 'clamp(0.8rem, 2vw, 0.875rem)',
+                      lineHeight: '1.6',
+                      fontFamily: 'Inter, system-ui, sans-serif',
+                      overflowX: 'auto',
+                      maxWidth: '100%',
+                      margin: 0
+                    }}>
+                      {cleanReportText(result.report_write || result.report)}
+                    </pre>
+                  </div>
+                )}
+
+                {/* Download Buttons */}
+                <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
+                  {/* Download Current View */}
+                  <button
+                    onClick={handleDownload}
+                    style={{
+                      flex: 1,
+                      minWidth: '160px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.5rem',
+                      padding: '0.875rem 1.25rem',
+                      background: 'white',
+                      color: '#667eea',
+                      border: '2px solid #667eea',
+                      borderRadius: '0.75rem',
+                      fontWeight: '600',
+                      fontSize: 'clamp(0.8rem, 2vw, 0.9rem)',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = '#f3f4f6'
+                      e.currentTarget.style.transform = 'translateY(-1px)'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'white'
+                      e.currentTarget.style.transform = 'translateY(0)'
+                    }}
+                  >
+                    <Download size={18} />
+                    {lang === 'es' 
+                      ? `Descargar ${reportView === 'visual' ? 'Rápido' : reportView === 'short' ? 'Resumen' : 'Completo'}`
+                      : `Download ${reportView === 'visual' ? 'Quick' : reportView === 'short' ? 'Summary' : 'Complete'}`}
+                  </button>
+
+                  {/* Download Full Report */}
+                  <button
+                    onClick={handleDownloadFull}
+                    style={{
+                      flex: 1,
+                      minWidth: '160px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.5rem',
+                      padding: '0.875rem 1.25rem',
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '0.75rem',
+                      fontWeight: '600',
+                      fontSize: 'clamp(0.8rem, 2vw, 0.9rem)',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'translateY(-2px)'
+                      e.currentTarget.style.boxShadow = '0 6px 20px rgba(102, 126, 234, 0.4)'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'translateY(0)'
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.3)'
+                    }}
+                  >
+                    <Download size={18} />
+                    {lang === 'es' ? 'Análisis Detallado' : 'Detailed Analysis'}
+                  </button>
+                </div>
+              </div>
+
+              {/* CTA removed - now handled by Results component with dynamic backend data */}
+
+              {/* Feedback Button - SECOND */}
               {!feedbackSubmitted && (
                 <div style={{
                   textAlign: 'center',
@@ -1300,26 +1567,32 @@ by Matías Carvajal
                 }}>
                   <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.75rem' }}>
                     {lang === 'es'
-                      ? "Estamos en beta. ¿Cómo te fue con el análisis?"
-                      : "We're in beta. How was your analysis experience?"}
+                      ? 'Estamos en beta. ¿Cómo te fue con el análisis?'
+                      : 'We\'re in beta. How was your analysis experience?'}
                   </p>
                   <button
                     onClick={() => setShowFeedbackModal(true)}
                     style={{
                       background: 'white',
-                      color: '#a855f7',
-                      border: '2px solid #a855f7',
-                      padding: '0.75rem 1.5rem',
+                      color: '#667eea',
+                      padding: '0.75rem 2rem',
                       borderRadius: '9999px',
-                      fontSize: '0.875rem',
                       fontWeight: '600',
+                      border: '2px solid #667eea',
                       cursor: 'pointer',
-                      transition: 'background 0.2s'
+                      transition: 'all 0.2s',
+                      fontSize: '0.95rem'
                     }}
-                    onMouseEnter={(e) => e.currentTarget.style.background = '#f3e8ff'}
-                    onMouseLeave={(e) => e.currentTarget.style.background = 'white'}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = '#f3f4f6'
+                      e.currentTarget.style.transform = 'translateY(-2px)'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'white'
+                      e.currentTarget.style.transform = 'translateY(0)'
+                    }}
                   >
-                    💬 {lang === 'es' ? 'Déjarnos Feedback' : 'Leave Feedback'}
+                    💬 {lang === 'es' ? 'Dejarnos Feedback' : 'Give Feedback'}
                   </button>
                 </div>
               )}
@@ -1345,7 +1618,7 @@ by Matías Carvajal
                   </p>
                 </div>
               )}
-            </>
+            </div>
           )}
         </div>
       </section>
