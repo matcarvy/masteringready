@@ -13,7 +13,39 @@ export default function Results({ data, onReset, lang: parentLang }: ResultsProp
   const [activeTab, setActiveTab] = useState<'visual' | 'short' | 'write'>('visual')
   const currentLang = parentLang || data.lang || 'es'
 
-  const handleDownload = (mode: 'visual' | 'short' | 'write' | 'complete') => {
+  const handleDownload = async (mode: 'visual' | 'short' | 'write' | 'complete' | 'pdf') => {
+    // PDF download uses API endpoint
+    if (mode === 'pdf') {
+      try {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://masteringready.onrender.com'
+        const response = await fetch(`${apiUrl}/api/download/pdf`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            request_id: data.request_id || 'unknown',
+            lang: currentLang
+          })
+        })
+        
+        if (!response.ok) throw new Error('PDF generation failed')
+        
+        const blob = await response.blob()
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `masteringready-detallado-${data.filename || 'analisis'}.pdf`
+        a.click()
+        URL.revokeObjectURL(url)
+      } catch (error) {
+        console.error('PDF download error:', error)
+        alert(currentLang === 'es' 
+          ? 'Error al generar PDF. Por favor intenta de nuevo.' 
+          : 'PDF generation error. Please try again.')
+      }
+      return
+    }
+
+    // Text downloads    
     let content = ''
     let filename = ''
     
@@ -190,12 +222,12 @@ export default function Results({ data, onReset, lang: parentLang }: ResultsProp
           </button>
           
           <button
-            onClick={() => handleDownload('complete')}
+            onClick={() => handleDownload('pdf')}
             className="flex items-center justify-center gap-2 bg-white text-purple-600 border-2 border-purple-600 
                      px-4 sm:px-6 py-3 rounded-lg font-medium hover:bg-purple-50 transition text-sm sm:text-base"
           >
             <FileText className="w-4 h-4" />
-            {currentLang === 'es' ? 'Análisis Detallado' : 'Detailed Analysis'}
+            {currentLang === 'es' ? 'Descargar PDF Completo' : 'Download Complete PDF'}
           </button>
         </div>
 
@@ -207,25 +239,24 @@ export default function Results({ data, onReset, lang: parentLang }: ResultsProp
         )}
       </div>
 
-      {/* CTA for Mastering Service - Dynamic from backend */}
-      {data.cta && data.cta.message && (
+      {/* CTA for Mastering Service - Dynamic with WhatsApp */}
+      {((data.cta_message && data.cta_button) || (data.cta && data.cta.message)) && (
         <div className="bg-gradient-purple text-white rounded-lg p-4 sm:p-6">
           <div className="whitespace-pre-line mb-4 text-base sm:text-lg leading-relaxed">
-            {data.cta.message}
+            {data.cta_message || data.cta?.message || ''}
           </div>
           <button 
             onClick={() => {
-              // TODO: Integrate with your contact/booking system
-              // For now, opens email with pre-filled subject
-              const subject = encodeURIComponent(
-                `${data.cta.button} - ${data.filename || 'Mi canción'}`
+              const buttonText = data.cta_button || data.cta?.button || 'Solicitar servicio'
+              const message = encodeURIComponent(
+                `Hola! Me gustaría solicitar: ${buttonText}\n\nArchivo: ${data.filename || 'Mi canción'}\nPuntuación: ${data.score}/100`
               )
-              window.location.href = `mailto:info@masteringready.com?subject=${subject}`
+              window.open(`https://wa.me/573155576115?text=${message}`, '_blank')
             }}
             className="bg-white text-purple-600 px-4 sm:px-6 py-3 rounded-lg 
                        font-semibold hover:bg-gray-100 transition text-sm sm:text-base"
           >
-            {data.cta.button}
+            {data.cta_button || data.cta?.button || (currentLang === 'es' ? 'Solicitar Mastering' : 'Request Mastering')}
           </button>
         </div>
       )}
