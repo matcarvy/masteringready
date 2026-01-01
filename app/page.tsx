@@ -1568,13 +1568,14 @@ by Matías Carvajal
                 }}>
                   <div style={{
                     display: 'flex',
-                    alignItems: 'center',
+                    alignItems: 'flex-start',
                     gap: '1rem',
                     marginBottom: '1.5rem'
                   }}>
+                    {/* Icon circle - dynamic based on score */}
                     <div style={{
-                      width: '3.5rem',
-                      height: '3.5rem',
+                      width: '4rem',
+                      height: '4rem',
                       background: 'rgba(255, 255, 255, 0.2)',
                       borderRadius: '50%',
                       display: 'flex',
@@ -1583,42 +1584,97 @@ by Matías Carvajal
                       backdropFilter: 'blur(10px)',
                       flexShrink: 0
                     }}>
-                      <span style={{ fontSize: '1.75rem' }}>🎧</span>
+                      <span style={{ fontSize: '2rem' }}>
+                        {result.score >= 85 ? '🎧' : 
+                         result.score >= 60 ? '🔧' : 
+                         result.score >= 40 ? '🔍' : 
+                         result.score >= 20 ? '🔧' : '💬'}
+                      </span>
                     </div>
-                    <div style={{
-                      whiteSpace: 'pre-line',
-                      fontSize: '1.25rem',
-                      lineHeight: '1.6',
-                      fontWeight: '500'
-                    }}>
-                      {result.cta_message}
+                    
+                    {/* Message - shorter on mobile */}
+                    <div style={{ flex: 1 }}>
+                      {/* Title - extracted from first line of cta_message */}
+                      <h3 style={{
+                        fontSize: '1.375rem',
+                        lineHeight: '1.3',
+                        fontWeight: '600',
+                        marginBottom: '1rem',
+                        marginTop: '0.25rem'
+                      }}>
+                        {result.cta_message.split('\n')[0].replace(/^[🎧🔧🔍⚙️💬]\s*/, '')}
+                      </h3>
+                      
+                      {/* Description - only on desktop */}
+                      <p style={{
+                        fontSize: '1.0625rem',
+                        lineHeight: '1.5',
+                        opacity: '0.95',
+                        margin: 0,
+                        display: window.innerWidth >= 768 ? 'block' : 'none'
+                      }}>
+                        {result.cta_message.split('\n').slice(1).join(' ')}
+                      </p>
+                      
+                      {/* Short version for mobile */}
+                      <p style={{
+                        fontSize: '1rem',
+                        lineHeight: '1.5',
+                        opacity: '0.95',
+                        margin: 0,
+                        display: window.innerWidth < 768 ? 'block' : 'none'
+                      }}>
+                        {result.score >= 85 
+                          ? 'Masterízala y haz que suene profesional en streaming.'
+                          : result.score >= 60
+                          ? 'Ajusta los detalles para llevarla al siguiente nivel.'
+                          : result.score >= 40
+                          ? 'Trabajemos juntos para corregir los problemas detectados.'
+                          : 'Puedo ayudarte a mejorar tu proyecto desde cero.'}
+                      </p>
                     </div>
                   </div>
-                  <button
-                    onClick={() => setShowContactModal(true)}
-                    style={{
-                      background: 'white',
-                      color: '#6366f1',
-                      padding: '1rem 2rem',
-                      borderRadius: '0.75rem',
-                      border: 'none',
-                      fontWeight: '600',
-                      cursor: 'pointer',
-                      fontSize: '1.125rem',
-                      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
-                      transition: 'all 0.2s'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = 'translateY(-2px)'
-                      e.currentTarget.style.boxShadow = '0 6px 16px rgba(0, 0, 0, 0.15)'
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = 'translateY(0)'
-                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.1)'
-                    }}
-                  >
-                    {result.cta_button}
-                  </button>
+                  
+                  {/* CTA Button */}
+                  <div style={{ paddingLeft: window.innerWidth >= 768 ? '5rem' : '0' }}>
+                    <button
+                      onClick={() => setShowContactModal(true)}
+                      style={{
+                        background: 'white',
+                        color: '#6366f1',
+                        padding: '1rem 2rem',
+                        borderRadius: '0.75rem',
+                        border: 'none',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        fontSize: '1.125rem',
+                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+                        transition: 'all 0.2s',
+                        width: window.innerWidth < 768 ? '100%' : 'auto'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = 'translateY(-2px)'
+                        e.currentTarget.style.boxShadow = '0 6px 16px rgba(0, 0, 0, 0.15)'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = 'translateY(0)'
+                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.1)'
+                      }}
+                    >
+                      {result.cta_button}
+                    </button>
+                    
+                    {/* Micro-benefit */}
+                    <p style={{
+                      fontSize: '0.875rem',
+                      opacity: '0.9',
+                      marginTop: '0.75rem',
+                      marginBottom: 0,
+                      textAlign: window.innerWidth < 768 ? 'center' : 'left'
+                    }}>
+                      ✓ Entrega rápida + 1 revisión incluida
+                    </p>
+                  </div>
                 </div>
               )}
 
