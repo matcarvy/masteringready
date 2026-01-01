@@ -1560,35 +1560,61 @@ by Matías Carvajal
               {/* CTA for Mastering Service - Dynamic from backend */}
               {result.cta_message && result.cta_button && (
                 <div style={{
-                  background: 'linear-gradient(135deg, #a855f7 0%, #9333ea 100%)',
-                  borderRadius: '0.5rem',
-                  padding: '1.5rem',
-                  color: 'white'
+                  background: 'linear-gradient(to bottom right, #818cf8 0%, #6366f1 100%)',
+                  borderRadius: '1.5rem',
+                  padding: '2.5rem 2rem',
+                  color: 'white',
+                  boxShadow: '0 20px 40px rgba(99, 102, 241, 0.2)'
                 }}>
                   <div style={{
-                    whiteSpace: 'pre-line',
-                    marginBottom: '1rem',
-                    fontSize: '1.125rem',
-                    lineHeight: '1.75'
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '1rem',
+                    marginBottom: '1.5rem'
                   }}>
-                    {result.cta_message}
+                    <div style={{
+                      width: '3.5rem',
+                      height: '3.5rem',
+                      background: 'rgba(255, 255, 255, 0.2)',
+                      borderRadius: '50%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backdropFilter: 'blur(10px)',
+                      flexShrink: 0
+                    }}>
+                      <span style={{ fontSize: '1.75rem' }}>🎧</span>
+                    </div>
+                    <div style={{
+                      whiteSpace: 'pre-line',
+                      fontSize: '1.25rem',
+                      lineHeight: '1.6',
+                      fontWeight: '500'
+                    }}>
+                      {result.cta_message}
+                    </div>
                   </div>
                   <button
-                    onClick={() => {
-                      const message = encodeURIComponent(
-                        `Hola! Me gustaría solicitar: ${result.cta_button}\n\nArchivo: ${result.filename || 'Mi canción'}\nPuntuación: ${result.score}/100`
-                      )
-                      window.open(`https://wa.me/573155576115?text=${message}`, '_blank')
-                    }}
+                    onClick={() => setShowContactModal(true)}
                     style={{
                       background: 'white',
-                      color: '#9333ea',
-                      padding: '0.75rem 1.5rem',
-                      borderRadius: '0.5rem',
+                      color: '#6366f1',
+                      padding: '1rem 2rem',
+                      borderRadius: '0.75rem',
                       border: 'none',
                       fontWeight: '600',
                       cursor: 'pointer',
-                      fontSize: '1rem'
+                      fontSize: '1.125rem',
+                      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'translateY(-2px)'
+                      e.currentTarget.style.boxShadow = '0 6px 16px rgba(0, 0, 0, 0.15)'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'translateY(0)'
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.1)'
                     }}
                   >
                     {result.cta_button}
