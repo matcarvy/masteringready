@@ -1603,9 +1603,11 @@ by Matías Carvajal
                         marginTop: '0.25rem'
                       }}>
                         {(() => {
-                          const title = result.cta_message.split('\n')[0];
-                          // Remove any emoji/icon from the start
-                          return title.replace(/^[🎧🔧🔍⚙️💬≡📊📝🎵🎛️🎚️📐📏🔊📢🎼🎹🎸🥁🎺🎻🔔🔕📻📲💾💿📀🖥️⌨️🖱️🖨️📱☎️📞📟📠📧✉️📮📪📫📬📭📯📤📥📦📃📄📑🗂️📂📁🗃️🗄️📋📇📊📈📉🗒️🗓️📆📅🗑️🔖🏷️💼👔🎓🎩👑⚙️🔧🔩⚙️🛠️🔨⛏️⚒️🗡️⚔️🔫🏹🛡️🔰]\s*/, '');
+                          let title = result.cta_message.split('\n')[0];
+                          // Remove ALL emojis, symbols, and special characters from the start
+                          // This regex removes: emojis, symbols, punctuation, whitespace at the start
+                          title = title.replace(/^[\p{Emoji}\p{Symbol}\p{Punctuation}\s]+/gu, '');
+                          return title;
                         })()}
                       </h3>
                       
