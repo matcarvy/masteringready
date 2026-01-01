@@ -1592,9 +1592,9 @@ by Matías Carvajal
                       </span>
                     </div>
                     
-                    {/* Message - shorter on mobile */}
+                    {/* Message */}
                     <div style={{ flex: 1 }}>
-                      {/* Title - extracted from first line of cta_message */}
+                      {/* Title - clean, no extra icons */}
                       <h3 style={{
                         fontSize: '1.375rem',
                         lineHeight: '1.3',
@@ -1602,35 +1602,31 @@ by Matías Carvajal
                         marginBottom: '1rem',
                         marginTop: '0.25rem'
                       }}>
-                        {result.cta_message.split('\n')[0].replace(/^[🎧🔧🔍⚙️💬]\s*/, '')}
+                        {(() => {
+                          const title = result.cta_message.split('\n')[0];
+                          // Remove any emoji/icon from the start
+                          return title.replace(/^[🎧🔧🔍⚙️💬≡📊📝🎵🎛️🎚️📐📏🔊📢🎼🎹🎸🥁🎺🎻🔔🔕📻📲💾💿📀🖥️⌨️🖱️🖨️📱☎️📞📟📠📧✉️📮📪📫📬📭📯📤📥📦📃📄📑🗂️📂📁🗃️🗄️📋📇📊📈📉🗒️🗓️📆📅🗑️🔖🏷️💼👔🎓🎩👑⚙️🔧🔩⚙️🛠️🔨⛏️⚒️🗡️⚔️🔫🏹🛡️🔰]\s*/, '');
+                        })()}
                       </h3>
                       
-                      {/* Description - only on desktop */}
+                      {/* Description - full on desktop, shortened on mobile */}
                       <p style={{
-                        fontSize: '1.0625rem',
+                        fontSize: window.innerWidth >= 768 ? '1.0625rem' : '1rem',
                         lineHeight: '1.5',
                         opacity: '0.95',
-                        margin: 0,
-                        display: window.innerWidth >= 768 ? 'block' : 'none'
+                        margin: 0
                       }}>
-                        {result.cta_message.split('\n').slice(1).join(' ')}
-                      </p>
-                      
-                      {/* Short version for mobile */}
-                      <p style={{
-                        fontSize: '1rem',
-                        lineHeight: '1.5',
-                        opacity: '0.95',
-                        margin: 0,
-                        display: window.innerWidth < 768 ? 'block' : 'none'
-                      }}>
-                        {result.score >= 85 
-                          ? 'Masterízala y haz que suene profesional en streaming.'
-                          : result.score >= 60
-                          ? 'Ajusta los detalles para llevarla al siguiente nivel.'
-                          : result.score >= 40
-                          ? 'Trabajemos juntos para corregir los problemas detectados.'
-                          : 'Puedo ayudarte a mejorar tu proyecto desde cero.'}
+                        {(() => {
+                          const fullText = result.cta_message.split('\n').slice(1).join(' ');
+                          // On mobile, shorten to first sentence or ~80 chars
+                          if (window.innerWidth < 768) {
+                            const firstSentence = fullText.split('.')[0];
+                            return firstSentence.length > 80 
+                              ? firstSentence.substring(0, 77) + '...'
+                              : firstSentence + '.';
+                          }
+                          return fullText;
+                        })()}
                       </p>
                     </div>
                   </div>
@@ -1663,17 +1659,6 @@ by Matías Carvajal
                     >
                       {result.cta_button}
                     </button>
-                    
-                    {/* Micro-benefit */}
-                    <p style={{
-                      fontSize: '0.875rem',
-                      opacity: '0.9',
-                      marginTop: '0.75rem',
-                      marginBottom: 0,
-                      textAlign: window.innerWidth < 768 ? 'center' : 'left'
-                    }}>
-                      ✓ Entrega rápida + 1 revisión incluida
-                    </p>
                   </div>
                 </div>
               )}
