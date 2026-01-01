@@ -4223,7 +4223,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
         cta_data = generate_cta(score, strict, lang, mode="write")
         cta_message = f"\n\n{cta_data['message']}" if cta_data['message'] else ""
         
-        return f"{filename_ref}{intro}\n\n{tech_sentence}{issues_sentence}{stereo_detail}{tech_details}{recommendation}{mode_note}"
+        return f"{filename_ref}{intro}\n\n{tech_sentence}{issues_sentence}{stereo_detail}{tech_details}{recommendation}{mode_note}{cta_message}"
 
 
 def iter_audio_files(p: Path) -> List[Path]:
