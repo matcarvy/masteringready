@@ -1557,7 +1557,44 @@ by Matías Carvajal
                 </div>
               </div>
 
-              {/* CTA removed - now handled by Results component with dynamic backend data */}
+              {/* CTA for Mastering Service - Dynamic from backend */}
+              {result.cta_message && result.cta_button && (
+                <div style={{
+                  background: 'linear-gradient(135deg, #a855f7 0%, #9333ea 100%)',
+                  borderRadius: '0.5rem',
+                  padding: '1.5rem',
+                  color: 'white'
+                }}>
+                  <div style={{
+                    whiteSpace: 'pre-line',
+                    marginBottom: '1rem',
+                    fontSize: '1.125rem',
+                    lineHeight: '1.75'
+                  }}>
+                    {result.cta_message}
+                  </div>
+                  <button
+                    onClick={() => {
+                      const message = encodeURIComponent(
+                        `Hola! Me gustaría solicitar: ${result.cta_button}\n\nArchivo: ${result.filename || 'Mi canción'}\nPuntuación: ${result.score}/100`
+                      )
+                      window.open(`https://wa.me/573155576115?text=${message}`, '_blank')
+                    }}
+                    style={{
+                      background: 'white',
+                      color: '#9333ea',
+                      padding: '0.75rem 1.5rem',
+                      borderRadius: '0.5rem',
+                      border: 'none',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      fontSize: '1rem'
+                    }}
+                  >
+                    {result.cta_button}
+                  </button>
+                </div>
+              )}
 
               {/* Feedback Button - SECOND */}
               {!feedbackSubmitted && (
