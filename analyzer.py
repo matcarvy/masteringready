@@ -2118,9 +2118,9 @@ def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, s
     hard_fail = bool(clipping) or bool(tp_hard)
     score, verdict = score_report(metrics, hard_fail, strict, lang)  # ← FIXED: Added strict and lang
     
-    # Generate CTA for frontend
+ # Generate CTA for frontend
     cta_data = generate_cta(score, strict, lang, mode="write")
-
+    
     # ========== NEW: Generate interpretative texts ==========
     interpretations = None
     if HAS_INTERPRETATIVE_TEXTS:
@@ -2129,75 +2129,33 @@ def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, s
             interpretation_metrics = {}
             
             # Extract headroom (use peak_db directly - already negative in dBFS)
-            headroom_metric = next((m for m in metrics if "Headroom" in m.get("internal_key", "")), None)
-            if headroom_metric:
-                try:
-                    peak_str = headroom_metric.get("peak_db", "0 dBFS")
-                    peak_value = float(peak_str.replace(" dBFS", "").replace("dBFS", ""))
-                    interpretation_metrics['headroom'] = peak_value  # Peak is already negative (e.g., -6.3 dBFS)
-                except:
-                    interpretation_metrics['headroom'] = 0
+            interpretation_metrics['headroom'] = final_peak  # Peak is already negative (e.g., -6.3 dBFS)
             
             # Extract true peak
-            tp_metric = next((m for m in metrics if "True Peak" in m.get("internal_key", "")), None)
-            if tp_metric:
-                try:
-                    tp_str = tp_metric.get("value", "0 dBTP")
-                    tp_value = float(tp_str.replace(" dBTP", "").replace("dBTP", ""))
-                    interpretation_metrics['true_peak'] = tp_value
-                except:
-                    interpretation_metrics['true_peak'] = 0
+            interpretation_metrics['true_peak'] = final_tp
             
             # Extract dynamic range (PLR)
-            plr_metric = next((m for m in metrics if "PLR" in m.get("internal_key", "")), None)
-            if plr_metric and plr_metric.get("value") != "N/A":
-                try:
-                    plr_str = plr_metric.get("value", "0 dB")
-                    plr_value = float(plr_str.split()[0])  # Get first number
-                    interpretation_metrics['dynamic_range'] = plr_value
-                except:
-                    interpretation_metrics['dynamic_range'] = 0
-            else:
-                interpretation_metrics['dynamic_range'] = 0
+            interpretation_metrics['dynamic_range'] = final_plr if final_plr > 0 else 0
             
             # Extract LUFS
-            lufs_metric = next((m for m in metrics if "LUFS" in m.get("internal_key", "")), None)
-            if lufs_metric and lufs_metric.get("value") != "N/A":
-                try:
-                    lufs_str = lufs_metric.get("value", "0 LUFS")
-                    lufs_value = float(lufs_str.replace(" LUFS", "").replace("LUFS", ""))
-                    interpretation_metrics['lufs'] = lufs_value
-                except:
-                    interpretation_metrics['lufs'] = -14.0  # Default
-            else:
-                interpretation_metrics['lufs'] = -14.0
+            interpretation_metrics['lufs'] = weighted_lufs if weighted_lufs != 0 else -14.0
             
             # Extract stereo balance
-            stereo_metric = next((m for m in metrics if "Stereo" in m.get("internal_key", "")), None)
-            if stereo_metric:
-                # Calculate balance from L/R balance dB
-                lr_balance_db = stereo_metric.get("lr_balance_db", 0)
-                # Convert dB difference to ratio (0.5 = perfect balance)
-                if lr_balance_db == 0:
-                    balance_ratio = 0.5
-                elif lr_balance_db > 0:  # R louder
-                    balance_ratio = 0.5 + (lr_balance_db / 20.0)
-                else:  # L louder
-                    balance_ratio = 0.5 + (lr_balance_db / 20.0)
-                
-                balance_ratio = max(0.0, min(1.0, balance_ratio))  # Clamp 0-1
-                interpretation_metrics['stereo_balance'] = balance_ratio
-                
-                # Extract correlation
-                try:
-                    corr_str = stereo_metric.get("value", "+1.00")
-                    corr_value = float(corr_str.replace("+", ""))
-                    interpretation_metrics['stereo_correlation'] = corr_value
-                except:
-                    interpretation_metrics['stereo_correlation'] = 0.8
-            else:
-                interpretation_metrics['stereo_balance'] = 0.5
-                interpretation_metrics['stereo_correlation'] = 0.8
+            # Calculate balance from L/R balance dB
+            lr_balance_db = final_lr_balance
+            # Convert dB difference to ratio (0.5 = perfect balance)
+            if lr_balance_db == 0:
+                balance_ratio = 0.5
+            elif lr_balance_db > 0:  # R louder
+                balance_ratio = 0.5 + (lr_balance_db / 20.0)
+            else:  # L louder
+                balance_ratio = 0.5 + (lr_balance_db / 20.0)
+            
+            balance_ratio = max(0.0, min(1.0, balance_ratio))  # Clamp 0-1
+            interpretation_metrics['stereo_balance'] = balance_ratio
+            
+            # Extract correlation
+            interpretation_metrics['stereo_correlation'] = final_correlation
             
             # Generate interpretative texts
             interpretations_raw = generate_interpretative_texts(
@@ -2214,31 +2172,44 @@ def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, s
             print(f"⚠️ Warning: Could not generate interpretations: {e}", flush=True)
             interpretations = None
     # ========== END: Interpretative texts generation ==========
-
-    return {
+    
+    # Build full result using the same structure as analyze_file
+    result = {
         "file": {
-            "path": str(path),
-            "duration_seconds": round(duration, 2),
-            "sample_rate_hz": sr,
-            "channels": channels,
-            "genre": genre if genre else "not specified"
+            "name": path.name,
+            "size": file_size,
+            "duration": duration,
+            "sample_rate": sr,
+            "channels": channels
+        },
+        "technical": {
+            "peak_dbfs": final_peak,
+            "true_peak_dbtp": final_tp,
+            "lufs": weighted_lufs,
+            "plr": final_plr,
+            "stereo_correlation": final_correlation,
+            "lr_balance_db": final_lr_balance,
+            "ms_ratio": final_ms_ratio
         },
         "metrics": metrics,
         "score": score,
         "verdict": verdict,
+        "territory": territory,
+        "is_mastered": is_mastered,
         "cta": cta_data,  # Add CTA data for frontend
         "interpretations": interpretations,  # NEW: Add interpretations
+        "chunked": True,
+        "num_chunks": num_chunks,
         "notes": {
-            "lufs_is_real": has_real_lufs,
-            "lufs_reliable": lufs_reliable,
+            "lufs_is_real": True,
+            "lufs_reliable": duration >= MIN_DURATION_FOR_LUFS,
             "oversample_factor": oversample,
-            "auto_oversample": oversample == auto_oversample_factor(sr),
-            "clipping_detected": clipping,
-            "dc_offset_detected": dc_data["detected"],
-            "recommendations": generate_recommendations(metrics, score, genre, lang)
+            "auto_oversample": True,
+            "clipping_detected": bool(results['clipping_chunks'])
         }
     }
-
+    
+    return result
 
 def generate_recommendations(metrics: List[Dict[str, Any]], score: int, genre: Optional[str], lang: str = 'en') -> List[str]:
     """Generate specific recommendations based on analysis with language support and temporal context."""
