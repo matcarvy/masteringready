@@ -1231,7 +1231,7 @@ by Matías Carvajal
                       </div>
                     </div>
                   ) : (
-                    <>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       {needsCompression ? (
                         <>
                           <Play size={18} style={{ marginRight: '0.5rem' }} />
@@ -1243,7 +1243,7 @@ by Matías Carvajal
                           {lang === 'es' ? 'Analizar Mezcla' : 'Analyze Mix'}
                         </>
                       )}
-                    </>
+                    </div>
                   )}
                 </button>
               )}
@@ -1754,8 +1754,8 @@ by Matías Carvajal
           }}>
             {/* Brand */}
             <div>
-              <div style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1rem' }}>
-                🎵 MasteringReady
+              <div style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Music size={24} style={{ color: '#ffffff', flexShrink: 0 }} /> MasteringReady
               </div>
               <p style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.875rem', lineHeight: '1.6' }}>
                 {lang === 'es'
