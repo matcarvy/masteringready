@@ -587,7 +587,7 @@ by Matías Carvajal
                 padding: '0.5rem 1rem',
                 marginBottom: '1.5rem'
               }}>
-                <span style={{ fontSize: '0.875rem', fontWeight: '500' }}>
+                <span style={{ fontSize: '1rem', fontWeight: '500' }}>
                   ✨ {lang === 'es' 
                     ? 'Metodología probada en más de 300 producciones profesionales'
                     : 'Methodology proven in over 300 professional productions'}
@@ -738,7 +738,7 @@ by Matías Carvajal
 
       {/* Features Section */}
       <section id="features" style={{
-        padding: '3rem 1.5rem',
+        padding: '2rem 1.5rem',
         background: '#f9fafb'
       }}>
         <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
@@ -809,7 +809,7 @@ by Matías Carvajal
       </section>
 
       {/* Analyzer Section - Same as before but with inline styles */}
-      <section id="analyze" style={{ padding: '2.5rem 1.5rem', background: 'white' }}>
+      <section id="analyze" style={{ padding: '1.5rem 1.5rem', background: 'white' }}>
         <div style={{ maxWidth: '896px', margin: '0 auto' }}>
           {!result ? (
             <>
@@ -1740,7 +1740,7 @@ by Matías Carvajal
       <footer style={{
         background: 'linear-gradient(to bottom, #1e1b4b 0%, #312e81 100%)',
         color: 'white',
-        padding: '4rem 1.5rem 3rem',
+        padding: '2.5rem 1.5rem 2rem',
         textAlign: 'center',
         borderTop: '1px solid rgba(255, 255, 255, 0.1)'
       }}>
