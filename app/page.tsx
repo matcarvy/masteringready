@@ -500,7 +500,7 @@ by Matías Carvajal
                 alignItems: 'center',
                 gap: '0.4rem'
               }}>
-                🎵 MasteringReady
+                <span style={{ fontSize: '1.75rem' }}>🎵</span> MasteringReady
                 <span style={{
                   fontSize: '0.5em',
                   fontWeight: '700',
@@ -738,7 +738,7 @@ by Matías Carvajal
 
       {/* Features Section */}
       <section id="features" style={{
-        padding: '4rem 1.5rem',
+        padding: '3.5rem 1.5rem',
         background: '#f9fafb'
       }}>
         <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
@@ -809,7 +809,7 @@ by Matías Carvajal
       </section>
 
       {/* Analyzer Section - Same as before but with inline styles */}
-      <section id="analyze" style={{ padding: '4rem 1.5rem', background: 'white' }}>
+      <section id="analyze" style={{ padding: '3rem 1.5rem', background: 'white' }}>
         <div style={{ maxWidth: '896px', margin: '0 auto' }}>
           {!result ? (
             <>
@@ -1234,7 +1234,8 @@ by Matías Carvajal
                     <>
                       {needsCompression ? (
                         <>
-                          {lang === 'es' ? '🗜️ Comprimir y Analizar' : '🗜️ Compress & Analyze'}
+                          <Zap size={18} style={{ marginRight: '0.5rem' }} />
+                          {lang === 'es' ? 'Comprimir y Analizar' : 'Compress & Analyze'}
                         </>
                       ) : (
                         lang === 'es' ? 'Analizar Mezcla' : 'Analyze Mix'
