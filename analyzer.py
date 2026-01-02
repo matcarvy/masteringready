@@ -2128,13 +2128,13 @@ def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, s
             # Extract key metrics for interpretation
             interpretation_metrics = {}
             
-            # Extract headroom
+            # Extract headroom (use peak_db directly - already negative in dBFS)
             headroom_metric = next((m for m in metrics if "Headroom" in m.get("internal_key", "")), None)
             if headroom_metric:
                 try:
                     peak_str = headroom_metric.get("peak_db", "0 dBFS")
                     peak_value = float(peak_str.replace(" dBFS", "").replace("dBFS", ""))
-                    interpretation_metrics['headroom'] = -peak_value  # Convert peak to headroom
+                    interpretation_metrics['headroom'] = peak_value  # Peak is already negative (e.g., -6.3 dBFS)
                 except:
                     interpretation_metrics['headroom'] = 0
             
