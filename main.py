@@ -496,6 +496,7 @@ async def start_analysis(
                         "report_short": report_short,     # Summary mode
                         "report_write": report_write,     # Complete mode
                         "metrics": result.get("metrics", []),
+                        "interpretations": result.get("interpretations"),
                         "filename": file.filename,
                         "mode": mode,
                         "lang": lang,
