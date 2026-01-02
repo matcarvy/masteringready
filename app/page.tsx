@@ -283,6 +283,8 @@ const handleAnalyze = async () => {
     
     setProgress(100)
     setResult(data)
+    console.log('🔍 RESULT:', data)
+    console.log('🔍 Has interpretations:', !!data.interpretations)
     
     // Scroll to results
     setTimeout(() => {
