@@ -1749,7 +1749,7 @@ by Matías Carvajal
             display: 'grid', 
             gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
             gap: '2.5rem',
-            marginBottom: '3rem',
+            marginBottom: '1.5rem',
             textAlign: 'left'
           }}>
             {/* Brand */}
@@ -1846,7 +1846,7 @@ by Matías Carvajal
             </div>
           </div>
           
-          <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.1)', paddingTop: '2rem', textAlign: 'center' }}>
+          <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.1)', paddingTop: '1rem', textAlign: 'center' }}>
             <p style={{ color: 'rgba(255, 255, 255, 0.8)', marginBottom: '0.5rem' }}>
               © 2025 MasteringReady by Matías Carvajal.
             </p>
