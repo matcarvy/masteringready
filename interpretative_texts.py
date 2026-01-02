@@ -11,7 +11,7 @@ Generates human-readable interpretations of technical metrics for:
 4. Stereo Balance
 
 Author: MasteringReady Team
-Version: 1.0.1 (Fixed headroom comparisons)
+Version: 1.0.0
 """
 
 from typing import Dict, Any
@@ -76,18 +76,17 @@ def generate_interpretative_texts(
 # ============================================================================
 
 def _get_headroom_status(headroom: float, true_peak: float) -> str:
-    """
-    Determine headroom status: excellent/good/warning/error
+    """Determine headroom status: excellent/good/warning/error
     
-    Args:
-        headroom: Headroom in dB (POSITIVE value, e.g., 6.2 means 6.2 dB of headroom)
-        true_peak: True Peak in dBTP (NEGATIVE value, e.g., -6.2 dBTP)
+    Note: In digital audio (dBFS), headroom is NEGATIVE.
+    -6 dBFS means 6 dB of space below the 0 dBFS ceiling.
+    More negative = more headroom (better).
     """
-    if headroom >= 6 and true_peak <= -1:
+    if headroom <= -6 and true_peak <= -1:
         return "excellent"
-    elif headroom >= 4 and true_peak <= -0.5:
+    elif headroom <= -4 and true_peak <= -0.5:
         return "good"
-    elif headroom >= 2:
+    elif headroom <= -2:
         return "warning"
     else:
         return "error"
@@ -172,7 +171,7 @@ def _generate_headroom_text_es(headroom: float, true_peak: float, status: str) -
             ),
             "recommendation": (
                 f"Se recomienda reducir el nivel del bus master entre 3-4 dB antes de exportar. "
-                f"Esto dejará un headroom de aproximadamente {headroom + 3.5:.1f} dBFS, "
+                f"Esto dejará un headroom de aproximadamente {abs(headroom) + 3.5:.1f} dBFS, "
                 f"ideal para la sesión de mastering."
             )
         }
@@ -187,7 +186,7 @@ def _generate_headroom_text_es(headroom: float, true_peak: float, status: str) -
             ),
             "recommendation": (
                 f"Es necesario reducir el nivel del bus master entre 5-6 dB antes de exportar. "
-                f"Esto creará el espacio necesario (aproximadamente {headroom + 5.5:.1f} dBFS) "
+                f"Esto creará el espacio necesario (aproximadamente {abs(headroom) + 5.5:.1f} dBFS) "
                 f"para que el ingeniero de mastering pueda trabajar correctamente."
             )
         }
@@ -454,7 +453,7 @@ def _generate_headroom_text_en(headroom: float, true_peak: float, status: str) -
             ),
             "recommendation": (
                 f"Consider reducing master bus level by 3-4 dB before export. "
-                f"This will provide approximately {headroom + 3.5:.1f} dBFS headroom, "
+                f"This will provide approximately {abs(headroom) + 3.5:.1f} dBFS headroom, "
                 f"ideal for the mastering session."
             )
         }
@@ -468,7 +467,7 @@ def _generate_headroom_text_en(headroom: float, true_peak: float, status: str) -
             ),
             "recommendation": (
                 f"Reduce master bus level by 5-6 dB before export. "
-                f"This will create necessary space (approximately {headroom + 5.5:.1f} dBFS) "
+                f"This will create necessary space (approximately {abs(headroom) + 5.5:.1f} dBFS) "
                 f"for proper mastering work."
             )
         }
@@ -748,7 +747,7 @@ def format_for_api_response(
 if __name__ == "__main__":
     # Test with sample metrics
     test_metrics = {
-        'headroom': 6.2,  # POSITIVE value
+        'headroom': -6.2,
         'true_peak': -3.1,
         'dynamic_range': 9.2,
         'lufs': -13.5,
@@ -771,4 +770,3 @@ if __name__ == "__main__":
     print("\n\n=== FORMATTED API RESPONSE ===\n")
     import json
     print(json.dumps(formatted, indent=2, ensure_ascii=False))
-
