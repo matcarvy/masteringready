@@ -476,6 +476,9 @@ by Matías Carvajal
       {/* Navigation */}
       <nav style={{
         position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
         width: '100%',
         background: 'rgba(255, 255, 255, 0.95)',
         backdropFilter: 'blur(10px)',
@@ -735,7 +738,7 @@ by Matías Carvajal
 
       {/* Features Section */}
       <section id="features" style={{
-        padding: '5rem 1.5rem',
+        padding: '4rem 1.5rem',
         background: '#f9fafb'
       }}>
         <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
@@ -753,7 +756,7 @@ by Matías Carvajal
           <div style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-            gap: '2rem'
+            gap: '1.5rem'
           }}>
             {[
               {
@@ -806,7 +809,7 @@ by Matías Carvajal
       </section>
 
       {/* Analyzer Section - Same as before but with inline styles */}
-      <section id="analyze" style={{ padding: '5rem 1.5rem', background: 'white' }}>
+      <section id="analyze" style={{ padding: '4rem 1.5rem', background: 'white' }}>
         <div style={{ maxWidth: '896px', margin: '0 auto' }}>
           {!result ? (
             <>
@@ -1731,24 +1734,26 @@ by Matías Carvajal
 
       {/* Footer */}
       <footer style={{
-        background: '#111827',
+        background: 'linear-gradient(to bottom, #1e1b4b 0%, #312e81 100%)',
         color: 'white',
-        padding: '3rem 1.5rem',
-        textAlign: 'center'
+        padding: '4rem 1.5rem 3rem',
+        textAlign: 'center',
+        borderTop: '1px solid rgba(255, 255, 255, 0.1)'
       }}>
-        <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
+        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
           <div style={{ 
             display: 'grid', 
             gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-            gap: '2rem',
-            marginBottom: '3rem'
+            gap: '2.5rem',
+            marginBottom: '3rem',
+            textAlign: 'left'
           }}>
             {/* Brand */}
             <div>
               <div style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1rem' }}>
                 🎵 MasteringReady
               </div>
-              <p style={{ color: '#9ca3af', fontSize: '0.875rem', lineHeight: '1.6' }}>
+              <p style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.875rem', lineHeight: '1.6' }}>
                 {lang === 'es'
                   ? 'Prepara tu mezcla para el mastering profesional. Análisis técnico en segundos.'
                   : 'Prepare your mix for professional mastering. Technical analysis in seconds.'}
@@ -1757,14 +1762,14 @@ by Matías Carvajal
 
             {/* Contact */}
             <div>
-              <h4 style={{ fontWeight: '600', marginBottom: '1rem', color: '#f3f4f6' }}>
+              <h4 style={{ fontWeight: '600', marginBottom: '1rem', color: '#ffffff' }}>
                 {lang === 'es' ? 'Contacto' : 'Contact'}
               </h4>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 <a 
                   href="mailto:mat@matcarvy.com"
                   style={{ 
-                    color: '#9ca3af', 
+                    color: 'rgba(255, 255, 255, 0.7)', 
                     textDecoration: 'none',
                     fontSize: '0.875rem',
                     display: 'flex',
@@ -1772,8 +1777,8 @@ by Matías Carvajal
                     gap: '0.5rem',
                     transition: 'color 0.2s'
                   }}
-                  onMouseEnter={(e) => e.currentTarget.style.color = '#667eea'}
-                  onMouseLeave={(e) => e.currentTarget.style.color = '#9ca3af'}
+                  onMouseEnter={(e) => e.currentTarget.style.color = '#ffffff'}
+                  onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)'}
                 >
                   <span>📧</span>
                   <span>mat@matcarvy.com</span>
@@ -1783,7 +1788,7 @@ by Matías Carvajal
                   target="_blank"
                   rel="noopener noreferrer"
                   style={{ 
-                    color: '#9ca3af', 
+                    color: 'rgba(255, 255, 255, 0.7)', 
                     textDecoration: 'none',
                     fontSize: '0.875rem',
                     display: 'flex',
@@ -1791,8 +1796,8 @@ by Matías Carvajal
                     gap: '0.5rem',
                     transition: 'color 0.2s'
                   }}
-                  onMouseEnter={(e) => e.currentTarget.style.color = '#667eea'}
-                  onMouseLeave={(e) => e.currentTarget.style.color = '#9ca3af'}
+                  onMouseEnter={(e) => e.currentTarget.style.color = '#ffffff'}
+                  onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)'}
                 >
                   <span>📱</span>
                   <span>WhatsApp</span>
@@ -1802,7 +1807,7 @@ by Matías Carvajal
                   target="_blank"
                   rel="noopener noreferrer"
                   style={{ 
-                    color: '#9ca3af', 
+                    color: 'rgba(255, 255, 255, 0.7)', 
                     textDecoration: 'none',
                     fontSize: '0.875rem',
                     display: 'flex',
@@ -1810,8 +1815,8 @@ by Matías Carvajal
                     gap: '0.5rem',
                     transition: 'color 0.2s'
                   }}
-                  onMouseEnter={(e) => e.currentTarget.style.color = '#667eea'}
-                  onMouseLeave={(e) => e.currentTarget.style.color = '#9ca3af'}
+                  onMouseEnter={(e) => e.currentTarget.style.color = '#ffffff'}
+                  onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)'}
                 >
                   <span>📷</span>
                   <span>@matcarvy</span>
@@ -1821,27 +1826,27 @@ by Matías Carvajal
 
             {/* Resources */}
             <div>
-              <h4 style={{ fontWeight: '600', marginBottom: '1rem', color: '#f3f4f6' }}>
+              <h4 style={{ fontWeight: '600', marginBottom: '1rem', color: '#ffffff' }}>
                 {lang === 'es' ? 'Acerca de' : 'About'}
               </h4>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                <p style={{ color: '#9ca3af', fontSize: '0.875rem', lineHeight: '1.6' }}>
+                <p style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.875rem', lineHeight: '1.6' }}>
                   {lang === 'es'
                     ? 'Análisis profesional de mezclas basado en la metodología Mastering Ready.'
                     : 'Professional mix analysis based on the Mastering Ready methodology.'}
                 </p>
-                <p style={{ color: '#9ca3af', fontSize: '0.875rem' }}>
+                <p style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.875rem' }}>
                   masteringready.com
                 </p>
               </div>
             </div>
           </div>
           
-          <div style={{ borderTop: '1px solid #374151', paddingTop: '2rem', textAlign: 'center' }}>
-            <p style={{ color: '#9ca3af', marginBottom: '0.5rem' }}>
+          <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.1)', paddingTop: '2rem', textAlign: 'center' }}>
+            <p style={{ color: 'rgba(255, 255, 255, 0.8)', marginBottom: '0.5rem' }}>
               © 2025 MasteringReady by Matías Carvajal.
             </p>
-            <p style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+            <p style={{ fontSize: '0.875rem', color: 'rgba(255, 255, 255, 0.6)' }}>
               {lang === 'es' 
                 ? 'Basado en la metodología "Mastering Ready"'
                 : 'Based on the "Mastering Ready" methodology'}
