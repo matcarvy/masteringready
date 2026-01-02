@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Download, Check, Upload, Zap, Shield, TrendingUp } from 'lucide-react'
+import { Download, Check, Upload, Zap, Shield, TrendingUp, Play, Music } from 'lucide-react'
 import { analyzeFile } from '@/lib/api'
 import { startAnalysisPolling, getAnalysisStatus } from '@/lib/api'
 import { compressAudioFile } from '@/lib/audio-compression'
@@ -498,9 +498,9 @@ by Matías Carvajal
                 whiteSpace: 'nowrap',
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '0.4rem'
+                gap: '0.5rem'
               }}>
-                <span style={{ fontSize: '1.75rem' }}>🎵</span> MasteringReady
+                <Music size={24} style={{ color: '#667eea', flexShrink: 0 }} /> MasteringReady
                 <span style={{
                   fontSize: '0.5em',
                   fontWeight: '700',
@@ -564,8 +564,8 @@ by Matías Carvajal
 
       {/* Hero Section */}
       <section style={{
-        paddingTop: '8rem',
-        paddingBottom: '5rem',
+        paddingTop: '6rem',
+        paddingBottom: '4rem',
         paddingLeft: '1.5rem',
         paddingRight: '1.5rem',
         background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
@@ -738,11 +738,11 @@ by Matías Carvajal
 
       {/* Features Section */}
       <section id="features" style={{
-        padding: '3.5rem 1.5rem',
+        padding: '3rem 1.5rem',
         background: '#f9fafb'
       }}>
         <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: '4rem' }}>
+          <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
             <h2 style={{ fontSize: '2.25rem', fontWeight: 'bold', marginBottom: '1rem' }}>
               {lang === 'es' ? '¿Por qué MasteringReady?' : 'Why MasteringReady?'}
             </h2>
@@ -809,7 +809,7 @@ by Matías Carvajal
       </section>
 
       {/* Analyzer Section - Same as before but with inline styles */}
-      <section id="analyze" style={{ padding: '3rem 1.5rem', background: 'white' }}>
+      <section id="analyze" style={{ padding: '2.5rem 1.5rem', background: 'white' }}>
         <div style={{ maxWidth: '896px', margin: '0 auto' }}>
           {!result ? (
             <>
@@ -1234,11 +1234,14 @@ by Matías Carvajal
                     <>
                       {needsCompression ? (
                         <>
-                          <Zap size={18} style={{ marginRight: '0.5rem' }} />
+                          <Play size={18} style={{ marginRight: '0.5rem' }} />
                           {lang === 'es' ? 'Comprimir y Analizar' : 'Compress & Analyze'}
                         </>
                       ) : (
-                        lang === 'es' ? 'Analizar Mezcla' : 'Analyze Mix'
+                        <>
+                          <Play size={18} style={{ marginRight: '0.5rem' }} />
+                          {lang === 'es' ? 'Analizar Mezcla' : 'Analyze Mix'}
+                        </>
                       )}
                     </>
                   )}
