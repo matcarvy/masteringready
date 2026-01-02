@@ -55,6 +55,17 @@ import soundfile as sf
 import librosa
 from scipy.signal import resample_poly
 
+# Import interpretative texts generator
+try:
+    from interpretative_texts import (
+        generate_interpretative_texts,
+        format_for_api_response
+    )
+    HAS_INTERPRETATIVE_TEXTS = True
+except ImportError:
+    HAS_INTERPRETATIVE_TEXTS = False
+    print("⚠️ interpretative_texts module not found - interpretations will not be generated", flush=True)
+
 try:
     import pyloudnorm as pyln  # type: ignore
     HAS_PYLOUDNORM = True
@@ -2110,6 +2121,100 @@ def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, s
     # Generate CTA for frontend
     cta_data = generate_cta(score, strict, lang, mode="write")
 
+    # ========== NEW: Generate interpretative texts ==========
+    interpretations = None
+    if HAS_INTERPRETATIVE_TEXTS:
+        try:
+            # Extract key metrics for interpretation
+            interpretation_metrics = {}
+            
+            # Extract headroom
+            headroom_metric = next((m for m in metrics if "Headroom" in m.get("internal_key", "")), None)
+            if headroom_metric:
+                try:
+                    peak_str = headroom_metric.get("peak_db", "0 dBFS")
+                    peak_value = float(peak_str.replace(" dBFS", "").replace("dBFS", ""))
+                    interpretation_metrics['headroom'] = -peak_value  # Convert peak to headroom
+                except:
+                    interpretation_metrics['headroom'] = 0
+            
+            # Extract true peak
+            tp_metric = next((m for m in metrics if "True Peak" in m.get("internal_key", "")), None)
+            if tp_metric:
+                try:
+                    tp_str = tp_metric.get("value", "0 dBTP")
+                    tp_value = float(tp_str.replace(" dBTP", "").replace("dBTP", ""))
+                    interpretation_metrics['true_peak'] = tp_value
+                except:
+                    interpretation_metrics['true_peak'] = 0
+            
+            # Extract dynamic range (PLR)
+            plr_metric = next((m for m in metrics if "PLR" in m.get("internal_key", "")), None)
+            if plr_metric and plr_metric.get("value") != "N/A":
+                try:
+                    plr_str = plr_metric.get("value", "0 dB")
+                    plr_value = float(plr_str.split()[0])  # Get first number
+                    interpretation_metrics['dynamic_range'] = plr_value
+                except:
+                    interpretation_metrics['dynamic_range'] = 0
+            else:
+                interpretation_metrics['dynamic_range'] = 0
+            
+            # Extract LUFS
+            lufs_metric = next((m for m in metrics if "LUFS" in m.get("internal_key", "")), None)
+            if lufs_metric and lufs_metric.get("value") != "N/A":
+                try:
+                    lufs_str = lufs_metric.get("value", "0 LUFS")
+                    lufs_value = float(lufs_str.replace(" LUFS", "").replace("LUFS", ""))
+                    interpretation_metrics['lufs'] = lufs_value
+                except:
+                    interpretation_metrics['lufs'] = -14.0  # Default
+            else:
+                interpretation_metrics['lufs'] = -14.0
+            
+            # Extract stereo balance
+            stereo_metric = next((m for m in metrics if "Stereo" in m.get("internal_key", "")), None)
+            if stereo_metric:
+                # Calculate balance from L/R balance dB
+                lr_balance_db = stereo_metric.get("lr_balance_db", 0)
+                # Convert dB difference to ratio (0.5 = perfect balance)
+                if lr_balance_db == 0:
+                    balance_ratio = 0.5
+                elif lr_balance_db > 0:  # R louder
+                    balance_ratio = 0.5 + (lr_balance_db / 20.0)
+                else:  # L louder
+                    balance_ratio = 0.5 + (lr_balance_db / 20.0)
+                
+                balance_ratio = max(0.0, min(1.0, balance_ratio))  # Clamp 0-1
+                interpretation_metrics['stereo_balance'] = balance_ratio
+                
+                # Extract correlation
+                try:
+                    corr_str = stereo_metric.get("value", "+1.00")
+                    corr_value = float(corr_str.replace("+", ""))
+                    interpretation_metrics['stereo_correlation'] = corr_value
+                except:
+                    interpretation_metrics['stereo_correlation'] = 0.8
+            else:
+                interpretation_metrics['stereo_balance'] = 0.5
+                interpretation_metrics['stereo_correlation'] = 0.8
+            
+            # Generate interpretative texts
+            interpretations_raw = generate_interpretative_texts(
+                metrics=interpretation_metrics,
+                lang=lang
+            )
+            interpretations = format_for_api_response(
+                interpretations_raw,
+                interpretation_metrics
+            )
+            
+        except Exception as e:
+            # If interpretation generation fails, continue without it
+            print(f"⚠️ Warning: Could not generate interpretations: {e}", flush=True)
+            interpretations = None
+    # ========== END: Interpretative texts generation ==========
+
     return {
         "file": {
             "path": str(path),
@@ -2122,6 +2227,7 @@ def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, s
         "score": score,
         "verdict": verdict,
         "cta": cta_data,  # Add CTA data for frontend
+        "interpretations": interpretations,  # NEW: Add interpretations
         "notes": {
             "lufs_is_real": has_real_lufs,
             "lufs_reliable": lufs_reliable,
