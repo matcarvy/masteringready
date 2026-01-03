@@ -4815,10 +4815,106 @@ def generate_complete_pdf(
                 ('RIGHTPADDING', (0, 0), (-1, -1), 8),
                 ('TOPPADDING', (0, 0), (-1, -1), 6),
                 ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
-            ]))
-            
+            ])
+
             story.append(metrics_table)
             story.append(Spacer(1, 0.3*inch))
+        
+        # ========== NEW: ANÁLISIS TÉCNICO DETALLADO (from interpretations) ==========
+        if report.get('interpretations'):
+            story.append(PageBreak())
+            story.append(Paragraph(
+                "[OK] ANÁLISIS TÉCNICO DETALLADO" if lang == 'es' else "[OK] TECHNICAL ANALYSIS DETAILED",
+                section_style
+            ))
+            story.append(Spacer(1, 0.2*inch))
+            
+            interps = report['interpretations']
+            
+            # Order: Headroom, Dynamic Range, Overall Level, Stereo Balance
+            sections = [
+                ('headroom', 'Headroom', 'Headroom'),
+                ('dynamic_range', 'Rango Dinámico (PLR)', 'Dynamic Range (PLR)'),
+                ('overall_level', 'Nivel General (LUFS)', 'Overall Level (LUFS)'),
+                ('stereo_balance', 'Balance Estéreo', 'Stereo Balance')
+            ]
+            
+            for section_key, title_es, title_en in sections:
+                if section_key in interps:
+                    section_data = interps[section_key]
+                    
+                    # Section Title
+                    story.append(Paragraph(
+                        f"<b>{title_es if lang == 'es' else title_en}</b>",
+                        body_style
+                    ))
+                    story.append(Spacer(1, 0.1*inch))
+                    
+                    # 1. NUMERIC DATA (metrics)
+                    if 'metrics' in section_data:
+                        metrics_info = section_data['metrics']
+                        
+                        if section_key == 'headroom':
+                            hr_val = metrics_info.get('headroom_dbfs', 0)
+                            tp_val = metrics_info.get('true_peak_dbtp', 0)
+                            story.append(Paragraph(
+                                f"Headroom dBFS: {hr_val:.2f}",
+                                body_style
+                            ))
+                            story.append(Paragraph(
+                                f"True Peak dBTP: {tp_val:.2f}",
+                                body_style
+                            ))
+                        
+                        elif section_key == 'dynamic_range':
+                            # Support both old and new field names
+                            plr_val = metrics_info.get('plr', metrics_info.get('dr_lu', 0))
+                            story.append(Paragraph(
+                                f"PLR: {plr_val:.1f} dB",
+                                body_style
+                            ))
+                        
+                        elif section_key == 'overall_level':
+                            lufs_val = metrics_info.get('lufs', 0)
+                            story.append(Paragraph(
+                                f"LUFS (Integrated): {lufs_val:.1f}",
+                                body_style
+                            ))
+                        
+                        elif section_key == 'stereo_balance':
+                            # Support both old and new field names
+                            bal_val = metrics_info.get('balance_l_r', metrics_info.get('balance_lr', 0))
+                            corr_val = metrics_info.get('correlation', 0)
+                            story.append(Paragraph(
+                                f"Balance L/R: {bal_val:+.1f} dB",
+                                body_style
+                            ))
+                            story.append(Paragraph(
+                                f"Correlación: {corr_val:.2f}",
+                                body_style
+                            ))
+                    
+                    story.append(Spacer(1, 0.1*inch))
+                    
+                    # 2. INTERPRETATION
+                    if 'interpretation' in section_data:
+                        interp_text = clean_text_for_pdf(section_data['interpretation'])
+                        for line in interp_text.split('\n'):
+                            if line.strip():
+                                story.append(Paragraph(line.strip(), body_style))
+                    
+                    story.append(Spacer(1, 0.1*inch))
+                    
+                    # 3. RECOMMENDATION
+                    if 'recommendation' in section_data:
+                        rec_text = clean_text_for_pdf(section_data['recommendation'])
+                        for line in rec_text.split('\n'):
+                            if line.strip():
+                                story.append(Paragraph(line.strip(), body_style))
+                    
+                    story.append(Spacer(1, 0.2*inch))
+        
+        # ========== END: ANÁLISIS TÉCNICO DETALLADO ==========
         
         # Analysis Modes
         for mode_key, mode_title_es, mode_title_en in [
