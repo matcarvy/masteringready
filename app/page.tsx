@@ -49,17 +49,7 @@ function InterpretativeSection({ title, interpretation, recommendation, metrics,
         {title}
       </h4>
       
-      {/* Interpretation Text */}
-      <p style={{
-        fontSize: '1rem',
-        lineHeight: '1.7',
-        marginBottom: '1.25rem',
-        color: '#374151'
-      }}>
-        {interpretation}
-      </p>
-      
-      {/* Technical Metrics */}
+      {/* 1. TECHNICAL METRICS FIRST */}
       <div style={{
         background: '#f9fafb',
         borderRadius: '0.5rem',
@@ -77,16 +67,30 @@ function InterpretativeSection({ title, interpretation, recommendation, metrics,
           {Object.entries(metrics).map(([key, value]) => {
             if (key === 'status') return null
             
-            // Format key names
-            const formattedKey = key
-              .replace(/_/g, ' ')
-              .replace(/dbfs/i, 'dBFS')
-              .replace(/dbtp/i, 'dBTP')
-              .replace(/lu/i, 'LU')
-              .replace(/lufs/i, 'LUFS')
-              .split(' ')
-              .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-              .join(' ')
+            // Format key names with correct capitalization
+            let formattedKey = key
+            
+            // Handle specific cases first
+            if (key === 'headroom_dbfs') {
+              formattedKey = 'Headroom dBFS'
+            } else if (key === 'true_peak_dbtp') {
+              formattedKey = 'True Peak dBTP'
+            } else if (key === 'plr' || key === 'dr_lu') {
+              formattedKey = 'PLR'
+            } else if (key === 'balance_l_r' || key === 'balance_lr') {
+              formattedKey = 'Balance L/R'
+            } else if (key === 'correlation') {
+              formattedKey = 'Correlation'
+            } else if (key === 'lufs') {
+              formattedKey = 'LUFS'
+            } else {
+              // Generic formatting for other keys
+              formattedKey = key
+                .replace(/_/g, ' ')
+                .split(' ')
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                .join(' ')
+            }
             
             return (
               <div key={key} style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -98,7 +102,17 @@ function InterpretativeSection({ title, interpretation, recommendation, metrics,
         </div>
       </div>
       
-      {/* Recommendation */}
+      {/* 2. INTERPRETATION TEXT SECOND */}
+      <p style={{
+        fontSize: '1rem',
+        lineHeight: '1.7',
+        marginBottom: '1.25rem',
+        color: '#374151'
+      }}>
+        {interpretation}
+      </p>
+      
+      {/* 3. RECOMMENDATION THIRD */}
       <div style={{
         background: '#eff6ff',
         borderLeft: '4px solid #3b82f6',
@@ -1669,32 +1683,7 @@ by Matías Carvajal
                 {/* Write Mode */}
                 {reportView === 'write' && (
                   <>
-                    {/* Original Report Text */}
-                    <div style={{
-                      background: '#f9fafb',
-                      borderRadius: '0.75rem',
-                      padding: 'clamp(1rem, 3vw, 1.5rem)',
-                      marginBottom: '1.5rem'
-                    }}>
-                      <h3 style={{ fontWeight: '600', fontSize: 'clamp(1rem, 2.5vw, 1.125rem)', marginBottom: '1rem' }}>
-                        {lang === 'es' ? '📄 Análisis Completo' : '📄 Complete Analysis'}
-                      </h3>
-                      <pre style={{
-                        whiteSpace: 'pre-wrap',
-                        wordBreak: 'break-word',
-                        overflowWrap: 'break-word',
-                        fontSize: 'clamp(0.8rem, 2vw, 0.875rem)',
-                        lineHeight: '1.6',
-                        fontFamily: 'Inter, system-ui, sans-serif',
-                        overflowX: 'auto',
-                        maxWidth: '100%',
-                        margin: 0
-                      }}>
-                        {cleanReportText(result.report_write || result.report)}
-                      </pre>
-                    </div>
-
-                    {/* NEW: Interpretative Sections */}
+                    {/* NEW: Interpretative Sections FIRST */}
                     {result.interpretations && (
                       <div style={{ marginBottom: '1.5rem' }}>
                         <h3 style={{ 
@@ -1751,6 +1740,31 @@ by Matías Carvajal
                         )}
                       </div>
                     )}
+
+                    {/* Original Report Text SECOND */}
+                    <div style={{
+                      background: '#f9fafb',
+                      borderRadius: '0.75rem',
+                      padding: 'clamp(1rem, 3vw, 1.5rem)',
+                      marginBottom: '1.5rem'
+                    }}>
+                      <h3 style={{ fontWeight: '600', fontSize: 'clamp(1rem, 2.5vw, 1.125rem)', marginBottom: '1rem' }}>
+                        {lang === 'es' ? '📄 Análisis Completo' : '📄 Complete Analysis'}
+                      </h3>
+                      <pre style={{
+                        whiteSpace: 'pre-wrap',
+                        wordBreak: 'break-word',
+                        overflowWrap: 'break-word',
+                        fontSize: 'clamp(0.8rem, 2vw, 0.875rem)',
+                        lineHeight: '1.6',
+                        fontFamily: 'Inter, system-ui, sans-serif',
+                        overflowX: 'auto',
+                        maxWidth: '100%',
+                        margin: 0
+                      }}>
+                        {cleanReportText(result.report_write || result.report)}
+                      </pre>
+                    </div>
                   </>
                 )}
 
