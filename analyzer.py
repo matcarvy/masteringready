@@ -2134,16 +2134,16 @@ def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, s
             interpretation_metrics = {}
             
             # Extract headroom (use peak_db directly - already negative in dBFS)
-            interpretation_metrics['headroom'] = final_peak  # Peak is already negative (e.g., -6.3 dBFS)
+            interpretation_metrics['headroom'] = float(final_peak)  # Convert numpy to Python float (e.g., -6.3 dBFS)
             
             # Extract true peak
-            interpretation_metrics['true_peak'] = final_tp
+            interpretation_metrics['true_peak'] = float(final_tp)
             
             # Extract dynamic range (PLR)
-            interpretation_metrics['dynamic_range'] = final_plr if final_plr > 0 else 0
+            interpretation_metrics['dynamic_range'] = float(final_plr) if final_plr > 0 else 0.0
             
             # Extract LUFS
-            interpretation_metrics['lufs'] = weighted_lufs if weighted_lufs != 0 else -14.0
+            interpretation_metrics['lufs'] = float(weighted_lufs) if weighted_lufs != 0 else -14.0
             
             # Extract stereo balance
             # Calculate balance from L/R balance dB
@@ -2160,7 +2160,7 @@ def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, s
             interpretation_metrics['stereo_balance'] = balance_ratio
             
             # Extract correlation
-            interpretation_metrics['stereo_correlation'] = final_correlation
+            interpretation_metrics['stereo_correlation'] = float(final_correlation)
             
             # Generate interpretative texts
             interpretations_raw = generate_interpretative_texts(
@@ -3387,16 +3387,16 @@ def analyze_file_chunked(
             interpretation_metrics = {}
             
             # Extract headroom (use peak_db directly - already negative in dBFS)
-            interpretation_metrics['headroom'] = final_peak  # Peak is already negative (e.g., -6.3 dBFS)
+            interpretation_metrics['headroom'] = float(final_peak)  # Convert numpy to Python float (e.g., -6.3 dBFS)
             
             # Extract true peak
-            interpretation_metrics['true_peak'] = final_tp
+            interpretation_metrics['true_peak'] = float(final_tp)
             
             # Extract dynamic range (PLR)
-            interpretation_metrics['dynamic_range'] = final_plr if final_plr > 0 else 0
+            interpretation_metrics['dynamic_range'] = float(final_plr) if final_plr > 0 else 0.0
             
             # Extract LUFS
-            interpretation_metrics['lufs'] = weighted_lufs if weighted_lufs != 0 else -14.0
+            interpretation_metrics['lufs'] = float(weighted_lufs) if weighted_lufs != 0 else -14.0
             
             # Extract stereo balance
             # Calculate balance from L/R balance dB
@@ -3413,7 +3413,7 @@ def analyze_file_chunked(
             interpretation_metrics['stereo_balance'] = balance_ratio
             
             # Extract correlation
-            interpretation_metrics['stereo_correlation'] = final_correlation
+            interpretation_metrics['stereo_correlation'] = float(final_correlation)
             
             # Generate interpretative texts
             interpretations_raw = generate_interpretative_texts(
