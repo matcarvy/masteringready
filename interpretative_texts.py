@@ -106,15 +106,14 @@ def _get_dr_status(dr_value: float) -> str:
 
 def _get_level_status(lufs: float) -> str:
     """Determine overall level status"""
-    if -16 <= lufs <= -8:
+    if -23 <= lufs <= -18:
         return "excellent"
-    elif -18 <= lufs <= -6:
+    elif -25 <= lufs <= -16:
         return "good"
-    elif -20 <= lufs <= -4:
+    elif -28 <= lufs <= -10:
         return "warning"
     else:
         return "error"
-
 
 def _get_stereo_status(balance: float, correlation: float) -> str:
     """Determine stereo balance status"""
@@ -283,60 +282,60 @@ def _generate_level_text_es(lufs: float, status: str) -> Dict[str, str]:
         }
     
     elif status == "warning":
-    if lufs > -14:
-        return {
-            "interpretation": (
-                "El nivel general de tu mezcla está alto para mastering. "
-                "Un loudness muy elevado antes del mastering puede indicar sobrecompresión "
-                "o puede limitar las opciones del ingeniero para alcanzar el balance final deseado."
-            ),
-            "recommendation": (
-                f"Considera reducir el nivel del bus master en 3-5 dB. Actualmente está "
-                f"en {lufs:.1f} LUFS, lo ideal sería alrededor de -23 a -18 LUFS."
-            )
-        }
-    else:
-        return {
-            "interpretation": (
-                "El nivel general de tu mezcla está bajo para mastering. "
-                "Un loudness muy bajo puede hacer que el procesamiento de mastering "
-                "tenga que trabajar más agresivamente de lo deseado, potencialmente "
-                "afectando la transparencia del resultado."
-            ),
-            "recommendation": (
-                f"Considera aumentar el nivel del bus master en 2-4 dB. Actualmente está "
-                f"en {lufs:.1f} LUFS, lo ideal sería alrededor de -23 a -18 LUFS."
-            )
-        }
-
-else:  # error
-    if lufs > -10:
-        return {
-            "interpretation": (
-                "El nivel general de tu mezcla es excesivamente alto. "
-                "Este loudness indica sobrecompresión severa o limitación agresiva, "
-                "lo que deja muy poco margen para el ingeniero de mastering y "
-                "probablemente ya ha comprometido la calidad sónica de la mezcla."
-            ),
-            "recommendation": (
-                f"Es necesario reducir significativamente el nivel (6-10 dB mínimo) y "
-                f"revisar toda la cadena de procesamiento del bus master. El objetivo "
-                f"es un rango de -23 a -18 LUFS."
-            )
-        }
-    else:
-        return {
-            "interpretation": (
-                "El nivel general de tu mezcla es excesivamente bajo. "
-                "Este loudness tan reducido forzará al mastering a trabajar de manera "
-                "muy agresiva para alcanzar niveles competitivos, lo que probablemente "
-                "comprometerá la transparencia y naturalidad del resultado final."
-            ),
-            "recommendation": (
-                f"Es necesario aumentar el nivel del bus master significativamente "
-                f"(5-8 dB). Actualmente en {lufs:.1f} LUFS, el objetivo es -23 a -18 LUFS."
-            )
-        }
+        if lufs > -14:
+            return {
+                "interpretation": (
+                    "El nivel general de tu mezcla está alto para mastering. "
+                    "Un loudness muy elevado antes del mastering puede indicar sobrecompresión "
+                    "o puede limitar las opciones del ingeniero para alcanzar el balance final deseado."
+                ),
+                "recommendation": (
+                    f"Considera reducir el nivel del bus master en 3-5 dB. Actualmente está "
+                    f"en {lufs:.1f} LUFS, lo ideal sería alrededor de -23 a -18 LUFS."
+                )
+            }
+        else:
+            return {
+                "interpretation": (
+                    "El nivel general de tu mezcla está bajo para mastering. "
+                    "Un loudness muy bajo puede hacer que el procesamiento de mastering "
+                    "tenga que trabajar más agresivamente de lo deseado, potencialmente "
+                    "afectando la transparencia del resultado."
+                ),
+                "recommendation": (
+                    f"Considera aumentar el nivel del bus master en 2-4 dB. Actualmente está "
+                    f"en {lufs:.1f} LUFS, lo ideal sería alrededor de -23 a -18 LUFS."
+                )
+            }
+    
+    else:  # error
+        if lufs > -10:
+            return {
+                "interpretation": (
+                    "El nivel general de tu mezcla es excesivamente alto. "
+                    "Este loudness indica sobrecompresión severa o limitación agresiva, "
+                    "lo que deja muy poco margen para el ingeniero de mastering y "
+                    "probablemente ya ha comprometido la calidad sónica de la mezcla."
+                ),
+                "recommendation": (
+                    f"Es necesario reducir significativamente el nivel (6-10 dB mínimo) y "
+                    f"revisar toda la cadena de procesamiento del bus master. El objetivo "
+                    f"es un rango de -23 a -18 LUFS."
+                )
+            }
+        else:
+            return {
+                "interpretation": (
+                    "El nivel general de tu mezcla es excesivamente bajo. "
+                    "Este loudness tan reducido forzará al mastering a trabajar de manera "
+                    "muy agresiva para alcanzar niveles competitivos, lo que probablemente "
+                    "comprometerá la transparencia y naturalidad del resultado final."
+                ),
+                "recommendation": (
+                    f"Es necesario aumentar el nivel del bus master significativamente "
+                    f"(5-8 dB). Actualmente en {lufs:.1f} LUFS, el objetivo es -23 a -18 LUFS."
+                )
+            }
 
 
 def _generate_stereo_text_es(balance: float, correlation: float, status: str) -> Dict[str, str]:
