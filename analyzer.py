@@ -4825,7 +4825,7 @@ def generate_complete_pdf(
         if report.get('interpretations'):
             story.append(PageBreak())
             story.append(Paragraph(
-                "[OK] ANÁLISIS TÉCNICO DETALLADO" if lang == 'es' else "[OK] TECHNICAL ANALYSIS DETAILED",
+                clean_text_for_pdf("📊 ANÁLISIS TÉCNICO DETALLADO") if lang == 'es' else clean_text_for_pdf("📊 TECHNICAL ANALYSIS DETAILED"),
                 section_style
             ))
             story.append(Spacer(1, 0.2*inch))
