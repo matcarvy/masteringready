@@ -3374,6 +3374,65 @@ def analyze_file_chunked(
     # Generate CTA for frontend
     cta_data = generate_cta(score, strict, lang, mode="write")
     
+    # ========== NEW: Generate interpretative texts ==========
+    interpretations = None
+    print(f"🔍 DEBUG: HAS_INTERPRETATIVE_TEXTS = {HAS_INTERPRETATIVE_TEXTS}", flush=True)
+    if HAS_INTERPRETATIVE_TEXTS:
+        print(f"🔍 DEBUG: Inside interpretations block (CHUNKED)", flush=True)
+        print(f"   final_peak: {final_peak}", flush=True)
+        print(f"   final_tp: {final_tp}", flush=True)
+        print(f"   final_plr: {final_plr}", flush=True)
+        try:
+            # Extract key metrics for interpretation
+            interpretation_metrics = {}
+            
+            # Extract headroom (use peak_db directly - already negative in dBFS)
+            interpretation_metrics['headroom'] = final_peak  # Peak is already negative (e.g., -6.3 dBFS)
+            
+            # Extract true peak
+            interpretation_metrics['true_peak'] = final_tp
+            
+            # Extract dynamic range (PLR)
+            interpretation_metrics['dynamic_range'] = final_plr if final_plr > 0 else 0
+            
+            # Extract LUFS
+            interpretation_metrics['lufs'] = weighted_lufs if weighted_lufs != 0 else -14.0
+            
+            # Extract stereo balance
+            # Calculate balance from L/R balance dB
+            lr_balance_db = final_lr_balance
+            # Convert dB difference to ratio (0.5 = perfect balance)
+            if lr_balance_db == 0:
+                balance_ratio = 0.5
+            elif lr_balance_db > 0:  # R louder
+                balance_ratio = 0.5 + (lr_balance_db / 20.0)
+            else:  # L louder
+                balance_ratio = 0.5 + (lr_balance_db / 20.0)
+            
+            balance_ratio = max(0.0, min(1.0, balance_ratio))  # Clamp 0-1
+            interpretation_metrics['stereo_balance'] = balance_ratio
+            
+            # Extract correlation
+            interpretation_metrics['stereo_correlation'] = final_correlation
+            
+            # Generate interpretative texts
+            interpretations_raw = generate_interpretative_texts(
+                metrics=interpretation_metrics,
+                lang=lang
+            )
+            interpretations = format_for_api_response(
+                interpretations_raw,
+                interpretation_metrics
+            )
+            
+        except Exception as e:
+            # If interpretation generation fails, continue without it
+            import traceback
+            print(f"❌ ERROR generating interpretations (CHUNKED): {e}", flush=True)
+            traceback.print_exc()
+            interpretations = None
+    # ========== END: Interpretative texts generation ==========
+    
     # Build full result using the same structure as analyze_file
     result = {
         "file": {
@@ -3398,6 +3457,7 @@ def analyze_file_chunked(
         "territory": territory,
         "is_mastered": is_mastered,
         "cta": cta_data,  # Add CTA data for frontend
+        "interpretations": interpretations,  # NEW: Add interpretations
         "chunked": True,
         "num_chunks": num_chunks,
         "notes": {
