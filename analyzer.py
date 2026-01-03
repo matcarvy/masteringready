@@ -2123,7 +2123,12 @@ def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, s
     
     # ========== NEW: Generate interpretative texts ==========
     interpretations = None
+    print(f"🔍 DEBUG: HAS_INTERPRETATIVE_TEXTS = {HAS_INTERPRETATIVE_TEXTS}", flush=True)
     if HAS_INTERPRETATIVE_TEXTS:
+        print(f"🔍 DEBUG: Inside interpretations block", flush=True)
+        print(f"   final_peak: {final_peak}", flush=True)
+        print(f"   final_tp: {final_tp}", flush=True)
+        print(f"   final_plr: {final_plr}", flush=True)
         try:
             # Extract key metrics for interpretation
             interpretation_metrics = {}
@@ -2168,8 +2173,9 @@ def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, s
             )
             
         except Exception as e:
-            # If interpretation generation fails, continue without it
-            print(f"⚠️ Warning: Could not generate interpretations: {e}", flush=True)
+            import traceback
+            print(f"❌ ERROR generating interpretations: {e}", flush=True)
+            traceback.print_exc()
             interpretations = None
     # ========== END: Interpretative texts generation ==========
     
