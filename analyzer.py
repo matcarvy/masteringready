@@ -59,7 +59,8 @@ from scipy.signal import resample_poly
 try:
     from interpretative_texts import (
         generate_interpretative_texts,
-        format_for_api_response
+        format_for_api_response,
+        format_for_api_response_v2
     )
     HAS_INTERPRETATIVE_TEXTS = True
 except ImportError:
@@ -4815,8 +4816,8 @@ def generate_complete_pdf(
                 ('RIGHTPADDING', (0, 0), (-1, -1), 8),
                 ('TOPPADDING', (0, 0), (-1, -1), 6),
                 ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
-            ])
-
+            ]))
+            
             story.append(metrics_table)
             story.append(Spacer(1, 0.3*inch))
         
