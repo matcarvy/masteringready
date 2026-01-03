@@ -1403,7 +1403,7 @@ def _status_plr_en(plr: Optional[float], has_real_lufs: bool, strict: bool = Fal
         },
         "pass": {
             "strict": "Good PLR for commercial, but ≥14 dB is ideal for maximum flexibility.",
-            "normal": "Very good PLR for mastering.",
+            "normal": "Adequate PLR for mastering.",
         },
         "warning": f"The mix may already be quite limited (PLR: {plr:.1f} dB). Check master bus limiters/compressors. If you like their color, keep them but adjust so they don't reduce gain (raise threshold/ceiling). This preserves the character while recovering dynamics.",
         "critical": f"PLR very low ({plr:.1f} dB): over-compressed/limited. Remove limiters or adjust them to pass audio without gain reduction (for color only). Alternatively, use less compression on group buses.",
@@ -1631,7 +1631,7 @@ def _status_plr_es(plr: Optional[float], has_real_lufs: bool, strict: bool = Fal
         },
         "pass": {
             "strict": "PLR bueno para comercial, pero ≥14 dB es ideal para máxima flexibilidad.",
-            "normal": "Muy buen PLR para mastering.",
+            "normal": "PLR adecuado para mastering.",
         },
         "warning": f"La mezcla ya puede estar bastante limitada (PLR: {plr:.1f} dB). Revisa limitadores/compresores en el master bus. Si te gusta su color, manténlos pero ajústalos para que no reduzcan ganancia (sube threshold/ceiling). Así conservas el carácter mientras recuperas dinámica.",
         "critical": f"PLR muy bajo ({plr:.1f} dB): sobre-comprimida/limitada. Quita limitadores o ajústalos para que el audio solo PASE sin reducción de ganancia (solo para color). Alternativamente, usa menos compresión en buses de grupos.",
@@ -4849,7 +4849,7 @@ def generate_complete_pdf(
                         f"<b>{title_es if lang == 'es' else title_en}</b>",
                         body_style
                     ))
-                    story.append(Spacer(1, 0.1*inch))
+                    story.append(Spacer(1, 0.05*inch))  # Reducido de 0.1 a 0.05
                     
                     # 1. NUMERIC DATA (metrics)
                     if 'metrics' in section_data:
@@ -4895,7 +4895,7 @@ def generate_complete_pdf(
                                 body_style
                             ))
                     
-                    story.append(Spacer(1, 0.1*inch))
+                    story.append(Spacer(1, 0.05*inch))  # Reducido de 0.1 a 0.05
                     
                     # 2. INTERPRETATION
                     if 'interpretation' in section_data:
@@ -4904,7 +4904,7 @@ def generate_complete_pdf(
                             if line.strip():
                                 story.append(Paragraph(line.strip(), body_style))
                     
-                    story.append(Spacer(1, 0.1*inch))
+                    story.append(Spacer(1, 0.05*inch))  # Reducido de 0.1 a 0.05
                     
                     # 3. RECOMMENDATION
                     if 'recommendation' in section_data:
@@ -4913,7 +4913,7 @@ def generate_complete_pdf(
                             if line.strip():
                                 story.append(Paragraph(line.strip(), body_style))
                     
-                    story.append(Spacer(1, 0.2*inch))
+                    story.append(Spacer(1, 0.15*inch))  # Reducido de 0.2 a 0.15
         
         # ========== END: ANÁLISIS TÉCNICO DETALLADO ==========
         
