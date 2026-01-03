@@ -711,7 +711,7 @@ def format_for_api_response(
             "interpretation": interpretations["dynamic_range"]["interpretation"],
             "recommendation": interpretations["dynamic_range"]["recommendation"],
             "metrics": {
-                "dr_lu": metrics.get('dynamic_range', 0),
+                "plr": metrics.get('dynamic_range', 0),
                 "status": _get_dr_status(metrics.get('dynamic_range', 0))
             }
         },
@@ -727,13 +727,79 @@ def format_for_api_response(
             "interpretation": interpretations["stereo_balance"]["interpretation"],
             "recommendation": interpretations["stereo_balance"]["recommendation"],
             "metrics": {
-                "balance_lr": metrics.get('stereo_balance', 0),
+                "balance_l_r": metrics.get('stereo_balance', 0),
                 "correlation": metrics.get('stereo_correlation', 0),
                 "status": _get_stereo_status(
                     metrics.get('stereo_balance', 0),
                     metrics.get('stereo_correlation', 0)
                 )
             }
+        }
+    }
+
+
+def format_for_api_response_v2(
+    interpretations: Dict[str, Dict[str, str]],
+    metrics: Dict[str, Any]
+) -> Dict[str, Any]:
+    """
+    NEW VERSION: Format with Technical Details FIRST, then Complete Analysis.
+    
+    Each section in technical_details shows:
+    1. Numeric data (metrics)
+    2. Interpretation (what it means)
+    3. Recommendation (what to do)
+    
+    Returns structure ready for frontend consumption.
+    """
+    return {
+        "technical_details": {
+            "headroom": {
+                "metrics": {
+                    "headroom_dbfs": metrics.get('headroom', 0),
+                    "true_peak_dbtp": metrics.get('true_peak', 0),
+                    "status": _get_headroom_status(
+                        metrics.get('headroom', 0),
+                        metrics.get('true_peak', 0)
+                    )
+                },
+                "interpretation": interpretations["headroom"]["interpretation"],
+                "recommendation": interpretations["headroom"]["recommendation"]
+            },
+            "dynamic_range": {
+                "metrics": {
+                    "plr": metrics.get('dynamic_range', 0),
+                    "status": _get_dr_status(metrics.get('dynamic_range', 0))
+                },
+                "interpretation": interpretations["dynamic_range"]["interpretation"],
+                "recommendation": interpretations["dynamic_range"]["recommendation"]
+            },
+            "overall_level": {
+                "metrics": {
+                    "lufs": metrics.get('lufs', 0),
+                    "status": _get_level_status(metrics.get('lufs', 0))
+                },
+                "interpretation": interpretations["overall_level"]["interpretation"],
+                "recommendation": interpretations["overall_level"]["recommendation"]
+            },
+            "stereo_balance": {
+                "metrics": {
+                    "balance_l_r": metrics.get('stereo_balance', 0),
+                    "correlation": metrics.get('stereo_correlation', 0),
+                    "status": _get_stereo_status(
+                        metrics.get('stereo_balance', 0),
+                        metrics.get('stereo_correlation', 0)
+                    )
+                },
+                "interpretation": interpretations["stereo_balance"]["interpretation"],
+                "recommendation": interpretations["stereo_balance"]["recommendation"]
+            }
+        },
+        "complete_analysis": {
+            "headroom": interpretations["headroom"],
+            "dynamic_range": interpretations["dynamic_range"],
+            "overall_level": interpretations["overall_level"],
+            "stereo_balance": interpretations["stereo_balance"]
         }
     }
 
