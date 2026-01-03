@@ -283,60 +283,60 @@ def _generate_level_text_es(lufs: float, status: str) -> Dict[str, str]:
         }
     
     elif status == "warning":
-        if lufs > -8:
-            return {
-                "interpretation": (
-                    "El nivel general de tu mezcla está alto para mastering. "
-                    "Un loudness muy elevado antes del mastering puede indicar sobrecompresión "
-                    "o puede limitar las opciones del ingeniero para alcanzar el balance final deseado."
-                ),
-                "recommendation": (
-                    f"Considera reducir el nivel del bus master en 2-3 dB. Actualmente está "
-                    f"en {lufs:.1f} LUFS, lo ideal sería alrededor de -12 a -14 LUFS."
-                )
-            }
-        else:
-            return {
-                "interpretation": (
-                    "El nivel general de tu mezcla está bajo para mastering. "
-                    "Un loudness muy bajo puede hacer que el procesamiento de mastering "
-                    "tenga que trabajar más agresivamente de lo deseado, potencialmente "
-                    "afectando la transparencia del resultado."
-                ),
-                "recommendation": (
-                    f"Considera aumentar el nivel del bus master en 2-3 dB. Actualmente está "
-                    f"en {lufs:.1f} LUFS, lo ideal sería alrededor de -12 a -14 LUFS."
-                )
-            }
-    
-    else:  # error
-        if lufs > -6:
-            return {
-                "interpretation": (
-                    "El nivel general de tu mezcla es excesivamente alto. "
-                    "Este loudness indica sobrecompresión severa o limitación agresiva, "
-                    "lo que deja muy poco margen para el ingeniero de mastering y "
-                    "probablemente ya ha comprometido la calidad sónica de la mezcla."
-                ),
-                "recommendation": (
-                    f"Es necesario reducir significativamente el nivel (4-6 dB mínimo) y "
-                    f"revisar toda la cadena de procesamiento del bus master. El objetivo "
-                    f"es un rango de -12 a -14 LUFS."
-                )
-            }
-        else:
-            return {
-                "interpretation": (
-                    "El nivel general de tu mezcla es excesivamente bajo. "
-                    "Este loudness tan reducido forzará al mastering a trabajar de manera "
-                    "muy agresiva para alcanzar niveles competitivos, lo que probablemente "
-                    "comprometerá la transparencia y naturalidad del resultado final."
-                ),
-                "recommendation": (
-                    f"Es necesario aumentar el nivel del bus master significativamente "
-                    f"(4-6 dB). Actualmente en {lufs:.1f} LUFS, el objetivo es -12 a -14 LUFS."
-                )
-            }
+    if lufs > -14:
+        return {
+            "interpretation": (
+                "El nivel general de tu mezcla está alto para mastering. "
+                "Un loudness muy elevado antes del mastering puede indicar sobrecompresión "
+                "o puede limitar las opciones del ingeniero para alcanzar el balance final deseado."
+            ),
+            "recommendation": (
+                f"Considera reducir el nivel del bus master en 3-5 dB. Actualmente está "
+                f"en {lufs:.1f} LUFS, lo ideal sería alrededor de -23 a -18 LUFS."
+            )
+        }
+    else:
+        return {
+            "interpretation": (
+                "El nivel general de tu mezcla está bajo para mastering. "
+                "Un loudness muy bajo puede hacer que el procesamiento de mastering "
+                "tenga que trabajar más agresivamente de lo deseado, potencialmente "
+                "afectando la transparencia del resultado."
+            ),
+            "recommendation": (
+                f"Considera aumentar el nivel del bus master en 2-4 dB. Actualmente está "
+                f"en {lufs:.1f} LUFS, lo ideal sería alrededor de -23 a -18 LUFS."
+            )
+        }
+
+else:  # error
+    if lufs > -10:
+        return {
+            "interpretation": (
+                "El nivel general de tu mezcla es excesivamente alto. "
+                "Este loudness indica sobrecompresión severa o limitación agresiva, "
+                "lo que deja muy poco margen para el ingeniero de mastering y "
+                "probablemente ya ha comprometido la calidad sónica de la mezcla."
+            ),
+            "recommendation": (
+                f"Es necesario reducir significativamente el nivel (6-10 dB mínimo) y "
+                f"revisar toda la cadena de procesamiento del bus master. El objetivo "
+                f"es un rango de -23 a -18 LUFS."
+            )
+        }
+    else:
+        return {
+            "interpretation": (
+                "El nivel general de tu mezcla es excesivamente bajo. "
+                "Este loudness tan reducido forzará al mastering a trabajar de manera "
+                "muy agresiva para alcanzar niveles competitivos, lo que probablemente "
+                "comprometerá la transparencia y naturalidad del resultado final."
+            ),
+            "recommendation": (
+                f"Es necesario aumentar el nivel del bus master significativamente "
+                f"(5-8 dB). Actualmente en {lufs:.1f} LUFS, el objetivo es -23 a -18 LUFS."
+            )
+        }
 
 
 def _generate_stereo_text_es(balance: float, correlation: float, status: str) -> Dict[str, str]:
@@ -538,12 +538,12 @@ def _generate_level_text_en(lufs: float, status: str) -> Dict[str, str]:
         return {
             "interpretation": (
                 "Your mix's overall level is optimal for mastering. "
-                "It's in a range that allows the engineer to work freely to achieve "
-                "target loudness for destination platforms without compromising dynamics "
-                "or introducing distortion."
+                "It's in the ideal range (-23 to -18 LUFS) that provides excellent "
+                "headroom for the mastering engineer to work freely, achieving "
+                "target loudness without compromising dynamics or introducing distortion."
             ),
             "recommendation": (
-                "Current level is perfect. Don't adjust master bus gain staging."
+                "Current level is perfect. Maintain this headroom for mastering."
             )
         }
     
@@ -551,68 +551,67 @@ def _generate_level_text_en(lufs: float, status: str) -> Dict[str, str]:
         return {
             "interpretation": (
                 "Your mix's overall level is good for mastering. "
-                "Current loudness allows comfortable work to achieve streaming platform "
-                "targets without forcing processing."
+                "Current loudness provides sufficient headroom for comfortable mastering "
+                "work to achieve streaming platform targets."
             ),
             "recommendation": (
-                "Level is adequate. Any adjustments should be minor (±1-2 dB)."
+                "Level is adequate. Any adjustments should be minimal (±1 dB)."
             )
         }
     
     elif status == "warning":
-        if lufs > -8:
+        if lufs > -14:
             return {
                 "interpretation": (
-                    "Your mix's overall level is high for mastering. "
-                    "Very high loudness before mastering may indicate overcompression or "
-                    "limit engineer's options to achieve desired final balance."
+                    "Your mix's overall level is too hot for mastering. "
+                    "Insufficient headroom may limit the mastering engineer's options "
+                    "and could indicate over-processing on the master bus."
                 ),
                 "recommendation": (
-                    f"Consider reducing master bus level by 2-3 dB. Currently at "
-                    f"{lufs:.1f} LUFS, ideal would be around -12 to -14 LUFS."
+                    f"Consider reducing master bus level by 3-5 dB. Currently at "
+                    f"{lufs:.1f} LUFS, ideal range is -23 to -18 LUFS."
                 )
             }
         else:
             return {
                 "interpretation": (
-                    "Your mix's overall level is low for mastering. "
-                    "Very low loudness may force mastering processing to work more aggressively "
-                    "than desired, potentially affecting result transparency."
+                    "Your mix's overall level is quite low for mastering. "
+                    "While headroom is important, excessive headroom may force "
+                    "the mastering chain to work harder than optimal."
                 ),
                 "recommendation": (
-                    f"Consider increasing master bus level by 2-3 dB. Currently at "
-                    f"{lufs:.1f} LUFS, ideal would be around -12 to -14 LUFS."
+                    f"Consider increasing master bus level by 2-4 dB. Currently at "
+                    f"{lufs:.1f} LUFS, ideal range is -23 to -18 LUFS."
                 )
             }
     
     else:  # error
-        if lufs > -6:
+        if lufs > -10:
             return {
                 "interpretation": (
                     "Your mix's overall level is excessively high. "
-                    "This loudness indicates severe overcompression or aggressive limiting, "
-                    "leaving minimal room for mastering engineer and likely already "
-                    "compromising mix sonic quality."
+                    "This indicates severe over-compression or limiting on the mix bus, "
+                    "leaving almost no headroom for mastering and likely already "
+                    "compromising the mix's dynamic range and clarity."
                 ),
                 "recommendation": (
-                    f"Significantly reduce level (4-6 dB minimum) and review entire master "
-                    f"bus processing chain. Target range is -12 to -14 LUFS."
+                    f"Significantly reduce level (6-10 dB) and remove or reduce limiting/compression "
+                    f"on master bus. Target range is -23 to -18 LUFS for proper mastering headroom."
                 )
             }
         else:
             return {
                 "interpretation": (
                     "Your mix's overall level is excessively low. "
-                    "Such reduced loudness will force mastering to work very aggressively "
-                    "to reach competitive levels, likely compromising transparency and "
-                    "naturalness of final result."
+                    "While headroom is valuable, this level will require very aggressive "
+                    "gain staging in mastering, potentially introducing noise or requiring "
+                    "excessive processing."
                 ),
                 "recommendation": (
-                    f"Significantly increase master bus level (4-6 dB). Currently at "
-                    f"{lufs:.1f} LUFS, target is -12 to -14 LUFS."
+                    f"Significantly increase master bus level (5-8 dB). Currently at "
+                    f"{lufs:.1f} LUFS, target range is -23 to -18 LUFS."
                 )
             }
-
 
 def _generate_stereo_text_en(balance: float, correlation: float, status: str) -> Dict[str, str]:
     """Generate English interpretation for stereo balance"""
