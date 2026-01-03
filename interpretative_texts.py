@@ -197,7 +197,7 @@ def _generate_dr_text_es(dr_value: float, status: str) -> Dict[str, str]:
     if status == "excellent":
         return {
             "interpretation": (
-                "Tu mezcla mantiene un excelente rango dinámico. "
+                "Tu mezcla mantiene un rango dinámico excelente. "
                 "Hay buen contraste entre las secciones suaves y fuertes de la canción, "
                 "lo que permite que el mastering pueda darle más impacto y energía sin "
                 "sacrificar la musicalidad ni la expresividad de la interpretación."
@@ -211,13 +211,13 @@ def _generate_dr_text_es(dr_value: float, status: str) -> Dict[str, str]:
     elif status == "good":
         return {
             "interpretation": (
-                "Tu mezcla presenta un rango dinámico saludable. "
+                "Tu mezcla presenta un rango dinámico adecuado para mastering. "
                 "Hay contraste suficiente entre las partes suaves y fuertes, lo que da "
                 "espacio al ingeniero de mastering para trabajar con la dinámica y crear "
-                "una versión final con buen impacto sin sonar sobrecomprimida."
+                "una versión final con buen impacto."
             ),
             "recommendation": (
-                "El rango dinámico actual está bien. Si estás usando compresión en el bus, "
+                "El rango dinámico actual es apropiado. Si estás usando compresión en el bus, "
                 "verifica que no esté trabajando de forma agresiva en las secciones más densas."
             )
         }
@@ -491,13 +491,12 @@ def _generate_dr_text_en(dr_value: float, status: str) -> Dict[str, str]:
     elif status == "good":
         return {
             "interpretation": (
-                "Your mix presents healthy dynamic range. "
+                "Your mix presents adequate dynamic range for mastering. "
                 "Sufficient contrast between soft and loud parts gives the mastering engineer "
-                "space to work with dynamics and create a final version with good impact "
-                "without sounding overcompressed."
+                "space to work with dynamics and create a final version with good impact."
             ),
             "recommendation": (
-                "Current dynamic range is good. If using bus compression, verify it's not "
+                "Current dynamic range is appropriate. If using bus compression, verify it's not "
                 "working aggressively during dense sections."
             )
         }
