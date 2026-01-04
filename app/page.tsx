@@ -667,6 +667,9 @@ by Matías Carvajal
     if (!text) return ''
     
     return text
+      // Remove song title header (already shown above)
+      .replace(/^🎵\s*Sobre\s*"[^"]*"\s*\n*/i, '')
+      .replace(/^🎵\s*About\s*"[^"]*"\s*\n*/i, '')
       // Remove ALL decorative lines (multiple patterns)
       .replace(/[═─━]{3,}/g, '')              // Lines with 3+ chars (including ━)
       .replace(/^[═─━\s]+$/gm, '')            // Lines that are ONLY decorative chars
