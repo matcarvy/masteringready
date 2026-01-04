@@ -4726,6 +4726,18 @@ def generate_complete_pdf(
             fontName=base_font
         )
         
+        # Header subtitle style (centered, elegant, not bold)
+        header_subtitle_style = ParagraphStyle(
+            'HeaderSubtitle',
+            parent=styles['BodyText'],
+            fontSize=14,
+            leading=18,
+            spaceAfter=12,
+            alignment=TA_CENTER,
+            fontName=base_font,  # Normal, not bold
+            textColor=colors.HexColor('#4b5563')  # Medium gray
+        )
+        
         # Subtitle style for section titles (bold, larger)
         subtitle_style = ParagraphStyle(
             'SectionSubtitle',
@@ -4753,7 +4765,7 @@ def generate_complete_pdf(
         story.append(Paragraph("MASTERINGREADY", title_style))
         story.append(Paragraph(
             "Reporte Completo de Análisis" if lang == 'es' else "Complete Analysis Report",
-            subtitle_style
+            header_subtitle_style
         ))
         story.append(Spacer(1, 0.3*inch))
         
@@ -4855,7 +4867,7 @@ def generate_complete_pdf(
                 clean_text_for_pdf("📊 ANÁLISIS TÉCNICO DETALLADO") if lang == 'es' else clean_text_for_pdf("📊 TECHNICAL ANALYSIS DETAILED"),
                 section_style
             ))
-            story.append(Spacer(1, 0.2*inch))
+            story.append(Spacer(1, 0.1*inch))  # Reduced from 0.2 to 0.1
             
             interps = report['interpretations']
             
