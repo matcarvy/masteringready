@@ -2162,6 +2162,7 @@ def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, s
             
             # Extract correlation
             interpretation_metrics['stereo_correlation'] = float(final_correlation)
+            interpretation_metrics['ms_ratio'] = float(stereo_metric.get('ms_ratio', 0))
             
             # Generate interpretative texts
             interpretations_raw = generate_interpretative_texts(
@@ -3416,6 +3417,7 @@ def analyze_file_chunked(
             
             # Extract correlation
             interpretation_metrics['stereo_correlation'] = float(final_correlation)
+            interpretation_metrics['ms_ratio'] = float(stereo_metric.get('ms_ratio', 0))
             
             # Generate interpretative texts
             interpretations_raw = generate_interpretative_texts(
@@ -4724,6 +4726,29 @@ def generate_complete_pdf(
             fontName=base_font
         )
         
+        # Subtitle style for section titles (bold, larger)
+        subtitle_style = ParagraphStyle(
+            'SectionSubtitle',
+            parent=styles['BodyText'],
+            fontSize=12,  # Increased from 11
+            leading=16,
+            spaceAfter=6,
+            fontName='DejaVu-Bold' if use_unicode_font else 'Helvetica-Bold',
+            textColor=colors.HexColor('#111827')  # Darker for more contrast
+        )
+        
+        # Style for numeric data (italic)
+        data_style = ParagraphStyle(
+            'NumericData',
+            parent=styles['BodyText'],
+            fontSize=10,
+            leading=14,
+            spaceAfter=4,
+            fontName=base_font,
+            fontStyle='italic',  # This may not work, so we'll use <i> tags
+            textColor=colors.HexColor('#374151')  # Slightly darker gray
+        )
+        
         # Header
         story.append(Paragraph("MASTERINGREADY", title_style))
         story.append(Paragraph(
@@ -4848,8 +4873,8 @@ def generate_complete_pdf(
                     
                     # Section Title
                     story.append(Paragraph(
-                        f"<b>{title_es if lang == 'es' else title_en}</b>",
-                        body_style
+                        f"{title_es if lang == 'es' else title_en}",
+                        subtitle_style
                     ))
                     story.append(Spacer(1, 0.05*inch))  # Reducido de 0.1 a 0.05
                     
@@ -4860,42 +4885,86 @@ def generate_complete_pdf(
                         if section_key == 'headroom':
                             hr_val = metrics_info.get('headroom_dbfs', 0)
                             tp_val = metrics_info.get('true_peak_dbtp', 0)
-                            story.append(Paragraph(
-                                f"Headroom dBFS: {hr_val:.2f}",
-                                body_style
-                            ))
-                            story.append(Paragraph(
-                                f"True Peak dBTP: {tp_val:.2f}",
-                                body_style
-                            ))
+                            
+                            # Create table with gray background for metrics
+                            data = [
+                                [f"Headroom dBFS: {hr_val:.2f}"],
+                                [f"True Peak dBTP: {tp_val:.2f}"]
+                            ]
+                            
+                            table = Table(data, colWidths=[5*inch])
+                            table.setStyle(TableStyle([
+                                ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#f3f4f6')),  # Light gray
+                                ('PADDING', (0, 0), (-1, -1), 8),
+                                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                                ('FONTNAME', (0, 0), (-1, -1), base_font),
+                                ('FONTSIZE', (0, 0), (-1, -1), 10),
+                                ('TEXTCOLOR', (0, 0), (-1, -1), colors.HexColor('#374151')),  # Dark gray
+                                ('BOX', (0, 0), (-1, -1), 0.5, colors.HexColor('#e5e7eb')),  # Border
+                            ]))
+                            story.append(table)
                         
                         elif section_key == 'dynamic_range':
                             # Support both old and new field names
                             plr_val = metrics_info.get('plr', metrics_info.get('dr_lu', 0))
-                            story.append(Paragraph(
-                                f"PLR: {plr_val:.1f} dB",
-                                body_style
-                            ))
+                            
+                            # Create table with gray background
+                            data = [[f"PLR: {plr_val:.1f} dB"]]
+                            
+                            table = Table(data, colWidths=[5*inch])
+                            table.setStyle(TableStyle([
+                                ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#f3f4f6')),
+                                ('PADDING', (0, 0), (-1, -1), 8),
+                                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                                ('FONTNAME', (0, 0), (-1, -1), base_font),
+                                ('FONTSIZE', (0, 0), (-1, -1), 10),
+                                ('TEXTCOLOR', (0, 0), (-1, -1), colors.HexColor('#374151')),
+                                ('BOX', (0, 0), (-1, -1), 0.5, colors.HexColor('#e5e7eb')),
+                            ]))
+                            story.append(table)
                         
                         elif section_key == 'overall_level':
                             lufs_val = metrics_info.get('lufs', 0)
-                            story.append(Paragraph(
-                                f"LUFS (Integrated): {lufs_val:.1f}",
-                                body_style
-                            ))
+                            
+                            # Create table with gray background
+                            data = [[f"LUFS (Integrated): {lufs_val:.1f}"]]
+                            
+                            table = Table(data, colWidths=[5*inch])
+                            table.setStyle(TableStyle([
+                                ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#f3f4f6')),
+                                ('PADDING', (0, 0), (-1, -1), 8),
+                                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                                ('FONTNAME', (0, 0), (-1, -1), base_font),
+                                ('FONTSIZE', (0, 0), (-1, -1), 10),
+                                ('TEXTCOLOR', (0, 0), (-1, -1), colors.HexColor('#374151')),
+                                ('BOX', (0, 0), (-1, -1), 0.5, colors.HexColor('#e5e7eb')),
+                            ]))
+                            story.append(table)
                         
                         elif section_key == 'stereo_balance':
                             # Support both old and new field names
                             bal_val = metrics_info.get('balance_l_r', metrics_info.get('balance_lr', 0))
                             corr_val = metrics_info.get('correlation', 0)
-                            story.append(Paragraph(
-                                f"Balance L/R: {bal_val:+.1f} dB",
-                                body_style
-                            ))
-                            story.append(Paragraph(
-                                f"Correlación: {corr_val:.2f}",
-                                body_style
-                            ))
+                            ms_val = metrics_info.get('ms_ratio', 0)
+                            
+                            # Create table with gray background
+                            data = [
+                                [f"Balance L/R: {bal_val:+.1f} dB"],
+                                [f"M/S Ratio: {ms_val:.2f}"],
+                                [f"Correlación: {corr_val:.2f}"]
+                            ]
+                            
+                            table = Table(data, colWidths=[5*inch])
+                            table.setStyle(TableStyle([
+                                ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#f3f4f6')),
+                                ('PADDING', (0, 0), (-1, -1), 8),
+                                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                                ('FONTNAME', (0, 0), (-1, -1), base_font),
+                                ('FONTSIZE', (0, 0), (-1, -1), 10),
+                                ('TEXTCOLOR', (0, 0), (-1, -1), colors.HexColor('#374151')),
+                                ('BOX', (0, 0), (-1, -1), 0.5, colors.HexColor('#e5e7eb')),
+                            ]))
+                            story.append(table)
                     
                     story.append(Spacer(1, 0.05*inch))  # Reducido de 0.1 a 0.05
                     
