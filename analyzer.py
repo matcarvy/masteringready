@@ -2166,7 +2166,8 @@ def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, s
             # Generate interpretative texts
             interpretations_raw = generate_interpretative_texts(
                 metrics=interpretation_metrics,
-                lang=lang
+                lang=lang,
+                strict=strict
             )
             interpretations = format_for_api_response(
                 interpretations_raw,
@@ -3419,7 +3420,8 @@ def analyze_file_chunked(
             # Generate interpretative texts
             interpretations_raw = generate_interpretative_texts(
                 metrics=interpretation_metrics,
-                lang=lang
+                lang=lang,
+                strict=strict
             )
             interpretations = format_for_api_response(
                 interpretations_raw,
@@ -4641,7 +4643,7 @@ def generate_complete_pdf(
         from reportlab.lib.pagesizes import letter
         from reportlab.lib.units import inch
         from reportlab.lib import colors
-        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
+        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak, HRFlowable
         from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
         from reportlab.lib.enums import TA_CENTER, TA_LEFT
         from reportlab.pdfbase import pdfmetrics
@@ -4913,7 +4915,19 @@ def generate_complete_pdf(
                             if line.strip():
                                 story.append(Paragraph(line.strip(), body_style))
                     
-                    story.append(Spacer(1, 0.15*inch))  # Reducido de 0.2 a 0.15
+                    story.append(Spacer(1, 0.1*inch))
+                    
+                    # Add separator line between sections (except after last section)
+                    if section_key != 'stereo_balance':
+                        story.append(HRFlowable(
+                            width="100%",
+                            thickness=1,
+                            color=colors.HexColor('#e5e7eb'),
+                            spaceBefore=0,
+                            spaceAfter=0.1*inch
+                        ))
+                    else:
+                        story.append(Spacer(1, 0.05*inch))
         
         # ========== END: ANÁLISIS TÉCNICO DETALLADO ==========
         
