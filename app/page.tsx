@@ -379,25 +379,16 @@ ${new Date().toLocaleDateString()}
 `
     } else {
       // Complete mode download - Include interpretations
-      let completeContent = `${lang === 'es' ? 'ANÁLISIS COMPLETO' : 'COMPLETE ANALYSIS'}
+      let completeContent = `${lang === 'es' ? 'ANÁLISIS TÉCNICO DETALLADO' : 'DETAILED TECHNICAL ANALYSIS'}
 ${'═'.repeat(50)}
 
 ${lang === 'es' ? 'Archivo' : 'File'}: ${result.filename || 'N/A'}
 ${lang === 'es' ? 'Puntuación' : 'Score'}: ${result.score}/100
 ${lang === 'es' ? 'Veredicto' : 'Verdict'}: ${result.verdict}
-
-${'─'.repeat(50)}
-${cleanReportText(result.report_write || result.report)}
 `
 
-      // Add interpretative sections if they exist
+      // Add interpretative sections FIRST if they exist
       if (result.interpretations) {
-        completeContent += `
-
-${'═'.repeat(50)}
-${lang === 'es' ? 'ANÁLISIS TÉCNICO DETALLADO' : 'DETAILED TECHNICAL ANALYSIS'}
-${'═'.repeat(50)}
-`
         
         // Helper function to format interpretation section
         const formatInterpretation = (
@@ -426,16 +417,30 @@ ${lang === 'es' ? 'Datos técnicos' : 'Technical data'}:
           for (const [key, value] of Object.entries(metrics)) {
             if (key === 'status') continue
             
-            // Format key
-            const formattedKey = key
-              .replace(/_/g, ' ')
-              .replace(/dbfs/i, 'dBFS')
-              .replace(/dbtp/i, 'dBTP')
-              .replace(/lu/i, 'LU')
-              .replace(/lufs/i, 'LUFS')
-              .split(' ')
-              .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
-              .join(' ')
+            // Format key names with correct capitalization
+            let formattedKey = key
+            
+            // Handle specific cases first (same as visual component)
+            if (key === 'headroom_dbfs') {
+              formattedKey = 'Headroom dBFS'
+            } else if (key === 'true_peak_dbtp') {
+              formattedKey = 'True Peak dBTP'
+            } else if (key === 'plr' || key === 'dr_lu') {
+              formattedKey = 'PLR'
+            } else if (key === 'balance_l_r' || key === 'balance_lr') {
+              formattedKey = 'Balance L/R'
+            } else if (key === 'correlation') {
+              formattedKey = 'Correlation'
+            } else if (key === 'lufs') {
+              formattedKey = 'LUFS'
+            } else {
+              // Generic formatting for other keys
+              formattedKey = key
+                .replace(/_/g, ' ')
+                .split(' ')
+                .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
+                .join(' ')
+            }
             
             const formattedValue = typeof value === 'number' ? value.toFixed(2) : value
             output += `  • ${formattedKey}: ${formattedValue}\n`
@@ -472,6 +477,17 @@ ${lang === 'es' ? 'Datos técnicos' : 'Technical data'}:
           '🎚️ STEREO BALANCE'
         )
       }
+      
+      // Add complete narrative analysis AFTER technical sections
+      completeContent += `
+
+${'═'.repeat(50)}
+${lang === 'es' ? 'ANÁLISIS COMPLETO' : 'COMPLETE ANALYSIS'}
+${'═'.repeat(50)}
+
+${'─'.repeat(50)}
+${cleanReportText(result.report_write || result.report)}
+`
       
       // Add footer
       completeContent += `
@@ -1702,7 +1718,7 @@ by Matías Carvajal
                           marginBottom: '1.5rem',
                           fontStyle: 'italic'
                         }}>
-                          {lang === 'es' ? '♪ Sobre' : '♪ About'} "{result.file?.name || 'archivo'}"
+                          {lang === 'es' ? '🎵 Sobre' : '🎵 About'} "{result.filename || 'archivo'}"
                         </p>
 
                         {/* Headroom & True Peak */}
