@@ -833,7 +833,7 @@ by Matías Carvajal
                 backdropFilter: 'blur(10px)',
                 borderRadius: '9999px',
                 padding: '0.5rem 1rem',
-                marginBottom: '1.5rem'
+                marginBottom: typeof window !== 'undefined' && window.innerWidth < 768 ? '1rem' : '1.5rem'
               }}>
                 <span style={{ fontSize: '1rem', fontWeight: '500' }}>
                   ✨ {lang === 'es' 
@@ -986,11 +986,16 @@ by Matías Carvajal
 
       {/* Features Section */}
       <section id="features" style={{
-        padding: '2rem 1.5rem',
+        padding: typeof window !== 'undefined' && window.innerWidth < 768 
+          ? '1.5rem 1.5rem 2rem 1.5rem'  // Móvil: menos padding arriba
+          : '2rem 1.5rem',
         background: '#f9fafb'
       }}>
         <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
+          <div style={{ 
+            textAlign: 'center', 
+            marginBottom: typeof window !== 'undefined' && window.innerWidth < 768 ? '2rem' : '3rem'
+          }}>
             <h2 style={{ fontSize: '2.25rem', fontWeight: 'bold', marginBottom: '1rem' }}>
               {lang === 'es' ? '¿Por qué MasteringReady?' : 'Why MasteringReady?'}
             </h2>
@@ -1553,7 +1558,7 @@ by Matías Carvajal
                 <div style={{
                   display: 'flex',
                   justifyContent: 'space-between',
-                  marginBottom: '1.5rem'
+                  marginBottom: typeof window !== 'undefined' && window.innerWidth < 768 ? '1rem' : '1.5rem'
                 }}>
                   <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>
                     {lang === 'es' ? 'Resultados del Análisis' : 'Analysis Results'}
