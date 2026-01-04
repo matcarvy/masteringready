@@ -19,7 +19,8 @@ from typing import Dict, Any
 
 def generate_interpretative_texts(
     metrics: Dict[str, Any],
-    lang: str = 'es'
+    lang: str = 'es',
+    strict: bool = False
 ) -> Dict[str, Dict[str, str]]:
     """
     Generate interpretative texts for all 4 main sections.
@@ -27,6 +28,7 @@ def generate_interpretative_texts(
     Args:
         metrics: Dictionary with all technical metrics
         lang: Language ('es' or 'en')
+        strict: Whether to use strict mode criteria
     
     Returns:
         Dictionary with interpretations for each section:
@@ -49,10 +51,10 @@ def generate_interpretative_texts(
     stereo_balance = metrics.get('stereo_balance', 0)
     stereo_correlation = metrics.get('stereo_correlation', 0)
     
-    # Determine status for each metric
-    headroom_status = _get_headroom_status(headroom, true_peak)
-    dr_status = _get_dr_status(dr_value)
-    level_status = _get_level_status(lufs)
+    # Determine status for each metric (considering strict mode)
+    headroom_status = _get_headroom_status(headroom, true_peak, strict)
+    dr_status = _get_dr_status(dr_value, strict)
+    level_status = _get_level_status(lufs, strict)
     stereo_status = _get_stereo_status(stereo_balance, stereo_correlation)
     
     if lang == 'es':
@@ -75,45 +77,81 @@ def generate_interpretative_texts(
 # STATUS DETERMINATION FUNCTIONS
 # ============================================================================
 
-def _get_headroom_status(headroom: float, true_peak: float) -> str:
+def _get_headroom_status(headroom: float, true_peak: float, strict: bool = False) -> str:
     """Determine headroom status: excellent/good/warning/error
     
     Note: In digital audio (dBFS), headroom is NEGATIVE.
     -6 dBFS means 6 dB of space below the 0 dBFS ceiling.
     More negative = more headroom (better).
     """
-    if headroom <= -6 and true_peak <= -1:
-        return "excellent"
-    elif headroom <= -4 and true_peak <= -0.5:
-        return "good"
-    elif headroom <= -2:
-        return "warning"
+    if strict:
+        # Strict mode: more conservative requirements
+        if headroom <= -6 and true_peak <= -3:
+            return "excellent"
+        elif headroom <= -5 and true_peak <= -2:
+            return "good"
+        elif headroom <= -3:
+            return "warning"
+        else:
+            return "error"
     else:
-        return "error"
+        # Normal mode
+        if headroom <= -6 and true_peak <= -1:
+            return "excellent"
+        elif headroom <= -4 and true_peak <= -0.5:
+            return "good"
+        elif headroom <= -2:
+            return "warning"
+        else:
+            return "error"
 
 
-def _get_dr_status(dr_value: float) -> str:
+def _get_dr_status(dr_value: float, strict: bool = False) -> str:
     """Determine dynamic range status"""
-    if dr_value >= 8:
-        return "excellent"
-    elif dr_value >= 6:
-        return "good"
-    elif dr_value >= 4:
-        return "warning"
+    if strict:
+        # Strict mode: require more dynamics
+        if dr_value >= 14:
+            return "excellent"
+        elif dr_value >= 12:
+            return "good"
+        elif dr_value >= 8:
+            return "warning"
+        else:
+            return "error"
     else:
-        return "error"
+        # Normal mode
+        if dr_value >= 12:
+            return "excellent"
+        elif dr_value >= 8:
+            return "good"
+        elif dr_value >= 6:
+            return "warning"
+        else:
+            return "error"
 
 
-def _get_level_status(lufs: float) -> str:
+def _get_level_status(lufs: float, strict: bool = False) -> str:
     """Determine overall level status"""
-    if -23 <= lufs <= -18:
-        return "excellent"
-    elif -25 <= lufs <= -16:
-        return "good"
-    elif -28 <= lufs <= -10:
-        return "warning"
+    if strict:
+        # Strict mode: narrower acceptable range
+        if -23 <= lufs <= -18:
+            return "excellent"
+        elif -25 <= lufs <= -16:
+            return "good"
+        elif -28 <= lufs <= -14:
+            return "warning"
+        else:
+            return "error"
     else:
-        return "error"
+        # Normal mode
+        if -23 <= lufs <= -16:
+            return "excellent"
+        elif -25 <= lufs <= -12:
+            return "good"
+        elif -28 <= lufs <= -10:
+            return "warning"
+        else:
+            return "error"
 
 def _get_stereo_status(balance: float, correlation: float) -> str:
     """Determine stereo balance status"""
