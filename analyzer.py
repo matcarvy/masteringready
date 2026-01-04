@@ -4867,7 +4867,7 @@ def generate_complete_pdf(
                 clean_text_for_pdf("📊 ANÁLISIS TÉCNICO DETALLADO") if lang == 'es' else clean_text_for_pdf("📊 TECHNICAL ANALYSIS DETAILED"),
                 section_style
             ))
-            story.append(Spacer(1, 0.1*inch))  # Reduced from 0.2 to 0.1
+            story.append(Spacer(1, 0.05*inch))  # Reduced from 0.1 to 0.05 for tighter spacing
             
             interps = report['interpretations']
             
