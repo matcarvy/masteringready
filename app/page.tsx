@@ -1689,11 +1689,21 @@ by Matías Carvajal
                         <h3 style={{ 
                           fontWeight: '700', 
                           fontSize: 'clamp(1.25rem, 3vw, 1.5rem)', 
-                          marginBottom: '1.5rem',
+                          marginBottom: '0.5rem',
                           color: '#111827'
                         }}>
                           {lang === 'es' ? '📊 Análisis Técnico Detallado' : '📊 Detailed Technical Analysis'}
                         </h3>
+                        
+                        {/* File name subtitle */}
+                        <p style={{
+                          fontSize: 'clamp(0.875rem, 2vw, 1rem)',
+                          color: '#6b7280',
+                          marginBottom: '1.5rem',
+                          fontStyle: 'italic'
+                        }}>
+                          {lang === 'es' ? '♪ Sobre' : '♪ About'} "{result.file?.name || 'archivo'}"
+                        </p>
 
                         {/* Headroom & True Peak */}
                         {result.interpretations.headroom && (
