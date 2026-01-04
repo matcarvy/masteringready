@@ -79,6 +79,8 @@ function InterpretativeSection({ title, interpretation, recommendation, metrics,
               formattedKey = 'PLR'
             } else if (key === 'balance_l_r' || key === 'balance_lr') {
               formattedKey = 'Balance L/R'
+            } else if (key === 'ms_ratio') {
+              formattedKey = 'M/S Ratio'
             } else if (key === 'correlation') {
               formattedKey = 'Correlation'
             } else if (key === 'lufs') {
@@ -406,16 +408,16 @@ ${lang === 'es' ? 'Veredicto' : 'Verdict'}: ${result.verdict}
 
 ${title}
 ${'─'.repeat(50)}
-
-${section.interpretation}
-
-${lang === 'es' ? 'Datos técnicos' : 'Technical data'}:
 `
           
-          // Add metrics
+          // Add metrics FIRST
           const metrics = section.metrics || {}
-          for (const [key, value] of Object.entries(metrics)) {
-            if (key === 'status') continue
+          const metricsEntries = Object.entries(metrics).filter(([key]) => key !== 'status')
+          
+          if (metricsEntries.length > 0) {
+            output += `\n${lang === 'es' ? 'Datos técnicos' : 'Technical data'}:\n`
+            
+            for (const [key, value] of metricsEntries) {
             
             // Format key names with correct capitalization
             let formattedKey = key
@@ -429,6 +431,8 @@ ${lang === 'es' ? 'Datos técnicos' : 'Technical data'}:
               formattedKey = 'PLR'
             } else if (key === 'balance_l_r' || key === 'balance_lr') {
               formattedKey = 'Balance L/R'
+            } else if (key === 'ms_ratio') {
+              formattedKey = 'M/S Ratio'
             } else if (key === 'correlation') {
               formattedKey = 'Correlation'
             } else if (key === 'lufs') {
@@ -444,9 +448,13 @@ ${lang === 'es' ? 'Datos técnicos' : 'Technical data'}:
             
             const formattedValue = typeof value === 'number' ? value.toFixed(2) : value
             output += `  • ${formattedKey}: ${formattedValue}\n`
+            }
           }
           
-          // Add recommendation
+          // Add interpretation AFTER metrics
+          output += `\n${section.interpretation}\n`
+          
+          // Add recommendation LAST
           output += `\n💡 ${recLabel}: ${section.recommendation}\n`
           
           return output
