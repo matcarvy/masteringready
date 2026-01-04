@@ -670,6 +670,11 @@ by Matías Carvajal
       // Remove song title header (already shown above)
       .replace(/^🎵\s*Sobre\s*"[^"]*"\s*\n*/i, '')
       .replace(/^🎵\s*About\s*"[^"]*"\s*\n*/i, '')
+      // Remove score and verdict lines (already shown in header)
+      .replace(/^Puntuación:\s*\d+\/100\s*\n*/im, '')
+      .replace(/^Score:\s*\d+\/100\s*\n*/im, '')
+      .replace(/^Veredicto:\s*[^\n]+\s*\n*/im, '')
+      .replace(/^Verdict:\s*[^\n]+\s*\n*/im, '')
       // Remove ALL decorative lines (multiple patterns)
       .replace(/[═─━]{3,}/g, '')              // Lines with 3+ chars (including ━)
       .replace(/^[═─━\s]+$/gm, '')            // Lines that are ONLY decorative chars
@@ -1661,9 +1666,20 @@ by Matías Carvajal
                     padding: 'clamp(1rem, 3vw, 1.5rem)',
                     marginBottom: '1.5rem'
                   }}>
-                    <h3 style={{ fontWeight: '600', fontSize: 'clamp(1rem, 2.5vw, 1.125rem)', marginBottom: '1rem' }}>
+                    <h3 style={{ fontWeight: '600', fontSize: 'clamp(1rem, 2.5vw, 1.125rem)', marginBottom: '0.5rem' }}>
                       {lang === 'es' ? '⚡ Análisis Rápido' : '⚡ Quick Analysis'}
                     </h3>
+                    
+                    {/* File name subtitle */}
+                    <p style={{
+                      fontSize: 'clamp(0.875rem, 2vw, 1rem)',
+                      color: '#6b7280',
+                      marginBottom: '1.5rem',
+                      fontStyle: 'italic'
+                    }}>
+                      {lang === 'es' ? '🎵 Sobre' : '🎵 About'} "{result.filename || 'archivo'}"
+                    </p>
+                    
                     <pre style={{
                       whiteSpace: 'pre-wrap',
                       wordBreak: 'break-word',
@@ -1688,9 +1704,20 @@ by Matías Carvajal
                     padding: 'clamp(1rem, 3vw, 1.5rem)',
                     marginBottom: '1.5rem'
                   }}>
-                    <h3 style={{ fontWeight: '600', fontSize: 'clamp(1rem, 2.5vw, 1.125rem)', marginBottom: '1rem' }}>
+                    <h3 style={{ fontWeight: '600', fontSize: 'clamp(1rem, 2.5vw, 1.125rem)', marginBottom: '0.5rem' }}>
                       {lang === 'es' ? '📝 Análisis Resumen' : '📝 Summary Analysis'}
                     </h3>
+                    
+                    {/* File name subtitle */}
+                    <p style={{
+                      fontSize: 'clamp(0.875rem, 2vw, 1rem)',
+                      color: '#6b7280',
+                      marginBottom: '1.5rem',
+                      fontStyle: 'italic'
+                    }}>
+                      {lang === 'es' ? '🎵 Sobre' : '🎵 About'} "{result.filename || 'archivo'}"
+                    </p>
+                    
                     <pre style={{
                       whiteSpace: 'pre-wrap',
                       wordBreak: 'break-word',
