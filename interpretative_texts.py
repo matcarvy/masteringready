@@ -765,6 +765,7 @@ def format_for_api_response(
             "recommendation": interpretations["stereo_balance"]["recommendation"],
             "metrics": {
                 "balance_l_r": metrics.get('stereo_balance', 0),
+                "ms_ratio": metrics.get('ms_ratio', 0),
                 "correlation": metrics.get('stereo_correlation', 0),
                 "status": _get_stereo_status(
                     metrics.get('stereo_balance', 0),
