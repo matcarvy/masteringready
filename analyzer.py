@@ -1,13 +1,20 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Mix Analyzer v7.3.13 - PRODUCTION RELEASE
+Mix Analyzer v7.3.14 - PRODUCTION RELEASE  
 =========================================
 
 ARCHITECTURE PRINCIPLES:
 1. Calculate scores LANGUAGE-NEUTRAL (no idioma en lógica)
 2. Freeze score before translation (score congelado)
 3. Translate messages with Matías Voice (del eBook "Mastering Ready")
+
+KEY FIX from v7.3.13:
+--------------------
+🐛 TRUE PEAK INFO MESSAGE IN CHUNKED MODE - Now shows informative message for brief peaks
+   • When TP > -1.0 but no 5-second windows exceed threshold in chunked analysis
+   • Ensures consistent user experience between normal and chunked modes
+   • Available in Spanish and English
 
 KEY FIX from v7.3.12:
 --------------------
@@ -68,7 +75,7 @@ Master detection → Complete analysis with positive aspects + observations
 
 Author: Matías Carvajal García (@matcarvy)
 Based on: "Mastering Ready - Asegura el éxito de tu mastering desde la mezcla" eBook
-Version: 7.3.13-production (2025-01-05)
+Version: 7.3.14-production (2025-01-05)
 
 Usage:
 ------
@@ -3464,6 +3471,31 @@ def analyze_file_chunked(
             'percentage_above_threshold': percentage,
             'num_regions': len(regions),
             'regions': [{'start': r['start'], 'end': r['end']} for r in regions[:10]]
+        }
+    elif final_tp > -1.0:
+        # If no regions found but TP is high, create informative message
+        # This happens when peak is brief (transient) but still problematic
+        lang_picked = _pick_lang(lang)
+        if lang_picked == 'es':
+            info_message = (
+                f"El pico máximo ({final_tp:.1f} dBTP) está cerca del límite digital, "
+                "pero ocurre en momentos muy breves (transitorios). "
+                "Aunque no afecta ventanas completas de 5 segundos, "
+                "sigue siendo un indicador de procesamiento de master."
+            )
+        else:
+            info_message = (
+                f"The maximum peak ({final_tp:.1f} dBTP) is close to the digital ceiling, "
+                "but occurs in very brief moments (transients). "
+                "While it doesn't affect complete 5-second windows, "
+                "it's still an indicator of master-level processing."
+            )
+        
+        tp_temporal = {
+            'num_regions': 0,
+            'info_only': True,
+            'info_message': info_message,
+            'percentage_above_threshold': 0
         }
     
     tp_metric = {
