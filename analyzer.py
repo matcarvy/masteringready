@@ -1,13 +1,19 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Mix Analyzer v7.3.12 - BETA RELEASE (FINAL)
-============================================
+Mix Analyzer v7.3.13 - PRODUCTION RELEASE
+=========================================
 
 ARCHITECTURE PRINCIPLES:
 1. Calculate scores LANGUAGE-NEUTRAL (no idioma en lógica)
 2. Freeze score before translation (score congelado)
 3. Translate messages with Matías Voice (del eBook "Mastering Ready")
+
+KEY FIX from v7.3.12:
+--------------------
+🐛 CREST FACTOR CHUNKED MODE - Fixed status to "info" in chunked analysis mode
+   • Crest Factor now correctly shows ℹ️ (not ⚠️) in all modes when PLR exists
+   • Applies to large files analyzed in chunks
 
 KEY IMPROVEMENTS from v7.3.11:
 ------------------------------
@@ -62,7 +68,7 @@ Master detection → Complete analysis with positive aspects + observations
 
 Author: Matías Carvajal García (@matcarvy)
 Based on: "Mastering Ready - Asegura el éxito de tu mastering desde la mezcla" eBook
-Version: 7.3.12-beta-FINAL (2025-01-05)
+Version: 7.3.13-production (2025-01-05)
 
 Usage:
 ------
@@ -3516,11 +3522,12 @@ def analyze_file_chunked(
     crest = final_plr  # Similar to PLR for chunked analysis
     st_cf, msg_cf, _ = status_crest_factor(crest, lang)
     
+    # Always use "info" status when PLR is available (chunked mode always has PLR)
     metrics.append({
         "name": "Crest Factor",
         "internal_key": "Crest Factor",
         "value": f"{crest:.1f} dB",
-        "status": st_cf,
+        "status": "info",  # Always info when PLR exists
         "message": "Informativo (usa PLR como métrica principal de dinámica)." if lang == "es" else "Informational (use PLR as the primary dynamics metric)."
     })
     
