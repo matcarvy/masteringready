@@ -3480,15 +3480,15 @@ def analyze_file_chunked(
             info_message = (
                 f"El pico máximo ({final_tp:.1f} dBTP) está cerca del límite digital, "
                 "pero ocurre en momentos muy breves (transitorios). "
-                "Aunque no afecta ventanas completas de 5 segundos, "
-                "sigue siendo un indicador de procesamiento de master."
+                "Aunque no se mantiene durante períodos continuos de 5 segundos o más, "
+                "es un indicador de procesamiento de master."
             )
         else:
             info_message = (
                 f"The maximum peak ({final_tp:.1f} dBTP) is close to the digital ceiling, "
                 "but occurs in very brief moments (transients). "
-                "While it doesn't affect complete 5-second windows, "
-                "it's still an indicator of master-level processing."
+                "While it is not sustained for 5 seconds or longer, "
+                "it is an indicator of mastering-level processing."
             )
         
         tp_temporal = {
