@@ -2580,7 +2580,9 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
                     
                     if num_regions > 0:
                         details += f"🔊 Correlación ({num_regions} región{'es' if num_regions > 1 else ''} problemática{'s' if num_regions > 1 else ''}):\n"
-                        for region in regions[:5]:
+                        
+                        max_regions_to_show = 25
+                        for region in regions[:max_regions_to_show]:
                             start_min = int(region['start'] // 60)
                             start_sec = int(region['start'] % 60)
                             end_min = int(region['end'] // 60)
@@ -2590,12 +2592,31 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
                             issue = region['issue']
                             
                             details += f"   • {start_min}:{start_sec:02d} → {end_min}:{end_sec:02d} ({dur}s): "
-                            if issue == 'low':
-                                details += f"Correlación baja ({corr*100:.0f}%)\n"
-                                details += "      → Posible phase issues\n"
-                            else:
+                            
+                            # Handle all 5 correlation issue types
+                            if issue == 'high':
                                 details += f"Correlación muy alta ({corr*100:.0f}%)\n"
                                 details += "      → Casi mono\n"
+                            elif issue == 'medium_low':
+                                details += f"Correlación media-baja ({corr*100:.0f}%)\n"
+                                details += "      → Revisa efectos estéreo y reverbs\n"
+                            elif issue == 'very_low':
+                                details += f"Correlación muy baja ({corr*100:.0f}%)\n"
+                                details += "      → Problemas de fase - cancelación en mono\n"
+                            elif issue == 'negative':
+                                details += f"Correlación negativa ({corr*100:.0f}%)\n"
+                                details += "      → Fase invertida parcial - pérdida en mono\n"
+                            elif issue == 'negative_severe':
+                                details += f"Correlación negativa severa ({corr*100:.0f}%)\n"
+                                details += "      → Fase invertida - cancelación severa en mono\n"
+                            else:  # Fallback
+                                details += f"Correlación: {corr*100:.0f}%\n"
+                        
+                        # Show remaining count if more than max_regions_to_show
+                        if num_regions > max_regions_to_show:
+                            remaining = num_regions - max_regions_to_show
+                            details += f"   ... y {remaining} región{'es' if remaining > 1 else ''} adicional{'es' if remaining > 1 else ''}\n"
+                        
                         details += "\n"
                 
                 # M/S Ratio temporal
@@ -2606,7 +2627,9 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
                     
                     if num_regions > 0:
                         details += f"📐 M/S Ratio ({num_regions} región{'es' if num_regions > 1 else ''} problemática{'s' if num_regions > 1 else ''}):\n"
-                        for region in regions[:5]:
+                        
+                        max_regions_to_show = 25
+                        for region in regions[:max_regions_to_show]:
                             start_min = int(region['start'] // 60)
                             start_sec = int(region['start'] % 60)
                             end_min = int(region['end'] // 60)
@@ -2622,6 +2645,12 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
                             else:
                                 details += f"Ratio alto ({ms:.2f})\n"
                                 details += "      → Exceso de información Side\n"
+                        
+                        # Show remaining count if more than max_regions_to_show
+                        if num_regions > max_regions_to_show:
+                            remaining = num_regions - max_regions_to_show
+                            details += f"   ... y {remaining} región{'es' if remaining > 1 else ''} adicional{'es' if remaining > 1 else ''}\n"
+                        
                         details += "\n"
                 
                 # L/R Balance temporal
@@ -2632,7 +2661,9 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
                     
                     if num_regions > 0:
                         details += f"⚖️ Balance L/R ({num_regions} región{'es' if num_regions > 1 else ''} problemática{'s' if num_regions > 1 else ''}):\n"
-                        for region in regions[:5]:
+                        
+                        max_regions_to_show = 25
+                        for region in regions[:max_regions_to_show]:
                             start_min = int(region['start'] // 60)
                             start_sec = int(region['start'] % 60)
                             end_min = int(region['end'] // 60)
@@ -2646,9 +2677,15 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
                                 details += f"Desbalance L: +{abs(balance):.1f} dB\n"
                             else:
                                 details += f"Desbalance R: {balance:.1f} dB\n"
+                        
+                        # Show remaining count if more than max_regions_to_show
+                        if num_regions > max_regions_to_show:
+                            remaining = num_regions - max_regions_to_show
+                            details += f"   ... y {remaining} región{'es' if remaining > 1 else ''} adicional{'es' if remaining > 1 else ''}\n"
+                        
                         details += "\n"
                 
-                details += "💡 Revisa los timestamps indicados en tu DAW.\n\n"
+                details += "💡 Revisa los tiempos indicados arriba en tu DAW para verificar si lo mencionado en el Análisis Temporal es una decisión artística o de producción, o si requiere un ajuste técnico.\n\n"
             
             else:
                 # No temporal analysis available
@@ -2753,8 +2790,132 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
             if lr_balance is not None:
                 details += f"   • L/R Balance: {abs(lr_balance):.1f} dB\n"
             details += "\n"
-            details += "   → Stereo image with good mono compatibility.\n"
-            details += "     Will translate well across systems.\n\n"
+            
+            # Check for temporal analysis (from chunked mode)
+            if "temporal_analysis" in stereo_metric:
+                temporal = stereo_metric["temporal_analysis"]
+                
+                details += "⚠️ TEMPORAL ANALYSIS:\n\n"
+                
+                # Correlation temporal
+                if 'correlation' in temporal:
+                    corr_data = temporal['correlation']
+                    num_regions = corr_data.get('num_regions', 0)
+                    regions = corr_data.get('regions', [])
+                    
+                    if num_regions > 0:
+                        details += f"🔊 Correlation ({num_regions} problematic region{'s' if num_regions > 1 else ''}):\n"
+                        
+                        max_regions_to_show = 25
+                        for region in regions[:max_regions_to_show]:
+                            start_min = int(region['start'] // 60)
+                            start_sec = int(region['start'] % 60)
+                            end_min = int(region['end'] // 60)
+                            end_sec = int(region['end'] % 60)
+                            dur = int(region['duration'])
+                            corr = region['avg_correlation']
+                            issue = region['issue']
+                            
+                            details += f"   • {start_min}:{start_sec:02d} → {end_min}:{end_sec:02d} ({dur}s): "
+                            
+                            # Handle all 5 correlation issue types
+                            if issue == 'high':
+                                details += f"Very high correlation ({corr*100:.0f}%)\n"
+                                details += "      → Nearly mono\n"
+                            elif issue == 'medium_low':
+                                details += f"Medium-low correlation ({corr*100:.0f}%)\n"
+                                details += "      → Check stereo effects and reverbs\n"
+                            elif issue == 'very_low':
+                                details += f"Very low correlation ({corr*100:.0f}%)\n"
+                                details += "      → Phase issues - mono cancellation\n"
+                            elif issue == 'negative':
+                                details += f"Negative correlation ({corr*100:.0f}%)\n"
+                                details += "      → Partial phase inversion - mono loss\n"
+                            elif issue == 'negative_severe':
+                                details += f"Severe negative correlation ({corr*100:.0f}%)\n"
+                                details += "      → Phase inverted - severe mono cancellation\n"
+                            else:  # Fallback
+                                details += f"Correlation: {corr*100:.0f}%\n"
+                        
+                        # Show remaining count if more than max_regions_to_show
+                        if num_regions > max_regions_to_show:
+                            remaining = num_regions - max_regions_to_show
+                            details += f"   ... and {remaining} additional region{'s' if remaining > 1 else ''}\n"
+                        
+                        details += "\n"
+                
+                # M/S Ratio temporal
+                if 'ms_ratio' in temporal:
+                    ms_data = temporal['ms_ratio']
+                    num_regions = ms_data.get('num_regions', 0)
+                    regions = ms_data.get('regions', [])
+                    
+                    if num_regions > 0:
+                        details += f"📐 M/S Ratio ({num_regions} problematic region{'s' if num_regions > 1 else ''}):\n"
+                        
+                        max_regions_to_show = 25
+                        for region in regions[:max_regions_to_show]:
+                            start_min = int(region['start'] // 60)
+                            start_sec = int(region['start'] % 60)
+                            end_min = int(region['end'] // 60)
+                            end_sec = int(region['end'] % 60)
+                            dur = int(region['duration'])
+                            ms = region['avg_ms_ratio']
+                            issue = region['issue']
+                            
+                            details += f"   • {start_min}:{start_sec:02d} → {end_min}:{end_sec:02d} ({dur}s): "
+                            if issue == 'mono':
+                                details += f"Low ratio ({ms:.2f})\n"
+                                details += "      → Very mono mix\n"
+                            else:
+                                details += f"High ratio ({ms:.2f})\n"
+                                details += "      → Excessive Side information\n"
+                        
+                        # Show remaining count if more than max_regions_to_show
+                        if num_regions > max_regions_to_show:
+                            remaining = num_regions - max_regions_to_show
+                            details += f"   ... and {remaining} additional region{'s' if remaining > 1 else ''}\n"
+                        
+                        details += "\n"
+                
+                # L/R Balance temporal
+                if 'lr_balance' in temporal:
+                    lr_data = temporal['lr_balance']
+                    num_regions = lr_data.get('num_regions', 0)
+                    regions = lr_data.get('regions', [])
+                    
+                    if num_regions > 0:
+                        details += f"⚖️ L/R Balance ({num_regions} problematic region{'s' if num_regions > 1 else ''}):\n"
+                        
+                        max_regions_to_show = 25
+                        for region in regions[:max_regions_to_show]:
+                            start_min = int(region['start'] // 60)
+                            start_sec = int(region['start'] % 60)
+                            end_min = int(region['end'] // 60)
+                            end_sec = int(region['end'] % 60)
+                            dur = int(region['duration'])
+                            balance = region['avg_balance_db']
+                            side = region['side']
+                            
+                            details += f"   • {start_min}:{start_sec:02d} → {end_min}:{end_sec:02d} ({dur}s): "
+                            if side == 'left':
+                                details += f"L imbalance: +{abs(balance):.1f} dB\n"
+                            else:
+                                details += f"R imbalance: {balance:.1f} dB\n"
+                        
+                        # Show remaining count if more than max_regions_to_show
+                        if num_regions > max_regions_to_show:
+                            remaining = num_regions - max_regions_to_show
+                            details += f"   ... and {remaining} additional region{'s' if remaining > 1 else ''}\n"
+                        
+                        details += "\n"
+                
+                details += "💡 Review the timestamps above in your DAW to verify if what's mentioned in the Temporal Analysis is an artistic or production decision, or if it requires a technical adjustment.\n\n"
+            
+            else:
+                # No temporal analysis available
+                details += "   → Stereo image with good mono compatibility.\n"
+                details += "     Will translate well across systems.\n\n"
         
         # FREQUENCY BALANCE
         freq_metric = next((m for m in metrics if "Frequency" in m.get("internal_key", "")), None)
@@ -2949,18 +3110,16 @@ def analyze_file_chunked(
                     })
                 
                 # 3. Stereo correlation temporal (per window)
+                # Detect 5 types of correlation issues:
+                # - high (>0.95): Nearly mono
+                # - medium_low (0.3-0.7): Phase issues possible
+                # - very_low (0.0-0.3): Severe phase issues
+                # - negative (-0.2 to 0.0): Partial phase inversion
+                # - negative_severe (<-0.2): Critical phase inversion
                 window_corr = stereo_correlation(window)
-                if window_corr < 0.3:
-                    results['correlation_problem_chunks'].append({
-                        'chunk': i + 1,
-                        'window': w + 1,
-                        'start_time': window_time,
-                        'end_time': window_time + window_dur,
-                        'correlation': window_corr,
-                        'issue': 'low',
-                        'severity': 'critical' if window_corr < 0.1 else 'warning'
-                    })
-                elif window_corr > 0.95:
+                
+                if window_corr > 0.95:
+                    # Nearly mono
                     results['correlation_problem_chunks'].append({
                         'chunk': i + 1,
                         'window': w + 1,
@@ -2969,6 +3128,50 @@ def analyze_file_chunked(
                         'correlation': window_corr,
                         'issue': 'high',
                         'severity': 'warning'
+                    })
+                elif window_corr < 0.7 and window_corr >= 0.3:
+                    # Medium-low correlation (phase issues possible)
+                    results['correlation_problem_chunks'].append({
+                        'chunk': i + 1,
+                        'window': w + 1,
+                        'start_time': window_time,
+                        'end_time': window_time + window_dur,
+                        'correlation': window_corr,
+                        'issue': 'medium_low',
+                        'severity': 'warning'
+                    })
+                elif window_corr < 0.3 and window_corr >= 0.0:
+                    # Very low correlation (severe phase issues)
+                    results['correlation_problem_chunks'].append({
+                        'chunk': i + 1,
+                        'window': w + 1,
+                        'start_time': window_time,
+                        'end_time': window_time + window_dur,
+                        'correlation': window_corr,
+                        'issue': 'very_low',
+                        'severity': 'critical'
+                    })
+                elif window_corr < 0.0 and window_corr >= -0.2:
+                    # Negative correlation (partial phase inversion)
+                    results['correlation_problem_chunks'].append({
+                        'chunk': i + 1,
+                        'window': w + 1,
+                        'start_time': window_time,
+                        'end_time': window_time + window_dur,
+                        'correlation': window_corr,
+                        'issue': 'negative',
+                        'severity': 'critical'
+                    })
+                elif window_corr < -0.2:
+                    # Severe negative correlation (critical phase inversion)
+                    results['correlation_problem_chunks'].append({
+                        'chunk': i + 1,
+                        'window': w + 1,
+                        'start_time': window_time,
+                        'end_time': window_time + window_dur,
+                        'correlation': window_corr,
+                        'issue': 'negative_severe',
+                        'severity': 'critical'
                     })
                 
                 # 4. M/S Ratio temporal (per window)
@@ -3288,7 +3491,7 @@ def analyze_file_chunked(
                         'issue': r['chunks'][0]['issue'],  # 'low' or 'high'
                         'severity': max(c['severity'] for c in r['chunks'])  # worst severity in region
                     }
-                    for r in corr_regions[:10]  # Limit to 10 regions
+                    for r in corr_regions[:25]  # Show up to 25 regions
                 ]
             }
         
@@ -3306,7 +3509,7 @@ def analyze_file_chunked(
                         'issue': r['chunks'][0]['issue'],  # 'mono' or 'too_wide'
                         'severity': max(c['severity'] for c in r['chunks'])
                     }
-                    for r in ms_regions[:10]
+                    for r in ms_regions[:25]
                 ]
             }
         
@@ -3324,7 +3527,7 @@ def analyze_file_chunked(
                         'side': r['chunks'][0]['side'],  # 'left' or 'right'
                         'severity': max(c['severity'] for c in r['chunks'])
                     }
-                    for r in lr_regions[:10]
+                    for r in lr_regions[:25]
                 ]
             }
     
