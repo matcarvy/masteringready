@@ -1,13 +1,19 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Mix Analyzer v7.3 - BETA RELEASE
+Mix Analyzer v7.3.9 - BETA RELEASE
 ================================
 
 ARCHITECTURE PRINCIPLES:
 1. Calculate scores LANGUAGE-NEUTRAL (no idioma en lógica)
 2. Freeze score before translation (score congelado)
 3. Translate messages with Matías Voice (del eBook "Mastering Ready")
+
+KEY IMPROVEMENTS from v7.3.8:
+-----------------------------
+✅ CORRELATION CLASSIFICATION FIX - "medium_low" (59%) now displays correctly
+✅ CORRELATION SUB-DESCRIPTIONS - Added "→ Casi mono", "→ Revisa efectos estéreo", etc.
+✅ DAW CONTEXT MESSAGE - Added after temporal analysis section
 
 KEY IMPROVEMENTS from v6:
 -------------------------
@@ -33,7 +39,7 @@ Master detection → Complete analysis with positive aspects + observations
 
 Author: Matías Carvajal García (@matcarvy)
 Based on: "Mastering Ready - Asegura el éxito de tu mastering desde la mezcla" eBook
-Version: 7.3.0-beta (2025-12-22)
+Version: 7.3.9-beta (2025-01-04)
 
 Usage:
 ------
@@ -3842,10 +3848,25 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                             issue = region['issue']
                             
                             temporal_message += f"   • {start_min}:{start_sec:02d} → {end_min}:{end_sec:02d} ({dur}s): "
-                            if issue == 'low':
-                                temporal_message += f"Correlación baja ({corr*100:.0f}%)\n"
-                            else:
+                            
+                            # Handle all 5 correlation issue types
+                            if issue == 'high':
                                 temporal_message += f"Correlación muy alta ({corr*100:.0f}%)\n"
+                                temporal_message += "      → Casi mono\n"
+                            elif issue == 'medium_low':
+                                temporal_message += f"Correlación media-baja ({corr*100:.0f}%)\n"
+                                temporal_message += "      → Revisa efectos estéreo y reverbs\n"
+                            elif issue == 'very_low':
+                                temporal_message += f"Correlación muy baja ({corr*100:.0f}%)\n"
+                                temporal_message += "      → Problemas de fase - cancelación en mono\n"
+                            elif issue == 'negative':
+                                temporal_message += f"Correlación negativa ({corr*100:.0f}%)\n"
+                                temporal_message += "      → Fase invertida parcial - pérdida en mono\n"
+                            elif issue == 'negative_severe':
+                                temporal_message += f"Correlación negativa severa ({corr*100:.0f}%)\n"
+                                temporal_message += "      → Fase invertida - cancelación severa en mono\n"
+                            else:  # Fallback
+                                temporal_message += f"Correlación: {corr*100:.0f}%\n"
                         temporal_message += "\n"
                 
                 # M/S Ratio temporal
@@ -3902,6 +3923,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
             if has_temporal:
                 message += "⚠️ ANÁLISIS TEMPORAL:\n\n"
                 message += temporal_message
+                message += "💡 Revisa los tiempos indicados arriba en tu DAW para verificar si lo mencionado en el Análisis Temporal es una decisión artística o de producción, o si requiere un ajuste técnico.\n\n"
             
             # SECTION 3: Technical Observations
             observations = []
@@ -4037,6 +4059,130 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                 message += "✅ Technically correct aspects:\n"
                 message += "\n".join(positive_aspects)
                 message += "\n\n"
+            
+            # SECTION 2.5: Temporal Analysis (if available from chunked mode)
+            has_temporal = False
+            temporal_message = ""
+            
+            # Check for True Peak temporal analysis
+            if tp_metric and "temporal_analysis" in tp_metric:
+                tp_temporal_data = tp_metric["temporal_analysis"]
+                num_regions = tp_temporal_data.get('num_regions', 0)
+                percentage = tp_temporal_data.get('percentage_above_threshold', 0)
+                regions = tp_temporal_data.get('regions', [])
+                
+                if num_regions > 0:
+                    has_temporal = True
+                    temporal_message += f"🔊 True Peak: Present for {percentage:.0f}% of the time.\n"
+                    temporal_message += f"   Affected regions ({num_regions}):\n"
+                    for region in regions[:10]:  # Max 10 regions
+                        start_min = int(region['start'] // 60)
+                        start_sec = int(region['start'] % 60)
+                        end_min = int(region['end'] // 60)
+                        end_sec = int(region['end'] % 60)
+                        temporal_message += f"   • {start_min}:{start_sec:02d} → {end_min}:{end_sec:02d}\n"
+                    temporal_message += "\n"
+                    temporal_message += "💡 The track is processed at master level with aggressive limiting.\n\n"
+            
+            # Check for Stereo temporal analysis
+            if stereo_metric and "temporal_analysis" in stereo_metric:
+                temporal = stereo_metric["temporal_analysis"]
+                
+                # Correlation temporal
+                if 'correlation' in temporal:
+                    corr_data = temporal['correlation']
+                    num_regions = corr_data.get('num_regions', 0)
+                    regions = corr_data.get('regions', [])
+                    
+                    if num_regions > 0:
+                        has_temporal = True
+                        temporal_message += f"🎧 Correlation ({num_regions} problematic region{'s' if num_regions > 1 else ''}):\n"
+                        for region in regions[:10]:
+                            start_min = int(region['start'] // 60)
+                            start_sec = int(region['start'] % 60)
+                            end_min = int(region['end'] // 60)
+                            end_sec = int(region['end'] % 60)
+                            dur = int(region['duration'])
+                            corr = region['avg_correlation']
+                            issue = region['issue']
+                            
+                            temporal_message += f"   • {start_min}:{start_sec:02d} → {end_min}:{end_sec:02d} ({dur}s): "
+                            
+                            # Handle all 5 correlation issue types
+                            if issue == 'high':
+                                temporal_message += f"Very high correlation ({corr*100:.0f}%)\n"
+                                temporal_message += "      → Nearly mono\n"
+                            elif issue == 'medium_low':
+                                temporal_message += f"Medium-low correlation ({corr*100:.0f}%)\n"
+                                temporal_message += "      → Check stereo effects and reverbs\n"
+                            elif issue == 'very_low':
+                                temporal_message += f"Very low correlation ({corr*100:.0f}%)\n"
+                                temporal_message += "      → Phase issues - mono cancellation\n"
+                            elif issue == 'negative':
+                                temporal_message += f"Negative correlation ({corr*100:.0f}%)\n"
+                                temporal_message += "      → Partial phase inversion - mono loss\n"
+                            elif issue == 'negative_severe':
+                                temporal_message += f"Severe negative correlation ({corr*100:.0f}%)\n"
+                                temporal_message += "      → Phase inverted - severe mono cancellation\n"
+                            else:  # Fallback
+                                temporal_message += f"Correlation: {corr*100:.0f}%\n"
+                        temporal_message += "\n"
+                
+                # M/S Ratio temporal
+                if 'ms_ratio' in temporal:
+                    ms_data = temporal['ms_ratio']
+                    num_regions = ms_data.get('num_regions', 0)
+                    regions = ms_data.get('regions', [])
+                    
+                    if num_regions > 0:
+                        has_temporal = True
+                        temporal_message += f"📐 M/S Ratio ({num_regions} problematic region{'s' if num_regions > 1 else ''}):\n"
+                        for region in regions[:10]:
+                            start_min = int(region['start'] // 60)
+                            start_sec = int(region['start'] % 60)
+                            end_min = int(region['end'] // 60)
+                            end_sec = int(region['end'] % 60)
+                            dur = int(region['duration'])
+                            ms = region['avg_ms_ratio']
+                            issue = region['issue']
+                            
+                            temporal_message += f"   • {start_min}:{start_sec:02d} → {end_min}:{end_sec:02d} ({dur}s): "
+                            if issue == 'mono':
+                                temporal_message += f"Low ratio ({ms:.2f})\n"
+                            else:
+                                temporal_message += f"High ratio ({ms:.2f})\n"
+                        temporal_message += "\n"
+                
+                # L/R Balance temporal
+                if 'lr_balance' in temporal:
+                    lr_data = temporal['lr_balance']
+                    num_regions = lr_data.get('num_regions', 0)
+                    regions = lr_data.get('regions', [])
+                    
+                    if num_regions > 0:
+                        has_temporal = True
+                        temporal_message += f"⚖️ L/R Balance ({num_regions} problematic region{'s' if num_regions > 1 else ''}):\n"
+                        for region in regions[:10]:
+                            start_min = int(region['start'] // 60)
+                            start_sec = int(region['start'] % 60)
+                            end_min = int(region['end'] // 60)
+                            end_sec = int(region['end'] % 60)
+                            dur = int(region['duration'])
+                            balance = region['avg_balance_db']
+                            side = region['side']
+                            
+                            temporal_message += f"   • {start_min}:{start_sec:02d} → {end_min}:{end_sec:02d} ({dur}s): "
+                            if side == 'left':
+                                temporal_message += f"L imbalance: +{abs(balance):.1f} dB\n"
+                            else:
+                                temporal_message += f"R imbalance: {balance:.1f} dB\n"
+                        temporal_message += "\n"
+            
+            # Add temporal analysis section if there's any temporal data
+            if has_temporal:
+                message += "⚠️ TEMPORAL ANALYSIS:\n\n"
+                message += temporal_message
+                message += "💡 Review the timestamps above in your DAW to verify if what's mentioned in the Temporal Analysis is an artistic or production decision, or if it requires a technical adjustment.\n\n"
             
             # SECTION 3: Technical Observations
             observations = []
