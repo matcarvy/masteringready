@@ -1,13 +1,26 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Mix Analyzer v7.3.10 - BETA RELEASE
-===================================
+Mix Analyzer v7.3.12 - BETA RELEASE (FINAL)
+============================================
 
 ARCHITECTURE PRINCIPLES:
 1. Calculate scores LANGUAGE-NEUTRAL (no idioma en lógica)
 2. Freeze score before translation (score congelado)
 3. Translate messages with Matías Voice (del eBook "Mastering Ready")
+
+KEY IMPROVEMENTS from v7.3.11:
+------------------------------
+✅ TRUE PEAK PERCENTAGE CONSISTENCY - Round to integer (75% not 72% vs 75%)
+   • Ensures identical percentage between Spanish and English
+   • Eliminates minor floating-point differences
+
+KEY IMPROVEMENTS from v7.3.10:
+------------------------------
+✅ TRUE PEAK INFO MESSAGE - Always shows temporal analysis when TP > -1.0 dBTP, even for brief peaks
+   • If no 5-second windows exceed threshold, shows informative message explaining brief transients
+   • Ensures consistent user experience for all high True Peak files
+   • Available in Spanish and English
 
 KEY IMPROVEMENTS from v7.3.9:
 -----------------------------
@@ -49,7 +62,7 @@ Master detection → Complete analysis with positive aspects + observations
 
 Author: Matías Carvajal García (@matcarvy)
 Based on: "Mastering Ready - Asegura el éxito de tu mastering desde la mezcla" eBook
-Version: 7.3.10-beta (2025-01-05)
+Version: 7.3.12-beta-FINAL (2025-01-05)
 
 Usage:
 ------
@@ -825,7 +838,7 @@ def analyze_true_peak_temporal(y: np.ndarray, sr: int, oversample: int = 4, thre
     
     return {
         "severity": severity,
-        "affected_percentage": round(affected_percentage, 1),
+        "affected_percentage": round(affected_percentage, 0),  # Round to integer for consistency
         "problem_regions": problem_regions,  # Now returns REGIONS not moments
         "total_regions": len(problem_regions),
         "max_value": round(tp, 1)
@@ -1975,6 +1988,31 @@ def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, s
         # -2.0 aligns with professional high-end standards (~-6 dBFS headroom from eBook)
         tp_threshold = -2.0 if strict else -1.0
         tp_temporal = analyze_true_peak_temporal(y, sr, oversample, threshold=tp_threshold)
+        
+        # If no regions found but TP is high, create informative message
+        # This happens when peak is brief (transient) but still problematic
+        if tp_temporal and tp_temporal.get('num_regions', 0) == 0:
+            lang_picked = _pick_lang(lang)
+            if lang_picked == 'es':
+                info_message = (
+                    f"El pico máximo ({tp:.1f} dBTP) está cerca del límite digital, "
+                    "pero ocurre en momentos muy breves (transitorios). "
+                    "Aunque no afecta ventanas completas de 5 segundos, "
+                    "sigue siendo un indicador de procesamiento de master."
+                )
+            else:
+                info_message = (
+                    f"The maximum peak ({tp:.1f} dBTP) is close to the digital ceiling, "
+                    "but occurs in very brief moments (transients). "
+                    "While it doesn't affect complete 5-second windows, "
+                    "it's still an indicator of master-level processing."
+                )
+            
+            # Create a synthetic region to display the message
+            tp_temporal['num_regions'] = 0  # Keep 0 to avoid showing timestamps
+            tp_temporal['info_only'] = True
+            tp_temporal['info_message'] = info_message
+            tp_temporal['percentage_above_threshold'] = 0
     
     tp_metric = {
         "name": METRIC_NAMES[_pick_lang(lang)]["True Peak"],
@@ -3834,7 +3872,10 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                 num_regions = tp_temporal_data.get('num_regions', 0)
                 percentage = tp_temporal_data.get('percentage_above_threshold', 0)
                 regions = tp_temporal_data.get('regions', [])
+                info_only = tp_temporal_data.get('info_only', False)
+                info_message = tp_temporal_data.get('info_message', '')
                 
+                # Show temporal analysis if there are regions OR if it's info-only
                 if num_regions > 0:
                     has_temporal = True
                     temporal_message += f"🔊 True Peak: Presente durante {percentage:.0f}% del tiempo.\n"
@@ -3846,6 +3887,12 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                         end_sec = int(region['end'] % 60)
                         temporal_message += f"   • {start_min}:{start_sec:02d} → {end_min}:{end_sec:02d}\n"
                     temporal_message += "\n"
+                    temporal_message += "💡 El track está procesado a nivel de master con limitación agresiva.\n\n"
+                elif info_only and info_message:
+                    # Show info message for brief peaks
+                    has_temporal = True
+                    temporal_message += f"🔊 True Peak:\n"
+                    temporal_message += f"   {info_message}\n\n"
                     temporal_message += "💡 El track está procesado a nivel de master con limitación agresiva.\n\n"
             
             # Check for Stereo temporal analysis
@@ -4093,7 +4140,10 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                 num_regions = tp_temporal_data.get('num_regions', 0)
                 percentage = tp_temporal_data.get('percentage_above_threshold', 0)
                 regions = tp_temporal_data.get('regions', [])
+                info_only = tp_temporal_data.get('info_only', False)
+                info_message = tp_temporal_data.get('info_message', '')
                 
+                # Show temporal analysis if there are regions OR if it's info-only
                 if num_regions > 0:
                     has_temporal = True
                     temporal_message += f"🔊 True Peak: Present for {percentage:.0f}% of the time.\n"
@@ -4105,6 +4155,12 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                         end_sec = int(region['end'] % 60)
                         temporal_message += f"   • {start_min}:{start_sec:02d} → {end_min}:{end_sec:02d}\n"
                     temporal_message += "\n"
+                    temporal_message += "💡 The track is processed at master level with aggressive limiting.\n\n"
+                elif info_only and info_message:
+                    # Show info message for brief peaks
+                    has_temporal = True
+                    temporal_message += f"🔊 True Peak:\n"
+                    temporal_message += f"   {info_message}\n\n"
                     temporal_message += "💡 The track is processed at master level with aggressive limiting.\n\n"
             
             # Check for Stereo temporal analysis
