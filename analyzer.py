@@ -2010,15 +2010,15 @@ def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, s
                 info_message = (
                     f"El pico máximo ({tp:.1f} dBTP) está cerca del límite digital, "
                     "pero ocurre en momentos muy breves (transitorios). "
-                    "Aunque no afecta ventanas completas de 5 segundos, "
+                    "Aunque no se mantiene de forma sostenida durante 5 segundos o más, "
                     "sigue siendo un indicador de procesamiento de master."
                 )
             else:
                 info_message = (
                     f"The maximum peak ({tp:.1f} dBTP) is close to the digital ceiling, "
                     "but occurs in very brief moments (transients). "
-                    "While it doesn't affect complete 5-second windows, "
-                    "it's still an indicator of master-level processing."
+                    "Although it is not sustained for 5 seconds or longer, "
+                    "it remains an indicator of mastering-level processing."
                 )
             
             # Create a synthetic region to display the message
