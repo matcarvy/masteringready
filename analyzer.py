@@ -1,13 +1,23 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Mix Analyzer v7.3.9 - BETA RELEASE
-================================
+Mix Analyzer v7.3.10 - BETA RELEASE
+===================================
 
 ARCHITECTURE PRINCIPLES:
 1. Calculate scores LANGUAGE-NEUTRAL (no idioma en lógica)
 2. Freeze score before translation (score congelado)
 3. Translate messages with Matías Voice (del eBook "Mastering Ready")
+
+KEY IMPROVEMENTS from v7.3.9:
+-----------------------------
+✅ TRUE PEAK THRESHOLD - Changed from 0.0 to -1.0 dBTP (normal) / -2.0 dBTP (strict)
+✅ CREST FACTOR STATUS - Now shows "info" (ℹ️) instead of "warning" (⚠️) when PLR is available
+✅ STRICT MODE TEMPORAL THRESHOLDS - More demanding analysis in strict mode:
+   • True Peak: -2.0 dBTP (vs -1.0 normal) - aligns with professional high-end standards
+   • Correlation: 0.5 (vs 0.3 normal)
+   • L/R Balance: 2.0 dB (vs 3.0 dB normal)
+   • M/S Ratio: 0.1-1.2 (vs 0.05-1.5 normal)
 
 KEY IMPROVEMENTS from v7.3.8:
 -----------------------------
@@ -39,7 +49,7 @@ Master detection → Complete analysis with positive aspects + observations
 
 Author: Matías Carvajal García (@matcarvy)
 Based on: "Mastering Ready - Asegura el éxito de tu mastering desde la mezcla" eBook
-Version: 7.3.9-beta (2025-01-04)
+Version: 7.3.10-beta (2025-01-05)
 
 Usage:
 ------
@@ -1961,7 +1971,10 @@ def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, s
     # Temporal analysis if problematic
     tp_temporal = None
     if tp > -1.0:  # Analyze if close to or above limit
-        tp_temporal = analyze_true_peak_temporal(y, sr, oversample, threshold=0.0)
+        # Strict mode uses more conservative threshold (-2.0 dBTP vs -1.0 dBTP)
+        # -2.0 aligns with professional high-end standards (~-6 dBFS headroom from eBook)
+        tp_threshold = -2.0 if strict else -1.0
+        tp_temporal = analyze_true_peak_temporal(y, sr, oversample, threshold=tp_threshold)
     
     tp_metric = {
         "name": METRIC_NAMES[_pick_lang(lang)]["True Peak"],
@@ -2028,15 +2041,19 @@ def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, s
     
     lang_picked = _pick_lang(lang)
     if has_real_lufs:
+        # When PLR is available, Crest Factor is informational only
+        cf_status = "info"
         cf_message = "Informativo (usa PLR como métrica principal de dinámica)." if lang_picked == 'es' else "Informational (use PLR as the primary dynamics metric)."
     else:
+        # When no PLR, use Crest Factor scoring
+        cf_status = st_cf
         cf_message = msg_cf
     
     metrics.append({
         "name": METRIC_NAMES[lang_picked]["Crest Factor"],
         "internal_key": "Crest Factor",  # For WEIGHTS lookup
         "value": f"{crest:.1f} dB",
-        "status": st_cf,
+        "status": cf_status,
         "message": cf_message
     })
 
@@ -2050,14 +2067,20 @@ def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, s
     ms_temporal = None
     lr_temporal = None
     
+    # Strict mode uses more demanding thresholds for temporal analysis
+    corr_threshold = 0.5 if strict else 0.3
+    ms_low_threshold = 0.1 if strict else 0.05
+    ms_high_threshold = 1.2 if strict else 1.5
+    lr_threshold = 2.0 if strict else 3.0
+    
     if corr < 0.5:  # Analyze if correlation is problematic
-        corr_temporal = analyze_correlation_temporal(y, sr, threshold=0.3)
+        corr_temporal = analyze_correlation_temporal(y, sr, threshold=corr_threshold)
     
-    if ms_ratio < 0.05 or ms_ratio > 1.5:  # Analyze if M/S is problematic
-        ms_temporal = analyze_ms_ratio_temporal(y, sr, low_threshold=0.05, high_threshold=1.5)
+    if ms_ratio < ms_low_threshold or ms_ratio > ms_high_threshold:  # Analyze if M/S is problematic
+        ms_temporal = analyze_ms_ratio_temporal(y, sr, low_threshold=ms_low_threshold, high_threshold=ms_high_threshold)
     
-    if abs(lr_balance_db) > 3.0:  # Analyze if L/R balance is problematic
-        lr_temporal = analyze_lr_balance_temporal(y, sr, threshold=3.0)
+    if abs(lr_balance_db) > lr_threshold:  # Analyze if L/R balance is problematic
+        lr_temporal = analyze_lr_balance_temporal(y, sr, threshold=lr_threshold)
     
     # Comprehensive evaluation with M/S and L/R context
     st_s, msg_s = evaluate_stereo_field_comprehensive(corr, ms_ratio, lr_balance_db, lang, strict)
