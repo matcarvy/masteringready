@@ -855,8 +855,7 @@ by Matías Carvajal
       </nav>
 
       {/* Hero Section */}
-      <section style={{
-        paddingTop: typeof window !== 'undefined' && window.innerWidth < 768 ? '4.5rem' : '6rem',
+      <section className="hero-section" style={{
         paddingBottom: '4rem',
         paddingLeft: '1.5rem',
         paddingRight: '1.5rem',
@@ -1029,16 +1028,12 @@ by Matías Carvajal
       </section>
 
       {/* Features Section */}
-      <section id="features" style={{
-        padding: typeof window !== 'undefined' && window.innerWidth < 768 
-          ? '1.125rem 1.5rem 2rem 1.5rem'  // Móvil: menos padding arriba (reducido 25%)
-          : '2rem 1.5rem',
+      <section id="features" className="features-section" style={{
         background: '#f9fafb'
       }}>
         <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
-          <div style={{ 
-            textAlign: 'center', 
-            marginBottom: typeof window !== 'undefined' && window.innerWidth < 768 ? '1.5rem' : '3rem'
+          <div className="features-title-container" style={{ 
+            textAlign: 'center'
           }}>
             <h2 style={{ fontSize: '2.25rem', fontWeight: 'bold', marginBottom: '1rem' }}>
               {lang === 'es' ? '¿Por qué Mastering Ready?' : 'Why Mastering Ready?'}
@@ -1106,17 +1101,13 @@ by Matías Carvajal
       </section>
 
       {/* Analyzer Section - Same as before but with inline styles */}
-      <section id="analyze" style={{ 
-        padding: typeof window !== 'undefined' && window.innerWidth < 768 ? '1.125rem 1.5rem' : '1.5rem 1.5rem', 
+      <section id="analyze" className="analyzer-section" style={{ 
         background: 'white' 
       }}>
         <div style={{ maxWidth: '896px', margin: '0 auto' }}>
           {!result ? (
             <>
-              <div style={{ 
-                textAlign: 'center', 
-                marginBottom: typeof window !== 'undefined' && window.innerWidth < 768 ? '2.25rem' : '3rem' 
-              }}>
+              <div className="analyzer-title-container" style={{ textAlign: 'center' }}>
                 <h2 style={{ fontSize: '2.25rem', fontWeight: 'bold', marginBottom: '1rem' }}>
                   {lang === 'es' ? 'Analiza Tu Mezcla Ahora' : 'Analyze Your Mix Now'}
                 </h2>
@@ -2133,19 +2124,16 @@ by Matías Carvajal
       </section>
 
       {/* Footer */}
-      <footer style={{
+      <footer className="footer-section" style={{
         background: 'linear-gradient(to bottom, #1e1b4b 0%, #312e81 100%)',
         color: 'white',
-        padding: '2.5rem 1.5rem 2rem',
         textAlign: 'center',
         borderTop: '1px solid rgba(255, 255, 255, 0.1)'
       }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-          <div style={{ 
+          <div className="footer-grid" style={{ 
             display: 'grid', 
             gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-            gap: typeof window !== 'undefined' && window.innerWidth < 768 ? '1.875rem' : '2.5rem',
-            marginBottom: typeof window !== 'undefined' && window.innerWidth < 768 ? '1.125rem' : '1.5rem',
             textAlign: 'left'
           }}>
             {/* Brand */}
@@ -2162,9 +2150,8 @@ by Matías Carvajal
 
             {/* Contact */}
             <div>
-              <h4 style={{ 
+              <h4 className="footer-heading" style={{ 
                 fontWeight: '600', 
-                marginBottom: typeof window !== 'undefined' && window.innerWidth < 768 ? '0.75rem' : '1rem', 
                 color: '#ffffff' 
               }}>
                 {lang === 'es' ? 'Contacto' : 'Contact'}
@@ -2230,9 +2217,8 @@ by Matías Carvajal
 
             {/* Resources */}
             <div>
-              <h4 style={{ 
+              <h4 className="footer-heading" style={{ 
                 fontWeight: '600', 
-                marginBottom: typeof window !== 'undefined' && window.innerWidth < 768 ? '0.75rem' : '1rem', 
                 color: '#ffffff' 
               }}>
                 {lang === 'es' ? 'Acerca de' : 'About'}
@@ -2263,13 +2249,12 @@ by Matías Carvajal
             </div>
           </div>
           
-          <div style={{ 
+          <div className="footer-copyright" style={{ 
             borderTop: '1px solid rgba(255, 255, 255, 0.1)', 
-            paddingTop: typeof window !== 'undefined' && window.innerWidth < 768 ? '0.75rem' : '1rem', 
             textAlign: 'center' 
           }}>
             <p style={{ color: 'rgba(255, 255, 255, 0.8)', marginBottom: '0.5rem' }}>
-              © 2025 Mastering Ready by Matías Carvajal.
+              © 2026 Mastering Ready by Matías Carvajal.
             </p>
             <p style={{ fontSize: '0.875rem', color: 'rgba(255, 255, 255, 0.6)' }}>
               {lang === 'es' 
@@ -2734,6 +2719,87 @@ by Matías Carvajal
         @keyframes spin {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
+        }
+
+        /* Hero Section - spacing solo para móvil */
+        .hero-section {
+          padding-top: 6rem;
+        }
+
+        /* Features Section - spacing solo para móvil */
+        .features-section {
+          padding: 2rem 1.5rem;
+        }
+        
+        .features-title-container {
+          margin-bottom: 3rem;
+        }
+
+        /* Analyzer Section - spacing solo para móvil */
+        .analyzer-section {
+          padding: 1.5rem 1.5rem;
+        }
+        
+        .analyzer-title-container {
+          margin-bottom: 3rem;
+        }
+
+        /* Footer - spacing solo para móvil */
+        .footer-section {
+          padding: 2.5rem 1.5rem 2rem;
+        }
+        
+        .footer-grid {
+          gap: 2.5rem;
+          margin-bottom: 1.5rem;
+        }
+        
+        .footer-heading {
+          margin-bottom: 1rem;
+        }
+        
+        .footer-copyright {
+          padding-top: 1rem;
+        }
+
+        /* MOBILE ONLY - Ajustes de spacing reducidos ~25% */
+        @media (max-width: 767px) {
+          .hero-section {
+            padding-top: 4.5rem;
+          }
+          
+          .features-section {
+            padding: 1.125rem 1.5rem 2rem 1.5rem;
+          }
+          
+          .features-title-container {
+            margin-bottom: 1.5rem;
+          }
+          
+          .analyzer-section {
+            padding: 1.125rem 1.5rem;
+          }
+          
+          .analyzer-title-container {
+            margin-bottom: 2.25rem;
+          }
+          
+          .footer-section {
+            padding: 2rem 1.5rem 1.5rem;
+          }
+          
+          .footer-grid {
+            gap: 1.875rem;
+            margin-bottom: 1.125rem;
+          }
+          
+          .footer-heading {
+            margin-bottom: 0.75rem;
+          }
+          
+          .footer-copyright {
+            padding-top: 0.75rem;
+          }
         }
       `}</style>
     </div>
