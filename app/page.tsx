@@ -2771,7 +2771,7 @@ by Matías Carvajal
         /* Hero Section */
         .hero-section {
           padding-top: 6rem;
-          padding-bottom: 4.25rem; /* Reducido - termina en la parte inferior de checkmarks */
+          padding-bottom: 4.25rem;
         }
         
         .methodology-badge {
@@ -2779,12 +2779,12 @@ by Matías Carvajal
         }
         
         .hero-main-title {
-          margin-top: -0.375rem; /* Sube 25% más cerca a metodología */
+          margin-top: 0.125rem; /* Baja un tris para igualar espacios */
         }
         
         .demo-card-container {
-          margin-top: -0.5rem;
-          padding-bottom: 0; /* Sin padding extra */
+          margin-top: -0.75rem; /* Sube más para alinearse con metodología */
+          padding-bottom: 0;
         }
 
         /* Features Section */
@@ -2847,11 +2847,11 @@ by Matías Carvajal
           }
           
           .methodology-badge {
-            margin-bottom: 1.25rem; /* Bajado un poco más que antes */
+            margin-bottom: 1.5rem; /* Bajado más - más separado de arriba y más espacio con título */
           }
           
           .hero-main-title {
-            margin-top: 0; /* Sin ajuste en móvil */
+            margin-top: 0;
           }
           
           .demo-card-container {
