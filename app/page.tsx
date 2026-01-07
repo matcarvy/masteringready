@@ -870,13 +870,12 @@ by Matías Carvajal
           }}>
             {/* Left: Copy */}
             <div style={{ color: 'white' }}>
-              <div style={{
+              <div className="methodology-badge" style={{
                 display: 'inline-block',
                 background: 'rgba(255, 255, 255, 0.2)',
                 backdropFilter: 'blur(10px)',
                 borderRadius: '9999px',
-                padding: '0.5rem 1rem',
-                marginBottom: typeof window !== 'undefined' && window.innerWidth < 768 ? '1rem' : '1.5rem'
+                padding: '0.5rem 1rem'
               }}>
                 <span style={{ fontSize: '1rem', fontWeight: '500' }}>
                   ✨ {lang === 'es' 
@@ -947,7 +946,7 @@ by Matías Carvajal
             </div>
             
             {/* Right: Demo Card */}
-            <div>
+            <div className="demo-card-container">
               <div style={{
                 background: 'white',
                 borderRadius: '1rem',
@@ -2721,30 +2720,39 @@ by Matías Carvajal
           to { transform: rotate(360deg); }
         }
 
-        /* Hero Section - spacing solo para móvil */
+        /* ============================================
+           DESKTOP STYLES (default)
+           ============================================ */
+        
+        /* Hero Section */
         .hero-section {
           padding-top: 6rem;
+          padding-bottom: 5rem; /* Estirado para terminar con checkmarks */
+        }
+        
+        .methodology-badge {
+          margin-bottom: 1.5rem;
         }
 
-        /* Features Section - spacing solo para móvil */
+        /* Features Section */
         .features-section {
-          padding: 2rem 1.5rem;
+          padding: 1.75rem 1.5rem; /* Título sube un poco */
         }
         
         .features-title-container {
-          margin-bottom: 3rem;
+          margin-bottom: 2.5rem; /* Reducido de 3rem */
         }
 
-        /* Analyzer Section - spacing solo para móvil */
+        /* Analyzer Section */
         .analyzer-section {
-          padding: 1.5rem 1.5rem;
+          padding: 1.25rem 1.5rem; /* Título sube un poco */
         }
         
         .analyzer-title-container {
-          margin-bottom: 3rem;
+          margin-bottom: 2.5rem; /* Reducido de 3rem */
         }
 
-        /* Footer - spacing solo para móvil */
+        /* Footer - alineación mejorada */
         .footer-section {
           padding: 2.5rem 1.5rem 2rem;
         }
@@ -2755,19 +2763,37 @@ by Matías Carvajal
         }
         
         .footer-heading {
-          margin-bottom: 1rem;
+          margin-bottom: 0.75rem; /* Igual que en la primera columna */
+        }
+        
+        /* Alinear el título de Mastering Ready con los demás */
+        .footer-grid > div:first-child > div:first-child {
+          margin-bottom: 0.75rem;
         }
         
         .footer-copyright {
           padding-top: 1rem;
         }
 
-        /* MOBILE ONLY - Ajustes de spacing reducidos ~25% */
+        /* ============================================
+           MOBILE STYLES (max-width: 767px)
+           ============================================ */
         @media (max-width: 767px) {
+          /* Hero Section */
           .hero-section {
             padding-top: 4.5rem;
+            padding-bottom: 4rem;
           }
           
+          .methodology-badge {
+            margin-bottom: 0.875rem; /* Baja un tris más */
+          }
+          
+          .demo-card-container {
+            margin-top: -1rem; /* Sube el box un tris */
+          }
+          
+          /* Features Section */
           .features-section {
             padding: 1.125rem 1.5rem 2rem 1.5rem;
           }
@@ -2776,6 +2802,7 @@ by Matías Carvajal
             margin-bottom: 1.5rem;
           }
           
+          /* Analyzer Section */
           .analyzer-section {
             padding: 1.125rem 1.5rem;
           }
@@ -2784,17 +2811,22 @@ by Matías Carvajal
             margin-bottom: 2.25rem;
           }
           
+          /* Footer - espacios más compactos */
           .footer-section {
-            padding: 2rem 1.5rem 1.5rem;
+            padding: 1.75rem 1.5rem 1.5rem; /* Más compacto */
           }
           
           .footer-grid {
-            gap: 1.875rem;
-            margin-bottom: 1.125rem;
+            gap: 1.25rem; /* Reducido significativamente */
+            margin-bottom: 1rem;
           }
           
           .footer-heading {
-            margin-bottom: 0.75rem;
+            margin-bottom: 0.625rem; /* Más compacto */
+          }
+          
+          .footer-grid > div:first-child > div:first-child {
+            margin-bottom: 0.625rem;
           }
           
           .footer-copyright {
