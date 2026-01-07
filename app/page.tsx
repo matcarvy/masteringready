@@ -2799,7 +2799,7 @@ by Matías Carvajal
           }
           
           .methodology-badge {
-            margin-bottom: 0.5rem; /* Bajado un poco más para balance perfecto */
+            margin-bottom: 0.75rem; /* Bajado más para mejor balance */
           }
           
           .demo-card-container {
