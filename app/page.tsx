@@ -2727,15 +2727,16 @@ by Matías Carvajal
         /* Hero Section */
         .hero-section {
           padding-top: 6rem;
-          padding-bottom: 5.5rem; /* Alargado hasta los checkmarks */
+          padding-bottom: 5.5rem;
         }
         
         .methodology-badge {
-          margin-bottom: 1.25rem; /* Bajado un tris */
+          margin-bottom: 1rem; /* Bajado más para alinear con box */
         }
         
         .demo-card-container {
-          margin-top: -0.75rem; /* Subido para alinear con metodología */
+          margin-top: -0.5rem; /* Ajustado para mejor alineación */
+          padding-bottom: 1.5rem; /* Estirado para terminar con checkmarks */
         }
 
         /* Features Section */
@@ -2758,7 +2759,7 @@ by Matías Carvajal
 
         /* Footer - alineación perfecta */
         .footer-section {
-          padding: 2.5rem 1.5rem 1.75rem; /* Copyright sube un tris */
+          padding: 2.5rem 1.5rem 1.75rem;
         }
         
         .footer-grid {
@@ -2769,7 +2770,7 @@ by Matías Carvajal
         /* Alinear TODOS los títulos a la misma altura */
         .footer-heading {
           margin-bottom: 0.75rem;
-          margin-top: 0.25rem; /* Contacto y Acerca de suben */
+          margin-top: 0.25rem;
         }
         
         /* Mastering Ready baja para alinearse */
@@ -2784,7 +2785,7 @@ by Matías Carvajal
         }
         
         .footer-copyright {
-          padding-top: 0.875rem; /* Copyright sube */
+          padding-top: 0.875rem;
         }
 
         /* ============================================
@@ -2798,7 +2799,7 @@ by Matías Carvajal
           }
           
           .methodology-badge {
-            margin-bottom: 0.65rem; /* Baja más - mitad del espacio superior */
+            margin-bottom: 0.325rem; /* 50% menos - muy pegado al título */
           }
           
           .demo-card-container {
@@ -2823,14 +2824,19 @@ by Matías Carvajal
             margin-bottom: 2.25rem;
           }
           
-          /* Footer - espaciado consistente */
+          /* Footer - espaciado mejorado */
           .footer-section {
             padding: 1.75rem 1.5rem 1.5rem;
           }
           
           .footer-grid {
             gap: 1.25rem;
-            margin-bottom: 0.75rem; /* Espacio reducido entre descripción y Contacto */
+            margin-bottom: 0.75rem;
+          }
+          
+          /* Separación entre secciones del footer */
+          .footer-grid > div:nth-child(2) {
+            margin-bottom: 1rem; /* Espacio entre Contacto y Acerca de */
           }
           
           .footer-heading {
