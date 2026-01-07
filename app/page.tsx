@@ -928,7 +928,7 @@ by Matías Carvajal
                 </span>
               </div>
               
-              <h1 style={{
+              <h1 className="hero-main-title" style={{
                 fontSize: 'clamp(2.5rem, 5vw, 3.75rem)',
                 fontWeight: 'bold',
                 marginBottom: '1.5rem',
@@ -2771,16 +2771,20 @@ by Matías Carvajal
         /* Hero Section */
         .hero-section {
           padding-top: 6rem;
-          padding-bottom: 5.5rem;
+          padding-bottom: 4.25rem; /* Reducido - termina en la parte inferior de checkmarks */
         }
         
         .methodology-badge {
-          margin-bottom: 1rem; /* Bajado más para alinear con box */
+          margin-bottom: 1rem;
+        }
+        
+        .hero-main-title {
+          margin-top: -0.375rem; /* Sube 25% más cerca a metodología */
         }
         
         .demo-card-container {
-          margin-top: -0.5rem; /* Ajustado para mejor alineación */
-          padding-bottom: 1.5rem; /* Estirado para terminar con checkmarks */
+          margin-top: -0.5rem;
+          padding-bottom: 0; /* Sin padding extra */
         }
 
         /* Features Section */
@@ -2843,11 +2847,15 @@ by Matías Carvajal
           }
           
           .methodology-badge {
-            margin-bottom: 1rem; /* Bajado un poco más */
+            margin-bottom: 1.25rem; /* Bajado un poco más que antes */
+          }
+          
+          .hero-main-title {
+            margin-top: 0; /* Sin ajuste en móvil */
           }
           
           .demo-card-container {
-            margin-top: 0; /* Sin margin negativo para no afectar el layout */
+            margin-top: 0;
           }
           
           /* Features Section */
