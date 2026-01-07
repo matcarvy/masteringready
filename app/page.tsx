@@ -2727,34 +2727,38 @@ by Matías Carvajal
         /* Hero Section */
         .hero-section {
           padding-top: 6rem;
-          padding-bottom: 5rem; /* Estirado para terminar con checkmarks */
+          padding-bottom: 5.5rem; /* Alargado hasta los checkmarks */
         }
         
         .methodology-badge {
-          margin-bottom: 1.5rem;
+          margin-bottom: 1.25rem; /* Bajado un tris */
+        }
+        
+        .demo-card-container {
+          margin-top: -0.75rem; /* Subido para alinear con metodología */
         }
 
         /* Features Section */
         .features-section {
-          padding: 1.75rem 1.5rem; /* Título sube un poco */
+          padding: 1.75rem 1.5rem;
         }
         
         .features-title-container {
-          margin-bottom: 2.5rem; /* Reducido de 3rem */
+          margin-bottom: 2.5rem;
         }
 
         /* Analyzer Section */
         .analyzer-section {
-          padding: 1.25rem 1.5rem; /* Título sube un poco */
+          padding: 1.25rem 1.5rem;
         }
         
         .analyzer-title-container {
-          margin-bottom: 2.5rem; /* Reducido de 3rem */
+          margin-bottom: 2.5rem;
         }
 
-        /* Footer - alineación mejorada */
+        /* Footer - alineación perfecta */
         .footer-section {
-          padding: 2.5rem 1.5rem 2rem;
+          padding: 2.5rem 1.5rem 1.75rem; /* Copyright sube un tris */
         }
         
         .footer-grid {
@@ -2762,17 +2766,25 @@ by Matías Carvajal
           margin-bottom: 1.5rem;
         }
         
+        /* Alinear TODOS los títulos a la misma altura */
         .footer-heading {
-          margin-bottom: 0.75rem; /* Igual que en la primera columna */
+          margin-bottom: 0.75rem;
+          margin-top: 0.25rem; /* Contacto y Acerca de suben */
         }
         
-        /* Alinear el título de Mastering Ready con los demás */
+        /* Mastering Ready baja para alinearse */
         .footer-grid > div:first-child > div:first-child {
+          margin-bottom: 0.75rem;
+          margin-top: 0.25rem;
+        }
+        
+        /* Igualar espacios entre título y contenido */
+        .footer-grid > div > div:first-child {
           margin-bottom: 0.75rem;
         }
         
         .footer-copyright {
-          padding-top: 1rem;
+          padding-top: 0.875rem; /* Copyright sube */
         }
 
         /* ============================================
@@ -2786,11 +2798,11 @@ by Matías Carvajal
           }
           
           .methodology-badge {
-            margin-bottom: 0.875rem; /* Baja un tris más */
+            margin-bottom: 0.65rem; /* Baja más - mitad del espacio superior */
           }
           
           .demo-card-container {
-            margin-top: -1rem; /* Sube el box un tris */
+            margin-top: -1rem;
           }
           
           /* Features Section */
@@ -2811,22 +2823,24 @@ by Matías Carvajal
             margin-bottom: 2.25rem;
           }
           
-          /* Footer - espacios más compactos */
+          /* Footer - espaciado consistente */
           .footer-section {
-            padding: 1.75rem 1.5rem 1.5rem; /* Más compacto */
+            padding: 1.75rem 1.5rem 1.5rem;
           }
           
           .footer-grid {
-            gap: 1.25rem; /* Reducido significativamente */
-            margin-bottom: 1rem;
+            gap: 1.25rem;
+            margin-bottom: 0.75rem; /* Espacio reducido entre descripción y Contacto */
           }
           
           .footer-heading {
-            margin-bottom: 0.625rem; /* Más compacto */
+            margin-bottom: 0.625rem;
+            margin-top: 0;
           }
           
           .footer-grid > div:first-child > div:first-child {
             margin-bottom: 0.625rem;
+            margin-top: 0;
           }
           
           .footer-copyright {
