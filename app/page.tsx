@@ -165,27 +165,71 @@ function Home() {
           // Get timezone
           const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone
           
-          // Spanish-speaking regions and Spain
-          const spanishRegions = [
-            'America/', // All Americas (Latin America)
-            'Europe/Madrid', // Spain
-            'Atlantic/Canary', // Canary Islands
-            'Africa/Ceuta' // Spanish territories
+          // English-speaking regions in Americas (exclude these first)
+          const englishRegions = [
+            'America/New_York',
+            'America/Chicago', 
+            'America/Denver',
+            'America/Los_Angeles',
+            'America/Phoenix',
+            'America/Anchorage',
+            'America/Honolulu',
+            'America/Toronto',
+            'America/Vancouver',
+            'America/Montreal',
+            'America/Halifax',
+            'America/Winnipeg',
+            'America/Edmonton'
           ]
           
-          // Check if timezone matches Spanish-speaking regions
-          const isSpanishRegion = spanishRegions.some(region => timezone.startsWith(region))
+          // Portuguese-speaking (Brazil)
+          const portugueseRegions = [
+            'America/Sao_Paulo',
+            'America/Rio_Branco',
+            'America/Manaus',
+            'America/Belem',
+            'America/Fortaleza',
+            'America/Recife',
+            'America/Bahia',
+            'America/Cuiaba',
+            'America/Campo_Grande',
+            'America/Porto_Velho',
+            'America/Boa_Vista',
+            'America/Santarem',
+            'America/Araguaina',
+            'America/Maceio',
+            'America/Noronha'
+          ]
           
-          // Also check browser language as fallback
-          const browserLang = navigator.language || navigator.languages?.[0] || ''
-          const isSpanishLang = browserLang.toLowerCase().startsWith('es')
+          // Check if it's an English or Portuguese region first
+          const isEnglishRegion = englishRegions.some(region => timezone === region)
+          const isPortugueseRegion = portugueseRegions.some(region => timezone === region)
           
-          // Set Spanish if either timezone or browser language indicates Spanish
-          if (isSpanishRegion || isSpanishLang) {
-            setLang('es')
-          } else {
-            // Default to English for rest of the world
+          if (isEnglishRegion || isPortugueseRegion) {
             setLang('en')
+          } else {
+            // Spanish-speaking regions
+            const spanishRegions = [
+              'America/', // Rest of Americas (Latin America)
+              'Europe/Madrid', // Spain
+              'Atlantic/Canary', // Canary Islands
+              'Africa/Ceuta' // Spanish territories
+            ]
+            
+            // Check if timezone matches Spanish-speaking regions
+            const isSpanishRegion = spanishRegions.some(region => timezone.startsWith(region))
+            
+            // Also check browser language as fallback
+            const browserLang = navigator.language || navigator.languages?.[0] || ''
+            const isSpanishLang = browserLang.toLowerCase().startsWith('es')
+            
+            // Set Spanish if either timezone or browser language indicates Spanish
+            if (isSpanishRegion || isSpanishLang) {
+              setLang('es')
+            } else {
+              // Default to English for rest of the world
+              setLang('en')
+            }
           }
           
           setLangDetected(true)
@@ -2803,7 +2847,7 @@ by Matías Carvajal
           }
           
           .demo-card-container {
-            margin-top: -1rem;
+            margin-top: 0; /* Sin margin negativo para no afectar el layout */
           }
           
           /* Features Section */
