@@ -115,6 +115,62 @@ try:
 except Exception:
     HAS_PYLOUDNORM = False
 
+# ----------------------------
+# Float Sanitization Functions
+# ----------------------------
+def sanitize_float(value: float) -> float:
+    """
+    Sanitize float values to ensure JSON compliance.
+    Converts inf, -inf, and nan to safe values.
+    """
+    if math.isinf(value):
+        return 999.99 if value > 0 else -999.99
+    elif math.isnan(value):
+        return 0.0
+    return value
+
+def safe_log10(value: float, default: float = -999.99) -> float:
+    """
+    Safe logarithm that handles edge cases.
+    Returns default value if input is <= 0, inf, or nan.
+    """
+    if value is None or value <= 0 or math.isinf(value) or math.isnan(value):
+        return default
+    try:
+        result = math.log10(value)
+        return sanitize_float(result)
+    except (ValueError, ZeroDivisionError):
+        return default
+
+def safe_divide(numerator: float, denominator: float, default: float = 0.0) -> float:
+    """
+    Safe division that handles zero division and edge cases.
+    """
+    if denominator == 0 or math.isinf(denominator) or math.isnan(denominator):
+        return default
+    if math.isinf(numerator) or math.isnan(numerator):
+        return default
+    try:
+        result = numerator / denominator
+        return sanitize_float(result)
+    except (ZeroDivisionError, ValueError):
+        return default
+
+def sanitize_dict(data: Any) -> Any:
+    """
+    Recursively sanitize all float values in a dictionary/list.
+    """
+    if isinstance(data, dict):
+        return {k: sanitize_dict(v) for k, v in data.items()}
+    elif isinstance(data, list):
+        return [sanitize_dict(item) for item in data]
+    elif isinstance(data, float):
+        return sanitize_float(data)
+    elif isinstance(data, np.floating):
+        return sanitize_float(float(data))
+    else:
+        return data
+
 # Unicode emoji support for PDFs
 try:
     from unicode_emoji_map import clean_text_for_pdf, PDF_UNICODE_MAP
@@ -535,7 +591,7 @@ def peak_dbfs(y: np.ndarray) -> float:
     """Pico sample en dBFS (0 dBFS = 1.0)."""
     peak = float(np.max(np.abs(y))) if y.size else 0.0
     peak = max(peak, 1e-12)
-    return 20.0 * math.log10(peak)
+    return 20.0 * safe_log10(peak, default=-999.99)
 
 
 def detect_dc_offset(y: np.ndarray) -> Dict[str, Any]:
@@ -580,7 +636,8 @@ def calculate_crest_factor(y: np.ndarray) -> float:
     peak = max(peak, 1e-12)
     rms = max(rms, 1e-12)
     
-    return 20.0 * math.log10(peak / rms)
+    ratio = safe_divide(peak, rms, default=1.0)
+    return 20.0 * safe_log10(ratio, default=0.0)
 
 
 def auto_oversample_factor(sr: int) -> int:
@@ -610,7 +667,7 @@ def oversampled_true_peak_db(y: np.ndarray, os_factor: int = 4) -> float:
         peaks.append(float(np.max(np.abs(up))) if up.size else 0.0)
     
     tp = max(max(peaks), 1e-12)
-    return 20.0 * math.log10(tp)
+    return 20.0 * safe_log10(tp, default=-999.99)
 
 
 def integrated_lufs(y: np.ndarray, sr: int, duration: float) -> Tuple[Optional[float], str, bool]:
@@ -659,7 +716,7 @@ def integrated_lufs(y: np.ndarray, sr: int, duration: float) -> Tuple[Optional[f
         rms = float(np.sqrt(np.mean(y[0].astype(np.float64) ** 2)))
     
     rms = max(rms, 1e-12)
-    return 20.0 * math.log10(rms), "approx_rms_dbfs", is_reliable
+    return 20.0 * safe_log10(rms, default=-999.99), "approx_rms_dbfs", is_reliable
 
 
 def stereo_correlation(y: np.ndarray) -> float:
@@ -723,7 +780,8 @@ def calculate_lr_balance(y: np.ndarray) -> float:
         return 0.0
     
     # Positive = more left, negative = more right
-    return 20 * np.log10(L_rms / R_rms)
+    ratio = safe_divide(L_rms, R_rms, default=1.0)
+    return float(20 * safe_log10(ratio, default=0.0))
 
 
 # ----------------------------
@@ -1306,9 +1364,9 @@ def band_balance_db(y: np.ndarray, sr: int) -> Dict[str, float]:
     mid_p = band_power(250.0, 4000.0)
     high_p = band_power(4000.0, hi_max)
 
-    low_db = 10.0 * math.log10(low_p)
-    mid_db = 10.0 * math.log10(mid_p)
-    high_db = 10.0 * math.log10(high_p)
+    low_db = 10.0 * safe_log10(low_p, default=-999.99)
+    mid_db = 10.0 * safe_log10(mid_p, default=-999.99)
+    high_db = 10.0 * safe_log10(high_p, default=-999.99)
     
     # Calculate percentages for easier understanding
     total_energy = low_p + mid_p + high_p
@@ -2298,6 +2356,9 @@ def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, s
         }
     }
     
+    # CRITICAL: Sanitize all float values to ensure JSON compliance
+    result = sanitize_dict(result)
+    
     return result
 
 def generate_recommendations(metrics: List[Dict[str, Any]], score: int, genre: Optional[str], lang: str = 'en') -> List[str]:
@@ -2775,9 +2836,9 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
         # FREQUENCY BALANCE
         freq_metric = next((m for m in metrics if "Frequency" in m.get("internal_key", "")), None)
         if freq_metric:
-            bass = freq_metric.get("bass_pct", 0)
-            mid = freq_metric.get("mid_pct", 0)
-            high = freq_metric.get("high_pct", 0)
+            bass = freq_metric.get("low_percent", 0)  # FIXED: was "bass_pct"
+            mid = freq_metric.get("mid_percent", 0)    # FIXED: was "mid_pct"
+            high = freq_metric.get("high_percent", 0)  # FIXED: was "high_pct"
             
             details += "🎼 BALANCE DE FRECUENCIAS:\n"
             if bass:
@@ -3000,9 +3061,9 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
         # FREQUENCY BALANCE
         freq_metric = next((m for m in metrics if "Frequency" in m.get("internal_key", "")), None)
         if freq_metric:
-            bass = freq_metric.get("bass_pct", 0)
-            mid = freq_metric.get("mid_pct", 0)
-            high = freq_metric.get("high_pct", 0)
+            bass = freq_metric.get("low_percent", 0)  # FIXED: was "bass_pct"
+            mid = freq_metric.get("mid_percent", 0)    # FIXED: was "mid_pct"
+            high = freq_metric.get("high_percent", 0)  # FIXED: was "high_pct"
             
             details += "🎼 FREQUENCY BALANCE:\n"
             if bass:
@@ -3076,6 +3137,7 @@ def analyze_file_chunked(
         'lr_balances': [],
         'ms_ratios': [],
         'chunk_durations': [],
+        'freq_balance_data': [],                # NEW: Track frequency balance per chunk
         'tp_problem_chunks': [],           # Track chunks with TP > -1.0 dBTP
         'clipping_chunks': [],              # Track chunks with sample clipping
         'correlation_problem_chunks': [],   # Track chunks with correlation issues
@@ -3113,7 +3175,7 @@ def analyze_file_chunked(
         try:
             # Peak
             chunk_peak = np.max(np.abs(y))
-            chunk_peak_db = 20 * np.log10(chunk_peak) if chunk_peak > 0 else -np.inf
+            chunk_peak_db = 20 * safe_log10(chunk_peak, default=-999.99) if chunk_peak > 0 else -999.99
             
             # True Peak (oversampled)
             chunk_tp_db = oversampled_true_peak_db(y, oversample)
@@ -3130,6 +3192,9 @@ def analyze_file_chunked(
             chunk_lr = calculate_lr_balance(y)
             chunk_ms, _, _ = calculate_ms_ratio(y)
             
+            # Frequency balance (NEW - calculate per chunk)
+            chunk_fb = band_balance_db(y, sr)
+            
             # Store results
             results['peaks'].append(chunk_peak_db)
             results['tps'].append(chunk_tp_db)
@@ -3138,6 +3203,21 @@ def analyze_file_chunked(
             results['lr_balances'].append(chunk_lr)
             results['ms_ratios'].append(chunk_ms)
             results['chunk_durations'].append(actual_chunk_duration)
+            
+            # Store frequency balance data (weighted by duration for averaging later)
+            if 'freq_balance_data' not in results:
+                results['freq_balance_data'] = []
+            results['freq_balance_data'].append({
+                'duration': actual_chunk_duration,
+                'low_percent': chunk_fb['low_percent'],
+                'mid_percent': chunk_fb['mid_percent'],
+                'high_percent': chunk_fb['high_percent'],
+                'low_db': chunk_fb['low_db'],
+                'mid_db': chunk_fb['mid_db'],
+                'high_db': chunk_fb['high_db'],
+                'd_low_mid_db': chunk_fb['d_low_mid_db'],
+                'd_high_mid_db': chunk_fb['d_high_mid_db']
+            })
             
             # ═══════════════════════════════════════════════════════════
             # SUB-CHUNK TEMPORAL ANALYSIS (5-second windows with 50% overlap)
@@ -3653,27 +3733,83 @@ def analyze_file_chunked(
     
     metrics.append(stereo_metric)
     
-    # 8. Frequency Balance (simplified - we don't have full frequency analysis in chunks)
-    # Create dummy frequency balance data
-    fb_dummy = {
-        "low_percent": 33.0,
-        "mid_percent": 34.0,
-        "high_percent": 33.0,
-        "low_db": 0.0,
-        "mid_db": 0.0,
-        "high_db": 0.0,
-        "d_low_mid_db": 0.0,
-        "d_high_mid_db": 0.0
-    }
-    st_f, msg_f, _ = status_freq(fb_dummy, genre, strict, lang)
+    # 8. Frequency Balance (calculated from chunks with weighted average)
+    # Calculate weighted average of frequency balance across all chunks
+    if 'freq_balance_data' in results and results['freq_balance_data']:
+        total_duration = sum(chunk['duration'] for chunk in results['freq_balance_data'])
+        
+        # Weighted average for percentages
+        final_low_percent = sum(chunk['low_percent'] * chunk['duration'] for chunk in results['freq_balance_data']) / total_duration
+        final_mid_percent = sum(chunk['mid_percent'] * chunk['duration'] for chunk in results['freq_balance_data']) / total_duration
+        final_high_percent = sum(chunk['high_percent'] * chunk['duration'] for chunk in results['freq_balance_data']) / total_duration
+        
+        # Weighted average for dB values
+        final_low_db = sum(chunk['low_db'] * chunk['duration'] for chunk in results['freq_balance_data']) / total_duration
+        final_mid_db = sum(chunk['mid_db'] * chunk['duration'] for chunk in results['freq_balance_data']) / total_duration
+        final_high_db = sum(chunk['high_db'] * chunk['duration'] for chunk in results['freq_balance_data']) / total_duration
+        
+        # Calculate deltas
+        final_d_low_mid_db = final_low_db - final_mid_db
+        final_d_high_mid_db = final_high_db - final_mid_db
+        
+        fb = {
+            "low_percent": final_low_percent,
+            "mid_percent": final_mid_percent,
+            "high_percent": final_high_percent,
+            "low_db": final_low_db,
+            "mid_db": final_mid_db,
+            "high_db": final_high_db,
+            "d_low_mid_db": final_d_low_mid_db,
+            "d_high_mid_db": final_d_high_mid_db
+        }
+        
+        print(f"\n✅ Frequency Balance calculated from {len(results['freq_balance_data'])} chunks")
+        print(f"   Low (20-250Hz): {final_low_percent:.1f}% | Mid (250Hz-4kHz): {final_mid_percent:.1f}% | High (4kHz-20kHz): {final_high_percent:.1f}%")
+    else:
+        # Fallback if no frequency data (shouldn't happen)
+        fb = {
+            "low_percent": 33.0,
+            "mid_percent": 34.0,
+            "high_percent": 33.0,
+            "low_db": 0.0,
+            "mid_db": 0.0,
+            "high_db": 0.0,
+            "d_low_mid_db": 0.0,
+            "d_high_mid_db": 0.0
+        }
+        print("\n⚠️  No frequency balance data available (using fallback)")
+    
+    st_f, msg_f, _ = status_freq(fb, genre, strict, lang)
+    
+    # Localize frequency band labels
+    lang_picked = _pick_lang(lang)
+    if lang_picked == 'es':
+        low_label, mid_label, high_label = "Graves", "Medios", "Agudos"
+        delta_low_mid = "ΔG-M"
+        delta_high_mid = "ΔA-M"
+    else:
+        low_label, mid_label, high_label = "Low", "Mid", "High"
+        delta_low_mid = "ΔL-M"
+        delta_high_mid = "ΔH-M"
     
     metrics.append({
-        "name": "Frequency Balance",
+        "name": METRIC_NAMES[lang_picked]["Frequency Balance"],
         "internal_key": "Frequency Balance",
-        "value": "Not analyzed in chunked mode",
-        "status": "info",  # Always info for chunked
-        "message": "Análisis de frecuencias no disponible en modo chunks." if lang == "es" else "Frequency analysis not available in chunked mode.",
-        **fb_dummy
+        "value": (
+            f"{low_label}: {fb['low_percent']:.0f}% | "
+            f"{mid_label}: {fb['mid_percent']:.0f}% | "
+            f"{high_label}: {fb['high_percent']:.0f}%"
+        ),
+        "value_detailed": (
+            f"{low_label}: {fb['low_db']:.1f} dB ({fb['low_percent']:.0f}%) | "
+            f"{mid_label}: {fb['mid_db']:.1f} dB ({fb['mid_percent']:.0f}%) | "
+            f"{high_label}: {fb['high_db']:.1f} dB ({fb['high_percent']:.0f}%) | "
+            f"{delta_low_mid}: {fb['d_low_mid_db']:+.1f} dB | "
+            f"{delta_high_mid}: {fb['d_high_mid_db']:+.1f} dB"
+        ),
+        "status": st_f,
+        "message": msg_f,
+        **fb
     })
     
     # Calculate score using the same score_report function as analyze_file
@@ -3782,6 +3918,9 @@ def analyze_file_chunked(
             "clipping_detected": bool(results['clipping_chunks'])
         }
     }
+    
+    # CRITICAL: Sanitize all float values to ensure JSON compliance
+    result = sanitize_dict(result)
     
     return result
 def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en', filename: str = "mix") -> str:
