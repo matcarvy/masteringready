@@ -590,8 +590,12 @@ def calculate_minimum_score(metrics: List[Dict[str, Any]]) -> int:
 def peak_dbfs(y: np.ndarray) -> float:
     """Pico sample en dBFS (0 dBFS = 1.0)."""
     peak = float(np.max(np.abs(y))) if y.size else 0.0
-    peak = max(peak, 1e-12)
-    return 20.0 * safe_log10(peak, default=-999.99)
+    if peak <= 0:
+        return -120.0  # Digital silence floor (standard in audio)
+    try:
+        return 20.0 * math.log10(peak)
+    except (ValueError, ZeroDivisionError):
+        return -120.0
 
 
 def detect_dc_offset(y: np.ndarray) -> Dict[str, Any]:
@@ -666,8 +670,13 @@ def oversampled_true_peak_db(y: np.ndarray, os_factor: int = 4) -> float:
         up = resample_poly(y[ch], up=os_factor, down=1)
         peaks.append(float(np.max(np.abs(up))) if up.size else 0.0)
     
-    tp = max(max(peaks), 1e-12)
-    return 20.0 * safe_log10(tp, default=-999.99)
+    tp = max(max(peaks) if peaks else 0.0, 1e-12)
+    if tp <= 0:
+        return -120.0
+    try:
+        return 20.0 * math.log10(tp)
+    except (ValueError, ZeroDivisionError):
+        return -120.0
 
 
 def integrated_lufs(y: np.ndarray, sr: int, duration: float) -> Tuple[Optional[float], str, bool]:
@@ -716,7 +725,12 @@ def integrated_lufs(y: np.ndarray, sr: int, duration: float) -> Tuple[Optional[f
         rms = float(np.sqrt(np.mean(y[0].astype(np.float64) ** 2)))
     
     rms = max(rms, 1e-12)
-    return 20.0 * safe_log10(rms, default=-999.99), "approx_rms_dbfs", is_reliable
+    if rms <= 0:
+        return -120.0, "approx_rms_dbfs", is_reliable
+    try:
+        return 20.0 * math.log10(rms), "approx_rms_dbfs", is_reliable
+    except (ValueError, ZeroDivisionError):
+        return -120.0, "approx_rms_dbfs", is_reliable
 
 
 def stereo_correlation(y: np.ndarray) -> float:
@@ -1348,7 +1362,13 @@ def band_balance_db(y: np.ndarray, sr: int) -> Dict[str, float]:
     
     # Usar percentil 75 en vez de mean para mejor representación
     # Esto evita que bass sostenido domine sobre transientes
-    P = np.percentile(magnitude**2, 75, axis=1)  # 75th percentile de potencia
+    # Usar múltiples percentiles para mayor robustez en tracks comprimidos
+    # Percentil 60, 75, 90 capturan mejor la distribución real
+    P60 = np.percentile(magnitude**2, 60, axis=1)
+    P75 = np.percentile(magnitude**2, 75, axis=1)
+    P90 = np.percentile(magnitude**2, 90, axis=1)
+    # Promedio ponderado: más peso a P75 (standard), menos a extremos
+    P = (P60 * 0.2 + P75 * 0.6 + P90 * 0.2)
     
     nyq = sr / 2.0
     hi_max = min(20000.0, nyq)
@@ -1357,25 +1377,49 @@ def band_balance_db(y: np.ndarray, sr: int) -> Dict[str, float]:
         idx = np.where((freqs >= f_lo) & (freqs < f_hi))[0]
         if idx.size == 0:
             return 1e-12
-        # Integrar potencia ponderada
-        return float(np.sum(P[idx]) + 1e-12)
+        # Integrar potencia ponderada con floor mínimo
+        power = float(np.sum(P[idx]))
+        return max(power, 1e-12)  # Garantizar mínimo detectable
 
     low_p = band_power(20.0, 250.0)
     mid_p = band_power(250.0, 4000.0)
     high_p = band_power(4000.0, hi_max)
 
-    low_db = 10.0 * safe_log10(low_p, default=-999.99)
-    mid_db = 10.0 * safe_log10(mid_p, default=-999.99)
-    high_db = 10.0 * safe_log10(high_p, default=-999.99)
+    # Calcular dB con floor de -120 dB (silence digital standard)
+    def power_to_db(power: float) -> float:
+        if power <= 0 or power < 1e-12:
+            return -120.0
+        try:
+            return 10.0 * math.log10(power)
+        except (ValueError, ZeroDivisionError):
+            return -120.0
+    
+    low_db = power_to_db(low_p)
+    mid_db = power_to_db(mid_p)
+    high_db = power_to_db(high_p)
     
     # Calculate percentages for easier understanding
     total_energy = low_p + mid_p + high_p
-    if total_energy > 0:
-        low_percent = (low_p / total_energy) * 100.0
-        mid_percent = (mid_p / total_energy) * 100.0
-        high_percent = (high_p / total_energy) * 100.0
+    if total_energy > 1e-12:
+        # Calcular porcentajes raw
+        low_percent_raw = (low_p / total_energy) * 100.0
+        mid_percent_raw = (mid_p / total_energy) * 100.0
+        high_percent_raw = (high_p / total_energy) * 100.0
+        
+        # Normalizar para que sumen EXACTAMENTE 100%
+        # (elimina errores de redondeo que pueden causar 99.9% o 100.1%)
+        total_raw = low_percent_raw + mid_percent_raw + high_percent_raw
+        low_percent = (low_percent_raw / total_raw) * 100.0
+        mid_percent = (mid_percent_raw / total_raw) * 100.0
+        high_percent = (high_percent_raw / total_raw) * 100.0
+        
+        # Sanitizar (por si acaso)
+        low_percent = max(0.0, min(100.0, low_percent))
+        mid_percent = max(0.0, min(100.0, mid_percent))
+        high_percent = max(0.0, min(100.0, high_percent))
     else:
-        low_percent = mid_percent = high_percent = 0.0
+        # Si no hay energía detectable, distribuir equitativamente
+        low_percent = mid_percent = high_percent = 33.33
 
     return {
         "low_db": low_db,
@@ -3175,7 +3219,13 @@ def analyze_file_chunked(
         try:
             # Peak
             chunk_peak = np.max(np.abs(y))
-            chunk_peak_db = 20 * safe_log10(chunk_peak, default=-999.99) if chunk_peak > 0 else -999.99
+            if chunk_peak <= 0:
+                chunk_peak_db = -120.0
+            else:
+                try:
+                    chunk_peak_db = 20 * math.log10(chunk_peak)
+                except (ValueError, ZeroDivisionError):
+                    chunk_peak_db = -120.0
             
             # True Peak (oversampled)
             chunk_tp_db = oversampled_true_peak_db(y, oversample)
