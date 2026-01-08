@@ -2860,7 +2860,7 @@ by Matías Carvajal
           
           /* 3️⃣ CLAVE: Más aire antes del CTA (decisión, no texto) */
           .hero-subtitle {
-            margin-bottom: calc(2rem + 14px) !important; /* +14px: CTA aislado */
+            margin-bottom: calc(2rem + 9px) !important; /* +9px en lugar de +14px: look más compacto */
           }
           
           /* 4️⃣ Checks pegados al CTA (tranquilizadores post-decisión) */
