@@ -939,7 +939,7 @@ by Matías Carvajal
                   : 'Is your mix ready for mastering?'}
               </h1>
               
-              <p style={{
+              <p className="hero-subtitle" style={{
                 fontSize: 'clamp(1.125rem, 2vw, 1.5rem)',
                 marginBottom: '2rem',
                 color: '#e9d5ff'
@@ -951,6 +951,7 @@ by Matías Carvajal
               
               <button
                 onClick={scrollToAnalyzer}
+                className="hero-cta-button"
                 style={{
                   background: 'white',
                   color: '#667eea',
@@ -976,7 +977,7 @@ by Matías Carvajal
                 {lang === 'es' ? 'Pruébalo sin costo' : 'Try it free'}
               </button>
               
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem', fontSize: '0.875rem' }}>
+              <div className="hero-checks" style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem', fontSize: '0.875rem' }}>
                 {[
                   'Privacy-first',
                   lang === 'es' ? 'Inglés y Español' : 'English & Spanish'
@@ -2842,21 +2843,41 @@ by Matías Carvajal
         @media (max-width: 767px) {
           /* Hero Section */
           .hero-section {
-            padding-top: 4.5rem;
+            padding-top: calc(4.5rem + 10px); /* +10px más aire arriba */
             padding-bottom: 4rem;
           }
           
+          /* 1️⃣ Badge presentado, no pegado */
           .methodology-badge {
-            margin-bottom: 1.5rem; /* Bajado más - más separado de arriba y más espacio con título */
+            margin-bottom: calc(1.5rem - 12px); /* -12px: compactar badge → H1 */
           }
           
+          /* 2️⃣ H1 y subtítulo compactos (mensaje es uno) */
           .hero-main-title {
             margin-top: 0;
+            margin-bottom: calc(1.5rem - 10px); /* -10px: compactar H1 → subtítulo */
+          }
+          
+          /* 3️⃣ CLAVE: Más aire antes del CTA (decisión, no texto) */
+          .hero-subtitle {
+            margin-bottom: calc(2rem + 14px) !important; /* +14px: CTA aislado */
+          }
+          
+          /* 4️⃣ Checks pegados al CTA (tranquilizadores post-decisión) */
+          .hero-cta-button {
+            margin-bottom: calc(2rem - 4px) !important; /* -4px: checks más cerca */
           }
           
           .demo-card-container {
             margin-top: 0;
           }
+          
+          /* Jerarquía de intención creada:
+             - Arriba: respirar
+             - Mensaje: compacto  
+             - CTA: aislado
+             - Reaseguro: pegado al CTA
+          */
           
           /* Features Section */
           .features-section {
