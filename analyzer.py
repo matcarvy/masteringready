@@ -1,13 +1,21 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Mix Analyzer v7.3.19 - PRODUCTION RELEASE  
+Mix Analyzer v7.3.20 - PRODUCTION RELEASE  
 =========================================
 
 ARCHITECTURE PRINCIPLES:
 1. Calculate scores LANGUAGE-NEUTRAL (no idioma en lógica)
 2. Freeze score before translation (score congelado)
 3. Translate messages with Matías Voice (del eBook "Mastering Ready")
+
+KEY FIX from v7.3.20:
+--------------------
+🐛 CRITICAL: Fixed "corr not defined" error
+   • Added missing line: corr = stereo_metric.get("correlation", 1.0)
+   • Fixed in both Spanish (line 4774) and English (line 5007) sections
+   • Error occurred when checking M/S < 0.05 condition
+   • Now properly retrieves correlation from stereo_metric dictionary
 
 KEY FIX from v7.3.19:
 --------------------
@@ -113,7 +121,7 @@ Master detection → Complete analysis with positive aspects + observations
 
 Author: Matías Carvajal García (@matcarvy)
 Based on: "Mastering Ready - Asegura el éxito de tu mastering desde la mezcla" eBook
-Version: 7.3.19-production (2025-01-13)
+Version: 7.3.20-production (2025-01-13)
 
 Usage:
 ------
@@ -4771,6 +4779,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
         if stereo_metric:
             ms_ratio = stereo_metric.get("ms_ratio", 0)
             lr_balance = stereo_metric.get("lr_balance_db", 0)
+            corr = stereo_metric.get("correlation", 1.0)  # Get correlation from metric
             
             # Show detailed section ONLY if there are stereo issues
             has_stereo_issue = False
@@ -5004,6 +5013,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
         if stereo_metric:
             ms_ratio = stereo_metric.get("ms_ratio", 0)
             lr_balance = stereo_metric.get("lr_balance_db", 0)
+            corr = stereo_metric.get("correlation", 1.0)  # Get correlation from metric
             
             # Show detailed section ONLY if there are stereo issues
             has_stereo_issue = False
