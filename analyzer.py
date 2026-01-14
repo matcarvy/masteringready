@@ -3339,7 +3339,10 @@ def analyze_file_chunked(
             # Spatial metrics
             chunk_corr = stereo_correlation(y)
             chunk_lr = calculate_lr_balance(y)
-            chunk_ms, _, _ = calculate_ms_ratio(y)
+            
+            # DEBUG: Enable M/S debug for first chunk only
+            debug_ms = (i == 0)  # Only first chunk to avoid spam
+            chunk_ms, _, _ = calculate_ms_ratio(y, debug=debug_ms)
             
             # Frequency balance (NEW - calculate per chunk)
             chunk_fb = band_balance_db(y, sr)
