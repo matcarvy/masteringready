@@ -276,13 +276,12 @@ function Home() {
 
 const handleAnalyze = async () => {
   if (!file) return
-
   setLoading(true)
   setProgress(0)
   setError(null)
-
   try {
     let fileToAnalyze = file
+    let originalMetadata = undefined
     
     // Check if file needs compression
     const maxSize = 30 * 1024 * 1024  // 30MB threshold
@@ -296,7 +295,7 @@ const handleAnalyze = async () => {
       }, 500)
       
       try {
-        const { file: compressedFile, compressed, originalSize, newSize } = 
+        const { file: compressedFile, compressed, originalSize, newSize, originalMetadata: metadata } =
           await compressAudioFile(file, 20)
         
         clearInterval(compressionInterval)
@@ -304,9 +303,11 @@ const handleAnalyze = async () => {
         
         if (compressed) {
           console.log(`Compressed: ${(originalSize/1024/1024).toFixed(1)}MB → ${(newSize/1024/1024).toFixed(1)}MB`)
+          console.log('📊 Original metadata captured:', metadata)
         }
         
         fileToAnalyze = compressedFile
+        originalMetadata = metadata
         
         // Wait a moment to show completion
         await new Promise(resolve => setTimeout(resolve, 500))
@@ -323,10 +324,15 @@ const handleAnalyze = async () => {
         )
       }
     }
-
+    
     // START ANALYSIS (returns job_id immediately)
     console.log('🚀 Starting analysis with polling...')
-    const startData = await startAnalysisPolling(fileToAnalyze, { lang, mode, strict })
+    const startData = await startAnalysisPolling(fileToAnalyze, { 
+      lang, 
+      mode, 
+      strict,
+      originalMetadata
+    })
     const jobId = startData.job_id
     
     // Store request ID for PDF download
