@@ -1,13 +1,21 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Mix Analyzer v7.3.21 - DEBUG RELEASE  
+Mix Analyzer v7.3.22 - PRODUCTION RELEASE  
 =========================================
 
 ARCHITECTURE PRINCIPLES:
 1. Calculate scores LANGUAGE-NEUTRAL (no idioma en lógica)
 2. Freeze score before translation (score congelado)
 3. Translate messages with Matías Voice (del eBook "Mastering Ready")
+
+KEY FIX from v7.3.22:
+--------------------
+🐛 CRITICAL: Fixed PDF generation error with Unicode filenames
+   • Error: 'latin-1' codec can't encode character '\u0301' (e.g., "Paraíso")
+   • Root cause: filename not being cleaned before PDF table insertion
+   • Fix: Added clean_text_for_pdf() to filename (line 5531)
+   • Now handles files like "TIEMPO (LIVE) - Paraíso Fractal.wav" correctly
 
 KEY FIX from v7.3.20:
 --------------------
@@ -121,7 +129,7 @@ Master detection → Complete analysis with positive aspects + observations
 
 Author: Matías Carvajal García (@matcarvy)
 Based on: "Mastering Ready - Asegura el éxito de tu mastering desde la mezcla" eBook
-Version: 7.3.20-production (2025-01-13)
+Version: 7.3.22-production (2025-01-14)
 
 Usage:
 ------
@@ -5526,8 +5534,11 @@ def generate_complete_pdf(
         verdict_text = report.get('verdict', 'N/A')
         verdict_text = clean_text_for_pdf(verdict_text).strip()
         
+        # Clean filename - handle Unicode characters like "Paraíso"
+        clean_filename = clean_text_for_pdf(filename or report.get('filename', 'Unknown')).strip()
+        
         file_info_data = [
-            ["Archivo" if lang == 'es' else "File", filename or report.get('filename', 'Unknown')],
+            ["Archivo" if lang == 'es' else "File", clean_filename],
             ["Fecha" if lang == 'es' else "Date", datetime.now().strftime('%d/%m/%Y %H:%M')],
             ["Puntuación" if lang == 'es' else "Score", f"{report.get('score', 0)}/100"],
             ["Veredicto" if lang == 'es' else "Verdict", verdict_text]
@@ -6126,16 +6137,10 @@ def main() -> None:
             print(f"❌ Error guardando JSON: {e}", file=sys.stderr)
 
     # PDF generation
-    print(f"🔍 DEBUG: args.pdf_path = {args.pdf_path}", flush=True)
-    print(f"🔍 DEBUG: len(reports_out) = {len(reports_out)}", flush=True)
-    
     if args.pdf_path:
-        print(f"🔍 DEBUG: Entrando a generación de PDF...", flush=True)
         pdf_path = Path(args.pdf_path).expanduser()
-        print(f"🔍 DEBUG: pdf_path expandido = {pdf_path}", flush=True)
         try:
             if len(reports_out) == 1:
-                print(f"🔍 DEBUG: Llamando a generate_complete_pdf()...", flush=True)
                 success = generate_complete_pdf(
                     reports_out[0],
                     str(pdf_path),
