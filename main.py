@@ -1,8 +1,15 @@
 """
-MasteringReady API v7.3.7 - MP3 Metadata Fix
-=============================================
+MasteringReady API v7.3.8 - MP3 Chunked Analysis Fix
+=====================================================
 
 FastAPI backend for MasteringReady web application.
+
+FIXES in v7.3.8:
+- Fixed timeout/crash for longer MP3 files (> 2 minutes)
+- MP3 and other compressed formats now ALWAYS use chunked analysis
+- Loading full MP3 into memory is slow and causes Render timeouts
+- Chunked loading is faster and more memory-efficient for compressed formats
+- Improved duration estimation: uses actual duration when available
 
 FIXES in v7.3.7:
 - Fixed 'str' object has no attribute 'bits_per_sample' error for MP3 files
@@ -17,7 +24,7 @@ Previous fixes (v7.3.5):
 
 Based on Matías Carvajal's "Mastering Ready" methodology
 Author: Matías Carvajal García (@matcarvy)
-Version: 7.3.7-production
+Version: 7.3.8-production
 """
 
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, BackgroundTasks
@@ -149,7 +156,7 @@ async def root():
     """Health check endpoint."""
     return {
         "name": "MasteringReady API",
-        "version": "7.3.7",
+        "version": "7.3.8",
         "status": "healthy",
         "methodology": "Basado en 'Mastering Ready' de Matías Carvajal",
         "endpoints": {
@@ -165,7 +172,7 @@ async def health_check():
     """Detailed health check."""
     return {
         "status": "healthy",
-        "version": "7.3.7",
+        "version": "7.3.8",
         "analyzer_loaded": True,
         "privacy": "In-memory processing, auto-delete guaranteed",
         "timestamp": datetime.utcnow().isoformat()
@@ -512,12 +519,34 @@ async def start_analysis(
                 # Determine if we need chunked analysis
                 file_size_mb = file_size / (1024 * 1024)
                 
-                # Estimate duration: ~2 MB per minute for WAV (rough estimate)
-                estimated_duration_min = file_size_mb / 2
+                # Get actual duration if available from metadata
+                actual_duration_sec = None
+                if original_metadata and original_metadata.get('duration'):
+                    actual_duration_sec = original_metadata.get('duration')
                 
-                # Use chunked analysis for files > 4 minutes (to avoid memory issues)
-                # Most songs are < 4 min and will use normal analysis (exact scoring)
-                use_chunked = estimated_duration_min > 4.0  # Increased from 2.0 to 4.0
+                # Determine if file is compressed format (MP3, AAC, etc.)
+                is_compressed = file_ext.lower() in ['.mp3', '.aac', '.m4a', '.ogg', '.opus']
+                
+                # Decision logic for chunked vs normal analysis:
+                # 1. If we know actual duration: use it (most reliable)
+                # 2. If compressed format: ALWAYS use chunked (loading full MP3 is slow/memory intensive)
+                # 3. Otherwise: estimate from file size (assumes WAV ~10 MB/min)
+                
+                if actual_duration_sec is not None:
+                    # We have real duration - use it
+                    estimated_duration_min = actual_duration_sec / 60.0
+                    use_chunked = estimated_duration_min > 2.0  # Use chunked for files > 2 minutes
+                    logger.info(f"📊 [{job_id}] Using ACTUAL duration: {estimated_duration_min:.1f} min")
+                elif is_compressed:
+                    # Compressed format - ALWAYS use chunked to avoid memory/timeout issues
+                    # MP3 files are much slower to decode fully than in chunks
+                    use_chunked = True
+                    estimated_duration_min = file_size_mb * 1.5  # Rough estimate: ~0.7 MB/min for MP3
+                    logger.info(f"🔄 [{job_id}] Compressed format ({file_ext}) - forcing CHUNKED analysis")
+                else:
+                    # WAV/AIFF - estimate from file size (~10 MB per minute for 16-bit stereo 44.1kHz)
+                    estimated_duration_min = file_size_mb / 10.0
+                    use_chunked = estimated_duration_min > 4.0
                 
                 loop = asyncio.get_event_loop()
                 
