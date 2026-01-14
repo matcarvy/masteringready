@@ -1,13 +1,21 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Mix Analyzer v7.3.23-DEBUG - M/S Investigation  
+Mix Analyzer v7.3.26 - Crest Factor Weights Fix
 =========================================
 
 ARCHITECTURE PRINCIPLES:
 1. Calculate scores LANGUAGE-NEUTRAL (no idioma en lógica)
 2. Freeze score before translation (score congelado)
 3. Translate messages with Matías Voice (del eBook "Mastering Ready")
+
+KEY FIX from v7.3.26:
+--------------------
+🐛 CRITICAL: Fixed "weights not defined" error in chunked mode
+   • Error: NameError: name 'weights' is not defined (line 3814)
+   • Root cause: Crest Factor calculation using undefined 'weights' variable
+   • Fix: Changed weights=weights to weights=results['chunk_durations']
+   • Now properly calculates weighted RMS across chunks for Crest Factor
 
 KEY FIX from v7.3.22:
 --------------------
@@ -3811,7 +3819,7 @@ def analyze_file_chunked(
     
     # 6. Crest Factor (proper calculation with RMS)
     # Calculate weighted RMS across all chunks
-    weighted_rms = np.average(results['rms_values'], weights=weights)
+    weighted_rms = np.average(results['rms_values'], weights=results['chunk_durations'])
     
     # Crest Factor = Peak - RMS (NOT Peak - LUFS like PLR)
     crest = final_peak - weighted_rms
@@ -6246,4 +6254,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
