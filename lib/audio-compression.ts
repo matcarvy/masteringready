@@ -2,6 +2,8 @@
  * Audio Compression Utility
  * Compresses large audio files to fit within size limits
  * without backend changes
+ * 
+ * v2.0 - FIXED: Preserves stereo for mastering analysis
  */
 
 export async function compressAudioFile(
@@ -32,21 +34,24 @@ export async function compressAudioFile(
   
   const duration = audioBuffer.duration
   
-  // Strategy: Very aggressive compression to stay well under limit
-  // and ensure fast analysis (<30s)
+  // Strategy: Intelligent compression while ALWAYS preserving stereo
+  // CRITICAL: Never convert to mono for mastering analysis
   let targetSampleRate = 44100
-  let targetChannels = Math.min(audioBuffer.numberOfChannels, 2)
+  let targetChannels = Math.min(audioBuffer.numberOfChannels, 2) // ALWAYS preserve stereo (max 2 channels)
   
-  // For very large files, be more aggressive
+  // Estimate compressed size
   const estimatedSize = duration * targetSampleRate * targetChannels * 2 // 16-bit
   
-  if (file.size > 100 * 1024 * 1024) {
-    // Very large files (>100MB): Use 22kHz mono
-    targetSampleRate = 22050
-    targetChannels = 1
-  } else if (estimatedSize > maxBytes * 0.8) {
-    // Still too big: reduce to 32kHz
+  // Adjust sample rate based on file size, but NEVER reduce channels
+  if (file.size > 150 * 1024 * 1024) {
+    // Very large files (>150MB): Use 32kHz stereo
     targetSampleRate = 32000
+  } else if (file.size > 100 * 1024 * 1024) {
+    // Large files (>100MB): Use 44.1kHz stereo
+    targetSampleRate = 44100
+  } else if (estimatedSize > maxBytes * 0.8) {
+    // Medium files approaching limit: Use 48kHz stereo
+    targetSampleRate = 48000
   }
   
   // Create offline context for resampling
