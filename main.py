@@ -1,28 +1,23 @@
 """
-MasteringReady API v7.3.6 - Frontend Metadata Integration
-==========================================================
+MasteringReady API v7.3.7 - MP3 Metadata Fix
+=============================================
 
 FastAPI backend for MasteringReady web application.
 
-FIXES in v7.3.6:
-- Fixed sample rate and bit depth when frontend compresses BEFORE upload
-- Now accepts 'original_metadata_json' parameter from frontend with pre-compression metadata
-- Prioritizes frontend metadata over file metadata (solves frontend compression issue)
-- Backend reads: frontend metadata (if available) > file metadata (fallback)
+FIXES in v7.3.7:
+- Fixed 'str' object has no attribute 'bits_per_sample' error for MP3 files
+- Improved bit depth extraction to handle compressed formats (MP3, AAC, etc.)
+- Now safely extracts metadata for both WAV and lossy formats
+
+Previous fixes (v7.3.6):
+- Frontend metadata integration (original_metadata_json parameter)
 
 Previous fixes (v7.3.5):
 - Reads original file metadata BEFORE any backend compression
-- Passes original_metadata to analyzer functions
-
-Previous fixes (v7.3.4):
-- Added "file" dict to job results
-
-Previous fixes (v7.3.3):
-- Fixed PDF download error with Unicode filenames
 
 Based on Matías Carvajal's "Mastering Ready" methodology
 Author: Matías Carvajal García (@matcarvy)
-Version: 7.3.6-production
+Version: 7.3.7-production
 """
 
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, BackgroundTasks
@@ -154,7 +149,7 @@ async def root():
     """Health check endpoint."""
     return {
         "name": "MasteringReady API",
-        "version": "7.3.6",
+        "version": "7.3.7",
         "status": "healthy",
         "methodology": "Basado en 'Mastering Ready' de Matías Carvajal",
         "endpoints": {
@@ -170,7 +165,7 @@ async def health_check():
     """Detailed health check."""
     return {
         "status": "healthy",
-        "version": "7.3.6",
+        "version": "7.3.7",
         "analyzer_loaded": True,
         "privacy": "In-memory processing, auto-delete guaranteed",
         "timestamp": datetime.utcnow().isoformat()
@@ -486,9 +481,20 @@ async def start_analysis(
                     # Fallback: Read metadata from uploaded file
                     try:
                         file_info = sf.info(temp_file.name)
+                        
+                        # Extract bit depth safely (MP3 and other formats don't have bits_per_sample)
+                        bit_depth = None
+                        if hasattr(file_info, 'subtype_info'):
+                            if hasattr(file_info.subtype_info, 'bits_per_sample'):
+                                bit_depth = file_info.subtype_info.bits_per_sample
+                            elif isinstance(file_info.subtype_info, str):
+                                # For MP3 and other compressed formats, estimate bit depth
+                                # Most MP3s decode to 16-bit, high-quality to 24-bit
+                                bit_depth = 16  # Default for lossy formats
+                        
                         original_metadata = {
                             'sample_rate': file_info.samplerate,
-                            'bit_depth': file_info.subtype_info.bits_per_sample if hasattr(file_info, 'subtype_info') else None,
+                            'bit_depth': bit_depth,
                             'duration': file_info.duration
                         }
                         logger.info(f"📊 [{job_id}] Read metadata from FILE: {file_info.samplerate} Hz, {original_metadata['bit_depth']}-bit, {file_info.duration:.1f}s")
