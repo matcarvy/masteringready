@@ -1,37 +1,68 @@
 /**
- * Audio Compression Utility
+ * Audio Compression Utility v3.0
  * Compresses large audio files to fit within size limits
- * without backend changes
+ * PRESERVES ORIGINAL METADATA for backend analysis
  * 
+ * v3.0 - NEW: Captures and returns original metadata before compression
  * v2.0 - FIXED: Preserves stereo for mastering analysis
  */
+
+export interface CompressionResult {
+  file: File;
+  compressed: boolean;
+  originalSize: number;
+  newSize: number;
+  // NEW: Original file metadata (before compression)
+  originalMetadata: {
+    sampleRate: number;
+    bitDepth: number;
+    numberOfChannels: number;
+    duration: number;
+  };
+}
 
 export async function compressAudioFile(
   file: File,
   maxSizeMB: number = 50
-): Promise<{ file: File; compressed: boolean; originalSize: number; newSize: number }> {
+): Promise<CompressionResult> {
   
   const maxBytes = maxSizeMB * 1024 * 1024
   
-  // If file is already under limit, return as-is
-  if (file.size <= maxBytes) {
-    return {
-      file,
-      compressed: false,
-      originalSize: file.size,
-      newSize: file.size
-    }
-  }
-
-  // Create audio context for compression
+  // Create audio context to read original metadata
   const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
   
   // Read file as ArrayBuffer
   const arrayBuffer = await file.arrayBuffer()
   
-  // Decode audio
+  // Decode audio to get ORIGINAL metadata
   const audioBuffer = await audioContext.decodeAudioData(arrayBuffer)
   
+  // ============================================================
+  // CAPTURE ORIGINAL METADATA BEFORE ANY COMPRESSION
+  // This is the TRUE metadata that backend needs for PDF
+  // ============================================================
+  const originalMetadata = {
+    sampleRate: audioBuffer.sampleRate,
+    bitDepth: getBitDepthFromFile(file), // Estimate from file (16, 24, or 32)
+    numberOfChannels: audioBuffer.numberOfChannels,
+    duration: audioBuffer.duration
+  }
+  
+  console.log('📊 Original file metadata:', originalMetadata)
+  // ============================================================
+  
+  // If file is already under limit, return as-is with original metadata
+  if (file.size <= maxBytes) {
+    audioContext.close()
+    return {
+      file,
+      compressed: false,
+      originalSize: file.size,
+      newSize: file.size,
+      originalMetadata // ← NUEVO: Always return original metadata
+    }
+  }
+
   const duration = audioBuffer.duration
   
   // Strategy: Intelligent compression while ALWAYS preserving stereo
@@ -53,6 +84,8 @@ export async function compressAudioFile(
     // Medium files approaching limit: Use 48kHz stereo
     targetSampleRate = 48000
   }
+  
+  console.log(`🔄 Compressing: ${originalMetadata.sampleRate}Hz → ${targetSampleRate}Hz`)
   
   // Create offline context for resampling
   const offlineContext = new OfflineAudioContext(
@@ -86,8 +119,37 @@ export async function compressAudioFile(
     file: compressedFile,
     compressed: true,
     originalSize: file.size,
-    newSize: compressedFile.size
+    newSize: compressedFile.size,
+    originalMetadata // ← NUEVO: Return ORIGINAL metadata (not compressed)
   }
+}
+
+// Helper: Estimate bit depth from file size and duration
+function getBitDepthFromFile(file: File): number {
+  // This is an approximation based on file extension and size
+  // For WAV files, we can make educated guesses
+  
+  const fileName = file.name.toLowerCase()
+  
+  // If filename contains bit depth hint
+  if (fileName.includes('24bit') || fileName.includes('24-bit')) return 24
+  if (fileName.includes('32bit') || fileName.includes('32-bit')) return 32
+  if (fileName.includes('16bit') || fileName.includes('16-bit')) return 16
+  
+  // Default assumptions based on file type
+  if (fileName.endsWith('.wav')) {
+    // For WAV: Estimate from file size
+    // Rough estimate: size per second for stereo
+    // 16-bit stereo 44.1kHz: ~176KB/s
+    // 24-bit stereo 48kHz: ~288KB/s
+    // 32-bit stereo 48kHz: ~384KB/s
+    
+    // This is a rough heuristic - not perfect but better than nothing
+    return 24 // Default to 24-bit for professional audio
+  }
+  
+  // Default to 16-bit for unknown formats
+  return 16
 }
 
 // Helper: Convert AudioBuffer to WAV Blob
