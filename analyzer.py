@@ -3255,6 +3255,7 @@ def analyze_file_chunked(
     duration = file_info.duration
     file_size = path.stat().st_size
     
+    
     # Extract bit depth from subtype
     subtype = file_info.subtype
     bit_depth = 0
@@ -3282,6 +3283,7 @@ def analyze_file_chunked(
         'peaks': [],
         'tps': [],
         'lufs_values': [],
+        'rms_values': [],                      # NEW: Track RMS for proper Crest Factor
         'correlations': [],
         'lr_balances': [],
         'ms_ratios': [],
@@ -3362,6 +3364,19 @@ def analyze_file_chunked(
             # Store results
             results['peaks'].append(chunk_peak_db)
             results['tps'].append(chunk_tp_db)
+            
+            # Calculate RMS for this chunk (for proper Crest Factor)
+            if y.shape[0] > 1:
+                # Stereo: combined RMS
+                rms_l = float(np.sqrt(np.mean(y[0].astype(np.float64) ** 2)))
+                rms_r = float(np.sqrt(np.mean(y[1].astype(np.float64) ** 2)))
+                chunk_rms = float(np.sqrt((rms_l**2 + rms_r**2) / 2))
+            else:
+                # Mono
+                chunk_rms = float(np.sqrt(np.mean(y[0].astype(np.float64) ** 2)))
+            
+            chunk_rms_db = 20 * math.log10(chunk_rms) if chunk_rms > 0 else -120.0
+            results['rms_values'].append(chunk_rms_db)
             results['lufs_values'].append(chunk_lufs)
             results['correlations'].append(chunk_corr)
             results['lr_balances'].append(chunk_lr)
@@ -3794,8 +3809,12 @@ def analyze_file_chunked(
         "message": msg_p
     })
     
-    # 6. Crest Factor (informational when we have real LUFS)
-    crest = final_plr  # Similar to PLR for chunked analysis
+    # 6. Crest Factor (proper calculation with RMS)
+    # Calculate weighted RMS across all chunks
+    weighted_rms = np.average(results['rms_values'], weights=weights)
+    
+    # Crest Factor = Peak - RMS (NOT Peak - LUFS like PLR)
+    crest = final_peak - weighted_rms
     st_cf, msg_cf, _ = status_crest_factor(crest, lang)
     
     # Always use "info" status when PLR is available (chunked mode always has PLR)
@@ -5579,18 +5598,27 @@ def generate_complete_pdf(
         
         # Extract audio file information
         file_dict = report.get('file', {})
-        duration = file_dict.get('duration', report.get('duration', 0))
-        sample_rate = file_dict.get('sample_rate', report.get('sample_rate', 0))
-        bit_depth = file_dict.get('bit_depth', report.get('bit_depth', 0))
+        duration = file_dict.get('duration', 0) or report.get('duration', 0)
+        sample_rate = file_dict.get('sample_rate', 0) or report.get('sample_rate', 0)
+        bit_depth = file_dict.get('bit_depth', 0) or report.get('bit_depth', 0)
+        
+        # Debug: print what we got
+        import sys
+        print(f"\n🔍 PDF DEBUG - File Info:", file=sys.stderr, flush=True)
+        print(f"   Duration: {duration}", file=sys.stderr, flush=True)
+        print(f"   Sample Rate: {sample_rate}", file=sys.stderr, flush=True)
+        print(f"   Bit Depth: {bit_depth}", file=sys.stderr, flush=True)
+        print(f"   File dict keys: {list(file_dict.keys())}", file=sys.stderr, flush=True)
+        sys.stderr.flush()
         
         # Format duration as MM:SS
-        duration_str = f"{int(duration // 60)}:{int(duration % 60):02d}" if duration else "N/A"
+        duration_str = f"{int(duration // 60)}:{int(duration % 60):02d}" if duration > 0 else "N/A"
         
         # Format sample rate as kHz
-        sample_rate_str = f"{sample_rate / 1000:.1f} kHz" if sample_rate else "N/A"
+        sample_rate_str = f"{sample_rate / 1000:.1f} kHz" if sample_rate > 0 else "N/A"
         
         # Format bit depth
-        bit_depth_str = f"{bit_depth}-bit" if bit_depth else "N/A"
+        bit_depth_str = f"{bit_depth}-bit" if bit_depth > 0 else "N/A"
         
         file_info_data = [
             ["Archivo" if lang == 'es' else "File", clean_filename],
@@ -6218,3 +6246,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
