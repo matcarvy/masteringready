@@ -1,13 +1,24 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Mix Analyzer v7.3.26 - Crest Factor Weights Fix
+Mix Analyzer v7.3.27 - File Info Fix for Non-Chunked Mode
 =========================================
 
 ARCHITECTURE PRINCIPLES:
 1. Calculate scores LANGUAGE-NEUTRAL (no idioma en lógica)
 2. Freeze score before translation (score congelado)
 3. Translate messages with Matías Voice (del eBook "Mastering Ready")
+
+KEY FIX from v7.3.27:
+--------------------
+🐛 CRITICAL: Fixed missing file info (duration, sample_rate, bit_depth) in non-chunked mode
+   • Error: PDF showing "N/A" for Duration, Sample Rate, Bit Depth
+   • Root cause: analyze_file() was missing file_size and bit_depth extraction
+   • Root cause: analyze_file() was using undefined variables (final_peak, final_tp, etc.)
+   • Fix: Added file_size and bit_depth extraction at start of analyze_file()
+   • Fix: Corrected variable names (peak instead of final_peak, tp instead of final_tp, etc.)
+   • Fix: Added territory and is_mastered detection calls
+   • Fix: Changed "chunked": True to "chunked": False for non-chunked mode
 
 KEY FIX from v7.3.26:
 --------------------
@@ -137,7 +148,7 @@ Master detection → Complete analysis with positive aspects + observations
 
 Author: Matías Carvajal García (@matcarvy)
 Based on: "Mastering Ready - Asegura el éxito de tu mastering desde la mezcla" eBook
-Version: 7.3.22-production (2025-01-14)
+Version: 7.3.27-production (2025-01-14)
 
 Usage:
 ------
@@ -2145,6 +2156,20 @@ def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, s
     channels = int(info.channels)
     duration = float(info.duration)
     
+    # Extract file size
+    file_size = path.stat().st_size
+    
+    # Extract bit depth from subtype
+    subtype = info.subtype
+    bit_depth = 0
+    if 'PCM_' in subtype:
+        try:
+            bit_depth = int(subtype.split('_')[1])
+        except:
+            bit_depth = 16
+    elif 'FLOAT' in subtype:
+        bit_depth = 32
+    
     # Validar duración mínima
     if duration < 0.5:
         raise RuntimeError(f"Archivo demasiado corto ({duration:.2f}s). Mínimo 0.5s.")
@@ -2410,28 +2435,27 @@ def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, s
     print(f"🔍 DEBUG: HAS_INTERPRETATIVE_TEXTS = {HAS_INTERPRETATIVE_TEXTS}", flush=True)
     if HAS_INTERPRETATIVE_TEXTS:
         print(f"🔍 DEBUG: Inside interpretations block", flush=True)
-        print(f"   final_peak: {final_peak}", flush=True)
-        print(f"   final_tp: {final_tp}", flush=True)
-        print(f"   final_plr: {final_plr}", flush=True)
+        print(f"   peak: {peak}", flush=True)
+        print(f"   tp: {tp}", flush=True)
+        print(f"   plr: {plr}", flush=True)
         try:
             # Extract key metrics for interpretation
             interpretation_metrics = {}
             
             # Extract headroom (use peak_db directly - already negative in dBFS)
-            interpretation_metrics['headroom'] = float(final_peak)  # Convert numpy to Python float (e.g., -6.3 dBFS)
+            interpretation_metrics['headroom'] = float(peak)  # Convert numpy to Python float (e.g., -6.3 dBFS)
             
             # Extract true peak
-            interpretation_metrics['true_peak'] = float(final_tp)
+            interpretation_metrics['true_peak'] = float(tp)
             
             # Extract dynamic range (PLR)
-            interpretation_metrics['dynamic_range'] = float(final_plr) if final_plr > 0 else 0.0
+            interpretation_metrics['dynamic_range'] = float(plr) if plr is not None and plr > 0 else 0.0
             
             # Extract LUFS
-            interpretation_metrics['lufs'] = float(weighted_lufs) if weighted_lufs != 0 else -14.0
+            interpretation_metrics['lufs'] = float(lufs) if lufs is not None and lufs != 0 else -14.0
             
             # Extract stereo balance
             # Calculate balance from L/R balance dB
-            lr_balance_db = final_lr_balance
             # Convert dB difference to ratio (0.5 = perfect balance)
             if lr_balance_db == 0:
                 balance_ratio = 0.5
@@ -2444,7 +2468,7 @@ def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, s
             interpretation_metrics['stereo_balance'] = balance_ratio
             
             # Extract correlation
-            interpretation_metrics['stereo_correlation'] = float(final_correlation)
+            interpretation_metrics['stereo_correlation'] = float(corr)
             interpretation_metrics['ms_ratio'] = float(stereo_metric.get('ms_ratio', 0))
             
             # Generate interpretative texts
@@ -2465,7 +2489,17 @@ def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, s
             interpretations = None
     # ========== END: Interpretative texts generation ==========
     
-    # Build full result using the same structure as analyze_file
+    # Detect territory and mastered status
+    territory = detect_territory(lufs, peak, tp, plr)
+    
+    # Calculate True Peak clipping percentage for mastered detection
+    tp_clipping_pct = 0.0
+    if tp_temporal:
+        tp_clipping_pct = tp_temporal.get("affected_percentage", 0.0)
+    
+    is_mastered = detect_mastered_file(lufs, peak, tp, plr, tp_clipping_pct)
+    
+    # Build full result
     result = {
         "file": {
             "name": path.name,
@@ -2476,13 +2510,13 @@ def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, s
             "bit_depth": bit_depth
         },
         "technical": {
-            "peak_dbfs": final_peak,
-            "true_peak_dbtp": final_tp,
-            "lufs": weighted_lufs,
-            "plr": final_plr,
-            "stereo_correlation": final_correlation,
-            "lr_balance_db": final_lr_balance,
-            "ms_ratio": final_ms_ratio
+            "peak_dbfs": peak,
+            "true_peak_dbtp": tp,
+            "lufs": lufs,
+            "plr": plr,
+            "stereo_correlation": corr,
+            "lr_balance_db": lr_balance_db,
+            "ms_ratio": ms_ratio
         },
         "metrics": metrics,
         "score": score,
@@ -2491,14 +2525,13 @@ def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, s
         "is_mastered": is_mastered,
         "cta": cta_data,  # Add CTA data for frontend
         "interpretations": interpretations,  # NEW: Add interpretations
-        "chunked": True,
-        "num_chunks": num_chunks,
+        "chunked": False,
         "notes": {
-            "lufs_is_real": True,
+            "lufs_is_real": HAS_PYLOUDNORM and lufs is not None,
             "lufs_reliable": duration >= MIN_DURATION_FOR_LUFS,
             "oversample_factor": oversample,
-            "auto_oversample": True,
-            "clipping_detected": bool(results['clipping_chunks'])
+            "auto_oversample": oversample == 0,
+            "clipping_detected": clipping
         }
     }
     
