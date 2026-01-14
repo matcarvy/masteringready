@@ -1,13 +1,22 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Mix Analyzer v7.3.18 - PRODUCTION RELEASE  
+Mix Analyzer v7.3.19 - PRODUCTION RELEASE  
 =========================================
 
 ARCHITECTURE PRINCIPLES:
 1. Calculate scores LANGUAGE-NEUTRAL (no idioma en lógica)
 2. Freeze score before translation (score congelado)
 3. Translate messages with Matías Voice (del eBook "Mastering Ready")
+
+KEY FIX from v7.3.19:
+--------------------
+🐛 CRITICAL: Fixed "practically mono" message in DETAILED ANALYSIS section
+   • Fixed lines 4771 and 5004: Now checks BOTH M/S < 0.05 AND correlation > 95%
+   • Before: M/S < 0.05 alone triggered "practically mono" warning
+   • After: Only warns if M/S < 0.05 AND correlation > 95% (truly mono)
+   • For M/S < 0.05 but corr 70-95%: No warning shown (valid centered stereo)
+   • This fixes the "CAMPO ESTÉREO - Análisis Detallado" section in reports
 
 KEY FIX from v7.3.18:
 --------------------
@@ -104,7 +113,7 @@ Master detection → Complete analysis with positive aspects + observations
 
 Author: Matías Carvajal García (@matcarvy)
 Based on: "Mastering Ready - Asegura el éxito de tu mastering desde la mezcla" eBook
-Version: 7.3.18-production (2025-01-13)
+Version: 7.3.19-production (2025-01-13)
 
 Usage:
 ------
@@ -4769,21 +4778,32 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
             
             # Check M/S Ratio issues
             if ms_ratio < 0.05:
-                has_stereo_issue = True
-                stereo_issues.append(
-                    "⚠️ La mezcla no tiene información estéreo (prácticamente mono).\n\n"
-                    "   🤔 ¿Es esto intencional?\n\n"
-                    "   Si SÍ es intencional:\n"
-                    "   • Perfecto - algunas producciones vintage o artísticas usan mono\n"
-                    "   • Solo confirma que sea la decisión correcta\n\n"
-                    "   Si NO es intencional, verifica:\n"
-                    "   • ¿Exportaste en mono por error? Revisa configuración de bounce\n"
-                    "   • ¿Tienes routing mal configurado en el DAW?\n"
-                    "   • ¿Todos los elementos están centrados sin paneo?\n\n"
-                    "   💡 Para mastering:\n"
-                    "   Si fue error, re-exporta en estéreo para aprovechar el paneo\n"
-                    "   y espacialización que diseñaste en la mezcla."
-                )
+                # M/S ratio muy bajo, pero debemos verificar correlación también
+                # Solo es "prácticamente mono" si AMBOS M/S bajo Y correlación muy alta (>95%)
+                if corr > 0.95:
+                    # Verdaderamente casi mono
+                    has_stereo_issue = True
+                    stereo_issues.append(
+                        "⚠️ La mezcla no tiene información estéreo (prácticamente mono).\n\n"
+                        "   🤔 ¿Es esto intencional?\n\n"
+                        "   Si SÍ es intencional:\n"
+                        "   • Perfecto - algunas producciones vintage o artísticas usan mono\n"
+                        "   • Solo confirma que sea la decisión correcta\n\n"
+                        "   Si NO es intencional, verifica:\n"
+                        "   • ¿Exportaste en mono por error? Revisa configuración de bounce\n"
+                        "   • ¿Tienes routing mal configurado en el DAW?\n"
+                        "   • ¿Todos los elementos están centrados sin paneo?\n\n"
+                        "   💡 Para mastering:\n"
+                        "   Si fue error, re-exporta en estéreo para aprovechar el paneo\n"
+                        "   y espacialización que diseñaste en la mezcla."
+                    )
+                elif corr > 0.85:
+                    # M/S bajo pero correlación moderada-alta = imagen muy centrada (no mono)
+                    # NO es un problema, solo informativo
+                    pass  # No mostrar como issue
+                else:
+                    # M/S bajo pero correlación saludable (<85%) = estéreo centrado válido
+                    pass  # No mostrar como issue
             elif ms_ratio > 1.5:
                 has_stereo_issue = True
                 stereo_issues.append(
@@ -4991,21 +5011,32 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
             
             # Check M/S Ratio issues
             if ms_ratio < 0.05:
-                has_stereo_issue = True
-                stereo_issues.append(
-                    "⚠️ Mix has no stereo information (practically mono).\n\n"
-                    "   🤔 Is this intentional?\n\n"
-                    "   If YES, it's intentional:\n"
-                    "   • Perfect - some vintage or artistic productions use mono\n"
-                    "   • Just confirm it's the right decision for your project\n\n"
-                    "   If NOT intentional, check:\n"
-                    "   • Did you export in mono by mistake? Review bounce settings\n"
-                    "   • Is your DAW routing misconfigured?\n"
-                    "   • Are all elements completely centered with no panning?\n\n"
-                    "   💡 For mastering:\n"
-                    "   If it was an error, re-export in stereo to take advantage of all\n"
-                    "   the panning and spatialization you designed in your mix."
-                )
+                # M/S ratio very low, but we must also check correlation
+                # Only "practically mono" if BOTH low M/S AND very high correlation (>95%)
+                if corr > 0.95:
+                    # Truly almost mono
+                    has_stereo_issue = True
+                    stereo_issues.append(
+                        "⚠️ Mix has no stereo information (practically mono).\n\n"
+                        "   🤔 Is this intentional?\n\n"
+                        "   If YES, it's intentional:\n"
+                        "   • Perfect - some vintage or artistic productions use mono\n"
+                        "   • Just confirm it's the right decision for your project\n\n"
+                        "   If NOT intentional, check:\n"
+                        "   • Did you export in mono by mistake? Review bounce settings\n"
+                        "   • Is your DAW routing misconfigured?\n"
+                        "   • Are all elements completely centered with no panning?\n\n"
+                        "   💡 For mastering:\n"
+                        "   If it was an error, re-export in stereo to take advantage of all\n"
+                        "   the panning and spatialization you designed in your mix."
+                    )
+                elif corr > 0.85:
+                    # Low M/S but moderate-high correlation = very centered (not mono)
+                    # Not an issue, just informational
+                    pass  # Don't show as issue
+                else:
+                    # Low M/S but healthy correlation (<85%) = valid centered stereo
+                    pass  # Don't show as issue
             elif ms_ratio > 1.5:
                 has_stereo_issue = True
                 stereo_issues.append(
