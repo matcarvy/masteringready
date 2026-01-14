@@ -11,6 +11,12 @@ export async function analyzeFile(
     lang: 'es' | 'en'
     mode: 'short' | 'write'
     strict: boolean
+    originalMetadata?: {  // NEW: Optional original metadata
+      sampleRate: number
+      bitDepth: number
+      numberOfChannels: number
+      duration: number
+    }
   }
 ) {
   const formData = new FormData()
@@ -18,6 +24,11 @@ export async function analyzeFile(
   formData.append('lang', options.lang)
   formData.append('mode', options.mode)
   formData.append('strict', String(options.strict))
+
+  // NEW: Add original metadata if provided
+  if (options.originalMetadata) {
+    formData.append('original_metadata', JSON.stringify(options.originalMetadata))
+  }
 
   // Create AbortController with 3-minute timeout for large files
   const controller = new AbortController()
@@ -56,6 +67,12 @@ export async function startAnalysisPolling(
     lang: 'es' | 'en'
     mode: 'short' | 'write'
     strict: boolean
+    originalMetadata?: {  // NEW: Optional original metadata
+      sampleRate: number
+      bitDepth: number
+      numberOfChannels: number
+      duration: number
+    }
   }
 ) {
   const formData = new FormData()
@@ -63,6 +80,19 @@ export async function startAnalysisPolling(
   formData.append('lang', options.lang)
   formData.append('mode', options.mode)
   formData.append('strict', String(options.strict))
+
+  // ============================================================
+  // CRITICAL: Add original metadata if provided
+  // This preserves original sample rate and bit depth when
+  // frontend compresses the file before upload
+  // ============================================================
+  if (options.originalMetadata) {
+    formData.append('original_metadata', JSON.stringify(options.originalMetadata))
+    console.log('📊 Sending original metadata:', options.originalMetadata)
+  } else {
+    console.warn('⚠️ No original metadata provided - will use compressed file metadata')
+  }
+  // ============================================================
 
   const res = await fetch(`${API_URL}/api/analyze/start`, {
     method: 'POST',
