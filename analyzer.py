@@ -1,13 +1,23 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Mix Analyzer v7.3.14 - PRODUCTION RELEASE  
+Mix Analyzer v7.3.16 - PRODUCTION RELEASE  
 =========================================
 
 ARCHITECTURE PRINCIPLES:
 1. Calculate scores LANGUAGE-NEUTRAL (no idioma en lógica)
 2. Freeze score before translation (score congelado)
 3. Translate messages with Matías Voice (del eBook "Mastering Ready")
+
+KEY FIX from v7.3.16:
+--------------------
+🐛 CRITICAL: LUFS -inf HANDLING IN CHUNKED MODE
+   • Fixed bug where pyloudnorm returning -inf for chunks caused PLR = inf
+   • Now properly handles -inf values with -40.0 dB fallback
+   • Prevents infinite PLR values in production reports
+   • Issue: When pyloudnorm returns -inf for quiet/silent chunks, it propagated 
+     through weighted_lufs calculation causing final_plr = peak - (-inf) = +inf
+   • Fix: Check np.isfinite(chunk_lufs_raw) before using value
 
 KEY FIX from v7.3.13:
 --------------------
@@ -75,7 +85,7 @@ Master detection → Complete analysis with positive aspects + observations
 
 Author: Matías Carvajal García (@matcarvy)
 Based on: "Mastering Ready - Asegura el éxito de tu mastering desde la mezcla" eBook
-Version: 7.3.14-production (2025-01-05)
+Version: 7.3.16-production (2025-01-13)
 
 Usage:
 ------
@@ -3233,7 +3243,13 @@ def analyze_file_chunked(
             # LUFS (integrated)
             if HAS_PYLOUDNORM:
                 meter = pyln.Meter(sr)
-                chunk_lufs = meter.integrated_loudness(y.T)
+                chunk_lufs_raw = meter.integrated_loudness(y.T)
+                # Handle -inf from pyloudnorm for very quiet signals or silence
+                if np.isfinite(chunk_lufs_raw):
+                    chunk_lufs = float(chunk_lufs_raw)
+                else:
+                    chunk_lufs = -40.0  # Safe fallback for -inf cases
+                    print(f"⚠️  Chunk LUFS is -inf, using fallback value", file=sys.stderr)
             else:
                 chunk_lufs = -23.0  # Safe default
             
