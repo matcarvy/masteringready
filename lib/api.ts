@@ -27,7 +27,7 @@ export async function analyzeFile(
 
   // NEW: Add original metadata if provided
   if (options.originalMetadata) {
-    formData.append('original_metadata', JSON.stringify(options.originalMetadata))
+    formData.append('original_metadata_json', JSON.stringify(options.originalMetadata))
   }
 
   // Create AbortController with 3-minute timeout for large files
@@ -83,11 +83,10 @@ export async function startAnalysisPolling(
 
   // ============================================================
   // CRITICAL: Add original metadata if provided
-  // This preserves original sample rate and bit depth when
-  // frontend compresses the file before upload
+  // Backend expects 'original_metadata_json' parameter name
   // ============================================================
   if (options.originalMetadata) {
-    formData.append('original_metadata', JSON.stringify(options.originalMetadata))
+    formData.append('original_metadata_json', JSON.stringify(options.originalMetadata))
     console.log('📊 Sending original metadata:', options.originalMetadata)
   } else {
     console.warn('⚠️ No original metadata provided - will use compressed file metadata')
