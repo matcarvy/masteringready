@@ -435,6 +435,10 @@ async def start_analysis(
     
     # Start analysis in background asyncio task
     async def analyze_in_background():
+        # Capture metadata from outer scope
+        metadata_from_frontend = original_metadata_from_frontend
+        logger.info(f"🔍 [{job_id}] Captured frontend metadata: {metadata_from_frontend}")
+        
         try:
             # Create temp file
             with tempfile.NamedTemporaryFile(delete=True, suffix=file_ext) as temp_file:
@@ -449,9 +453,9 @@ async def start_analysis(
                 # ============================================================
                 original_metadata = None
                 
-                if original_metadata_from_frontend and original_metadata_from_frontend.get('sample_rate'):
+                if metadata_from_frontend and metadata_from_frontend.get('sample_rate'):
                     # Use metadata from frontend (captures pre-compression values)
-                    original_metadata = original_metadata_from_frontend
+                    original_metadata = metadata_from_frontend
                     logger.info(f"✅ [{job_id}] Using metadata from FRONTEND: {original_metadata['sample_rate']} Hz, {original_metadata['bit_depth']}-bit")
                 else:
                     # Fallback: Read metadata from uploaded file
