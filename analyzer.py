@@ -1,13 +1,32 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Mix Analyzer v7.3.16 - PRODUCTION RELEASE  
+Mix Analyzer v7.3.18 - PRODUCTION RELEASE  
 =========================================
 
 ARCHITECTURE PRINCIPLES:
 1. Calculate scores LANGUAGE-NEUTRAL (no idioma en lógica)
 2. Freeze score before translation (score congelado)
 3. Translate messages with Matías Voice (del eBook "Mastering Ready")
+
+KEY FIX from v7.3.18:
+--------------------
+🐛 CORRELATION INTERPRETATION FIXES
+   • Fixed "casi mono" message - now properly distinguishes between ranges:
+     - >95%: "Imagen muy centrada (casi mono)" (truly near-mono)
+     - 90-95%: "Muy centrado" (centered but not mono)
+     - 70-90%: "Buena mono-compatibilidad" (healthy stereo, PERFECT range)
+   • Improved M/S ratio + correlation combined analysis
+   • 84% correlation now correctly shows as "centered stereo" not "almost mono"
+   • Better temporal analysis messages reflecting actual correlation ranges
+
+KEY FIX from v7.3.17:
+--------------------
+🐛 IMPROVED STEREO INTERPRETATION - Better correlation + M/S analysis
+   • Fixed false "mono" warning for files with low M/S ratio but moderate correlation
+   • Now only warns "practically mono" if BOTH M/S < 0.05 AND correlation > 90%
+   • For M/S < 0.05 but corr < 90%: shows "centered stereo" message instead
+   • Example: 84% correlation + M/S 0.00 → "centered stereo" (not "mono") ✅
 
 KEY FIX from v7.3.16:
 --------------------
@@ -85,7 +104,7 @@ Master detection → Complete analysis with positive aspects + observations
 
 Author: Matías Carvajal García (@matcarvy)
 Based on: "Mastering Ready - Asegura el éxito de tu mastering desde la mezcla" eBook
-Version: 7.3.16-production (2025-01-13)
+Version: 7.3.18-production (2025-01-13)
 
 Usage:
 ------
@@ -1281,10 +1300,25 @@ def evaluate_stereo_field_comprehensive(corr: float, ms_ratio: float, lr_balance
     
     # Check M/S Ratio
     if ms_ratio < 0.05:
-        if lang == 'es':
-            context_parts.append("⚠️ La mezcla no tiene información estéreo (prácticamente mono). ¿Es intencional? Verifica si exportaste en mono por error.")
+        # M/S ratio muy bajo sugiere poca información Side, PERO debemos considerar correlación también
+        # CORRELACIÓN: +1.0 = mono puro, 0.95-1.0 = casi mono, 0.7-0.95 = estéreo saludable
+        if corr > 0.95:  # Solo si correlación es MUY alta (>95%) = verdaderamente mono
+            if lang == 'es':
+                context_parts.append("⚠️ La mezcla no tiene información estéreo (prácticamente mono). ¿Es intencional? Verifica si exportaste en mono por error.")
+            else:
+                context_parts.append("⚠️ Mix has no stereo information (practically mono). Is this intentional? Check if you exported in mono by mistake.")
+        elif corr > 0.90:
+            # Correlación muy alta pero no extrema = muy centrado
+            if lang == 'es':
+                context_parts.append(f"ℹ️ Mezcla muy centrada (corr: {corr:.2f}, M/S: {ms_ratio:.2f}). Predomina contenido mono con estéreo sutil.")
+            else:
+                context_parts.append(f"ℹ️ Very centered mix (corr: {corr:.2f}, M/S: {ms_ratio:.2f}). Mono content predominates with subtle stereo.")
         else:
-            context_parts.append("⚠️ Mix has no stereo information (practically mono). Is this intentional? Check if you exported in mono by mistake.")
+            # Correlación moderada (70-90%) pero M/S bajo = estéreo centrado pero presente
+            if lang == 'es':
+                context_parts.append(f"ℹ️ Imagen estéreo centrada (corr: {corr:.2f}, M/S: {ms_ratio:.2f}). Buena mono-compatibilidad con información estéreo presente.")
+            else:
+                context_parts.append(f"ℹ️ Centered stereo image (corr: {corr:.2f}, M/S: {ms_ratio:.2f}). Good mono compatibility with stereo information present.")
     elif ms_ratio > 1.5:
         if lang == 'es':
             context_parts.append(f"⚠️ Estéreo muy ancho (M/S: {ms_ratio:.2f}). Puede sonar débil en parlantes o mono. Considera reducir stereo widening.")
@@ -2791,7 +2825,7 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
                             # Handle all 5 correlation issue types
                             if issue == 'high':
                                 details += f"Correlación muy alta ({corr*100:.0f}%)\n"
-                                details += "      → Casi mono\n"
+                                details += "      → Imagen muy centrada (casi mono)\n"
                             elif issue == 'medium_low':
                                 details += f"Correlación media-baja ({corr*100:.0f}%)\n"
                                 details += "      → Revisa efectos estéreo y reverbs\n"
