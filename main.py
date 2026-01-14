@@ -381,17 +381,42 @@ async def start_analysis(
     file: UploadFile = File(...),
     lang: str = Form("es"),
     mode: str = Form("write"),
-    strict: bool = Form(False)
+    strict: bool = Form(False),
+    original_metadata_json: Optional[str] = Form(None)  # NEW: Original file metadata from frontend
 ):
     """
     Start analysis and return job_id immediately (<1 sec).
     Client polls /api/analyze/status/{job_id} for progress and result.
     
     This endpoint avoids Render's 30-second timeout by returning immediately.
+    
+    Parameters:
+    - file: Audio file
+    - lang: Language (es/en)
+    - mode: Output mode (write/short)
+    - strict: Strict mode (true/false)
+    - original_metadata_json: (Optional) JSON with original file metadata
+        Example: {"sampleRate": 48000, "bitDepth": 24, "duration": 391.2, "numberOfChannels": 2}
     """
     
     # Cleanup old jobs
     await cleanup_old_jobs()
+    
+    # Parse original metadata if provided
+    original_metadata_from_frontend = None
+    if original_metadata_json:
+        try:
+            import json
+            metadata = json.loads(original_metadata_json)
+            original_metadata_from_frontend = {
+                'sample_rate': int(metadata.get('sampleRate', 0)),
+                'bit_depth': int(metadata.get('bitDepth', 0)),
+                'duration': float(metadata.get('duration', 0)),
+                'channels': int(metadata.get('numberOfChannels', 0))
+            }
+            logger.info(f"📊 Received original metadata from frontend: {original_metadata_from_frontend}")
+        except Exception as e:
+            logger.warning(f"⚠️ Could not parse original_metadata_json: {e}")
     
     # Validate file
     if not file.filename:
