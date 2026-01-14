@@ -2464,7 +2464,8 @@ def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, s
             "size": file_size,
             "duration": duration,
             "sample_rate": sr,
-            "channels": channels
+            "channels": channels,
+            "bit_depth": bit_depth
         },
         "technical": {
             "peak_dbfs": final_peak,
@@ -3254,6 +3255,17 @@ def analyze_file_chunked(
     duration = file_info.duration
     file_size = path.stat().st_size
     
+    # Extract bit depth from subtype
+    subtype = file_info.subtype
+    bit_depth = 0
+    if 'PCM_' in subtype:
+        try:
+            bit_depth = int(subtype.split('_')[1])
+        except:
+            bit_depth = 16
+    elif 'FLOAT' in subtype:
+        bit_depth = 32
+    
     print(f"📁 File: {path.name}")
     print(f"📦 Chunk size: {chunk_duration} seconds")
     print(f"⏱️  Duration: {duration:.1f} seconds ({duration/60:.1f} minutes)")
@@ -4042,7 +4054,8 @@ def analyze_file_chunked(
             "size": file_size,
             "duration": duration,
             "sample_rate": sr,
-            "channels": channels
+            "channels": channels,
+            "bit_depth": bit_depth
         },
         "technical": {
             "peak_dbfs": final_peak,
@@ -5564,9 +5577,27 @@ def generate_complete_pdf(
         # Clean filename - handle Unicode characters like "Paraíso"
         clean_filename = clean_text_for_pdf(filename or report.get('filename', 'Unknown')).strip()
         
+        # Extract audio file information
+        file_dict = report.get('file', {})
+        duration = file_dict.get('duration', report.get('duration', 0))
+        sample_rate = file_dict.get('sample_rate', report.get('sample_rate', 0))
+        bit_depth = file_dict.get('bit_depth', report.get('bit_depth', 0))
+        
+        # Format duration as MM:SS
+        duration_str = f"{int(duration // 60)}:{int(duration % 60):02d}" if duration else "N/A"
+        
+        # Format sample rate as kHz
+        sample_rate_str = f"{sample_rate / 1000:.1f} kHz" if sample_rate else "N/A"
+        
+        # Format bit depth
+        bit_depth_str = f"{bit_depth}-bit" if bit_depth else "N/A"
+        
         file_info_data = [
             ["Archivo" if lang == 'es' else "File", clean_filename],
             ["Fecha" if lang == 'es' else "Date", datetime.now().strftime('%d/%m/%Y %H:%M')],
+            ["Duración" if lang == 'es' else "Duration", duration_str],
+            ["Sample Rate" if lang == 'es' else "Sample Rate", sample_rate_str],
+            ["Bit Depth" if lang == 'es' else "Bit Depth", bit_depth_str],
             ["Puntuación" if lang == 'es' else "Score", f"{report.get('score', 0)}/100"],
             ["Veredicto" if lang == 'es' else "Verdict", verdict_text]
         ]
