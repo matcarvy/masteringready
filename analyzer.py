@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Mix Analyzer v7.3.22 - PRODUCTION RELEASE  
+Mix Analyzer v7.3.23-DEBUG - M/S Investigation  
 =========================================
 
 ARCHITECTURE PRINCIPLES:
@@ -806,7 +806,7 @@ def stereo_correlation(y: np.ndarray) -> float:
     return float(np.mean(L * R) / denom)
 
 
-def calculate_ms_ratio(y: np.ndarray) -> Tuple[float, float, float]:
+def calculate_ms_ratio(y: np.ndarray, debug: bool = False) -> Tuple[float, float, float]:
     """
     Calculate Mid/Side ratio and related metrics.
     Returns: (ms_ratio, mid_rms, side_rms)
@@ -818,11 +818,35 @@ def calculate_ms_ratio(y: np.ndarray) -> Tuple[float, float, float]:
         return 0.0, 0.0, 0.0
     
     L, R = y[0], y[1]
+    
+    # DEBUG: Check if L and R are identical
+    if debug:
+        import sys
+        l_r_diff = np.abs(L - R)
+        max_diff = np.max(l_r_diff)
+        mean_diff = np.mean(l_r_diff)
+        identical_samples = np.sum(l_r_diff < 1e-9)
+        total_samples = len(L)
+        identical_percentage = (identical_samples / total_samples) * 100
+        
+        print(f"\n🔍 M/S DEBUG:", file=sys.stderr)
+        print(f"   L channel RMS: {np.sqrt(np.mean(L**2)):.6f}", file=sys.stderr)
+        print(f"   R channel RMS: {np.sqrt(np.mean(R**2)):.6f}", file=sys.stderr)
+        print(f"   Max L-R difference: {max_diff:.6f}", file=sys.stderr)
+        print(f"   Mean L-R difference: {mean_diff:.6f}", file=sys.stderr)
+        print(f"   Identical samples: {identical_percentage:.1f}%", file=sys.stderr)
+    
     mid = (L + R) / 2
     side = (L - R) / 2
     
     mid_rms = float(np.sqrt(np.mean(mid**2)))
     side_rms = float(np.sqrt(np.mean(side**2)))
+    
+    if debug:
+        print(f"   Mid RMS: {mid_rms:.6f}", file=sys.stderr)
+        print(f"   Side RMS: {side_rms:.6f}", file=sys.stderr)
+        print(f"   M/S Ratio: {side_rms / (mid_rms + 1e-12):.6f}", file=sys.stderr)
+        sys.stderr.flush()
     
     # Avoid division by zero
     ms_ratio = side_rms / (mid_rms + 1e-12) if mid_rms > 1e-9 else 0.0
@@ -2281,7 +2305,7 @@ def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, s
 
     # 7. Stereo Field Analysis (Correlation + M/S + L/R Balance) with Temporal Analysis
     corr = stereo_correlation(y)
-    ms_ratio, mid_rms, side_rms = calculate_ms_ratio(y)
+    ms_ratio, mid_rms, side_rms = calculate_ms_ratio(y, debug=True)  # Enable debug for investigation
     lr_balance_db = calculate_lr_balance(y)
     
     # Temporal analysis for each parameter if problematic
