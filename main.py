@@ -1,23 +1,26 @@
 """
-MasteringReady API v7.3.3 - PDF Unicode Fix
-============================================
+MasteringReady API v7.3.5 - Original Metadata Preservation
+===========================================================
 
 FastAPI backend for MasteringReady web application.
 
-FIXES in v7.3.3:
-- Fixed PDF download error with Unicode filenames (Paraíso, São Paulo, etc.)
-- Added sanitize_filename_for_http() to remove accents and special chars
-- Uses RFC 5987 UTF-8 encoding for international filename support
-- Prevents 'latin-1' codec encoding errors in Content-Disposition header
+FIXES in v7.3.5:
+- Fixed sample rate and bit depth showing compressed values instead of original
+- Now reads original file metadata BEFORE any compression/processing
+- Passes original_metadata to analyzer functions (analyze_file, analyze_file_chunked)
+- PDF now shows true original sample rate and bit depth
 
-Previous fixes:
-- Uses analyzer's write_report() directly (no mixing)
-- Implements short mode following CLI logic exactly
-- Proper Spanish/English separation
+Previous fixes (v7.3.4):
+- Fixed missing file info (duration, sample_rate, bit_depth) in job results
+- Added "file" dict to jobs[job_id]['result']
+
+Previous fixes (v7.3.3):
+- Fixed PDF download error with Unicode filenames
+- Added sanitize_filename_for_http()
 
 Based on Matías Carvajal's "Mastering Ready" methodology
 Author: Matías Carvajal García (@matcarvy)
-Version: 7.3.3-production
+Version: 7.3.5-production
 """
 
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, BackgroundTasks
@@ -34,6 +37,7 @@ import unicodedata
 import urllib.parse
 from typing import Optional, Dict, Any
 from datetime import datetime, timedelta
+import soundfile as sf
 
 # Setup logging
 logging.basicConfig(
@@ -148,7 +152,7 @@ async def root():
     """Health check endpoint."""
     return {
         "name": "MasteringReady API",
-        "version": "7.3.2",
+        "version": "7.3.5",
         "status": "healthy",
         "methodology": "Basado en 'Mastering Ready' de Matías Carvajal",
         "endpoints": {
@@ -164,7 +168,7 @@ async def health_check():
     """Detailed health check."""
     return {
         "status": "healthy",
-        "version": "7.3.2",
+        "version": "7.3.5",
         "analyzer_loaded": True,
         "privacy": "In-memory processing, auto-delete guaranteed",
         "timestamp": datetime.utcnow().isoformat()
@@ -418,6 +422,23 @@ async def start_analysis(
                 
                 logger.info(f"💾 [{job_id}] Temp file created")
                 
+                # ============================================================
+                # READ ORIGINAL FILE METADATA IMMEDIATELY (before any compression)
+                # This captures the true sample rate and bit depth
+                # ============================================================
+                original_metadata = None
+                try:
+                    file_info = sf.info(temp_file.name)
+                    original_metadata = {
+                        'sample_rate': file_info.samplerate,
+                        'bit_depth': file_info.subtype_info.bits_per_sample if hasattr(file_info, 'subtype_info') else None,
+                        'duration': file_info.duration
+                    }
+                    logger.info(f"📊 [{job_id}] Original metadata: {file_info.samplerate} Hz, {original_metadata['bit_depth']}-bit, {file_info.duration:.1f}s")
+                except Exception as e:
+                    logger.warning(f"⚠️ [{job_id}] Could not read original metadata: {e}")
+                # ============================================================
+                
                 # Update progress
                 async with jobs_lock:
                     jobs[job_id]['progress'] = 10
@@ -459,7 +480,8 @@ async def start_analysis(
                         lang=lang,
                         strict=strict,
                         chunk_duration=30.0,  # 30 second chunks
-                        progress_callback=update_progress  # ← Pass callback
+                        progress_callback=update_progress,  # ← Pass callback
+                        original_metadata=original_metadata  # ← Pass original metadata
                     )
                 else:
                     logger.info(f"📊 [{job_id}] Using NORMAL analysis (estimated {estimated_duration_min:.1f} min, {file_size_mb:.1f} MB)")
@@ -468,7 +490,8 @@ async def start_analysis(
                         analyze_file,
                         Path(temp_file.name),
                         lang=lang,
-                        strict=strict
+                        strict=strict,
+                        original_metadata=original_metadata  # ← Pass original metadata
                     )
                 
                 result = await loop.run_in_executor(None, analyze_func)
