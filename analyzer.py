@@ -1,31 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Mix Analyzer v7.3.25 - PRODUCTION RELEASE
-==========================================
-
-FINAL VERSION FOR BETA LAUNCH - All fixes implemented
-
-KEY IMPROVEMENTS in v7.3.25:
-- Fixed temporal analysis thresholds (no more false positives)
-- Correlation >0.97 for "almost mono" (was 0.95)
-- Removed 0.3-0.7 correlation as problem (healthy stereo range)
-- M/S ratio >1.8 for "too wide" (was 1.2)
-- Minimum duration filter: 8 seconds (ignore transients)
-- Exclude intro/outro: first/last 5 seconds
-- Removed M/S debug logging (production ready)
-- Improved messaging for stereo field analysis
-
-Previous fixes (v7.3.22-v7.3.24):
-- Unicode emoji support in PDFs
-- Stereo preservation in compression
-- M/S ratio calculation verified
-- PDF filename sanitization
-
-Based on Matías Carvajal's "Mastering Ready" methodology
-Author: Matías Carvajal García (@matcarvy)
-Version: 7.3.25-production
-"""
+Mix Analyzer v7.3.25 PRODUCTION - Ready for Beta Launch  
+=========================================
 
 ARCHITECTURE PRINCIPLES:
 1. Calculate scores LANGUAGE-NEUTRAL (no idioma en lógica)
@@ -51,9 +28,9 @@ KEY FIX from v7.3.20:
 KEY FIX from v7.3.19:
 --------------------
 🐛 CRITICAL: Fixed "practically mono" message in DETAILED ANALYSIS section
-   • Fixed lines 4771 and 5004: Now checks BOTH M/S < 0.05 AND correlation > 95%
+   • Fixed lines 4771 and 5004: Now checks BOTH M/S < 0.05 AND correlation > 97%
    • Before: M/S < 0.05 alone triggered "practically mono" warning
-   • After: Only warns if M/S < 0.05 AND correlation > 95% (truly mono)
+   • After: Only warns if M/S < 0.05 AND correlation > 97% (truly mono)
    • For M/S < 0.05 but corr 70-95%: No warning shown (valid centered stereo)
    • This fixes the "CAMPO ESTÉREO - Análisis Detallado" section in reports
 
@@ -1106,24 +1083,11 @@ def analyze_clipping_temporal(y: np.ndarray, sr: int, threshold: float = 0.99999
 
 def analyze_correlation_temporal(y: np.ndarray, sr: int, threshold: float = 0.2, min_duration: float = 8.0, exclude_intro_outro: float = 5.0) -> Dict[str, Any]:
     """
-    Temporal analysis of stereo correlation with professional mastering standards.
-    
-    UPDATED THRESHOLDS (v7.3.25):
-    - threshold: 0.2 (was 0.3) - Only flag severe phase issues
-    - 0.5-0.9 is HEALTHY stereo (typical range)
-    - >0.97 is considered "almost mono"
-    - Negative sustained values indicate phase problems
-    
-    FILTERS:
-    - min_duration: 8.0s - Ignore regions shorter than this (transients, effects)
-    - exclude_intro_outro: 5.0s - Exclude first/last N seconds (normal variance)
-    
+    Temporal analysis of stereo correlation.
     Detects REGIONS where correlation is problematic (not just individual moments).
     """
     if y.shape[0] < 2:
         return {"severity": "none", "affected_percentage": 0.0, "problem_regions": [], "total_regions": 0}
-    
-    track_duration = y.shape[1] / sr
     
     # Window-based analysis (5 second windows)
     window_duration = 5.0
@@ -1136,20 +1100,16 @@ def analyze_correlation_temporal(y: np.ndarray, sr: int, threshold: float = 0.2,
     
     for start in range(0, y.shape[1] - window_samples, hop_samples):
         end = start + window_samples
-        timestamp = start / sr
-        
-        # FILTER 1: Exclude intro/outro
-        if timestamp < exclude_intro_outro or timestamp > (track_duration - exclude_intro_outro):
-            continue
-        
         window = y[:, start:end]
+        
         corr = stereo_correlation(window)
         total_windows += 1
         
         if corr < min_corr:
             min_corr = corr
         
-        # Only flag if below threshold (severe issues)
+        timestamp = start / sr
+        
         if corr < threshold:
             problem_windows.append({
                 "time_seconds": timestamp,
@@ -1171,35 +1131,29 @@ def analyze_correlation_temporal(y: np.ndarray, sr: int, threshold: float = 0.2,
             if curr_time - prev_time <= 10.0:
                 current_region_end = curr_time
             else:
-                # FILTER 2: Only save regions longer than min_duration
-                region_duration = current_region_end - current_region_start
-                if region_duration >= min_duration:
-                    problem_regions.append({
-                        "start": format_timestamp(current_region_start),
-                        "end": format_timestamp(current_region_end),
-                        "start_seconds": current_region_start,
-                        "end_seconds": current_region_end,
-                        "duration": region_duration
-                    })
+                # Save previous region and start new one
+                problem_regions.append({
+                    "start": format_timestamp(current_region_start),
+                    "end": format_timestamp(current_region_end),
+                    "start_seconds": current_region_start,
+                    "end_seconds": current_region_end
+                })
                 current_region_start = curr_time
                 current_region_end = curr_time
         
-        # Don't forget the last region (with duration filter)
-        region_duration = current_region_end - current_region_start
-        if region_duration >= min_duration:
-            problem_regions.append({
-                "start": format_timestamp(current_region_start),
-                "end": format_timestamp(current_region_end),
-                "start_seconds": current_region_start,
-                "end_seconds": current_region_end,
-                "duration": region_duration
-            })
+        # Don't forget the last region
+        problem_regions.append({
+            "start": format_timestamp(current_region_start),
+            "end": format_timestamp(current_region_end),
+            "start_seconds": current_region_start,
+            "end_seconds": current_region_end
+        })
     
     affected_percentage = (len(problem_windows) / total_windows * 100) if total_windows > 0 else 0
     severity = "widespread" if affected_percentage >= 20 else "localized"
     
     return {
-        "severity": severity if problem_regions else "none",
+        "severity": severity,
         "affected_percentage": round(affected_percentage, 1),
         "problem_regions": problem_regions,
         "total_regions": len(problem_regions),
@@ -1289,18 +1243,7 @@ def analyze_lr_balance_temporal(y: np.ndarray, sr: int, threshold: float = 3.0) 
 
 def analyze_ms_ratio_temporal(y: np.ndarray, sr: int, low_threshold: float = 0.05, high_threshold: float = 1.8, min_duration: float = 8.0, exclude_intro_outro: float = 5.0) -> Dict[str, Any]:
     """
-    Temporal analysis of M/S ratio with professional mastering standards.
-    
-    UPDATED THRESHOLDS (v7.3.25):
-    - low_threshold: 0.05 (very mono)
-    - high_threshold: 1.8 (was 1.2) - Allow legitimate wide stereo
-    - Typical healthy range: 0.3-0.7
-    - Wide stereo (acceptable): 0.8-1.8
-    
-    FILTERS:
-    - min_duration: 8.0s - Ignore regions shorter than this
-    - exclude_intro_outro: 5.0s - Exclude first/last N seconds
-    
+    Temporal analysis of M/S ratio.
     Detects REGIONS where M/S ratio is problematic (too low or too high).
     """
     if y.shape[0] < 2:
@@ -1315,9 +1258,6 @@ def analyze_ms_ratio_temporal(y: np.ndarray, sr: int, low_threshold: float = 0.0
     total_windows = 0
     min_ms = 999.0
     max_ms = 0.0
-    
-    
-    track_duration = y.shape[1] / sr
     
     for start in range(0, y.shape[1] - window_samples, hop_samples):
         end = start + window_samples
@@ -2197,17 +2137,6 @@ def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, s
     channels = int(info.channels)
     duration = float(info.duration)
     
-    # Extract bit depth from subtype
-    subtype = info.subtype
-    bit_depth = 0
-    if 'PCM_' in subtype:
-        try:
-            bit_depth = int(subtype.split('_')[1])
-        except:
-            bit_depth = 16  # Default fallback
-    elif 'FLOAT' in subtype:
-        bit_depth = 32  # Float is typically 32-bit
-    
     # Validar duración mínima
     if duration < 0.5:
         raise RuntimeError(f"Archivo demasiado corto ({duration:.2f}s). Mínimo 0.5s.")
@@ -2385,7 +2314,7 @@ def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, s
     lr_temporal = None
     
     # Strict mode uses more demanding thresholds for temporal analysis
-    corr_threshold = 0.5 if strict else 0.2
+    corr_threshold = 0.5 if strict else 0.3
     ms_low_threshold = 0.1 if strict else 0.05
     ms_high_threshold = 1.5 if strict else 1.8
     lr_threshold = 2.0 if strict else 3.0
@@ -3672,7 +3601,12 @@ def analyze_file_chunked(
     
     # DEBUG M/S: Print first chunk details
     if len(results['ms_ratios']) > 0:
-        print(f"\n        print()
+        print(f"\n🔍 M/S ANALYSIS DEBUG:")
+        print(f"   Total chunks: {len(results['ms_ratios'])}")
+        print(f"   First chunk M/S: {results['ms_ratios'][0]:.6f}")
+        print(f"   Average M/S: {final_ms_ratio:.6f}")
+        print(f"   All M/S values: {[f'{ms:.4f}' for ms in results['ms_ratios'][:5]]}...")
+        print()
     
     # 5. Detect territory and mastered status
     territory = detect_territory(weighted_lufs, final_peak, final_tp, final_plr)
