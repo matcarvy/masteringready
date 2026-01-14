@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Mix Analyzer v7.3.25 PRODUCTION - Ready for Beta Launch  
+Mix Analyzer v7.3.23-DEBUG - M/S Investigation  
 =========================================
 
 ARCHITECTURE PRINCIPLES:
@@ -28,9 +28,9 @@ KEY FIX from v7.3.20:
 KEY FIX from v7.3.19:
 --------------------
 🐛 CRITICAL: Fixed "practically mono" message in DETAILED ANALYSIS section
-   • Fixed lines 4771 and 5004: Now checks BOTH M/S < 0.05 AND correlation > 97%
+   • Fixed lines 4771 and 5004: Now checks BOTH M/S < 0.05 AND correlation > 95%
    • Before: M/S < 0.05 alone triggered "practically mono" warning
-   • After: Only warns if M/S < 0.05 AND correlation > 97% (truly mono)
+   • After: Only warns if M/S < 0.05 AND correlation > 95% (truly mono)
    • For M/S < 0.05 but corr 70-95%: No warning shown (valid centered stereo)
    • This fixes the "CAMPO ESTÉREO - Análisis Detallado" section in reports
 
@@ -806,7 +806,7 @@ def stereo_correlation(y: np.ndarray) -> float:
     return float(np.mean(L * R) / denom)
 
 
-def calculate_ms_ratio(y: np.ndarray) -> Tuple[float, float, float]:
+def calculate_ms_ratio(y: np.ndarray, debug: bool = False) -> Tuple[float, float, float]:
     """
     Calculate Mid/Side ratio and related metrics.
     Returns: (ms_ratio, mid_rms, side_rms)
@@ -1081,7 +1081,7 @@ def analyze_clipping_temporal(y: np.ndarray, sr: int, threshold: float = 0.99999
     }
 
 
-def analyze_correlation_temporal(y: np.ndarray, sr: int, threshold: float = 0.2) -> Dict[str, Any]:
+def analyze_correlation_temporal(y: np.ndarray, sr: int, threshold: float = 0.3) -> Dict[str, Any]:
     """
     Temporal analysis of stereo correlation.
     Detects REGIONS where correlation is problematic (not just individual moments).
@@ -1241,7 +1241,7 @@ def analyze_lr_balance_temporal(y: np.ndarray, sr: int, threshold: float = 3.0) 
     }
 
 
-def analyze_ms_ratio_temporal(y: np.ndarray, sr: int, low_threshold: float = 0.05, high_threshold: float = 1.8) -> Dict[str, Any]:
+def analyze_ms_ratio_temporal(y: np.ndarray, sr: int, low_threshold: float = 0.05, high_threshold: float = 1.5) -> Dict[str, Any]:
     """
     Temporal analysis of M/S ratio.
     Detects REGIONS where M/S ratio is problematic (too low or too high).
@@ -1351,7 +1351,7 @@ def evaluate_stereo_field_comprehensive(corr: float, ms_ratio: float, lr_balance
     if ms_ratio < 0.05:
         # M/S ratio muy bajo sugiere poca información Side, PERO debemos considerar correlación también
         # CORRELACIÓN: +1.0 = mono puro, 0.95-1.0 = casi mono, 0.7-0.95 = estéreo saludable
-        if corr > 0.97:  # Solo si correlación es MUY alta (>95%) = verdaderamente mono
+        if corr > 0.95:  # Solo si correlación es MUY alta (>95%) = verdaderamente mono
             if lang == 'es':
                 context_parts.append("⚠️ La mezcla no tiene información estéreo (prácticamente mono). ¿Es intencional? Verifica si exportaste en mono por error.")
             else:
@@ -2305,7 +2305,7 @@ def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, s
 
     # 7. Stereo Field Analysis (Correlation + M/S + L/R Balance) with Temporal Analysis
     corr = stereo_correlation(y)
-    ms_ratio, mid_rms, side_rms = calculate_ms_ratio(y)  # Enable debug for investigation
+    ms_ratio, mid_rms, side_rms = calculate_ms_ratio(y, debug=True)  # Enable debug for investigation
     lr_balance_db = calculate_lr_balance(y)
     
     # Temporal analysis for each parameter if problematic
@@ -2316,7 +2316,7 @@ def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, s
     # Strict mode uses more demanding thresholds for temporal analysis
     corr_threshold = 0.5 if strict else 0.3
     ms_low_threshold = 0.1 if strict else 0.05
-    ms_high_threshold = 1.5 if strict else 1.8
+    ms_high_threshold = 1.2 if strict else 1.5
     lr_threshold = 2.0 if strict else 3.0
     
     if corr < 0.5:  # Analyze if correlation is problematic
@@ -2464,8 +2464,7 @@ def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, s
             "size": file_size,
             "duration": duration,
             "sample_rate": sr,
-            "channels": channels,
-            "bit_depth": bit_depth
+            "channels": channels
         },
         "technical": {
             "peak_dbfs": final_peak,
@@ -3255,18 +3254,6 @@ def analyze_file_chunked(
     duration = file_info.duration
     file_size = path.stat().st_size
     
-    
-    # Extract bit depth from subtype
-    subtype = file_info.subtype
-    bit_depth = 0
-    if 'PCM_' in subtype:
-        try:
-            bit_depth = int(subtype.split('_')[1])
-        except:
-            bit_depth = 16
-    elif 'FLOAT' in subtype:
-        bit_depth = 32
-    
     print(f"📁 File: {path.name}")
     print(f"📦 Chunk size: {chunk_duration} seconds")
     print(f"⏱️  Duration: {duration:.1f} seconds ({duration/60:.1f} minutes)")
@@ -3355,7 +3342,7 @@ def analyze_file_chunked(
             
             # DEBUG: Enable M/S debug for first chunk only
             debug_ms = (i == 0)  # Only first chunk to avoid spam
-            chunk_ms, _, _ = calculate_ms_ratio(y)
+            chunk_ms, _, _ = calculate_ms_ratio(y, debug=debug_ms)
             
             # Frequency balance (NEW - calculate per chunk)
             chunk_fb = band_balance_db(y, sr)
@@ -3443,7 +3430,7 @@ def analyze_file_chunked(
                 # - negative_severe (<-0.2): Critical phase inversion
                 window_corr = stereo_correlation(window)
                 
-                if window_corr > 0.97:
+                if window_corr > 0.95:
                     # Nearly mono
                     results['correlation_problem_chunks'].append({
                         'chunk': i + 1,
@@ -4055,8 +4042,7 @@ def analyze_file_chunked(
             "size": file_size,
             "duration": duration,
             "sample_rate": sr,
-            "channels": channels,
-            "bit_depth": bit_depth
+            "channels": channels
         },
         "technical": {
             "peak_dbfs": final_peak,
@@ -4838,7 +4824,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
             if ms_ratio < 0.05:
                 # M/S ratio muy bajo, pero debemos verificar correlación también
                 # Solo es "prácticamente mono" si AMBOS M/S bajo Y correlación muy alta (>95%)
-                if corr > 0.97:
+                if corr > 0.95:
                     # Verdaderamente casi mono
                     has_stereo_issue = True
                     stereo_issues.append(
@@ -5072,7 +5058,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
             if ms_ratio < 0.05:
                 # M/S ratio very low, but we must also check correlation
                 # Only "practically mono" if BOTH low M/S AND very high correlation (>95%)
-                if corr > 0.97:
+                if corr > 0.95:
                     # Truly almost mono
                     has_stereo_issue = True
                     stereo_issues.append(
@@ -5578,28 +5564,9 @@ def generate_complete_pdf(
         # Clean filename - handle Unicode characters like "Paraíso"
         clean_filename = clean_text_for_pdf(filename or report.get('filename', 'Unknown')).strip()
         
-        
-        # Extract audio file information from report
-        file_dict = report.get('file', {})
-        duration = file_dict.get('duration', report.get('duration', 0))
-        sample_rate = file_dict.get('sample_rate', report.get('sample_rate', 0))
-        bit_depth = file_dict.get('bit_depth', report.get('bit_depth', 0))
-        
-        # Format duration as MM:SS
-        duration_str = f"{int(duration // 60)}:{int(duration % 60):02d}" if duration else "N/A"
-        
-        # Format sample rate as kHz
-        sample_rate_str = f"{sample_rate / 1000:.1f} kHz" if sample_rate else "N/A"
-        
-        # Format bit depth
-        bit_depth_str = f"{bit_depth}-bit" if bit_depth else "N/A"
-        
         file_info_data = [
             ["Archivo" if lang == 'es' else "File", clean_filename],
             ["Fecha" if lang == 'es' else "Date", datetime.now().strftime('%d/%m/%Y %H:%M')],
-            ["Duración" if lang == 'es' else "Duration", duration_str],
-            ["Sample Rate" if lang == 'es' else "Sample Rate", sample_rate_str],
-            ["Bit Depth" if lang == 'es' else "Bit Depth", bit_depth_str],
             ["Puntuación" if lang == 'es' else "Score", f"{report.get('score', 0)}/100"],
             ["Veredicto" if lang == 'es' else "Verdict", verdict_text]
         ]
@@ -6220,4 +6187,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
