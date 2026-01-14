@@ -1,17 +1,23 @@
 """
-MasteringReady API v7.3.2 - FINAL FIX
-======================================
+MasteringReady API v7.3.3 - PDF Unicode Fix
+============================================
 
 FastAPI backend for MasteringReady web application.
 
-FIXES:
+FIXES in v7.3.3:
+- Fixed PDF download error with Unicode filenames (Paraíso, São Paulo, etc.)
+- Added sanitize_filename_for_http() to remove accents and special chars
+- Uses RFC 5987 UTF-8 encoding for international filename support
+- Prevents 'latin-1' codec encoding errors in Content-Disposition header
+
+Previous fixes:
 - Uses analyzer's write_report() directly (no mixing)
 - Implements short mode following CLI logic exactly
 - Proper Spanish/English separation
 
 Based on Matías Carvajal's "Mastering Ready" methodology
 Author: Matías Carvajal García (@matcarvy)
-Version: 7.3.2-final
+Version: 7.3.3-production
 """
 
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, BackgroundTasks
@@ -24,6 +30,8 @@ import sys
 import uuid
 import asyncio
 import functools
+import unicodedata
+import urllib.parse
 from typing import Optional, Dict, Any
 from datetime import datetime, timedelta
 
@@ -33,6 +41,56 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+
+# ============================================================================
+# UTILITY FUNCTIONS
+# ============================================================================
+
+def sanitize_filename_for_http(filename: str) -> str:
+    """
+    Sanitize filename for HTTP Content-Disposition headers.
+    Removes Unicode accents and special characters to avoid latin-1 encoding errors.
+    
+    Examples:
+        "Paraíso Fractal.pdf" → "Paraiso Fractal.pdf"
+        "TIEMPO (LIVE).wav" → "TIEMPO (LIVE).wav"
+        "São Paulo Mix.mp3" → "Sao Paulo Mix.mp3"
+    
+    Args:
+        filename: Original filename with potential Unicode characters
+    
+    Returns:
+        ASCII-safe filename suitable for HTTP headers
+    """
+    # Step 1: Normalize Unicode to NFD (decomposed form)
+    # This separates base characters from combining marks (accents)
+    nfd = unicodedata.normalize('NFD', filename)
+    
+    # Step 2: Remove combining characters (category 'Mn' = Mark, nonspacing)
+    # This removes accents: á → a, é → e, ñ → n, etc.
+    ascii_base = ''.join(
+        char for char in nfd 
+        if unicodedata.category(char) != 'Mn'
+    )
+    
+    # Step 3: Keep only safe ASCII characters
+    # Allow: letters, numbers, spaces, hyphens, parentheses, underscores, dots
+    safe = ''.join(
+        char if char.isalnum() or char in ' -()_.[]' else '_'
+        for char in ascii_base
+    )
+    
+    # Step 4: Clean up multiple spaces/underscores
+    import re
+    safe = re.sub(r'[ _]+', ' ', safe).strip()
+    
+    return safe
+
+
+# ============================================================================
+# IMPORT ANALYZER
+# ============================================================================
 
 # Import analyzer module
 try:
@@ -621,7 +679,11 @@ async def download_pdf(
         filename_base = result.get('filename', 'analisis').replace('.wav', '').replace('.mp3', '')
         pdf_filename = f"masteringready-{'detallado' if lang == 'es' else 'detailed'}-{filename_base}.pdf"
         
+        # Sanitize filename for HTTP header (avoid latin-1 encoding errors)
+        safe_pdf_filename = sanitize_filename_for_http(pdf_filename)
+        
         logger.info(f"✅ PDF generated successfully: {pdf_filename}")
+        logger.info(f"📦 Safe filename for download: {safe_pdf_filename}")
         
         # Clean up function
         def cleanup():
@@ -636,12 +698,18 @@ async def download_pdf(
         if background_tasks:
             background_tasks.add_task(cleanup)
         
+        # Use RFC 5987 encoding for international filenames
+        # This supports UTF-8 characters in Content-Disposition header
+        encoded_filename = urllib.parse.quote(safe_pdf_filename)
+        
         return FileResponse(
             pdf_path,
             media_type='application/pdf',
-            filename=pdf_filename,
             headers={
-                "Content-Disposition": f"attachment; filename={pdf_filename}"
+                # Use both methods for maximum compatibility:
+                # 1. Simple ASCII filename (for old browsers)
+                # 2. RFC 5987 UTF-8 filename* (for modern browsers)
+                "Content-Disposition": f"attachment; filename=\"{safe_pdf_filename}\"; filename*=UTF-8''{encoded_filename}"
             }
         )
         
