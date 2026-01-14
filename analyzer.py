@@ -3340,9 +3340,15 @@ def analyze_file_chunked(
             chunk_corr = stereo_correlation(y)
             chunk_lr = calculate_lr_balance(y)
             
-            # DEBUG: Enable M/S debug for first chunk only
+            # DEBUG: Force M/S debug for first chunk with visible output
+            if i == 0:
+                print("\n" + "="*70, flush=True)
+                print("🔍 M/S RATIO DEBUG - FIRST CHUNK", flush=True)
+                print("="*70, flush=True)
             debug_ms = (i == 0)  # Only first chunk to avoid spam
             chunk_ms, _, _ = calculate_ms_ratio(y, debug=debug_ms)
+            if i == 0:
+                print("="*70 + "\n", flush=True)
             
             # Frequency balance (NEW - calculate per chunk)
             chunk_fb = band_balance_db(y, sr)
@@ -3580,6 +3586,15 @@ def analyze_file_chunked(
     print(f"✅ Correlation: {final_correlation:.3f}")
     print(f"✅ L/R Balance: {final_lr_balance:+.2f} dB")
     print(f"✅ M/S Ratio: {final_ms_ratio:.2f}")
+    
+    # DEBUG M/S: Print first chunk details
+    if len(results['ms_ratios']) > 0:
+        print(f"\n🔍 M/S ANALYSIS DEBUG:")
+        print(f"   Total chunks: {len(results['ms_ratios'])}")
+        print(f"   First chunk M/S: {results['ms_ratios'][0]:.6f}")
+        print(f"   Average M/S: {final_ms_ratio:.6f}")
+        print(f"   All M/S values: {[f'{ms:.4f}' for ms in results['ms_ratios'][:5]]}...")
+        print()
     
     # 5. Detect territory and mastered status
     territory = detect_territory(weighted_lufs, final_peak, final_tp, final_plr)
