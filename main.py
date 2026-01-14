@@ -1,26 +1,28 @@
 """
-MasteringReady API v7.3.5 - Original Metadata Preservation
-===========================================================
+MasteringReady API v7.3.6 - Frontend Metadata Integration
+==========================================================
 
 FastAPI backend for MasteringReady web application.
 
-FIXES in v7.3.5:
-- Fixed sample rate and bit depth showing compressed values instead of original
-- Now reads original file metadata BEFORE any compression/processing
-- Passes original_metadata to analyzer functions (analyze_file, analyze_file_chunked)
-- PDF now shows true original sample rate and bit depth
+FIXES in v7.3.6:
+- Fixed sample rate and bit depth when frontend compresses BEFORE upload
+- Now accepts 'original_metadata_json' parameter from frontend with pre-compression metadata
+- Prioritizes frontend metadata over file metadata (solves frontend compression issue)
+- Backend reads: frontend metadata (if available) > file metadata (fallback)
+
+Previous fixes (v7.3.5):
+- Reads original file metadata BEFORE any backend compression
+- Passes original_metadata to analyzer functions
 
 Previous fixes (v7.3.4):
-- Fixed missing file info (duration, sample_rate, bit_depth) in job results
-- Added "file" dict to jobs[job_id]['result']
+- Added "file" dict to job results
 
 Previous fixes (v7.3.3):
 - Fixed PDF download error with Unicode filenames
-- Added sanitize_filename_for_http()
 
 Based on Matías Carvajal's "Mastering Ready" methodology
 Author: Matías Carvajal García (@matcarvy)
-Version: 7.3.5-production
+Version: 7.3.6-production
 """
 
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, BackgroundTasks
@@ -152,7 +154,7 @@ async def root():
     """Health check endpoint."""
     return {
         "name": "MasteringReady API",
-        "version": "7.3.5",
+        "version": "7.3.6",
         "status": "healthy",
         "methodology": "Basado en 'Mastering Ready' de Matías Carvajal",
         "endpoints": {
@@ -168,7 +170,7 @@ async def health_check():
     """Detailed health check."""
     return {
         "status": "healthy",
-        "version": "7.3.5",
+        "version": "7.3.6",
         "analyzer_loaded": True,
         "privacy": "In-memory processing, auto-delete guaranteed",
         "timestamp": datetime.utcnow().isoformat()
@@ -181,7 +183,8 @@ async def analyze_mix_endpoint(
     file: UploadFile = File(...),
     lang: str = Form("es"),
     mode: str = Form("write"),
-    strict: bool = Form(False)
+    strict: bool = Form(False),
+    original_metadata_json: Optional[str] = Form(None)  # NEW: Original file metadata from frontend
 ):
     """
     Analyze audio mix for mastering readiness.
@@ -196,6 +199,8 @@ async def analyze_mix_endpoint(
     - lang: Language (es/en)
     - mode: Output mode (short/write)
     - strict: Use strict commercial standards (true/false)
+    - original_metadata_json: (Optional) JSON string with original file metadata
+        Example: {"sampleRate": 48000, "bitDepth": 24, "duration": 391.2, "numberOfChannels": 2}
     
     Returns:
     - JSON with score, verdict, report, and metrics
@@ -203,6 +208,22 @@ async def analyze_mix_endpoint(
     
     # Log request
     logger.info(f"📥 Analysis request: {file.filename}, lang={lang}, mode={mode}, strict={strict}")
+    
+    # Parse original metadata if provided
+    original_metadata_from_frontend = None
+    if original_metadata_json:
+        try:
+            import json
+            metadata = json.loads(original_metadata_json)
+            original_metadata_from_frontend = {
+                'sample_rate': int(metadata.get('sampleRate', 0)),
+                'bit_depth': int(metadata.get('bitDepth', 0)),
+                'duration': float(metadata.get('duration', 0)),
+                'channels': int(metadata.get('numberOfChannels', 0))
+            }
+            logger.info(f"📊 Received original metadata from frontend: {original_metadata_from_frontend}")
+        except Exception as e:
+            logger.warning(f"⚠️ Could not parse original_metadata_json: {e}")
     
     # Validate file extension
     file_ext = Path(file.filename).suffix.lower()
@@ -423,20 +444,27 @@ async def start_analysis(
                 logger.info(f"💾 [{job_id}] Temp file created")
                 
                 # ============================================================
-                # READ ORIGINAL FILE METADATA IMMEDIATELY (before any compression)
-                # This captures the true sample rate and bit depth
+                # PRIORITIZE METADATA FROM FRONTEND (if available)
+                # This handles the case where frontend compressed the file
                 # ============================================================
                 original_metadata = None
-                try:
-                    file_info = sf.info(temp_file.name)
-                    original_metadata = {
-                        'sample_rate': file_info.samplerate,
-                        'bit_depth': file_info.subtype_info.bits_per_sample if hasattr(file_info, 'subtype_info') else None,
-                        'duration': file_info.duration
-                    }
-                    logger.info(f"📊 [{job_id}] Original metadata: {file_info.samplerate} Hz, {original_metadata['bit_depth']}-bit, {file_info.duration:.1f}s")
-                except Exception as e:
-                    logger.warning(f"⚠️ [{job_id}] Could not read original metadata: {e}")
+                
+                if original_metadata_from_frontend and original_metadata_from_frontend.get('sample_rate'):
+                    # Use metadata from frontend (captures pre-compression values)
+                    original_metadata = original_metadata_from_frontend
+                    logger.info(f"✅ [{job_id}] Using metadata from FRONTEND: {original_metadata['sample_rate']} Hz, {original_metadata['bit_depth']}-bit")
+                else:
+                    # Fallback: Read metadata from uploaded file
+                    try:
+                        file_info = sf.info(temp_file.name)
+                        original_metadata = {
+                            'sample_rate': file_info.samplerate,
+                            'bit_depth': file_info.subtype_info.bits_per_sample if hasattr(file_info, 'subtype_info') else None,
+                            'duration': file_info.duration
+                        }
+                        logger.info(f"📊 [{job_id}] Read metadata from FILE: {file_info.samplerate} Hz, {original_metadata['bit_depth']}-bit, {file_info.duration:.1f}s")
+                    except Exception as e:
+                        logger.warning(f"⚠️ [{job_id}] Could not read file metadata: {e}")
                 # ============================================================
                 
                 # Update progress
