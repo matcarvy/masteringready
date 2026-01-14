@@ -1,13 +1,22 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Mix Analyzer v7.3.27 - File Info Fix for Non-Chunked Mode
-=========================================
+Mix Analyzer v7.3.28 - Original Metadata Preservation
+======================================================
 
 ARCHITECTURE PRINCIPLES:
 1. Calculate scores LANGUAGE-NEUTRAL (no idioma en lógica)
 2. Freeze score before translation (score congelado)
 3. Translate messages with Matías Voice (del eBook "Mastering Ready")
+
+KEY FIX from v7.3.28:
+--------------------
+🐛 CRITICAL: Fixed sample rate and bit depth showing compressed values
+   • Error: PDF showing 44.1 kHz / 16-bit for originally 48 kHz / 24-bit files
+   • Root cause: When file is compressed, metadata is read from compressed version
+   • Fix: Added original_metadata parameter to analyze_file() and analyze_file_chunked()
+   • Fix: Main.py now reads metadata BEFORE any compression and passes it
+   • Now displays true original sample rate and bit depth in all reports
 
 KEY FIX from v7.3.27:
 --------------------
@@ -148,7 +157,7 @@ Master detection → Complete analysis with positive aspects + observations
 
 Author: Matías Carvajal García (@matcarvy)
 Based on: "Mastering Ready - Asegura el éxito de tu mastering desde la mezcla" eBook
-Version: 7.3.27-production (2025-01-14)
+Version: 7.3.28-production (2025-01-14)
 
 Usage:
 ------
@@ -2145,7 +2154,7 @@ def score_report(metrics: List[Dict[str, Any]], hard_fail: bool, strict: bool = 
     return score, verdict
 
 
-def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, strict: bool = False, lang: str = "en") -> Dict[str, Any]:
+def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, strict: bool = False, lang: str = "en", original_metadata: Optional[Dict] = None) -> Dict[str, Any]:
     """Analyze a full audio file."""
     try:
         info = sf.info(str(path))
@@ -2159,16 +2168,21 @@ def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, s
     # Extract file size
     file_size = path.stat().st_size
     
-    # Extract bit depth from subtype
-    subtype = info.subtype
-    bit_depth = 0
-    if 'PCM_' in subtype:
-        try:
-            bit_depth = int(subtype.split('_')[1])
-        except:
-            bit_depth = 16
-    elif 'FLOAT' in subtype:
-        bit_depth = 32
+    # Extract bit depth - USE ORIGINAL METADATA if provided
+    if original_metadata and original_metadata.get('bit_depth'):
+        bit_depth = original_metadata['bit_depth']
+        sr = original_metadata.get('sample_rate', sr)  # Also use original sample rate
+    else:
+        # Fallback to reading from current file
+        subtype = info.subtype
+        bit_depth = 0
+        if 'PCM_' in subtype:
+            try:
+                bit_depth = int(subtype.split('_')[1])
+            except:
+                bit_depth = 16
+        elif 'FLOAT' in subtype:
+            bit_depth = 32
     
     # Validar duración mínima
     if duration < 0.5:
@@ -3264,7 +3278,8 @@ def analyze_file_chunked(
     strict: bool = False,
     lang: str = "en",
     chunk_duration: float = 30.0,
-    progress_callback = None
+    progress_callback = None,
+    original_metadata: Optional[Dict] = None
 ) -> Dict[str, Any]:
     """
     Memory-optimized analysis for large files using chunked processing.
@@ -3278,6 +3293,7 @@ def analyze_file_chunked(
         lang: Language for reports ('en' or 'es')
         chunk_duration: Duration of each chunk in seconds (default: 30s)
         progress_callback: Optional callback function(progress_value) for progress updates
+        original_metadata: Optional dict with original file metadata (sample_rate, bit_depth)
     
     Returns:
         Same structure as analyze_file() but with chunked=True flag
@@ -3297,16 +3313,23 @@ def analyze_file_chunked(
     file_size = path.stat().st_size
     
     
-    # Extract bit depth from subtype
-    subtype = file_info.subtype
-    bit_depth = 0
-    if 'PCM_' in subtype:
-        try:
-            bit_depth = int(subtype.split('_')[1])
-        except:
-            bit_depth = 16
-    elif 'FLOAT' in subtype:
-        bit_depth = 32
+    # Extract bit depth - USE ORIGINAL METADATA if provided
+    if original_metadata and original_metadata.get('bit_depth'):
+        bit_depth = original_metadata['bit_depth']
+        sr = original_metadata.get('sample_rate', sr)  # Also use original sample rate
+        print(f"✅ Using ORIGINAL metadata: {sr} Hz, {bit_depth}-bit")
+    else:
+        # Fallback to reading from current file
+        subtype = file_info.subtype
+        bit_depth = 0
+        if 'PCM_' in subtype:
+            try:
+                bit_depth = int(subtype.split('_')[1])
+            except:
+                bit_depth = 16
+        elif 'FLOAT' in subtype:
+            bit_depth = 32
+        print(f"📊 Using file metadata: {sr} Hz, {bit_depth}-bit")
     
     print(f"📁 File: {path.name}")
     print(f"📦 Chunk size: {chunk_duration} seconds")
