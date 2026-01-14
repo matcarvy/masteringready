@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Mix Analyzer v7.3.20 - PRODUCTION RELEASE  
+Mix Analyzer v7.3.21 - DEBUG RELEASE  
 =========================================
 
 ARCHITECTURE PRINCIPLES:
@@ -6126,10 +6126,16 @@ def main() -> None:
             print(f"❌ Error guardando JSON: {e}", file=sys.stderr)
 
     # PDF generation
+    print(f"🔍 DEBUG: args.pdf_path = {args.pdf_path}", flush=True)
+    print(f"🔍 DEBUG: len(reports_out) = {len(reports_out)}", flush=True)
+    
     if args.pdf_path:
+        print(f"🔍 DEBUG: Entrando a generación de PDF...", flush=True)
         pdf_path = Path(args.pdf_path).expanduser()
+        print(f"🔍 DEBUG: pdf_path expandido = {pdf_path}", flush=True)
         try:
             if len(reports_out) == 1:
+                print(f"🔍 DEBUG: Llamando a generate_complete_pdf()...", flush=True)
                 success = generate_complete_pdf(
                     reports_out[0],
                     str(pdf_path),
