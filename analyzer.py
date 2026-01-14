@@ -1,13 +1,20 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Mix Analyzer v7.3.28 - Original Metadata Preservation
+Mix Analyzer v7.3.29 - Faster MP3 Chunk Loading
 ======================================================
 
 ARCHITECTURE PRINCIPLES:
 1. Calculate scores LANGUAGE-NEUTRAL (no idioma en lógica)
 2. Freeze score before translation (score congelado)
 3. Translate messages with Matías Voice (del eBook "Mastering Ready")
+
+KEY FIX from v7.3.29:
+--------------------
+🚀 OPTIMIZATION: Added res_type='kaiser_fast' for faster chunk loading
+   • MP3 files decode faster with kaiser_fast resampling
+   • Reduces processing time for chunked analysis
+   • Especially important for compressed formats on Render (timeout prevention)
 
 KEY FIX from v7.3.28:
 --------------------
@@ -3368,12 +3375,14 @@ def analyze_file_chunked(
         print(f"📦 Chunk {i+1}/{num_chunks} (offset: {start_time:.1f}s, duration: {actual_chunk_duration:.1f}s)")
         
         # Load only this chunk (STEREO)
+        # Using res_type='kaiser_fast' for faster resampling (especially important for MP3)
         y, _ = librosa.load(
             str(path),
             sr=sr,
             offset=start_time,
             duration=actual_chunk_duration,
-            mono=False  # ← CRITICAL: Keep stereo
+            mono=False,  # ← CRITICAL: Keep stereo
+            res_type='kaiser_fast'  # ← Faster resampling for chunked analysis
         )
         
         # Ensure correct format (channels, samples)
