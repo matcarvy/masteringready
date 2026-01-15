@@ -2173,6 +2173,161 @@ by Matías Carvajal
         </div>
       </section>
 
+      {/* eBook Section */}
+      <section className="ebook-section" style={{
+        background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+        padding: '4rem 1.5rem',
+        borderTop: '1px solid #e2e8f0'
+      }}>
+        <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'minmax(0, 1fr)',
+            gap: '2rem',
+            alignItems: 'center'
+          }}>
+            {/* Content */}
+            <div style={{ textAlign: 'center' }}>
+              {/* Badge */}
+              <div style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                color: 'white',
+                padding: '0.5rem 1rem',
+                borderRadius: '9999px',
+                fontSize: '0.75rem',
+                fontWeight: '600',
+                marginBottom: '1.5rem',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em'
+              }}>
+                <span>📖</span>
+                <span>{lang === 'es' ? 'Profundiza en la metodología' : 'Go deeper into the methodology'}</span>
+              </div>
+
+              <h2 style={{
+                fontSize: 'clamp(1.75rem, 4vw, 2.25rem)',
+                fontWeight: '800',
+                color: '#1e293b',
+                marginBottom: '1rem',
+                lineHeight: '1.2'
+              }}>
+                {lang === 'es' 
+                  ? '¿Quieres dominar la preparación de mezclas?' 
+                  : 'Want to master mix preparation?'}
+              </h2>
+
+              <p style={{
+                fontSize: '1.125rem',
+                color: '#475569',
+                marginBottom: '1.5rem',
+                lineHeight: '1.7',
+                maxWidth: '600px',
+                margin: '0 auto 1.5rem'
+              }}>
+                {lang === 'es'
+                  ? 'El eBook "Mastering Ready" te enseña las decisiones que realmente importan al preparar una mezcla para mastering. No presets, no trucos rápidos—criterio profesional basado en +300 producciones.'
+                  : 'The "Mastering Ready" eBook teaches you the decisions that truly matter when preparing a mix for mastering. No presets, no quick tricks—professional judgment based on 300+ productions.'}
+              </p>
+
+              {/* Features list */}
+              <div style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                justifyContent: 'center',
+                gap: '1rem',
+                marginBottom: '2rem'
+              }}>
+                {[
+                  lang === 'es' ? 'Headroom y dinámica' : 'Headroom & dynamics',
+                  lang === 'es' ? 'Balance de frecuencias' : 'Frequency balance',
+                  lang === 'es' ? 'Errores comunes' : 'Common mistakes',
+                  lang === 'es' ? 'Checklist profesional' : 'Professional checklist'
+                ].map((feature, i) => (
+                  <div key={i} style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.375rem',
+                    background: 'white',
+                    padding: '0.5rem 1rem',
+                    borderRadius: '9999px',
+                    fontSize: '0.875rem',
+                    color: '#475569',
+                    border: '1px solid #e2e8f0',
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                  }}>
+                    <Check size={14} style={{ color: '#10b981' }} />
+                    <span>{feature}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* CTA Button */}
+              <a
+                href="https://payhip.com/b/TXrCn"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.75rem',
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  color: 'white',
+                  padding: '1rem 2rem',
+                  borderRadius: '0.75rem',
+                  fontWeight: '700',
+                  fontSize: '1.125rem',
+                  textDecoration: 'none',
+                  transition: 'all 0.2s',
+                  boxShadow: '0 4px 15px rgba(102, 126, 234, 0.35)'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-3px)'
+                  e.currentTarget.style.boxShadow = '0 8px 25px rgba(102, 126, 234, 0.45)'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)'
+                  e.currentTarget.style.boxShadow = '0 4px 15px rgba(102, 126, 234, 0.35)'
+                }}
+              >
+                <span>{lang === 'es' ? 'Ver eBook' : 'View eBook'}</span>
+                <span style={{
+                  background: 'rgba(255,255,255,0.2)',
+                  padding: '0.25rem 0.75rem',
+                  borderRadius: '9999px',
+                  fontSize: '0.875rem'
+                }}>
+                  $15 USD
+                </span>
+              </a>
+
+              {/* Discount badge */}
+              <div style={{
+                marginTop: '1rem',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                color: '#059669',
+                fontSize: '0.875rem',
+                fontWeight: '600'
+              }}>
+                <span style={{
+                  background: '#d1fae5',
+                  padding: '0.25rem 0.5rem',
+                  borderRadius: '0.25rem',
+                  fontSize: '0.75rem'
+                }}>
+                  -37%
+                </span>
+                <span>{lang === 'es' ? 'Precio especial por tiempo limitado' : 'Limited time special price'}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Footer */}
       <footer className="footer-section" style={{
         background: 'linear-gradient(to bottom, #1e1b4b 0%, #312e81 100%)',
@@ -2816,6 +2971,11 @@ by Matías Carvajal
         .footer-section {
           padding: 2.5rem 1.5rem 1.75rem;
         }
+
+        /* eBook Section */
+        .ebook-section {
+          padding: 4rem 1.5rem;
+        }
         
         .footer-grid {
           gap: 2.5rem;
@@ -2906,6 +3066,11 @@ by Matías Carvajal
           /* Footer - espaciado mejorado */
           .footer-section {
             padding: 1.75rem 1.5rem 1.5rem;
+          }
+
+          /* eBook Section - mobile */
+          .ebook-section {
+            padding: 3rem 1.5rem;
           }
           
           .footer-grid {
