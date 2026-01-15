@@ -1,13 +1,30 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Mix Analyzer v7.3.29 - Faster MP3 Chunk Loading
+Mix Analyzer v7.3.30 - Temporal Analysis Improvements
 ======================================================
 
 ARCHITECTURE PRINCIPLES:
 1. Calculate scores LANGUAGE-NEUTRAL (no idioma en lógica)
 2. Freeze score before translation (score congelado)
 3. Translate messages with Matías Voice (del eBook "Mastering Ready")
+
+KEY FIX from v7.3.30:
+--------------------
+🔧 TEMPORAL ANALYSIS IMPROVEMENTS:
+   • Correlation >0.97 for "casi mono" (was 0.95) - 85% is NOT "almost mono"
+   • M/S >1.8 for "too wide" in normal mode (was 1.5)
+   • M/S >1.5 for "too wide" in strict mode (was 1.2)
+   • Minimum region duration: 8 seconds (ignore shorter regions as noise)
+   • Exclude intro/outro: first and last 5 seconds excluded from analysis
+   • Added filter_temporal_regions() helper function
+   
+   Why these changes:
+   • Correlation 85% is healthy centered stereo, not "almost mono"
+   • Only >97% correlation is truly mono-like (very narrow stereo)
+   • M/S 1.3-1.5 is common in modern mixes, shouldn't trigger warnings
+   • Short regions (<8s) are usually transitions, not real problems
+   • Intro/outro often have different stereo characteristics (intentional)
 
 KEY FIX from v7.3.29:
 --------------------
@@ -63,9 +80,9 @@ KEY FIX from v7.3.20:
 KEY FIX from v7.3.19:
 --------------------
 🐛 CRITICAL: Fixed "practically mono" message in DETAILED ANALYSIS section
-   • Fixed lines 4771 and 5004: Now checks BOTH M/S < 0.05 AND correlation > 95%
+   • Fixed lines 4771 and 5004: Now checks BOTH M/S < 0.05 AND correlation > 97%
    • Before: M/S < 0.05 alone triggered "practically mono" warning
-   • After: Only warns if M/S < 0.05 AND correlation > 95% (truly mono)
+   • After: Only warns if M/S < 0.05 AND correlation > 97% (truly mono)
    • For M/S < 0.05 but corr 70-95%: No warning shown (valid centered stereo)
    • This fixes the "CAMPO ESTÉREO - Análisis Detallado" section in reports
 
@@ -73,7 +90,7 @@ KEY FIX from v7.3.18:
 --------------------
 🐛 CORRELATION INTERPRETATION FIXES
    • Fixed "casi mono" message - now properly distinguishes between ranges:
-     - >95%: "Imagen muy centrada (casi mono)" (truly near-mono)
+     - >97%: "Imagen muy centrada (casi mono)" (truly near-mono)
      - 90-95%: "Muy centrado" (centered but not mono)
      - 70-90%: "Buena mono-compatibilidad" (healthy stereo, PERFECT range)
    • Improved M/S ratio + correlation combined analysis
@@ -437,13 +454,13 @@ class ScoringThresholds:
         "strict": {
             "perfect": lambda corr: 0.75 <= corr <= 0.85,  # Más estrecho que normal
             "pass": lambda corr: (0.70 <= corr < 0.75) or (0.85 < corr <= 0.90),
-            "warning": lambda corr: (0.60 <= corr < 0.70) or (0.90 < corr <= 0.95) or (-0.2 < corr < 0.60),
+            "warning": lambda corr: (0.60 <= corr < 0.70) or (0.90 < corr <= 0.97) or (-0.2 < corr < 0.60),  # v7.3.30: 0.95→0.97
             "critical": lambda corr: -0.5 <= corr <= -0.2,
             "catastrophic": lambda corr: corr < -0.5,  # Antifase severa
         },
         "normal": {
-            "perfect": lambda corr: 0.7 <= corr <= 0.95,
-            "pass": lambda corr: (0.5 <= corr < 0.7) or (0.95 < corr <= 1.0),
+            "perfect": lambda corr: 0.7 <= corr <= 0.97,  # v7.3.30: 0.95→0.97 (85% no es "casi mono")
+            "pass": lambda corr: (0.5 <= corr < 0.7) or (0.97 < corr <= 1.0),  # v7.3.30: 0.95→0.97
             "warning": lambda corr: (0.3 <= corr < 0.5) or (-0.2 < corr <= 0.3),
             "critical": lambda corr: -0.5 <= corr <= -0.2,
             "catastrophic": lambda corr: corr < -0.5,  # Antifase severa
@@ -922,6 +939,72 @@ def format_timestamp(seconds: float) -> str:
     return f"{minutes}:{secs:02d}"
 
 
+# ============================================
+# TEMPORAL ANALYSIS FILTERS (v7.3.30)
+# ============================================
+# Constants for filtering noise in temporal analysis
+MIN_REGION_DURATION = 8.0  # Ignore regions shorter than 8 seconds
+INTRO_OUTRO_EXCLUDE = 5.0  # Exclude first and last 5 seconds
+
+def filter_temporal_regions(
+    regions: List[Dict[str, Any]], 
+    track_duration: float,
+    min_duration: float = MIN_REGION_DURATION,
+    exclude_intro_outro: float = INTRO_OUTRO_EXCLUDE
+) -> List[Dict[str, Any]]:
+    """
+    Filter temporal analysis regions to reduce noise.
+    
+    Removes:
+    - Regions shorter than min_duration (default 8s)
+    - Regions entirely within intro (first 5s) or outro (last 5s)
+    
+    Args:
+        regions: List of region dicts with start_seconds, end_seconds
+        track_duration: Total track duration in seconds
+        min_duration: Minimum region duration to keep (default 8s)
+        exclude_intro_outro: Seconds to exclude from start/end (default 5s)
+    
+    Returns:
+        Filtered list of regions
+    """
+    if not regions:
+        return []
+    
+    filtered = []
+    
+    for region in regions:
+        start = region.get('start_seconds', 0)
+        end = region.get('end_seconds', start)
+        duration = end - start + 5.0  # Add window duration since end is window start
+        
+        # Skip if too short
+        if duration < min_duration:
+            continue
+        
+        # Skip if entirely in intro
+        if end < exclude_intro_outro:
+            continue
+        
+        # Skip if entirely in outro
+        if start > (track_duration - exclude_intro_outro):
+            continue
+        
+        # Adjust region boundaries if they extend into intro/outro
+        adjusted_start = max(start, exclude_intro_outro)
+        adjusted_end = min(end, track_duration - exclude_intro_outro)
+        
+        # Check if adjusted region is still long enough
+        adjusted_duration = adjusted_end - adjusted_start + 5.0
+        if adjusted_duration < min_duration:
+            continue
+        
+        # Keep the region (with original timestamps for user reference)
+        filtered.append(region)
+    
+    return filtered
+
+
 def format_temporal_message(temporal_data: Dict[str, Any], parameter_name: str, lang: str = 'en') -> str:
     """
     Format temporal analysis data into human-readable message.
@@ -1120,9 +1203,16 @@ def analyze_correlation_temporal(y: np.ndarray, sr: int, threshold: float = 0.3)
     """
     Temporal analysis of stereo correlation.
     Detects REGIONS where correlation is problematic (not just individual moments).
+    
+    v7.3.30: Added filtering for:
+    - Regions < 8 seconds (noise)
+    - Intro (first 5s) and outro (last 5s)
     """
     if y.shape[0] < 2:
         return {"severity": "none", "affected_percentage": 0.0, "problem_regions": [], "total_regions": 0}
+    
+    # Calculate track duration for filtering
+    track_duration = y.shape[1] / sr
     
     # Window-based analysis (5 second windows)
     window_duration = 5.0
@@ -1184,8 +1274,15 @@ def analyze_correlation_temporal(y: np.ndarray, sr: int, threshold: float = 0.3)
             "end_seconds": current_region_end
         })
     
+    # v7.3.30: Filter regions (min duration 8s, exclude intro/outro 5s)
+    problem_regions = filter_temporal_regions(problem_regions, track_duration)
+    
     affected_percentage = (len(problem_windows) / total_windows * 100) if total_windows > 0 else 0
     severity = "widespread" if affected_percentage >= 20 else "localized"
+    
+    # If all regions were filtered out, set severity to none
+    if not problem_regions:
+        severity = "none"
     
     return {
         "severity": severity,
@@ -1200,9 +1297,16 @@ def analyze_lr_balance_temporal(y: np.ndarray, sr: int, threshold: float = 3.0) 
     """
     Temporal analysis of L/R balance.
     Detects REGIONS where balance exceeds threshold (not just individual moments).
+    
+    v7.3.30: Added filtering for:
+    - Regions < 8 seconds (noise)
+    - Intro (first 5s) and outro (last 5s)
     """
     if y.shape[0] < 2:
         return {"severity": "none", "affected_percentage": 0.0, "problem_regions": [], "total_regions": 0}
+    
+    # Calculate track duration for filtering
+    track_duration = y.shape[1] / sr
     
     # Window-based analysis (5 second windows)
     window_duration = 5.0
@@ -1264,8 +1368,15 @@ def analyze_lr_balance_temporal(y: np.ndarray, sr: int, threshold: float = 3.0) 
             "end_seconds": current_region_end
         })
     
+    # v7.3.30: Filter regions (min duration 8s, exclude intro/outro 5s)
+    problem_regions = filter_temporal_regions(problem_regions, track_duration)
+    
     affected_percentage = (len(problem_windows) / total_windows * 100) if total_windows > 0 else 0
     severity = "widespread" if affected_percentage >= 20 else "localized"
+    
+    # If all regions were filtered out, set severity to none
+    if not problem_regions:
+        severity = "none"
     
     return {
         "severity": severity,
@@ -1280,9 +1391,16 @@ def analyze_ms_ratio_temporal(y: np.ndarray, sr: int, low_threshold: float = 0.0
     """
     Temporal analysis of M/S ratio.
     Detects REGIONS where M/S ratio is problematic (too low or too high).
+    
+    v7.3.30: Added filtering for:
+    - Regions < 8 seconds (noise)
+    - Intro (first 5s) and outro (last 5s)
     """
     if y.shape[0] < 2:
         return {"severity": "none", "affected_percentage": 0.0, "problem_regions": [], "total_regions": 0}
+    
+    # Calculate track duration for filtering
+    track_duration = y.shape[1] / sr
     
     # Window-based analysis (5 second windows)
     window_duration = 5.0
@@ -1351,8 +1469,15 @@ def analyze_ms_ratio_temporal(y: np.ndarray, sr: int, low_threshold: float = 0.0
             "end_seconds": current_region_end
         })
     
+    # v7.3.30: Filter regions (min duration 8s, exclude intro/outro 5s)
+    problem_regions = filter_temporal_regions(problem_regions, track_duration)
+    
     affected_percentage = (len(problem_windows) / total_windows * 100) if total_windows > 0 else 0
     severity = "widespread" if affected_percentage >= 20 else "localized"
+    
+    # If all regions were filtered out, set severity to none
+    if not problem_regions:
+        severity = "none"
     
     return {
         "severity": severity,
@@ -1385,8 +1510,8 @@ def evaluate_stereo_field_comprehensive(corr: float, ms_ratio: float, lr_balance
     # Check M/S Ratio
     if ms_ratio < 0.05:
         # M/S ratio muy bajo sugiere poca información Side, PERO debemos considerar correlación también
-        # CORRELACIÓN: +1.0 = mono puro, 0.95-1.0 = casi mono, 0.7-0.95 = estéreo saludable
-        if corr > 0.95:  # Solo si correlación es MUY alta (>95%) = verdaderamente mono
+        # CORRELACIÓN: +1.0 = mono puro, 0.97-1.0 = casi mono, 0.7-0.95 = estéreo saludable
+        if corr > 0.97:  # Solo si correlación es MUY alta (>97%) = verdaderamente mono
             if lang == 'es':
                 context_parts.append("⚠️ La mezcla no tiene información estéreo (prácticamente mono). ¿Es intencional? Verifica si exportaste en mono por error.")
             else:
@@ -2370,7 +2495,7 @@ def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, s
     # Strict mode uses more demanding thresholds for temporal analysis
     corr_threshold = 0.5 if strict else 0.3
     ms_low_threshold = 0.1 if strict else 0.05
-    ms_high_threshold = 1.2 if strict else 1.5
+    ms_high_threshold = 1.5 if strict else 1.8  # FIX: Was 1.2/1.5, now 1.5/1.8 (more permissive)
     lr_threshold = 2.0 if strict else 3.0
     
     if corr < 0.5:  # Analyze if correlation is problematic
@@ -3530,7 +3655,7 @@ def analyze_file_chunked(
                 # - negative_severe (<-0.2): Critical phase inversion
                 window_corr = stereo_correlation(window)
                 
-                if window_corr > 0.95:
+                if window_corr > 0.97:
                     # Nearly mono
                     results['correlation_problem_chunks'].append({
                         'chunk': i + 1,
@@ -4928,8 +5053,8 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
             # Check M/S Ratio issues
             if ms_ratio < 0.05:
                 # M/S ratio muy bajo, pero debemos verificar correlación también
-                # Solo es "prácticamente mono" si AMBOS M/S bajo Y correlación muy alta (>95%)
-                if corr > 0.95:
+                # Solo es "prácticamente mono" si AMBOS M/S bajo Y correlación muy alta (>97%)
+                if corr > 0.97:
                     # Verdaderamente casi mono
                     has_stereo_issue = True
                     stereo_issues.append(
@@ -5162,8 +5287,8 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
             # Check M/S Ratio issues
             if ms_ratio < 0.05:
                 # M/S ratio very low, but we must also check correlation
-                # Only "practically mono" if BOTH low M/S AND very high correlation (>95%)
-                if corr > 0.95:
+                # Only "practically mono" if BOTH low M/S AND very high correlation (>97%)
+                if corr > 0.97:
                     # Truly almost mono
                     has_stereo_issue = True
                     stereo_issues.append(
