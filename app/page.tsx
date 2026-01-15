@@ -2287,6 +2287,20 @@ by Matías Carvajal
                 ))}
               </div>
 
+              {/* Closing line - human touch */}
+              <p style={{
+                fontSize: '1rem',
+                color: '#64748b',
+                fontStyle: 'italic',
+                marginBottom: '1.5rem',
+                maxWidth: '500px',
+                margin: '0 auto 1.5rem'
+              }}>
+                {lang === 'es'
+                  ? 'Si mezclas música y quieres que el mastering funcione como debería, este libro es para ti.'
+                  : 'If you mix music and want mastering to work the way it should, this book is for you.'}
+              </p>
+
               {/* CTA Button */}
               <a
                 href="https://payhip.com/b/TXrCn"
@@ -2320,25 +2334,41 @@ by Matías Carvajal
                 <span>15 USD</span>
               </a>
 
-              {/* Discount badge */}
+              {/* Discount info - separated */}
               <div style={{
                 marginTop: '1rem',
-                display: 'inline-flex',
+                display: 'flex',
+                flexDirection: 'column',
                 alignItems: 'center',
-                gap: '0.5rem',
-                color: '#059669',
-                fontSize: '0.875rem',
-                fontWeight: '600'
+                gap: '0.375rem'
               }}>
-                <span style={{
-                  background: '#d1fae5',
-                  padding: '0.25rem 0.5rem',
-                  borderRadius: '0.25rem',
-                  fontSize: '0.75rem'
+                <div style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  color: '#059669',
+                  fontSize: '0.875rem',
+                  fontWeight: '600'
                 }}>
-                  -37%
-                </span>
-                <span>{lang === 'es' ? 'Precio especial por tiempo limitado' : 'Limited-time special price'}</span>
+                  <span style={{
+                    background: '#d1fae5',
+                    padding: '0.25rem 0.5rem',
+                    borderRadius: '0.25rem',
+                    fontSize: '0.75rem'
+                  }}>
+                    -37%
+                  </span>
+                  <span>{lang === 'es' ? 'Precio especial por tiempo limitado' : 'Limited-time special price'}</span>
+                </div>
+                <p style={{
+                  fontSize: '0.8rem',
+                  color: '#64748b',
+                  margin: 0
+                }}>
+                  {lang === 'es' 
+                    ? '15 USD hasta el 31 de enero con código READY15'
+                    : '15 USD until January 31 with code READY15'}
+                </p>
               </div>
             </div>
           </div>
@@ -2451,6 +2481,25 @@ by Matías Carvajal
                     ? 'Análisis profesional de mezclas basado en la metodología Mastering Ready.'
                     : 'Professional mix analysis based on the Mastering Ready methodology.'}
                 </p>
+                <a 
+                  href="https://payhip.com/b/TXrCn"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ 
+                    color: 'rgba(255, 255, 255, 0.7)', 
+                    textDecoration: 'none',
+                    fontSize: '0.875rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    transition: 'color 0.2s'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.color = '#ffffff'}
+                  onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)'}
+                >
+                  <span>📖</span>
+                  <span>{lang === 'es' ? 'Profundiza en el eBook' : 'Learn more in the eBook'}</span>
+                </a>
                 <a 
                   href="https://www.masteringready.com"
                   target="_blank"
