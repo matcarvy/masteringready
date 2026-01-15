@@ -48,7 +48,6 @@ export async function compressAudioFile(
     duration: audioBuffer.duration
   }
   
-  console.log('📊 Original file metadata:', originalMetadata)
   // ============================================================
   
   // If file is already under limit, return as-is with original metadata
@@ -85,7 +84,6 @@ export async function compressAudioFile(
     targetSampleRate = 48000
   }
   
-  console.log(`🔄 Compressing: ${originalMetadata.sampleRate}Hz → ${targetSampleRate}Hz`)
   
   // Create offline context for resampling
   const offlineContext = new OfflineAudioContext(
