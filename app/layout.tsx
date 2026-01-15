@@ -20,22 +20,22 @@ export const metadata: Metadata = {
   // BASIC META
   // ─────────────────────────────────────────────────────────────────────────────
   title: {
-    default: '¿Tu mezcla está lista para mastering? | Mastering Ready',
+    default: 'Is your mix ready for mastering? | Mastering Ready',
     template: '%s | Mastering Ready'
   },
-  description: 'Analiza tu mezcla en 60 segundos. Detecta problemas de headroom, LUFS, true peak y balance antes de enviarla a mastering. Metodología probada en +300 producciones profesionales.',
+  description: 'Analyze your mix in 60 seconds. Detect headroom, LUFS, true peak and balance issues before sending to mastering. Methodology proven in 300+ professional productions.',
   keywords: [
-    'análisis de mezcla',
-    'preparar mezcla para mastering',
+    'mix analysis',
+    'prepare mix for mastering',
     'headroom',
     'LUFS',
     'true peak',
-    'balance estéreo',
+    'stereo balance',
     'mix analyzer',
     'audio analysis',
     'mastering preparation',
-    'mezcla profesional',
-    'ingeniería de audio',
+    'professional mix',
+    'audio engineering',
     'pre-mastering checklist'
   ],
   authors: [{ name: siteConfig.author, url: 'https://matcarvy.com' }],
@@ -63,14 +63,14 @@ export const metadata: Metadata = {
     alternateLocale: siteConfig.locale.alternate,
     url: siteConfig.url,
     siteName: siteConfig.name,
-    title: '¿Tu mezcla está lista para mastering?',
-    description: 'Análisis técnico en 60 segundos. Headroom, LUFS, True Peak, balance estéreo y más. Metodología probada en +300 producciones.',
+    title: 'Is your mix ready for mastering?',
+    description: 'Technical analysis in 60 seconds. Headroom, LUFS, True Peak, stereo balance and more. Methodology proven in 300+ productions.',
     images: [
       {
         url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'Mastering Ready - Analiza tu mezcla antes del mastering',
+        alt: 'Mastering Ready - Analyze your mix before mastering',
         type: 'image/png'
       }
     ]
@@ -81,8 +81,8 @@ export const metadata: Metadata = {
   // ─────────────────────────────────────────────────────────────────────────────
   twitter: {
     card: 'summary_large_image',
-    title: '¿Tu mezcla está lista para mastering?',
-    description: 'Análisis técnico en 60 segundos. Headroom, LUFS, True Peak y más. Metodología probada en +300 producciones.',
+    title: 'Is your mix ready for mastering?',
+    description: 'Technical analysis in 60 seconds. Headroom, LUFS, True Peak and more. Methodology proven in 300+ productions.',
     site: siteConfig.twitter,
     creator: siteConfig.twitter,
     images: ['/og-image.png']
@@ -161,16 +161,16 @@ const structuredData = {
       name: 'Matías Carvajal',
       url: 'https://matcarvy.com'
     },
-    description: 'Analiza tu mezcla de audio en 60 segundos. Detecta problemas de headroom, LUFS, true peak y balance estéreo antes de enviarla a mastering.',
+    description: 'Analyze your audio mix in 60 seconds. Detect headroom, LUFS, true peak and stereo balance issues before sending to mastering.',
     url: 'https://masteringready.com',
     screenshot: 'https://masteringready.com/og-image.png',
     featureList: [
-      'Análisis de Headroom',
-      'Medición LUFS',
+      'Headroom Analysis',
+      'LUFS Measurement',
       'True Peak Detection',
-      'Balance Estéreo',
-      'Análisis de Frecuencias',
-      'Reporte PDF descargable'
+      'Stereo Balance',
+      'Frequency Analysis',
+      'Downloadable PDF Report'
     ]
   },
 
@@ -178,38 +178,38 @@ const structuredData = {
   howTo: {
     '@context': 'https://schema.org',
     '@type': 'HowTo',
-    name: 'Cómo analizar tu mezcla antes del mastering',
-    description: 'Guía paso a paso para verificar que tu mezcla está lista para mastering profesional usando Mastering Ready.',
+    name: 'How to analyze your mix before mastering',
+    description: 'Step-by-step guide to verify your mix is ready for professional mastering using Mastering Ready.',
     totalTime: 'PT2M',
     tool: [
       {
         '@type': 'HowToTool',
-        name: 'Archivo de audio (WAV, MP3 o AIFF)'
+        name: 'Audio file (WAV, MP3 or AIFF)'
       }
     ],
     step: [
       {
         '@type': 'HowToStep',
-        name: 'Sube tu mezcla',
-        text: 'Arrastra y suelta tu archivo de audio (WAV, MP3 o AIFF, máximo 50MB) en el analizador.',
+        name: 'Upload your mix',
+        text: 'Drag and drop your audio file (WAV, MP3 or AIFF, max 50MB) into the analyzer.',
         position: 1
       },
       {
         '@type': 'HowToStep',
-        name: 'Espera el análisis',
-        text: 'El sistema analiza headroom, LUFS, true peak, balance estéreo y frecuencias en menos de 60 segundos.',
+        name: 'Wait for analysis',
+        text: 'The system analyzes headroom, LUFS, true peak, stereo balance and frequencies in under 60 seconds.',
         position: 2
       },
       {
         '@type': 'HowToStep',
-        name: 'Revisa los resultados',
-        text: 'Obtén un puntaje de 0-100 con interpretaciones y recomendaciones específicas para tu mezcla.',
+        name: 'Review results',
+        text: 'Get a score from 0-100 with interpretations and specific recommendations for your mix.',
         position: 3
       },
       {
         '@type': 'HowToStep',
-        name: 'Descarga el reporte',
-        text: 'Genera un PDF profesional con todos los detalles técnicos para compartir o archivar.',
+        name: 'Download report',
+        text: 'Generate a professional PDF with all technical details to share or archive.',
         position: 4
       }
     ]
@@ -238,16 +238,16 @@ const structuredData = {
   product: {
     '@context': 'https://schema.org',
     '@type': 'Book',
-    name: 'Mastering Ready — Asegura el éxito de tu mastering desde la mezcla',
+    name: 'Mastering Ready — Ensure mastering success from the mix',
     author: {
       '@type': 'Person',
       name: 'Matías Carvajal'
     },
-    description: 'Guía para entender qué decisiones importan realmente cuando preparas una mezcla para mastering. Aprende a entregar mezclas claras, estables y bien preparadas.',
+    description: 'A guide to understanding which decisions truly matter when preparing a mix for mastering. Learn to deliver clear, stable, and well-prepared mixes.',
     url: 'https://payhip.com/b/TXrCn',
     offers: {
       '@type': 'Offer',
-      price: '23.99',
+      price: '15',
       priceCurrency: 'USD',
       availability: 'https://schema.org/InStock'
     },
