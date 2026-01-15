@@ -2400,6 +2400,20 @@ by Matías Carvajal
                     ? '15 USD hasta el 31 de enero con código READY15'
                     : '15 USD until January 31 with code READY15'}
                 </p>
+                <p style={{
+                  fontSize: '0.75rem',
+                  color: '#94a3b8',
+                  margin: '0.5rem 0 0 0',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.375rem'
+                }}>
+                  <span>📘</span>
+                  {lang === 'es' 
+                    ? 'Disponible en español. Al comprar tendrás acceso a la versión en inglés cuando esté disponible.'
+                    : 'Currently in Spanish. Purchase now and get access to the English version when released.'}
+                </p>
               </div>
             </div>
           </div>
