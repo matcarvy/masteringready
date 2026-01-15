@@ -274,6 +274,38 @@ function Home() {
     }
   }
 
+  // File validation helper
+  const validateFile = (file: File): { valid: boolean; error?: string } => {
+    const maxSize = 500 * 1024 * 1024 // 500MB
+    const allowedTypes = ['audio/wav', 'audio/mpeg', 'audio/mp3', 'audio/aiff', 'audio/x-aiff']
+    const allowedExtensions = ['.wav', '.mp3', '.aiff']
+    
+    const fileName = file.name.toLowerCase()
+    const hasValidExtension = allowedExtensions.some(ext => fileName.endsWith(ext))
+    const hasValidType = allowedTypes.includes(file.type) || hasValidExtension
+    
+    if (!hasValidType) {
+      return {
+        valid: false,
+        error: lang === 'es'
+          ? `Formato no soportado. Por favor, usa archivos WAV, MP3 o AIFF.`
+          : `Unsupported format. Please use WAV, MP3 or AIFF files.`
+      }
+    }
+    
+    if (file.size > maxSize) {
+      const sizeMB = (file.size / (1024 * 1024)).toFixed(1)
+      return {
+        valid: false,
+        error: lang === 'es'
+          ? `Archivo muy grande (${sizeMB}MB). El tamaño máximo es 500MB.`
+          : `File too large (${sizeMB}MB). Maximum size is 500MB.`
+      }
+    }
+    
+    return { valid: true }
+  }
+
 const handleAnalyze = async () => {
   if (!file) return
   setLoading(true)
@@ -302,8 +334,6 @@ const handleAnalyze = async () => {
         setCompressionProgress(100)
         
         if (compressed) {
-          console.log(`Compressed: ${(originalSize/1024/1024).toFixed(1)}MB → ${(newSize/1024/1024).toFixed(1)}MB`)
-          console.log('📊 Original metadata captured:', metadata)
         }
         
         fileToAnalyze = compressedFile
@@ -326,7 +356,6 @@ const handleAnalyze = async () => {
     }
     
     // START ANALYSIS (returns job_id immediately)
-    console.log('🚀 Starting analysis with polling...')
     const startData = await startAnalysisPolling(fileToAnalyze, { 
       lang, 
       mode, 
@@ -338,7 +367,6 @@ const handleAnalyze = async () => {
     // Store request ID for PDF download
     requestIdRef.current = jobId
     
-    console.log(`🆔 Job ID: ${jobId}`)
     setProgress(10)
     
     // POLL FOR RESULT
@@ -353,24 +381,22 @@ const handleAnalyze = async () => {
           try {
             const statusData = await getAnalysisStatus(jobId)
             
-            console.log(`📊 Poll ${pollAttempts}: ${statusData.status} - ${statusData.progress}%`)
             
             // Update progress bar (don't allow it to go backwards)
             setProgress(prev => Math.max(prev, statusData.progress || 0))
             
             if (statusData.status === 'complete') {
               clearInterval(pollInterval)
-              console.log('✅ Analysis complete!')
               resolve(statusData.result)
               
             } else if (statusData.status === 'error') {
               clearInterval(pollInterval)
-              console.error('❌ Analysis error:', statusData.error)
+              console.error('Analysis error:', statusData.error)
               reject(new Error(statusData.error || 'Analysis failed'))
               
             } else if (pollAttempts >= maxPollAttempts) {
               clearInterval(pollInterval)
-              console.error('⏱️ Polling timeout')
+              console.error('Polling timeout')
               reject(new Error(
                 lang === 'es'
                   ? 'El análisis está tardando más de lo esperado. Por favor, intenta de nuevo.'
@@ -380,7 +406,7 @@ const handleAnalyze = async () => {
             
           } catch (pollError: any) {
             clearInterval(pollInterval)
-            console.error('❌ Polling error:', pollError)
+            console.error('Polling error:', pollError)
             reject(pollError)
           }
           
@@ -393,8 +419,6 @@ const handleAnalyze = async () => {
     
     setProgress(100)
     setResult(data)
-    console.log('🔍 RESULT:', data)
-    console.log('🔍 Has interpretations:', !!data.interpretations)
     
     // Scroll to results
     setTimeout(() => {
@@ -631,14 +655,14 @@ ${new Date().toLocaleDateString()}
 
   const handleDownloadFull = async () => {
     if (!result) {
-      console.error('❌ No result available')
+      console.error('No result available')
       alert(lang === 'es' ? 'Error: análisis no disponible' : 'Error: analysis not available')
       return
     }
 
     // Verify that analysis is actually complete
     if (!result.score || !result.verdict) {
-      console.error('❌ Analysis incomplete, missing score or verdict')
+      console.error('Analysis incomplete, missing score or verdict')
       alert(lang === 'es' 
         ? 'El análisis aún no está completo. Por favor espera unos segundos.' 
         : 'Analysis not yet complete. Please wait a few seconds.')
@@ -648,10 +672,6 @@ ${new Date().toLocaleDateString()}
     try {
       // Try PDF first if endpoint is available
       if (requestIdRef.current) {
-        console.log('📄 Attempting PDF download...')
-        console.log('🆔 Request ID:', requestIdRef.current)
-        console.log('🌍 Language:', lang)
-        console.log('📊 Score:', result.score, 'Verdict:', result.verdict)
         
         try {
           const formData = new FormData()
@@ -661,14 +681,12 @@ ${new Date().toLocaleDateString()}
           // Use full backend URL instead of relative path
           const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'https://masteringready.onrender.com'
           const pdfUrl = `${backendUrl}/api/download/pdf`
-          console.log('🔗 Calling:', pdfUrl)
           
           const response = await fetch(pdfUrl, {
             method: 'POST',
             body: formData
           })
 
-          console.log('📡 Response status:', response.status)
 
           if (response.ok) {
             // PDF download successful
@@ -683,23 +701,18 @@ ${new Date().toLocaleDateString()}
             document.body.removeChild(a)
             URL.revokeObjectURL(url)
             
-            console.log('✅ PDF downloaded successfully')
             return
           } else {
             const errorText = await response.text()
-            console.error('❌ PDF error response:', errorText)
-            console.warn('⚠️ PDF endpoint returned error, falling back to TXT')
+            console.error('PDF error response:', errorText)
           }
         } catch (pdfError) {
-          console.error('❌ PDF exception:', pdfError)
-          console.warn('⚠️ PDF download failed, falling back to TXT')
+          console.error('PDF exception:', pdfError)
         }
       } else {
-        console.warn('⚠️ No request ID available, skipping PDF, using TXT')
       }
       
       // Fallback to TXT download
-      console.log('📄 Downloading complete TXT report...')
       
       const content = `${'═'.repeat(50)}
    MASTERINGREADY - ${lang === 'es' ? 'Reporte Completo' : 'Complete Report'}
@@ -741,11 +754,10 @@ by Matías Carvajal
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
       
-      console.log('✅ TXT downloaded successfully')
       
     } catch (error) {
       // Only show error if TXT download also failed
-      console.error('❌ Complete download failed:', error)
+      console.error('Complete download failed:', error)
       alert(lang === 'es' 
         ? 'Error al descargar archivo. Por favor intenta de nuevo.' 
         : 'Error downloading file. Please try again.')
@@ -1221,6 +1233,15 @@ by Matías Carvajal
                     
                     if (!loading && e.dataTransfer.files && e.dataTransfer.files[0]) {
                       const droppedFile = e.dataTransfer.files[0]
+                      
+                      // Validate file
+                      const validation = validateFile(droppedFile)
+                      if (!validation.valid) {
+                        setError(validation.error || null)
+                        return
+                      }
+                      
+                      setError(null)
                       setFile(droppedFile)
                       
                       // Scroll to analyze section
@@ -1261,10 +1282,20 @@ by Matías Carvajal
                     accept=".wav,.mp3,.aiff"
                     onChange={(e) => {
                       const selectedFile = e.target.files?.[0] || null
-                      setFile(selectedFile)
                       
-                      // Scroll to analyze section when file is selected
                       if (selectedFile) {
+                        // Validate file
+                        const validation = validateFile(selectedFile)
+                        if (!validation.valid) {
+                          setError(validation.error || null)
+                          e.target.value = '' // Reset input
+                          return
+                        }
+                        
+                        setError(null)
+                        setFile(selectedFile)
+                        
+                        // Scroll to analyze section when file is selected
                         setTimeout(() => {
                           const analyzeSection = document.getElementById('analyze-section')
                           if (analyzeSection) {
@@ -1290,7 +1321,7 @@ by Matías Carvajal
                       : 'Drag and drop or click to select'}
                   </p>
                   <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.5rem' }}>
-                    WAV, MP3 o AIFF (máx 50MB)
+                    {lang === 'es' ? 'WAV, MP3 o AIFF (máx 500MB)' : 'WAV, MP3 or AIFF (max 500MB)'}
                   </p>
                   <div style={{
                     display: 'flex',
