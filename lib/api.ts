@@ -87,9 +87,7 @@ export async function startAnalysisPolling(
   // ============================================================
   if (options.originalMetadata) {
     formData.append('original_metadata_json', JSON.stringify(options.originalMetadata))
-    console.log('📊 Sending original metadata:', options.originalMetadata)
   } else {
-    console.warn('⚠️ No original metadata provided - will use compressed file metadata')
   }
   // ============================================================
 
