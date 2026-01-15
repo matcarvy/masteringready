@@ -866,7 +866,6 @@ def calculate_ms_ratio(y: np.ndarray, debug: bool = False) -> Tuple[float, float
     
     L, R = y[0], y[1]
     
-    # DEBUG: Check if L and R are identical
     if debug:
         import sys
         l_r_diff = np.abs(L - R)
@@ -876,12 +875,6 @@ def calculate_ms_ratio(y: np.ndarray, debug: bool = False) -> Tuple[float, float
         total_samples = len(L)
         identical_percentage = (identical_samples / total_samples) * 100
         
-        print(f"\n🔍 M/S DEBUG:", file=sys.stderr)
-        print(f"   L channel RMS: {np.sqrt(np.mean(L**2)):.6f}", file=sys.stderr)
-        print(f"   R channel RMS: {np.sqrt(np.mean(R**2)):.6f}", file=sys.stderr)
-        print(f"   Max L-R difference: {max_diff:.6f}", file=sys.stderr)
-        print(f"   Mean L-R difference: {mean_diff:.6f}", file=sys.stderr)
-        print(f"   Identical samples: {identical_percentage:.1f}%", file=sys.stderr)
     
     mid = (L + R) / 2
     side = (L - R) / 2
@@ -890,9 +883,6 @@ def calculate_ms_ratio(y: np.ndarray, debug: bool = False) -> Tuple[float, float
     side_rms = float(np.sqrt(np.mean(side**2)))
     
     if debug:
-        print(f"   Mid RMS: {mid_rms:.6f}", file=sys.stderr)
-        print(f"   Side RMS: {side_rms:.6f}", file=sys.stderr)
-        print(f"   M/S Ratio: {side_rms / (mid_rms + 1e-12):.6f}", file=sys.stderr)
         sys.stderr.flush()
     
     # Avoid division by zero
@@ -2573,12 +2563,7 @@ def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, s
     
     # ========== NEW: Generate interpretative texts ==========
     interpretations = None
-    print(f"🔍 DEBUG: HAS_INTERPRETATIVE_TEXTS = {HAS_INTERPRETATIVE_TEXTS}", flush=True)
     if HAS_INTERPRETATIVE_TEXTS:
-        print(f"🔍 DEBUG: Inside interpretations block", flush=True)
-        print(f"   peak: {peak}", flush=True)
-        print(f"   tp: {tp}", flush=True)
-        print(f"   plr: {plr}", flush=True)
         try:
             # Extract key metrics for interpretation
             interpretation_metrics = {}
@@ -3426,9 +3411,7 @@ def analyze_file_chunked(
         Same structure as analyze_file() but with chunked=True flag
     """
     
-    print("============================================================")
     print("🔄 CHUNKED ANALYSIS - Memory Optimized")
-    print("============================================================")
     
     # 1. Get file metadata without loading audio
     import soundfile as sf
@@ -3456,12 +3439,10 @@ def analyze_file_chunked(
                 bit_depth = 16
         elif 'FLOAT' in subtype:
             bit_depth = 32
-        print(f"📊 Using file metadata: {sr} Hz, {bit_depth}-bit")
     
     print(f"📁 File: {path.name}")
     print(f"📦 Chunk size: {chunk_duration} seconds")
     print(f"⏱️  Duration: {duration:.1f} seconds ({duration/60:.1f} minutes)")
-    print(f"📊 Sample rate: {sr} Hz")
     print(f"🔊 Channels: {channels}")
     print(f"💾 File size: {file_size / (1024*1024):.1f} MB")
     
@@ -3547,7 +3528,6 @@ def analyze_file_chunked(
             chunk_corr = stereo_correlation(y)
             chunk_lr = calculate_lr_balance(y)
             
-            # DEBUG: Enable M/S debug for first chunk only
             debug_ms = (i == 0)  # Only first chunk to avoid spam
             chunk_ms, _, _ = calculate_ms_ratio(y, debug=debug_ms)
             
@@ -3751,9 +3731,7 @@ def analyze_file_chunked(
             results['ms_ratios'].append(0.3)
             results['chunk_durations'].append(actual_chunk_duration)
     
-    print("============================================================")
     print("Aggregating results...")
-    print("============================================================")
     
     # 4. Aggregate results using weighted average
     total_duration = sum(results['chunk_durations'])
@@ -3797,7 +3775,6 @@ def analyze_file_chunked(
     
     print(f"📍 Territory: {territory}")
     print(f"🎛️  {'Mastered' if is_mastered else 'Mix (not mastered)'}")
-    print("============================================================")
     
     # Helper function to merge consecutive chunks into regions
     def merge_chunks_into_regions(problem_chunks, gap_threshold=2.5, track_duration=None, 
@@ -3873,7 +3850,6 @@ def analyze_file_chunked(
             
             filtered_regions.append(r)
         
-        print(f"   📊 Regions: {len(regions)} total → {len(filtered_regions)} after filtering")
         return filtered_regions
     
     # Build metrics array using the ACTUAL evaluation functions from analyzer
@@ -4219,12 +4195,7 @@ def analyze_file_chunked(
     
     # ========== NEW: Generate interpretative texts ==========
     interpretations = None
-    print(f"🔍 DEBUG: HAS_INTERPRETATIVE_TEXTS = {HAS_INTERPRETATIVE_TEXTS}", flush=True)
     if HAS_INTERPRETATIVE_TEXTS:
-        print(f"🔍 DEBUG: Inside interpretations block (CHUNKED)", flush=True)
-        print(f"   final_peak: {final_peak}", flush=True)
-        print(f"   final_tp: {final_tp}", flush=True)
-        print(f"   final_plr: {final_plr}", flush=True)
         try:
             # Extract key metrics for interpretation
             interpretation_metrics = {}
@@ -5649,22 +5620,16 @@ def generate_complete_pdf(
         bool: True if successful, False otherwise
     """
     import sys
-    print(f"\n🔍 DEBUG: generate_complete_pdf called", flush=True)
-    print(f"   Lang: {lang}, Filename: {filename}", flush=True)
-    print(f"   Report has {len(report.get('metrics', []))} metrics", flush=True)
-    print(f"   Report has report_write: {bool(report.get('report_write'))}", flush=True)
     sys.stdout.flush()
     
     # Test clean_text_for_pdf is working
     test_emoji = "⚠️ Test 🔊"
     cleaned_test = clean_text_for_pdf(test_emoji)
-    print(f"   clean_text_for_pdf test: '{test_emoji}' → '{cleaned_test}'", flush=True)
     sys.stdout.flush()
     
     # Check if report content has emojis BEFORE cleaning
     if report.get('report_write'):
         sample = report['report_write'][:100]
-        print(f"   report_write sample BEFORE: {repr(sample)}", flush=True)
         sys.stdout.flush()
     
     try:
@@ -5816,7 +5781,6 @@ def generate_complete_pdf(
         
         # Debug: print what we got
         import sys
-        print(f"\n🔍 PDF DEBUG - File Info:", file=sys.stderr, flush=True)
         print(f"   Duration: {duration}", file=sys.stderr, flush=True)
         print(f"   Sample Rate: {sample_rate}", file=sys.stderr, flush=True)
         print(f"   Bit Depth: {bit_depth}", file=sys.stderr, flush=True)
@@ -6084,10 +6048,8 @@ def generate_complete_pdf(
                 # Clean text - use Unicode symbols
                 text = report[mode_key]
                 
-                # DEBUG: Show text BEFORE cleaning
                 import sys
                 sample_before = text[:200] if len(text) > 200 else text
-                print(f"\n🔍 DEBUG {mode_key} BEFORE clean:", flush=True)
                 print(f"   Sample: {repr(sample_before)}", flush=True)
                 print(f"   Has ■: {'■' in text}", flush=True)
                 print(f"   Has ⚠️: {'⚠️' in text or '⚠' in text}", flush=True)
@@ -6096,9 +6058,7 @@ def generate_complete_pdf(
                 
                 text = clean_text_for_pdf(text)
                 
-                # DEBUG: Show text AFTER cleaning  
                 sample_after = text[:200] if len(text) > 200 else text
-                print(f"\n🔍 DEBUG {mode_key} AFTER clean:", flush=True)
                 print(f"   Sample: {repr(sample_after)}", flush=True)
                 print(f"   Has ■: {'■' in text}", flush=True)
                 print(f"   Has ⚠: {'⚠' in text}", flush=True)
@@ -6113,7 +6073,6 @@ def generate_complete_pdf(
                 for line in text.split('\n'):
                     line_stripped = line.strip()
                     if line_stripped:
-                        # DEBUG: Check if line starts with number
                         if line_stripped and line_stripped[0].isdigit():
                             print(f"   📌 Line starts with digit: {repr(line_stripped[:50])}", flush=True)
                             sys.stdout.flush()
