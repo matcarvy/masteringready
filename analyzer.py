@@ -26,12 +26,7 @@ KEY FIX from v7.3.30:
    • Short regions (<8s) are usually transitions, not real problems
    • Intro/outro often have different stereo characteristics (intentional)
 
-KEY FIX from v7.3.29:
---------------------
-🚀 OPTIMIZATION: Added res_type='kaiser_fast' for faster chunk loading
-   • MP3 files decode faster with kaiser_fast resampling
-   • Reduces processing time for chunked analysis
-   • Especially important for compressed formats on Render (timeout prevention)
+🚀 OPTIMIZATION: res_type='kaiser_fast' for faster chunk loading (requires resampy)
 
 KEY FIX from v7.3.28:
 --------------------
@@ -3500,7 +3495,7 @@ def analyze_file_chunked(
         print(f"📦 Chunk {i+1}/{num_chunks} (offset: {start_time:.1f}s, duration: {actual_chunk_duration:.1f}s)")
         
         # Load only this chunk (STEREO)
-        # Using res_type='kaiser_fast' for faster resampling (especially important for MP3)
+        # Using res_type='kaiser_fast' for faster resampling (requires resampy)
         y, _ = librosa.load(
             str(path),
             sr=sr,
@@ -3647,16 +3642,15 @@ def analyze_file_chunked(
                     })
                 
                 # 3. Stereo correlation temporal (per window)
-                # Detect 5 types of correlation issues:
-                # - high (>0.95): Nearly mono
-                # - medium_low (0.3-0.7): Phase issues possible
-                # - very_low (0.0-0.3): Severe phase issues
-                # - negative (-0.2 to 0.0): Partial phase inversion
-                # - negative_severe (<-0.2): Critical phase inversion
+                # v7.3.30: Only flag as problem if truly problematic:
+                # - high (>0.97): Nearly mono (was 0.95)
+                # - very_low (<0.3): Severe phase issues
+                # - negative (<0.0): Phase inversion
+                # NOTE: 0.3-0.7 (30-70%) is HEALTHY stereo, NOT a problem!
                 window_corr = stereo_correlation(window)
                 
                 if window_corr > 0.97:
-                    # Nearly mono
+                    # Nearly mono - only if >97% (was 0.95)
                     results['correlation_problem_chunks'].append({
                         'chunk': i + 1,
                         'window': w + 1,
@@ -3666,17 +3660,8 @@ def analyze_file_chunked(
                         'issue': 'high',
                         'severity': 'warning'
                     })
-                elif window_corr < 0.7 and window_corr >= 0.3:
-                    # Medium-low correlation (phase issues possible)
-                    results['correlation_problem_chunks'].append({
-                        'chunk': i + 1,
-                        'window': w + 1,
-                        'start_time': window_time,
-                        'end_time': window_time + window_dur,
-                        'correlation': window_corr,
-                        'issue': 'medium_low',
-                        'severity': 'warning'
-                    })
+                # v7.3.30: REMOVED 0.3-0.7 range - this is HEALTHY stereo!
+                # Old code marked 30-70% as "medium_low" problem, but this is wrong
                 elif window_corr < 0.3 and window_corr >= 0.0:
                     # Very low correlation (severe phase issues)
                     results['correlation_problem_chunks'].append({
@@ -3815,9 +3800,14 @@ def analyze_file_chunked(
     print("============================================================")
     
     # Helper function to merge consecutive chunks into regions
-    def merge_chunks_into_regions(problem_chunks, gap_threshold=2.5):
+    def merge_chunks_into_regions(problem_chunks, gap_threshold=2.5, track_duration=None, 
+                                     min_region_duration=8.0, exclude_intro_outro=5.0):
         """
         Merge consecutive problem chunks into continuous regions.
+        
+        v7.3.30: Added filtering:
+        - min_region_duration: Ignore regions shorter than this (default 8s)
+        - exclude_intro_outro: Exclude first and last N seconds (default 5s)
         
         Gap threshold of 2.5s matches terminal behavior:
         - Small gaps (< 2.5s) are absorbed into continuous regions
@@ -3860,7 +3850,31 @@ def analyze_file_chunked(
         
         # Don't forget last region
         regions.append(current_region)
-        return regions
+        
+        # v7.3.30: Apply filters
+        filtered_regions = []
+        for r in regions:
+            region_duration = r['end'] - r['start']
+            
+            # Skip if too short
+            if region_duration < min_region_duration:
+                print(f"   ⏭️ Skipping region {r['start']:.0f}-{r['end']:.0f}s (duration {region_duration:.1f}s < {min_region_duration}s)")
+                continue
+            
+            # Skip if entirely in intro
+            if r['end'] <= exclude_intro_outro:
+                print(f"   ⏭️ Skipping region {r['start']:.0f}-{r['end']:.0f}s (in intro)")
+                continue
+            
+            # Skip if entirely in outro (if track_duration is known)
+            if track_duration and r['start'] >= (track_duration - exclude_intro_outro):
+                print(f"   ⏭️ Skipping region {r['start']:.0f}-{r['end']:.0f}s (in outro)")
+                continue
+            
+            filtered_regions.append(r)
+        
+        print(f"   📊 Regions: {len(regions)} total → {len(filtered_regions)} after filtering")
+        return filtered_regions
     
     # Build metrics array using the ACTUAL evaluation functions from analyzer
     # This ensures IDENTICAL scoring between normal and chunked analysis
@@ -3884,8 +3898,8 @@ def analyze_file_chunked(
     # Build clipping temporal analysis if there are clipping chunks
     clipping_temporal = None
     if results['clipping_chunks']:
-        # Merge consecutive chunks into regions
-        regions = merge_chunks_into_regions(results['clipping_chunks'])
+        # Merge consecutive chunks into regions (clipping doesn't need intro/outro filter)
+        regions = merge_chunks_into_regions(results['clipping_chunks'], track_duration=duration, min_region_duration=0)
         
         clipping_temporal = {
             'num_regions': len(regions),
@@ -3912,8 +3926,8 @@ def analyze_file_chunked(
     # Build temporal analysis if there are problem chunks
     tp_temporal = None
     if results['tp_problem_chunks']:
-        # FIRST: Merge consecutive chunks into regions
-        regions = merge_chunks_into_regions(results['tp_problem_chunks'])
+        # FIRST: Merge consecutive chunks into regions (True Peak uses 10s minimum)
+        regions = merge_chunks_into_regions(results['tp_problem_chunks'], track_duration=duration, min_region_duration=10.0)
         
         # THEN: Calculate percentage based on MERGED REGIONS (not individual windows)
         # This avoids double-counting overlapping windows
@@ -4046,7 +4060,7 @@ def analyze_file_chunked(
         
         # 1. Correlation temporal analysis
         if results['correlation_problem_chunks']:
-            corr_regions = merge_chunks_into_regions(results['correlation_problem_chunks'])
+            corr_regions = merge_chunks_into_regions(results['correlation_problem_chunks'], track_duration=duration)
             stereo_temporal['correlation'] = {
                 'num_regions': len(corr_regions),
                 'regions': [
@@ -4064,7 +4078,7 @@ def analyze_file_chunked(
         
         # 2. M/S Ratio temporal analysis
         if results['ms_ratio_problem_chunks']:
-            ms_regions = merge_chunks_into_regions(results['ms_ratio_problem_chunks'])
+            ms_regions = merge_chunks_into_regions(results['ms_ratio_problem_chunks'], track_duration=duration)
             stereo_temporal['ms_ratio'] = {
                 'num_regions': len(ms_regions),
                 'regions': [
@@ -4082,7 +4096,7 @@ def analyze_file_chunked(
         
         # 3. L/R Balance temporal analysis
         if results['lr_balance_problem_chunks']:
-            lr_regions = merge_chunks_into_regions(results['lr_balance_problem_chunks'])
+            lr_regions = merge_chunks_into_regions(results['lr_balance_problem_chunks'], track_duration=duration)
             stereo_temporal['lr_balance'] = {
                 'num_regions': len(lr_regions),
                 'regions': [
