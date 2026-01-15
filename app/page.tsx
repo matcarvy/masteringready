@@ -2211,26 +2211,49 @@ by Matías Carvajal
                 fontSize: 'clamp(1.75rem, 4vw, 2.25rem)',
                 fontWeight: '800',
                 color: '#1e293b',
-                marginBottom: '1rem',
+                marginBottom: '1.5rem',
                 lineHeight: '1.2'
               }}>
                 {lang === 'es' 
-                  ? '¿Quieres dominar la preparación de mezclas?' 
-                  : 'Want to master mix preparation?'}
+                  ? '¿Quieres preparar tus mezclas con criterio profesional?' 
+                  : 'Want to prepare your mixes with professional judgment?'}
               </h2>
 
-              <p style={{
+              <div style={{
                 fontSize: '1.125rem',
                 color: '#475569',
-                marginBottom: '1.5rem',
-                lineHeight: '1.7',
-                maxWidth: '600px',
-                margin: '0 auto 1.5rem'
+                marginBottom: '2rem',
+                lineHeight: '1.8',
+                maxWidth: '650px',
+                margin: '0 auto 2rem',
+                textAlign: 'center'
               }}>
-                {lang === 'es'
-                  ? 'El eBook "Mastering Ready" te enseña las decisiones que realmente importan al preparar una mezcla para mastering. No presets, no trucos rápidos—criterio profesional basado en +300 producciones.'
-                  : 'The "Mastering Ready" eBook teaches you the decisions that truly matter when preparing a mix for mastering. No presets, no quick tricks—professional judgment based on 300+ productions.'}
-              </p>
+                {lang === 'es' ? (
+                  <>
+                    <p style={{ marginBottom: '1rem' }}>
+                      El eBook Mastering Ready te ayuda a entender qué decisiones realmente importan cuando preparas una mezcla para mastering.
+                    </p>
+                    <p style={{ marginBottom: '1rem' }}>
+                      No se trata de presets ni de fórmulas rápidas. Se trata de escuchar mejor, tomar decisiones conscientes y evitar errores comunes que afectan el resultado final.
+                    </p>
+                    <p>
+                      Es el mismo criterio aplicado en más de 300 producciones reales.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p style={{ marginBottom: '1rem' }}>
+                      The Mastering Ready eBook helps you understand which decisions actually matter when preparing a mix for mastering.
+                    </p>
+                    <p style={{ marginBottom: '1rem' }}>
+                      It's not about presets or quick formulas. It's about listening better, making conscious decisions, and avoiding common mistakes that affect the final result.
+                    </p>
+                    <p>
+                      This is the same professional judgment applied across more than 300 real-world productions.
+                    </p>
+                  </>
+                )}
+              </div>
 
               {/* Features list */}
               <div style={{
@@ -2241,10 +2264,10 @@ by Matías Carvajal
                 marginBottom: '2rem'
               }}>
                 {[
-                  lang === 'es' ? 'Headroom y dinámica' : 'Headroom & dynamics',
+                  lang === 'es' ? 'Headroom y control dinámico' : 'Headroom and dynamic control',
                   lang === 'es' ? 'Balance de frecuencias' : 'Frequency balance',
-                  lang === 'es' ? 'Errores comunes' : 'Common mistakes',
-                  lang === 'es' ? 'Checklist profesional' : 'Professional checklist'
+                  lang === 'es' ? 'Errores comunes antes del mastering' : 'Common pre-mastering mistakes',
+                  lang === 'es' ? 'Checklist profesional de entrega' : 'Professional delivery checklist'
                 ].map((feature, i) => (
                   <div key={i} style={{
                     display: 'flex',
@@ -2272,7 +2295,7 @@ by Matías Carvajal
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '0.75rem',
+                  gap: '0.5rem',
                   background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                   color: 'white',
                   padding: '1rem 2rem',
@@ -2293,14 +2316,8 @@ by Matías Carvajal
                 }}
               >
                 <span>{lang === 'es' ? 'Ver eBook' : 'View eBook'}</span>
-                <span style={{
-                  background: 'rgba(255,255,255,0.2)',
-                  padding: '0.25rem 0.75rem',
-                  borderRadius: '9999px',
-                  fontSize: '0.875rem'
-                }}>
-                  $15 USD
-                </span>
+                <span style={{ opacity: 0.7 }}>·</span>
+                <span>15 USD</span>
               </a>
 
               {/* Discount badge */}
@@ -2321,7 +2338,7 @@ by Matías Carvajal
                 }}>
                   -37%
                 </span>
-                <span>{lang === 'es' ? 'Precio especial por tiempo limitado' : 'Limited time special price'}</span>
+                <span>{lang === 'es' ? 'Precio especial por tiempo limitado' : 'Limited-time special price'}</span>
               </div>
             </div>
           </div>
