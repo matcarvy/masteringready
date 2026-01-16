@@ -12,22 +12,25 @@ Sistema de notificaciones en tiempo real para monitorear:
 
 Setup:
 1. Bot creado con @BotFather
-2. Token y Chat ID configurados abajo
+2. Configurar variables de entorno en Render:
+   - TELEGRAM_BOT_TOKEN
+   - TELEGRAM_CHAT_ID
 
 Author: MasteringReady Team
-Version: 1.0.0
+Version: 1.0.1 (Secure)
 """
 
 import requests
 from datetime import datetime
 from typing import Optional, Dict
+import os
 
 # ============================================================================
-# CONFIGURACIÓN - TUS CREDENCIALES
+# CONFIGURACIÓN - VARIABLES DE ENTORNO (SEGURO)
 # ============================================================================
 
-TELEGRAM_BOT_TOKEN = "8267395463:AAEYV3VgNtcYt_9Xs7ecrRXEMAtIEKPiDdg"
-TELEGRAM_CHAT_ID = "8590134948"
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
 
 # ============================================================================
 # FUNCIÓN BASE
