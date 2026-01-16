@@ -1,8 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Mix Analyzer v7.3.30 - Temporal Analysis Improvements
+Mix Analyzer v7.3.31 - True Peak Messaging Alignment
 ======================================================
+
+v7.3.31 CHANGES:
+- True Peak messages now emphasize "for mastering" instead of MP3/AAC/streaming
+- Removed references to codec conversion (that's mastering's responsibility)
+- Aligned with eBook philosophy: "El volumen final no es tu responsabilidad en la mezcla"
+- Positive aspects now say "True Peak seguro para mastering" instead of "streaming"
 
 ARCHITECTURE PRINCIPLES:
 1. Calculate scores LANGUAGE-NEUTRAL (no idioma en lógica)
@@ -1723,12 +1729,12 @@ def _status_true_peak_en(tp_db: float, strict: bool = False) -> Tuple[str, str, 
     mode = "strict" if strict else "normal"
     
     messages = {
-        "critical": "True peak is dangerously high. It may clip after conversion/encoding. Lower the level and re-export.",
+        "critical": "True peak is dangerously high. Lower the level and re-export to give mastering room to work.",
         "warning": {
             "strict": "True peak should be ≤ -3.0 dBTP for professional commercial delivery.",
-            "normal": "True peak is close to the limit. Streaming codecs (MP3, AAC, Opus) may clip. Better to aim for ≤ -1.0 dBTP.",
+            "normal": "True peak is close to the limit. Aim for ≤ -1.0 dBTP to give mastering flexibility.",
         },
-        "perfect": "True peak is very safe for mastering. No issues converting to formats like MP3, AAC or for streaming.",
+        "perfect": "True peak is safe for mastering. Provides enough margin for processing without quality compromises.",
         "pass": {
             "strict": "True peak is acceptable, but -2 dBTP or better is ideal for clients/labels.",
             "normal": "True peak is safe for mastering.",
@@ -1951,12 +1957,12 @@ def _status_true_peak_es(tp_db: float, strict: bool = False) -> Tuple[str, str, 
     mode = "strict" if strict else "normal"
     
     messages = {
-        "critical": "True peak demasiado alto. Puede distorsionar al convertir/streaming. Baja el nivel y re-exporta.",
+        "critical": "True peak demasiado alto. Baja el nivel y re-exporta para que el mastering pueda trabajar con margen.",
         "warning": {
             "strict": "True peak debe ser ≤ -3.0 dBTP para entrega comercial profesional.",
-            "normal": "True peak muy cerca del límite. Los codecs de streaming (MP3, AAC, Opus) pueden clipear. Mejor apuntar a ≤ -1.0 dBTP.",
+            "normal": "True peak muy cerca del límite. Apunta a ≤ -1.0 dBTP para dar flexibilidad al mastering.",
         },
-        "perfect": "True peak muy seguro para mastering. No habrá problemas al convertir a formatos como MP3, AAC o para streaming.",
+        "perfect": "True peak seguro para mastering. Deja margen suficiente para procesar sin comprometer la calidad.",
         "pass": {
             "strict": "True peak aceptable, pero -2 dBTP o menos es ideal para clientes/labels.",
             "normal": "True peak seguro para mastering.",
@@ -2960,8 +2966,8 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
         if tp_metric:
             tp_val = tp_metric.get("value", "")
             details += f"🔊 TRUE PEAK: {tp_val}\n"
-            details += "   → Seguro para conversión a formatos con pérdida (MP3, AAC, Spotify).\n"
-            details += "     No habrá distorsión intersample en streaming.\n"
+            details += "   → Seguro para el proceso de mastering.\n"
+            details += "     El control de picos finales y compatibilidad con codecs se gestiona en mastering.\n"
             
             # Add temporal info
             if "temporal_analysis" in tp_metric:
@@ -3187,8 +3193,8 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
         if tp_metric:
             tp_val = tp_metric.get("value", "")
             details += f"🔊 TRUE PEAK: {tp_val}\n"
-            details += "   → Safe for lossy format conversion (MP3, AAC, Spotify).\n"
-            details += "     No intersample distortion in streaming.\n"
+            details += "   → Safe for the mastering process.\n"
+            details += "     Final peak control and codec compatibility are handled in mastering.\n"
             
             if "temporal_analysis" in tp_metric:
                 temporal = format_temporal_message(
@@ -5524,7 +5530,7 @@ def generate_visual_report(report: Dict[str, Any], strict: bool = False, lang: s
             if "Headroom" in name:
                 positive_aspects.append("Headroom apropiado para mastering" if lang == "es" else "Appropriate headroom for mastering")
             elif "True Peak" in name:
-                positive_aspects.append("True Peak seguro para streaming" if lang == "es" else "Safe True Peak for streaming")
+                positive_aspects.append("True Peak seguro para mastering" if lang == "es" else "Safe True Peak for mastering")
             elif "PLR" in name or "dinám" in message.lower() or "dynamic" in message.lower():
                 positive_aspects.append("Excelente rango dinámico" if lang == "es" else "Excellent dynamic range")
             elif "Stereo" in name or "stéreo" in name.lower():
