@@ -109,6 +109,15 @@ except ImportError as e:
     logger.error("Make sure mix_analyzer_v7.3_BETA.py is renamed to analyzer.py")
     sys.exit(1)
 
+# Import Telegram alerts
+try:
+    from telegram_alerts import alert_new_analysis, alert_error, alert_system_status, alert_mastered_file
+    logger.info("✅ Telegram alerts module imported successfully")
+    TELEGRAM_ENABLED = True
+except ImportError as e:
+    logger.warning(f"⚠️ Telegram alerts not available: {e}")
+    TELEGRAM_ENABLED = False
+
 # In-memory job storage for polling pattern
 # Jobs expire after 10 minutes
 jobs: Dict[str, dict] = {}
@@ -682,11 +691,45 @@ async def start_analysis(
                 
                 logger.info(f"✅ [{job_id}] Job complete")
                 
+                # 🔔 TELEGRAM ALERT: Análisis completado
+                if TELEGRAM_ENABLED:
+                    try:
+                        # Extraer duración del archivo
+                        duration_str = ""
+                        if result.get("file") and result["file"].get("duration"):
+                            duration_mins = result["file"]["duration"] / 60
+                            duration_str = f"{duration_mins:.1f} min"
+                        
+                        alert_new_analysis(
+                            filename=file.filename,
+                            score=result["score"],
+                            verdict=result["verdict"],
+                            lang=lang,
+                            strict=strict,
+                            duration=duration_str,
+                            silent=False
+                        )
+                    except Exception as alert_err:
+                        logger.warning(f"⚠️ Failed to send Telegram alert: {alert_err}")
+                
+                
         except Exception as e:
             logger.error(f"❌ [{job_id}] Analysis error: {str(e)}")
             async with jobs_lock:
                 jobs[job_id]['status'] = 'error'
                 jobs[job_id]['error'] = str(e)
+            
+            # 🔔 TELEGRAM ALERT: Error en análisis
+            if TELEGRAM_ENABLED:
+                try:
+                    alert_error(
+                        error_type=type(e).__name__,
+                        filename=file.filename,
+                        details=str(e),
+                        critical=True
+                    )
+                except Exception as alert_err:
+                    logger.warning(f"⚠️ Failed to send error alert: {alert_err}")
     
     # Start asyncio task (non-blocking)
     asyncio.create_task(analyze_in_background())
@@ -845,6 +888,13 @@ async def download_pdf(
 
 # ============== RUN ==============
 if __name__ == "__main__":
+    # 🔔 TELEGRAM ALERT: Sistema iniciado
+    if TELEGRAM_ENABLED:
+        try:
+            alert_system_status('online', 'Backend deployed on Render')
+        except Exception as e:
+            logger.warning(f"⚠️ Failed to send startup alert: {e}")
+    
     import uvicorn
     uvicorn.run(
         "main:app",
