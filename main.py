@@ -694,11 +694,17 @@ async def start_analysis(
                 # 🔔 TELEGRAM ALERT: Análisis completado
                 if TELEGRAM_ENABLED:
                     try:
-                        # Extraer duración del archivo
-                        duration_str = ""
+                        # Calcular tiempo de procesamiento
+                        end_time = datetime.now()
+                        processing_time = (end_time - jobs[job_id]['created_at']).total_seconds()
+                        
+                        # Duración del archivo de audio
+                        audio_duration = ""
                         if result.get("file") and result["file"].get("duration"):
-                            duration_mins = result["file"]["duration"] / 60
-                            duration_str = f"{duration_mins:.1f} min"
+                            audio_mins = result["file"]["duration"] / 60
+                            audio_duration = f" | 🎵 {audio_mins:.1f}min"
+                        
+                        duration_str = f"⏱️ {processing_time:.1f}s{audio_duration}"
                         
                         alert_new_analysis(
                             filename=file.filename,
