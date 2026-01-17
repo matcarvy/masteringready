@@ -1,8 +1,16 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Mix Analyzer v7.3.32 - LUFS Chunked Calculation Fix
+Mix Analyzer v7.3.33 - Correlation Messages Precision
 ======================================================
+
+v7.3.33 CHANGES:
+- Correlation messages now differentiate between low positive and negative values
+- Low positive (e.g. 16%): "Very wide stereo - may lose body in mono" (NO cancellation)
+- Negative (e.g. -8%): "Phase cancellation begins - mono loss expected"
+- Severe negative (e.g. -45%): "Severe phase cancellation in mono"
+- Aligned with technical reality: cancellation only occurs at NEGATIVE correlation
+- Updated temporal messages in both regular and chunked modes
 
 v7.3.32 CRITICAL FIX:
 - Fixed LUFS calculation in chunked mode using ENERGY summation (EBU R128 correct)
@@ -1820,15 +1828,22 @@ def _status_stereo_en(corr: float, strict: bool = False) -> Tuple[str, str, floa
     status, score = calculate_stereo_score(corr, strict)
     
     # TRACK 2: Format message (Matías Voice - English)
-    messages = {
-        "perfect": "Excellent stereo correlation (mono compatible). The mix will translate well on all playback systems.",
-        "pass": "Good stereo correlation. The mix maintains a healthy stereo image with good mono compatibility.",
-        "warning": "Stereo correlation shows some phase issues. Check stereo effects, reverbs, and panning. Test in mono to ensure nothing important disappears.",
-        "critical": f"Low stereo correlation ({corr:.2f}). Significant phase cancellation risk in mono playback. This can cause instruments or vocals to lose volume or disappear entirely on mono systems (Bluetooth speakers, phones, clubs).",
-        "catastrophic": f"SEVERE: Near-total phase inversion detected ({corr:.2f}). The mix will almost completely cancel out in mono. Check for: inverted phase plugins, M/S processing errors, or accidentally inverted channels.",
-    }
-    
-    message = messages[status]
+    # v7.3.33: Differentiate between low positive (wide stereo) and negative (phase cancellation)
+    if status == "warning":
+        if corr >= 0:
+            # Low positive: wide stereo but NO cancellation yet
+            message = f"Very wide stereo image ({corr:.0%}). Check wideners, chorus or stereo delays. Test in mono: may lose body, though no phase cancellation yet."
+        else:
+            # Negative: phase cancellation BEGINS
+            message = f"Phase cancellation begins ({corr:.0%}). Volume loss in mono expected. Check widening plugins, M/S processing or inverted channels."
+    elif status == "critical":
+        message = f"Significant phase cancellation ({corr:.0%}). Elements will lose volume or disappear in mono (Bluetooth speakers, phones, clubs). Check channel polarity, M/S plugins or phase-inverted effects."
+    elif status == "catastrophic":
+        message = f"SEVERE: Near-total phase inversion ({corr:.0%}). The mix will almost completely cancel in mono. Check for: inverted phase plugins, M/S processing errors, or accidentally inverted channels."
+    elif status == "perfect":
+        message = "Excellent stereo correlation (mono compatible). The mix will translate well on all playback systems."
+    else:  # pass
+        message = "Good stereo correlation. The mix maintains a healthy stereo image with good mono compatibility."
     
     return status, message, score
 
@@ -2048,15 +2063,22 @@ def _status_stereo_es(corr: float, strict: bool = False) -> Tuple[str, str, floa
     status, score = calculate_stereo_score(corr, strict)
     
     # TRACK 2: Formatear mensaje (Matías Voice - del eBook)
-    messages = {
-        "perfect": "Excelente correlación estéreo (mono compatible). La mezcla se traducirá bien en todos los sistemas de reproducción.",
-        "pass": "Buena correlación estéreo. La mezcla mantiene una imagen estéreo saludable con buena compatibilidad en mono.",
-        "warning": "La correlación estéreo muestra algunos problemas de fase. Revisa efectos estéreo, reverbs y paneo. Prueba en mono para asegurarte de que no se pierde nada importante.",
-        "critical": f"Correlación estéreo baja ({corr:.2f}). Riesgo significativo de cancelación de fase en reproducción mono. Esto puede hacer que instrumentos o voces pierdan volumen o desaparezcan completamente en sistemas mono (parlantes Bluetooth, teléfonos, clubes).",
-        "catastrophic": f"SEVERO: Inversión de fase casi total detectada ({corr:.2f}). La mezcla se cancelará casi por completo en mono. Verifica: plugins con fase invertida, errores en procesamiento M/S, o canales accidentalmente invertidos.",
-    }
-    
-    message = messages[status]
+    # v7.3.33: Diferenciar entre positivo bajo (stereo amplio) y negativo (cancelación)
+    if status == "warning":
+        if corr >= 0:
+            # Positivo bajo: stereo amplio pero SIN cancelación todavía
+            message = f"Imagen estéreo muy amplia ({corr:.0%}). Revisa ensanchadores, chorus o delays estéreo. Prueba en mono: puede perder cuerpo, aunque aún no hay cancelación."
+        else:
+            # Negativo: EMPIEZA la cancelación de fase
+            message = f"Empieza la cancelación de fase ({corr:.0%}). Pérdida de volumen en mono esperada. Revisa plugins de ensanchamiento, procesamiento M/S o canales invertidos."
+    elif status == "critical":
+        message = f"Cancelación de fase significativa ({corr:.0%}). Elementos perderán volumen o desaparecerán en mono (parlantes Bluetooth, teléfonos, clubes). Verifica polaridad de canales, plugins M/S o efectos con fase invertida."
+    elif status == "catastrophic":
+        message = f"SEVERO: Inversión de fase casi total ({corr:.0%}). La mezcla se cancelará casi por completo en mono. Verifica: plugins con fase invertida, errores en procesamiento M/S, o canales accidentalmente invertidos."
+    elif status == "perfect":
+        message = "Excelente correlación estéreo (mono compatible). La mezcla se traducirá bien en todos los sistemas de reproducción."
+    else:  # pass
+        message = "Buena correlación estéreo. La mezcla mantiene una imagen estéreo saludable con buena compatibilidad en mono."
     
     return status, message, score
 
@@ -3052,6 +3074,7 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
                             details += f"   • {start_min}:{start_sec:02d} → {end_min}:{end_sec:02d} ({dur}s): "
                             
                             # Handle all 5 correlation issue types
+                            # v7.3.33: Mensajes más precisos - very_low NO es cancelación
                             if issue == 'high':
                                 details += f"Correlación muy alta ({corr*100:.0f}%)\n"
                                 details += "      → Imagen muy centrada (casi mono)\n"
@@ -3060,13 +3083,13 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
                                 details += "      → Revisa efectos estéreo y reverbs\n"
                             elif issue == 'very_low':
                                 details += f"Correlación muy baja ({corr*100:.0f}%)\n"
-                                details += "      → Problemas de fase - cancelación en mono\n"
+                                details += "      → Stereo muy amplio - puede perder cuerpo en mono\n"
                             elif issue == 'negative':
                                 details += f"Correlación negativa ({corr*100:.0f}%)\n"
-                                details += "      → Fase invertida parcial - pérdida en mono\n"
+                                details += "      → Empieza cancelación de fase - pérdida en mono\n"
                             elif issue == 'negative_severe':
                                 details += f"Correlación negativa severa ({corr*100:.0f}%)\n"
-                                details += "      → Fase invertida - cancelación severa en mono\n"
+                                details += "      → Cancelación de fase severa en mono\n"
                             else:  # Fallback
                                 details += f"Correlación: {corr*100:.0f}%\n"
                         
@@ -3277,6 +3300,7 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
                             details += f"   • {start_min}:{start_sec:02d} → {end_min}:{end_sec:02d} ({dur}s): "
                             
                             # Handle all 5 correlation issue types
+                            # v7.3.33: More precise messages - very_low is NOT cancellation
                             if issue == 'high':
                                 details += f"Very high correlation ({corr*100:.0f}%)\n"
                                 details += "      → Nearly mono\n"
@@ -3285,13 +3309,13 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
                                 details += "      → Check stereo effects and reverbs\n"
                             elif issue == 'very_low':
                                 details += f"Very low correlation ({corr*100:.0f}%)\n"
-                                details += "      → Phase issues - mono cancellation\n"
+                                details += "      → Very wide stereo - may lose body in mono\n"
                             elif issue == 'negative':
                                 details += f"Negative correlation ({corr*100:.0f}%)\n"
-                                details += "      → Partial phase inversion - mono loss\n"
+                                details += "      → Phase cancellation begins - mono loss\n"
                             elif issue == 'negative_severe':
                                 details += f"Severe negative correlation ({corr*100:.0f}%)\n"
-                                details += "      → Phase inverted - severe mono cancellation\n"
+                                details += "      → Severe phase cancellation in mono\n"
                             else:  # Fallback
                                 details += f"Correlation: {corr*100:.0f}%\n"
                         
@@ -4488,6 +4512,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                             temporal_message += f"   • {start_min}:{start_sec:02d} → {end_min}:{end_sec:02d} ({dur}s): "
                             
                             # Handle all 5 correlation issue types
+                            # v7.3.33: Mensajes más precisos - very_low NO es cancelación
                             if issue == 'high':
                                 temporal_message += f"Correlación muy alta ({corr*100:.0f}%)\n"
                                 temporal_message += "      → Casi mono\n"
@@ -4496,13 +4521,13 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                                 temporal_message += "      → Revisa efectos estéreo y reverbs\n"
                             elif issue == 'very_low':
                                 temporal_message += f"Correlación muy baja ({corr*100:.0f}%)\n"
-                                temporal_message += "      → Problemas de fase - cancelación en mono\n"
+                                temporal_message += "      → Stereo muy amplio - puede perder cuerpo en mono\n"
                             elif issue == 'negative':
                                 temporal_message += f"Correlación negativa ({corr*100:.0f}%)\n"
-                                temporal_message += "      → Fase invertida parcial - pérdida en mono\n"
+                                temporal_message += "      → Empieza cancelación de fase - pérdida en mono\n"
                             elif issue == 'negative_severe':
                                 temporal_message += f"Correlación negativa severa ({corr*100:.0f}%)\n"
-                                temporal_message += "      → Fase invertida - cancelación severa en mono\n"
+                                temporal_message += "      → Cancelación de fase severa en mono\n"
                             else:  # Fallback
                                 temporal_message += f"Correlación: {corr*100:.0f}%\n"
                         temporal_message += "\n"
@@ -4756,6 +4781,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                             temporal_message += f"   • {start_min}:{start_sec:02d} → {end_min}:{end_sec:02d} ({dur}s): "
                             
                             # Handle all 5 correlation issue types
+                            # v7.3.33: More precise messages - very_low is NOT cancellation
                             if issue == 'high':
                                 temporal_message += f"Very high correlation ({corr*100:.0f}%)\n"
                                 temporal_message += "      → Nearly mono\n"
@@ -4764,13 +4790,13 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                                 temporal_message += "      → Check stereo effects and reverbs\n"
                             elif issue == 'very_low':
                                 temporal_message += f"Very low correlation ({corr*100:.0f}%)\n"
-                                temporal_message += "      → Phase issues - mono cancellation\n"
+                                temporal_message += "      → Very wide stereo - may lose body in mono\n"
                             elif issue == 'negative':
                                 temporal_message += f"Negative correlation ({corr*100:.0f}%)\n"
-                                temporal_message += "      → Partial phase inversion - mono loss\n"
+                                temporal_message += "      → Phase cancellation begins - mono loss\n"
                             elif issue == 'negative_severe':
                                 temporal_message += f"Severe negative correlation ({corr*100:.0f}%)\n"
-                                temporal_message += "      → Phase inverted - severe mono cancellation\n"
+                                temporal_message += "      → Severe phase cancellation in mono\n"
                             else:  # Fallback
                                 temporal_message += f"Correlation: {corr*100:.0f}%\n"
                         temporal_message += "\n"
