@@ -3409,7 +3409,7 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
                                 details += "      → Revisa efectos estéreo y reverbs\n"
                             elif issue == 'very_low':
                                 details += f"Correlación muy baja ({corr*100:.0f}%)\n"
-                                details += "      → Stereo muy amplio - escúchalo en mono, puede perder cuerpo\n"
+                                details += "      → Estéreo muy amplio - verifica comportamiento en mono\n"
                                 # v7.3.35: Show band breakdown if available
                                 if band_corr:
                                     problem_bands = identify_problem_bands(band_corr, threshold=0.3)
@@ -3472,7 +3472,7 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
                                 details += "      → Mezcla muy mono - poca información estéreo\n"
                             else:
                                 details += f"Ratio alto ({ms:.2f})\n"
-                                details += "      → Mucha información Side - escúchalo en mono, puede perder cuerpo central\n"
+                                details += "      → Exceso de información Side - verifica en mono\n"
                         
                         # Show remaining count if more than max_regions_to_show
                         if num_regions > max_regions_to_show:
@@ -3513,7 +3513,7 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
                         
                         details += "\n"
                 
-                details += "💡 Revisa los tiempos indicados arriba en tu DAW para verificar si lo mencionado en el Análisis Temporal es una decisión artística o de producción, o si requiere un ajuste técnico.\n\n"
+                details += "💡 Revisa los tiempos indicados arriba en tu DAW para confirmar si lo detectado en el Análisis Temporal responde a una decisión artística o si requiere un ajuste técnico antes del mastering.\n\n"
             
             else:
                 # No temporal analysis available
@@ -3720,7 +3720,7 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
                                 details += "      → Very mono mix - little stereo information\n"
                             else:
                                 details += f"High ratio ({ms:.2f})\n"
-                                details += "      → Heavy Side content - check in mono, may lose center focus\n"
+                                details += "      → Excess Side information - check in mono\n"
                         
                         # Show remaining count if more than max_regions_to_show
                         if num_regions > max_regions_to_show:
@@ -3761,7 +3761,7 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
                         
                         details += "\n"
                 
-                details += "💡 Review the timestamps above in your DAW to verify if what's mentioned in the Temporal Analysis is an artistic or production decision, or if it requires a technical adjustment.\n\n"
+                details += "💡 Review the timestamps above in your DAW to confirm if what's detected in the Temporal Analysis is an artistic decision or if it requires a technical adjustment before mastering.\n\n"
             
             else:
                 # No temporal analysis available
@@ -4968,7 +4968,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                                 temporal_message += "      → Revisa efectos estéreo y reverbs\n"
                             elif issue == 'very_low':
                                 temporal_message += f"Correlación muy baja ({corr*100:.0f}%)\n"
-                                temporal_message += "      → Stereo muy amplio - escúchalo en mono, puede perder cuerpo\n"
+                                temporal_message += "      → Estéreo muy amplio - posible pérdida de cuerpo en mono\n"
                                 # v7.3.35: Show band breakdown if available
                                 if band_corr:
                                     problem_bands = identify_problem_bands(band_corr, threshold=0.3)
@@ -5024,7 +5024,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                                 temporal_message += "      → Muy mono - poca información estéreo\n"
                             else:
                                 temporal_message += f"Ratio alto ({ms:.2f})\n"
-                                temporal_message += "      → Mucha Side - escúchalo en mono\n"
+                                temporal_message += "      → Exceso de información Side - escúchalo en mono\n"
                         temporal_message += "\n"
                 
                 # L/R Balance temporal
@@ -5056,7 +5056,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
             if has_temporal:
                 message += "⚠️ ANÁLISIS TEMPORAL:\n\n"
                 message += temporal_message
-                message += "💡 Revisa los tiempos indicados arriba en tu DAW para verificar si lo mencionado en el Análisis Temporal es una decisión artística o de producción, o si requiere un ajuste técnico.\n\n"
+                message += "💡 Revisa los tiempos indicados arriba en tu DAW para confirmar si lo detectado en el Análisis Temporal responde a una decisión artística o si requiere un ajuste técnico antes del mastering.\n\n"
             
             # SECTION 3: Technical Observations
             observations = []
@@ -5317,7 +5317,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                                 temporal_message += "      → Very mono - little stereo info\n"
                             else:
                                 temporal_message += f"High ratio ({ms:.2f})\n"
-                                temporal_message += "      → Heavy Side - check in mono\n"
+                                temporal_message += "      → Excess Side information - check in mono\n"
                         temporal_message += "\n"
                 
                 # L/R Balance temporal
@@ -5349,7 +5349,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
             if has_temporal:
                 message += "⚠️ TEMPORAL ANALYSIS:\n\n"
                 message += temporal_message
-                message += "💡 Review the timestamps above in your DAW to verify if what's mentioned in the Temporal Analysis is an artistic or production decision, or if it requires a technical adjustment.\n\n"
+                message += "💡 Review the timestamps above in your DAW to confirm if what's detected in the Temporal Analysis is an artistic decision or if it requires a technical adjustment before mastering.\n\n"
             
             # SECTION 3: Technical Observations
             observations = []
