@@ -3388,8 +3388,15 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
                         problem_word = "problemática" if num_regions == 1 else "problemáticas"
                         details += f"🎧 Correlación ({num_regions} {region_word} {problem_word}):\n"
                         
+                        # v7.3.36.4: Variaciones de mensajes de mono para evitar repetición
+                        variaciones_mono_es = [
+                            "verifica comportamiento en mono",
+                            "posible pérdida de cuerpo en mono",
+                            "puede perder impacto en mono"
+                        ]
+                        
                         max_regions_to_show = 25
-                        for region in regions[:max_regions_to_show]:
+                        for region_idx, region in enumerate(regions[:max_regions_to_show]):
                             start_min = int(region['start'] // 60)
                             start_sec = int(region['start'] % 60)
                             end_min = int(region['end'] // 60)
@@ -3411,7 +3418,9 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
                                 details += "      → Revisa efectos estéreo y reverbs\n"
                             elif issue == 'very_low':
                                 details += f"Correlación muy baja ({corr*100:.0f}%)\n"
-                                details += "      → Estéreo muy amplio - verifica comportamiento en mono\n"
+                                # Rotate variation based on region index
+                                mono_msg = variaciones_mono_es[region_idx % len(variaciones_mono_es)]
+                                details += f"      → Estéreo muy amplio - {mono_msg}\n"
                                 # v7.3.35: Show band breakdown if available
                                 if band_corr:
                                     problem_bands = identify_problem_bands(band_corr, threshold=0.3)
@@ -3528,7 +3537,7 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
                         
                         details += "\n"
                 
-                details += "💡 Revisa los tiempos indicados arriba en tu DAW para confirmar si lo detectado en el Análisis Temporal responde a una decisión artística o si requiere un ajuste técnico antes del mastering.\n\n"
+                details += "💡 Revisa los tiempos indicados arriba en tu DAW para evaluar si lo detectado en el Análisis Temporal responde a una decisión artística o si requiere un ajuste técnico antes del mastering.\n\n"
             
             else:
                 # No temporal analysis available
@@ -3649,8 +3658,15 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
                     if num_regions > 0:
                         details += f"🎧 Correlation ({num_regions} problematic region{'s' if num_regions > 1 else ''}):\n"
                         
+                        # v7.3.36.4: Variations to avoid mechanical repetition
+                        variaciones_mono_en = [
+                            "verify mono behavior",
+                            "possible body loss in mono",
+                            "may lose impact in mono"
+                        ]
+                        
                         max_regions_to_show = 25
-                        for region in regions[:max_regions_to_show]:
+                        for region_idx, region in enumerate(regions[:max_regions_to_show]):
                             start_min = int(region['start'] // 60)
                             start_sec = int(region['start'] % 60)
                             end_min = int(region['end'] // 60)
@@ -3672,7 +3688,9 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
                                 details += "      → Check stereo effects and reverbs\n"
                             elif issue == 'very_low':
                                 details += f"Very low correlation ({corr*100:.0f}%)\n"
-                                details += "      → Very wide stereo - verify mono behavior\n"
+                                # Rotate variation based on region index
+                                mono_msg = variaciones_mono_en[region_idx % len(variaciones_mono_en)]
+                                details += f"      → Very wide stereo - {mono_msg}\n"
                                 # v7.3.35: Show band breakdown if available
                                 if band_corr:
                                     problem_bands = identify_problem_bands(band_corr, threshold=0.3)
@@ -3785,7 +3803,7 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
                         
                         details += "\n"
                 
-                details += "💡 Review the timestamps above in your DAW to confirm if what's detected in the Temporal Analysis is an artistic decision or if it requires a technical adjustment before mastering.\n\n"
+                details += "💡 Review the timestamps above in your DAW to evaluate if what's detected in the Temporal Analysis is an artistic decision or if it requires a technical adjustment before mastering.\n\n"
             
             else:
                 # No temporal analysis available
@@ -4972,7 +4990,15 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                         region_word = "región" if num_regions == 1 else "regiones"
                         problem_word = "problemática" if num_regions == 1 else "problemáticas"
                         temporal_message += f"🎧 Correlación ({num_regions} {region_word} {problem_word}):\n"
-                        for region in regions[:10]:
+                        
+                        # v7.3.36.4: Variaciones de mensajes de mono para evitar repetición
+                        variaciones_mono_es = [
+                            "verifica comportamiento en mono",
+                            "posible pérdida de cuerpo en mono",
+                            "puede perder impacto en mono"
+                        ]
+                        
+                        for region_idx, region in enumerate(regions[:10]):
                             start_min = int(region['start'] // 60)
                             start_sec = int(region['start'] % 60)
                             end_min = int(region['end'] // 60)
@@ -4994,7 +5020,9 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                                 temporal_message += "      → Revisa efectos estéreo y reverbs\n"
                             elif issue == 'very_low':
                                 temporal_message += f"Correlación muy baja ({corr*100:.0f}%)\n"
-                                temporal_message += "      → Estéreo muy amplio - posible pérdida de cuerpo en mono\n"
+                                # Rotate variation based on region index
+                                mono_msg = variaciones_mono_es[region_idx % len(variaciones_mono_es)]
+                                temporal_message += f"      → Estéreo muy amplio - {mono_msg}\n"
                                 # v7.3.35: Show band breakdown if available
                                 if band_corr:
                                     problem_bands = identify_problem_bands(band_corr, threshold=0.3)
@@ -5095,7 +5123,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
             if has_temporal:
                 message += "⚠️ ANÁLISIS TEMPORAL:\n\n"
                 message += temporal_message
-                message += "💡 Revisa los tiempos indicados arriba en tu DAW para confirmar si lo detectado en el Análisis Temporal responde a una decisión artística o si requiere un ajuste técnico antes del mastering.\n\n"
+                message += "💡 Revisa los tiempos indicados arriba en tu DAW para evaluar si lo detectado en el Análisis Temporal responde a una decisión artística o si requiere un ajuste técnico antes del mastering.\n\n"
             
             # SECTION 3: Technical Observations
             observations = []
@@ -5278,7 +5306,15 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                     if num_regions > 0:
                         has_temporal = True
                         temporal_message += f"🎧 Correlation ({num_regions} problematic region{'s' if num_regions > 1 else ''}):\n"
-                        for region in regions[:10]:
+                        
+                        # v7.3.36.4: Variations to avoid mechanical repetition
+                        variaciones_mono_en = [
+                            "verify mono behavior",
+                            "possible body loss in mono",
+                            "may lose impact in mono"
+                        ]
+                        
+                        for region_idx, region in enumerate(regions[:10]):
                             start_min = int(region['start'] // 60)
                             start_sec = int(region['start'] % 60)
                             end_min = int(region['end'] // 60)
@@ -5300,7 +5336,9 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                                 temporal_message += "      → Check stereo effects and reverbs\n"
                             elif issue == 'very_low':
                                 temporal_message += f"Very low correlation ({corr*100:.0f}%)\n"
-                                temporal_message += "      → Very wide stereo - possible body loss in mono\n"
+                                # Rotate variation based on region index
+                                mono_msg = variaciones_mono_en[region_idx % len(variaciones_mono_en)]
+                                temporal_message += f"      → Very wide stereo - {mono_msg}\n"
                                 # v7.3.35: Show band breakdown if available
                                 if band_corr:
                                     problem_bands = identify_problem_bands(band_corr, threshold=0.3)
@@ -5397,7 +5435,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
             if has_temporal:
                 message += "⚠️ TEMPORAL ANALYSIS:\n\n"
                 message += temporal_message
-                message += "💡 Review the timestamps above in your DAW to confirm if what's detected in the Temporal Analysis is an artistic decision or if it requires a technical adjustment before mastering.\n\n"
+                message += "💡 Review the timestamps above in your DAW to evaluate if what's detected in the Temporal Analysis is an artistic decision or if it requires a technical adjustment before mastering.\n\n"
             
             # SECTION 3: Technical Observations
             observations = []
