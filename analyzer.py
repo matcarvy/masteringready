@@ -1,8 +1,16 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Mix Analyzer v7.3.35 - Correlation Per-Band Analysis
-=====================================================
+Mix Analyzer v7.3.36 - Parity Audit & Improved Messages
+=======================================================
+
+v7.3.36 IMPROVEMENTS:
+- Parity audit: Normal and chunked modes now have identical output structure
+- Added 'num_chunks' field to normal mode (value: 1) for consistency
+- Improved "test in mono" messages for clarity:
+  ES: "prueba en mono" → "escúchalo en mono" (clearer action)
+  EN: "test in mono" → "check in mono" (shorter/clearer)
+- All 8 occurrences of these messages updated
 
 v7.3.35 NEW FEATURE:
 - Added per-band correlation analysis when phase issues are detected
@@ -17,7 +25,7 @@ v7.3.34 FIX:
 - Issue type (very_low/negative/etc) now based on avg_correlation, not first chunk
 - This fixes cases where same percentage showed different messages
 - Example: 18% was incorrectly showing as both "muy baja" AND "negativa"
-- Temporal correlation messages now include "prueba en mono" / "test in mono"
+- Temporal correlation messages now include "escúchalo en mono" / "check in mono"
 
 v7.3.33 CHANGES:
 - Correlation messages now differentiate between low positive and negative values
@@ -2841,6 +2849,7 @@ def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, s
         "cta": cta_data,  # Add CTA data for frontend
         "interpretations": interpretations,  # NEW: Add interpretations
         "chunked": False,
+        "num_chunks": 1,  # v7.3.36: Added for parity with chunked mode
         "notes": {
             "lufs_is_real": HAS_PYLOUDNORM and lufs is not None,
             "lufs_reliable": duration >= MIN_DURATION_FOR_LUFS,
@@ -3239,7 +3248,7 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
                                 details += "      → Revisa efectos estéreo y reverbs\n"
                             elif issue == 'very_low':
                                 details += f"Correlación muy baja ({corr*100:.0f}%)\n"
-                                details += "      → Stereo muy amplio - prueba en mono, puede perder cuerpo\n"
+                                details += "      → Stereo muy amplio - escúchalo en mono, puede perder cuerpo\n"
                                 # v7.3.35: Show band breakdown if available
                                 if band_corr:
                                     problem_bands = identify_problem_bands(band_corr, threshold=0.3)
@@ -3299,10 +3308,10 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
                             details += f"   • {start_min}:{start_sec:02d} → {end_min}:{end_sec:02d} ({dur}s): "
                             if issue == 'mono':
                                 details += f"Ratio bajo ({ms:.2f})\n"
-                                details += "      → Mezcla muy mono\n"
+                                details += "      → Mezcla muy mono - poca información estéreo\n"
                             else:
                                 details += f"Ratio alto ({ms:.2f})\n"
-                                details += "      → Exceso de información Side\n"
+                                details += "      → Mucha información Side - escúchalo en mono, puede perder cuerpo central\n"
                         
                         # Show remaining count if more than max_regions_to_show
                         if num_regions > max_regions_to_show:
@@ -3487,7 +3496,7 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
                                 details += "      → Check stereo effects and reverbs\n"
                             elif issue == 'very_low':
                                 details += f"Very low correlation ({corr*100:.0f}%)\n"
-                                details += "      → Very wide stereo - test in mono, may lose body\n"
+                                details += "      → Very wide stereo - check in mono, may lose body\n"
                                 # v7.3.35: Show band breakdown if available
                                 if band_corr:
                                     problem_bands = identify_problem_bands(band_corr, threshold=0.3)
@@ -3547,10 +3556,10 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
                             details += f"   • {start_min}:{start_sec:02d} → {end_min}:{end_sec:02d} ({dur}s): "
                             if issue == 'mono':
                                 details += f"Low ratio ({ms:.2f})\n"
-                                details += "      → Very mono mix\n"
+                                details += "      → Very mono mix - little stereo information\n"
                             else:
                                 details += f"High ratio ({ms:.2f})\n"
-                                details += "      → Excessive Side information\n"
+                                details += "      → Heavy Side content - check in mono, may lose center focus\n"
                         
                         # Show remaining count if more than max_regions_to_show
                         if num_regions > max_regions_to_show:
@@ -4754,6 +4763,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                             dur = int(region['duration'])
                             corr = region['avg_correlation']
                             issue = region['issue']
+                            band_corr = region.get('band_correlation')
                             
                             temporal_message += f"   • {start_min}:{start_sec:02d} → {end_min}:{end_sec:02d} ({dur}s): "
                             
@@ -4767,13 +4777,34 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                                 temporal_message += "      → Revisa efectos estéreo y reverbs\n"
                             elif issue == 'very_low':
                                 temporal_message += f"Correlación muy baja ({corr*100:.0f}%)\n"
-                                temporal_message += "      → Stereo muy amplio - prueba en mono, puede perder cuerpo\n"
+                                temporal_message += "      → Stereo muy amplio - escúchalo en mono, puede perder cuerpo\n"
+                                # v7.3.35: Show band breakdown if available
+                                if band_corr:
+                                    problem_bands = identify_problem_bands(band_corr, threshold=0.3)
+                                    if problem_bands:
+                                        band_names = [f"{b['name_es']} ({b['correlation']*100:.0f}%)" for b in problem_bands[:3]]
+                                        temporal_message += f"      📊 Bandas afectadas: {', '.join(band_names)}\n"
+                                        temporal_message += f"      💡 Revisa: {problem_bands[0]['causes_es']}\n"
                             elif issue == 'negative':
                                 temporal_message += f"Correlación negativa ({corr*100:.0f}%)\n"
                                 temporal_message += "      → Empieza cancelación de fase - pérdida en mono\n"
+                                # v7.3.35: Show band breakdown if available
+                                if band_corr:
+                                    problem_bands = identify_problem_bands(band_corr, threshold=0.3)
+                                    if problem_bands:
+                                        band_names = [f"{b['name_es']} ({b['correlation']*100:.0f}%)" for b in problem_bands[:3]]
+                                        temporal_message += f"      📊 Bandas afectadas: {', '.join(band_names)}\n"
+                                        temporal_message += f"      💡 Revisa: {problem_bands[0]['causes_es']}\n"
                             elif issue == 'negative_severe':
                                 temporal_message += f"Correlación negativa severa ({corr*100:.0f}%)\n"
                                 temporal_message += "      → Cancelación de fase severa en mono\n"
+                                # v7.3.35: Show band breakdown if available
+                                if band_corr:
+                                    problem_bands = identify_problem_bands(band_corr, threshold=0.3)
+                                    if problem_bands:
+                                        band_names = [f"{b['name_es']} ({b['correlation']*100:.0f}%)" for b in problem_bands[:3]]
+                                        temporal_message += f"      📊 Bandas afectadas: {', '.join(band_names)}\n"
+                                        temporal_message += f"      💡 Revisa: {problem_bands[0]['causes_es']}\n"
                             else:  # Fallback
                                 temporal_message += f"Correlación: {corr*100:.0f}%\n"
                         temporal_message += "\n"
@@ -4799,8 +4830,10 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                             temporal_message += f"   • {start_min}:{start_sec:02d} → {end_min}:{end_sec:02d} ({dur}s): "
                             if issue == 'mono':
                                 temporal_message += f"Ratio bajo ({ms:.2f})\n"
+                                temporal_message += "      → Muy mono - poca información estéreo\n"
                             else:
                                 temporal_message += f"Ratio alto ({ms:.2f})\n"
+                                temporal_message += "      → Mucha Side - escúchalo en mono\n"
                         temporal_message += "\n"
                 
                 # L/R Balance temporal
@@ -5023,6 +5056,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                             dur = int(region['duration'])
                             corr = region['avg_correlation']
                             issue = region['issue']
+                            band_corr = region.get('band_correlation')
                             
                             temporal_message += f"   • {start_min}:{start_sec:02d} → {end_min}:{end_sec:02d} ({dur}s): "
                             
@@ -5036,13 +5070,34 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                                 temporal_message += "      → Check stereo effects and reverbs\n"
                             elif issue == 'very_low':
                                 temporal_message += f"Very low correlation ({corr*100:.0f}%)\n"
-                                temporal_message += "      → Very wide stereo - test in mono, may lose body\n"
+                                temporal_message += "      → Very wide stereo - check in mono, may lose body\n"
+                                # v7.3.35: Show band breakdown if available
+                                if band_corr:
+                                    problem_bands = identify_problem_bands(band_corr, threshold=0.3)
+                                    if problem_bands:
+                                        band_names = [f"{b['name_en']} ({b['correlation']*100:.0f}%)" for b in problem_bands[:3]]
+                                        temporal_message += f"      📊 Affected bands: {', '.join(band_names)}\n"
+                                        temporal_message += f"      💡 Check: {problem_bands[0]['causes_en']}\n"
                             elif issue == 'negative':
                                 temporal_message += f"Negative correlation ({corr*100:.0f}%)\n"
                                 temporal_message += "      → Phase cancellation begins - mono loss\n"
+                                # v7.3.35: Show band breakdown if available
+                                if band_corr:
+                                    problem_bands = identify_problem_bands(band_corr, threshold=0.3)
+                                    if problem_bands:
+                                        band_names = [f"{b['name_en']} ({b['correlation']*100:.0f}%)" for b in problem_bands[:3]]
+                                        temporal_message += f"      📊 Affected bands: {', '.join(band_names)}\n"
+                                        temporal_message += f"      💡 Check: {problem_bands[0]['causes_en']}\n"
                             elif issue == 'negative_severe':
                                 temporal_message += f"Severe negative correlation ({corr*100:.0f}%)\n"
                                 temporal_message += "      → Severe phase cancellation in mono\n"
+                                # v7.3.35: Show band breakdown if available
+                                if band_corr:
+                                    problem_bands = identify_problem_bands(band_corr, threshold=0.3)
+                                    if problem_bands:
+                                        band_names = [f"{b['name_en']} ({b['correlation']*100:.0f}%)" for b in problem_bands[:3]]
+                                        temporal_message += f"      📊 Affected bands: {', '.join(band_names)}\n"
+                                        temporal_message += f"      💡 Check: {problem_bands[0]['causes_en']}\n"
                             else:  # Fallback
                                 temporal_message += f"Correlation: {corr*100:.0f}%\n"
                         temporal_message += "\n"
@@ -5068,8 +5123,10 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                             temporal_message += f"   • {start_min}:{start_sec:02d} → {end_min}:{end_sec:02d} ({dur}s): "
                             if issue == 'mono':
                                 temporal_message += f"Low ratio ({ms:.2f})\n"
+                                temporal_message += "      → Very mono - little stereo info\n"
                             else:
                                 temporal_message += f"High ratio ({ms:.2f})\n"
+                                temporal_message += "      → Heavy Side - check in mono\n"
                         temporal_message += "\n"
                 
                 # L/R Balance temporal
