@@ -3384,7 +3384,9 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
                     regions = corr_data.get('regions', [])
                     
                     if num_regions > 0:
-                        details += f"🎧 Correlación ({num_regions} región{'es' if num_regions > 1 else ''} problemática{'s' if num_regions > 1 else ''}):\n"
+                        region_word = "región" if num_regions == 1 else "regiones"
+                        problem_word = "problemática" if num_regions == 1 else "problemáticas"
+                        details += f"🎧 Correlación ({num_regions} {region_word} {problem_word}):\n"
                         
                         max_regions_to_show = 25
                         for region in regions[:max_regions_to_show]:
@@ -3439,6 +3441,9 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
                                         details += f"      💡 Posibles causas en {problem_bands[0]['name_es']}: {problem_bands[0]['causes_es']}\n"
                             else:  # Fallback
                                 details += f"Correlación: {corr*100:.0f}%\n"
+                            
+                            # Add spacing between regions for readability
+                            details += "\n"
                         
                         # Show remaining count if more than max_regions_to_show
                         if num_regions > max_regions_to_show:
@@ -3454,7 +3459,9 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
                     regions = ms_data.get('regions', [])
                     
                     if num_regions > 0:
-                        details += f"📐 M/S Ratio ({num_regions} región{'es' if num_regions > 1 else ''} problemática{'s' if num_regions > 1 else ''}):\n"
+                        region_word = "región" if num_regions == 1 else "regiones"
+                        problem_word = "problemática" if num_regions == 1 else "problemáticas"
+                        details += f"📐 M/S Ratio ({num_regions} {region_word} {problem_word}):\n"
                         
                         max_regions_to_show = 25
                         for region in regions[:max_regions_to_show]:
@@ -3473,6 +3480,9 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
                             else:
                                 details += f"Ratio alto ({ms:.2f})\n"
                                 details += "      → Exceso de información Side - verifica en mono\n"
+                            
+                            # Add spacing between regions for readability
+                            details += "\n"
                         
                         # Show remaining count if more than max_regions_to_show
                         if num_regions > max_regions_to_show:
@@ -3488,7 +3498,9 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
                     regions = lr_data.get('regions', [])
                     
                     if num_regions > 0:
-                        details += f"⚖️ Balance L/R ({num_regions} región{'es' if num_regions > 1 else ''} problemática{'s' if num_regions > 1 else ''}):\n"
+                        region_word = "región" if num_regions == 1 else "regiones"
+                        problem_word = "problemática" if num_regions == 1 else "problemáticas"
+                        details += f"⚖️ Balance L/R ({num_regions} {region_word} {problem_word}):\n"
                         
                         max_regions_to_show = 25
                         for region in regions[:max_regions_to_show]:
@@ -3505,6 +3517,9 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
                                 details += f"Desbalance L: +{abs(balance):.1f} dB\n"
                             else:
                                 details += f"Desbalance R: {balance:.1f} dB\n"
+                            
+                            # Add spacing between regions for readability
+                            details += "\n"
                         
                         # Show remaining count if more than max_regions_to_show
                         if num_regions > max_regions_to_show:
@@ -3657,7 +3672,7 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
                                 details += "      → Check stereo effects and reverbs\n"
                             elif issue == 'very_low':
                                 details += f"Very low correlation ({corr*100:.0f}%)\n"
-                                details += "      → Very wide stereo - check in mono, may lose body\n"
+                                details += "      → Very wide stereo - verify mono behavior\n"
                                 # v7.3.35: Show band breakdown if available
                                 if band_corr:
                                     problem_bands = identify_problem_bands(band_corr, threshold=0.3)
@@ -3687,6 +3702,9 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
                                         details += f"      💡 Possible causes in {problem_bands[0]['name_en']}: {problem_bands[0]['causes_en']}\n"
                             else:  # Fallback
                                 details += f"Correlation: {corr*100:.0f}%\n"
+                            
+                            # Add spacing between regions for readability
+                            details += "\n"
                         
                         # Show remaining count if more than max_regions_to_show
                         if num_regions > max_regions_to_show:
@@ -3721,6 +3739,9 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
                             else:
                                 details += f"High ratio ({ms:.2f})\n"
                                 details += "      → Excess Side information - check in mono\n"
+                            
+                            # Add spacing between regions for readability
+                            details += "\n"
                         
                         # Show remaining count if more than max_regions_to_show
                         if num_regions > max_regions_to_show:
@@ -3753,6 +3774,9 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
                                 details += f"L imbalance: +{abs(balance):.1f} dB\n"
                             else:
                                 details += f"R imbalance: {balance:.1f} dB\n"
+                            
+                            # Add spacing between regions for readability
+                            details += "\n"
                         
                         # Show remaining count if more than max_regions_to_show
                         if num_regions > max_regions_to_show:
@@ -4945,7 +4969,9 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                     
                     if num_regions > 0:
                         has_temporal = True
-                        temporal_message += f"🎧 Correlación ({num_regions} región{'es' if num_regions > 1 else ''} problemática{'s' if num_regions > 1 else ''}):\n"
+                        region_word = "región" if num_regions == 1 else "regiones"
+                        problem_word = "problemática" if num_regions == 1 else "problemáticas"
+                        temporal_message += f"🎧 Correlación ({num_regions} {region_word} {problem_word}):\n"
                         for region in regions[:10]:
                             start_min = int(region['start'] // 60)
                             start_sec = int(region['start'] % 60)
@@ -4998,6 +5024,9 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                                         temporal_message += f"      💡 Posibles causas en {problem_bands[0]['name_es']}: {problem_bands[0]['causes_es']}\n"
                             else:  # Fallback
                                 temporal_message += f"Correlación: {corr*100:.0f}%\n"
+                            
+                            # Add spacing between regions for readability
+                            temporal_message += "\n"
                         temporal_message += "\n"
                 
                 # M/S Ratio temporal
@@ -5008,7 +5037,9 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                     
                     if num_regions > 0:
                         has_temporal = True
-                        temporal_message += f"📐 M/S Ratio ({num_regions} región{'es' if num_regions > 1 else ''} problemática{'s' if num_regions > 1 else ''}):\n"
+                        region_word = "región" if num_regions == 1 else "regiones"
+                        problem_word = "problemática" if num_regions == 1 else "problemáticas"
+                        temporal_message += f"📐 M/S Ratio ({num_regions} {region_word} {problem_word}):\n"
                         for region in regions[:10]:
                             start_min = int(region['start'] // 60)
                             start_sec = int(region['start'] % 60)
@@ -5025,6 +5056,9 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                             else:
                                 temporal_message += f"Ratio alto ({ms:.2f})\n"
                                 temporal_message += "      → Exceso de información Side - escúchalo en mono\n"
+                            
+                            # Add spacing between regions for readability
+                            temporal_message += "\n"
                         temporal_message += "\n"
                 
                 # L/R Balance temporal
@@ -5035,7 +5069,9 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                     
                     if num_regions > 0:
                         has_temporal = True
-                        temporal_message += f"⚖️ Balance L/R ({num_regions} región{'es' if num_regions > 1 else ''} problemática{'s' if num_regions > 1 else ''}):\n"
+                        region_word = "región" if num_regions == 1 else "regiones"
+                        problem_word = "problemática" if num_regions == 1 else "problemáticas"
+                        temporal_message += f"⚖️ Balance L/R ({num_regions} {region_word} {problem_word}):\n"
                         for region in regions[:10]:
                             start_min = int(region['start'] // 60)
                             start_sec = int(region['start'] % 60)
@@ -5050,6 +5086,9 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                                 temporal_message += f"Desbalance L: +{abs(balance):.1f} dB\n"
                             else:
                                 temporal_message += f"Desbalance R: {balance:.1f} dB\n"
+                            
+                            # Add spacing between regions for readability
+                            temporal_message += "\n"
                         temporal_message += "\n"
             
             # Add temporal analysis section if there's any temporal data
@@ -5261,7 +5300,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                                 temporal_message += "      → Check stereo effects and reverbs\n"
                             elif issue == 'very_low':
                                 temporal_message += f"Very low correlation ({corr*100:.0f}%)\n"
-                                temporal_message += "      → Very wide stereo - check in mono, may lose body\n"
+                                temporal_message += "      → Very wide stereo - possible body loss in mono\n"
                                 # v7.3.35: Show band breakdown if available
                                 if band_corr:
                                     problem_bands = identify_problem_bands(band_corr, threshold=0.3)
@@ -5291,6 +5330,9 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                                         temporal_message += f"      💡 Possible causes in {problem_bands[0]['name_en']}: {problem_bands[0]['causes_en']}\n"
                             else:  # Fallback
                                 temporal_message += f"Correlation: {corr*100:.0f}%\n"
+                            
+                            # Add spacing between regions for readability
+                            temporal_message += "\n"
                         temporal_message += "\n"
                 
                 # M/S Ratio temporal
@@ -5318,6 +5360,9 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                             else:
                                 temporal_message += f"High ratio ({ms:.2f})\n"
                                 temporal_message += "      → Excess Side information - check in mono\n"
+                            
+                            # Add spacing between regions for readability
+                            temporal_message += "\n"
                         temporal_message += "\n"
                 
                 # L/R Balance temporal
@@ -5343,6 +5388,9 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                                 temporal_message += f"L imbalance: +{abs(balance):.1f} dB\n"
                             else:
                                 temporal_message += f"R imbalance: {balance:.1f} dB\n"
+                            
+                            # Add spacing between regions for readability
+                            temporal_message += "\n"
                         temporal_message += "\n"
             
             # Add temporal analysis section if there's any temporal data
