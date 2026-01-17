@@ -534,10 +534,10 @@ def _generate_stereo_text_es(balance: float, correlation: float, ms_ratio: float
                 "interpretation": (
                     f"La imagen estéreo de tu mezcla está muy ancha (M/S: {ms_ratio:.2f}). "
                     "Puede sonar débil en parlantes o perder impacto en mono. "
-                    "Los efectos de stereo widening pueden estar exagerados."
+                    "Los efectos de estéreo widening pueden estar exagerados."
                 ),
                 "recommendation": (
-                    "Considera reducir el stereo widening en algunos elementos. "
+                    "Considera reducir el estéreo widening en algunos elementos. "
                     "Verifica que el centro (voz, bajo, kick) no esté disperso. "
                     "Prueba en mono para verificar."
                 )
