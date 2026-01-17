@@ -1,8 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Mix Analyzer v7.3.31 - True Peak Messaging Alignment
+Mix Analyzer v7.3.32 - LUFS Chunked Calculation Fix
 ======================================================
+
+v7.3.32 CRITICAL FIX:
+- Fixed LUFS calculation in chunked mode using ENERGY summation (EBU R128 correct)
+- Before: arithmetic average of dB values (WRONG: -8 + -12 / 2 = -10)
+- After: logarithmic energy sum (CORRECT: 10*log10(avg(10^(LUFS/10))))
+- This was causing ~1-2 dB measurement errors vs reference meters
 
 v7.3.31 CHANGES:
 - True Peak messages now emphasize "for mastering" instead of MP3/AAC/streaming
@@ -3746,10 +3752,21 @@ def analyze_file_chunked(
     final_peak = max(results['peaks']) if results['peaks'] else -60.0
     final_tp = max(results['tps']) if results['tps'] else -60.0
     
-    # LUFS: weighted average
-    weighted_lufs = sum(
-        lufs * dur for lufs, dur in zip(results['lufs_values'], results['chunk_durations'])
-    ) / total_duration if total_duration > 0 else -23.0
+    # LUFS: weighted average using ENERGY (not dB arithmetic)
+    # EBU R128 specifies loudness is summed in linear domain, not dB
+    # Formula: LUFS_total = 10 * log10(sum(10^(LUFS_i/10) * duration_i) / total_duration)
+    if total_duration > 0 and results['lufs_values']:
+        lufs_energy_sum = sum(
+            (10 ** (lufs / 10)) * dur 
+            for lufs, dur in zip(results['lufs_values'], results['chunk_durations'])
+            if lufs is not None and lufs > -70  # Ignore very quiet chunks
+        )
+        if lufs_energy_sum > 0:
+            weighted_lufs = 10 * math.log10(lufs_energy_sum / total_duration)
+        else:
+            weighted_lufs = -70.0  # Fallback for silence
+    else:
+        weighted_lufs = -23.0
     
     # PLR: difference between peak and LUFS
     final_plr = final_peak - weighted_lufs
