@@ -5,12 +5,22 @@ Mix Analyzer v7.3.36 - Parity Audit & Improved Messages
 =======================================================
 
 v7.3.36 IMPROVEMENTS:
-- Parity audit: Normal and chunked modes now have identical output structure
+- FULL PARITY between normal and chunked modes:
+  * temporal_analysis structure now identical in both modes
+  * correlation regions include: avg_correlation, issue, band_correlation
+  * ms_ratio regions include: avg_ms_ratio, issue, severity
+  * lr_balance regions include: avg_balance_db, side, severity
+  * clipping_temporal: severity, affected_percentage, problem_regions, total_regions
+  * tp_temporal: severity, affected_percentage, problem_regions, total_regions, max_value
 - Added 'num_chunks' field to normal mode (value: 1) for consistency
 - Improved "test in mono" messages for clarity:
   ES: "prueba en mono" → "escúchalo en mono" (clearer action)
   EN: "test in mono" → "check in mono" (shorter/clearer)
-- All 8 occurrences of these messages updated
+- Improved band correlation cause messages:
+  ES: "Revisa: bajo, toms, o guitarras" → "Posibles causas en Bajos-Medios: bajo, toms, guitarras"
+  EN: "Check: bass, toms, or low guitars" → "Possible causes in Bass-Mids: bass, toms, low guitars"
+- Removed "o" / "or" from cause lists for cleaner formatting
+- Band name now explicitly shown to eliminate ambiguity
 
 v7.3.35 NEW FEATURE:
 - Added per-band correlation analysis when phase issues are detected
@@ -983,36 +993,36 @@ def identify_problem_bands(band_correlations: Dict[str, float], threshold: float
             'range': '20-120 Hz',
             'es': 'Sub/Bajos',
             'en': 'Sub/Bass',
-            'causes_es': 'kick, sub bass, o sidechain',
-            'causes_en': 'kick, sub bass, or sidechain'
+            'causes_es': 'kick, sub bass, sidechain',
+            'causes_en': 'kick, sub bass, sidechain'
         },
         'bass_mid': {
             'range': '120-500 Hz',
             'es': 'Bajos-Medios',
             'en': 'Bass-Mids',
-            'causes_es': 'bajo, toms, o guitarras graves',
-            'causes_en': 'bass, toms, or low guitars'
+            'causes_es': 'bajo, toms, guitarras graves',
+            'causes_en': 'bass, toms, low guitars'
         },
         'mid': {
             'range': '500-2k Hz',
             'es': 'Medios',
             'en': 'Mids',
-            'causes_es': 'voces, guitarras, snare, o synths',
-            'causes_en': 'vocals, guitars, snare, or synths'
+            'causes_es': 'voces, guitarras, snare, synths',
+            'causes_en': 'vocals, guitars, snare, synths'
         },
         'mid_high': {
             'range': '2-8 kHz',
             'es': 'Medios-Altos',
             'en': 'Mid-Highs',
-            'causes_es': 'presencia vocal, platillos, o reverbs',
-            'causes_en': 'vocal presence, cymbals, or reverbs'
+            'causes_es': 'presencia vocal, platillos, reverbs',
+            'causes_en': 'vocal presence, cymbals, reverbs'
         },
         'high': {
             'range': '8-20 kHz',
             'es': 'Altos',
             'en': 'Highs',
-            'causes_es': 'aire, brillos, o hi-hats',
-            'causes_en': 'air, brilliance, or hi-hats'
+            'causes_es': 'aire, brillos, hi-hats',
+            'causes_en': 'air, brilliance, hi-hats'
         }
     }
     
@@ -1372,6 +1382,7 @@ def analyze_correlation_temporal(y: np.ndarray, sr: int, threshold: float = 0.3)
     Temporal analysis of stereo correlation.
     Detects REGIONS where correlation is problematic (not just individual moments).
     
+    v7.3.36: Added band_correlation for parity with chunked mode
     v7.3.30: Added filtering for:
     - Regions < 8 seconds (noise)
     - Intro (first 5s) and outro (last 5s)
@@ -1404,9 +1415,16 @@ def analyze_correlation_temporal(y: np.ndarray, sr: int, threshold: float = 0.3)
         timestamp = start / sr
         
         if corr < threshold:
+            # v7.3.36: Calculate band correlation for problem windows
+            band_corr = None
+            if corr < 0.3:  # Only for significant issues
+                band_corr = correlation_by_band(window, sr)
+            
             problem_windows.append({
                 "time_seconds": timestamp,
-                "value": round(corr * 100, 0)
+                "value": round(corr * 100, 0),
+                "correlation": corr,
+                "band_correlation": band_corr
             })
     
     # Now detect CONTINUOUS REGIONS from problem windows
@@ -1415,6 +1433,7 @@ def analyze_correlation_temporal(y: np.ndarray, sr: int, threshold: float = 0.3)
     if problem_windows:
         current_region_start = problem_windows[0]["time_seconds"]
         current_region_end = problem_windows[0]["time_seconds"]
+        current_region_windows = [problem_windows[0]]
         
         for i in range(1, len(problem_windows)):
             prev_time = problem_windows[i-1]["time_seconds"]
@@ -1423,23 +1442,80 @@ def analyze_correlation_temporal(y: np.ndarray, sr: int, threshold: float = 0.3)
             # If gap is less than 10 seconds, consider it same region
             if curr_time - prev_time <= 10.0:
                 current_region_end = curr_time
+                current_region_windows.append(problem_windows[i])
             else:
                 # Save previous region and start new one
+                # v7.3.36: Calculate average correlation and band_correlation for region
+                avg_corr = sum(w['correlation'] for w in current_region_windows) / len(current_region_windows)
+                
+                # Aggregate band correlations
+                band_corrs = [w.get('band_correlation') for w in current_region_windows if w.get('band_correlation')]
+                avg_band_corr = None
+                if band_corrs:
+                    avg_band_corr = {}
+                    for band in ['sub_bass', 'bass_mid', 'mid', 'mid_high', 'high']:
+                        values = [bc[band] for bc in band_corrs if band in bc]
+                        if values:
+                            avg_band_corr[band] = sum(values) / len(values)
+                
+                # Classify issue type based on avg_correlation
+                if avg_corr > 0.97:
+                    issue_type = 'high'
+                elif avg_corr >= 0.0 and avg_corr < 0.3:
+                    issue_type = 'very_low'
+                elif avg_corr >= -0.2 and avg_corr < 0.0:
+                    issue_type = 'negative'
+                elif avg_corr < -0.2:
+                    issue_type = 'negative_severe'
+                else:
+                    issue_type = 'medium_low'
+                
                 problem_regions.append({
                     "start": format_timestamp(current_region_start),
                     "end": format_timestamp(current_region_end),
                     "start_seconds": current_region_start,
-                    "end_seconds": current_region_end
+                    "end_seconds": current_region_end,
+                    "avg_correlation": avg_corr,
+                    "issue": issue_type,
+                    "band_correlation": avg_band_corr
                 })
                 current_region_start = curr_time
                 current_region_end = curr_time
+                current_region_windows = [problem_windows[i]]
         
         # Don't forget the last region
+        avg_corr = sum(w['correlation'] for w in current_region_windows) / len(current_region_windows)
+        
+        # Aggregate band correlations for last region
+        band_corrs = [w.get('band_correlation') for w in current_region_windows if w.get('band_correlation')]
+        avg_band_corr = None
+        if band_corrs:
+            avg_band_corr = {}
+            for band in ['sub_bass', 'bass_mid', 'mid', 'mid_high', 'high']:
+                values = [bc[band] for bc in band_corrs if band in bc]
+                if values:
+                    avg_band_corr[band] = sum(values) / len(values)
+        
+        # Classify issue type
+        if avg_corr > 0.97:
+            issue_type = 'high'
+        elif avg_corr >= 0.0 and avg_corr < 0.3:
+            issue_type = 'very_low'
+        elif avg_corr >= -0.2 and avg_corr < 0.0:
+            issue_type = 'negative'
+        elif avg_corr < -0.2:
+            issue_type = 'negative_severe'
+        else:
+            issue_type = 'medium_low'
+        
         problem_regions.append({
             "start": format_timestamp(current_region_start),
             "end": format_timestamp(current_region_end),
             "start_seconds": current_region_start,
-            "end_seconds": current_region_end
+            "end_seconds": current_region_end,
+            "avg_correlation": avg_corr,
+            "issue": issue_type,
+            "band_correlation": avg_band_corr
         })
     
     # v7.3.30: Filter regions (min duration 8s, exclude intro/outro 5s)
@@ -1466,6 +1542,7 @@ def analyze_lr_balance_temporal(y: np.ndarray, sr: int, threshold: float = 3.0) 
     Temporal analysis of L/R balance.
     Detects REGIONS where balance exceeds threshold (not just individual moments).
     
+    v7.3.36: Added avg_balance_db, side, severity for parity with chunked mode
     v7.3.30: Added filtering for:
     - Regions < 8 seconds (noise)
     - Intro (first 5s) and outro (last 5s)
@@ -1500,7 +1577,10 @@ def analyze_lr_balance_temporal(y: np.ndarray, sr: int, threshold: float = 3.0) 
         if abs(balance) > threshold:
             problem_windows.append({
                 "time_seconds": timestamp,
-                "value": round(balance, 1)
+                "value": round(balance, 1),
+                "balance_db": balance,
+                "side": "left" if balance > 0 else "right",
+                "severity": "critical" if abs(balance) > 3.0 else "warning"
             })
     
     # Now detect CONTINUOUS REGIONS from problem windows
@@ -1509,6 +1589,7 @@ def analyze_lr_balance_temporal(y: np.ndarray, sr: int, threshold: float = 3.0) 
     if problem_windows:
         current_region_start = problem_windows[0]["time_seconds"]
         current_region_end = problem_windows[0]["time_seconds"]
+        current_region_windows = [problem_windows[0]]
         
         for i in range(1, len(problem_windows)):
             prev_time = problem_windows[i-1]["time_seconds"]
@@ -1517,23 +1598,37 @@ def analyze_lr_balance_temporal(y: np.ndarray, sr: int, threshold: float = 3.0) 
             # If gap is less than 10 seconds, consider it same region
             if curr_time - prev_time <= 10.0:
                 current_region_end = curr_time
+                current_region_windows.append(problem_windows[i])
             else:
                 # Save previous region and start new one
+                avg_balance = sum(w['balance_db'] for w in current_region_windows) / len(current_region_windows)
+                max_severity = max(w['severity'] for w in current_region_windows)
+                
                 problem_regions.append({
                     "start": format_timestamp(current_region_start),
                     "end": format_timestamp(current_region_end),
                     "start_seconds": current_region_start,
-                    "end_seconds": current_region_end
+                    "end_seconds": current_region_end,
+                    "avg_balance_db": avg_balance,
+                    "side": "left" if avg_balance > 0 else "right",
+                    "severity": max_severity
                 })
                 current_region_start = curr_time
                 current_region_end = curr_time
+                current_region_windows = [problem_windows[i]]
         
         # Don't forget the last region
+        avg_balance = sum(w['balance_db'] for w in current_region_windows) / len(current_region_windows)
+        max_severity = max(w['severity'] for w in current_region_windows)
+        
         problem_regions.append({
             "start": format_timestamp(current_region_start),
             "end": format_timestamp(current_region_end),
             "start_seconds": current_region_start,
-            "end_seconds": current_region_end
+            "end_seconds": current_region_end,
+            "avg_balance_db": avg_balance,
+            "side": "left" if avg_balance > 0 else "right",
+            "severity": max_severity
         })
     
     # v7.3.30: Filter regions (min duration 8s, exclude intro/outro 5s)
@@ -1560,6 +1655,7 @@ def analyze_ms_ratio_temporal(y: np.ndarray, sr: int, low_threshold: float = 0.0
     Temporal analysis of M/S ratio.
     Detects REGIONS where M/S ratio is problematic (too low or too high).
     
+    v7.3.36: Added avg_ms_ratio, issue, severity for parity with chunked mode
     v7.3.30: Added filtering for:
     - Regions < 8 seconds (noise)
     - Intro (first 5s) and outro (last 5s)
@@ -1601,7 +1697,9 @@ def analyze_ms_ratio_temporal(y: np.ndarray, sr: int, low_threshold: float = 0.0
             problem_windows.append({
                 "time_seconds": timestamp,
                 "value": round(ms_ratio, 2),
-                "type": problem_type
+                "ms_ratio": ms_ratio,
+                "issue": problem_type,
+                "severity": "warning"
             })
     
     # Now detect CONTINUOUS REGIONS from problem windows
@@ -1610,6 +1708,7 @@ def analyze_ms_ratio_temporal(y: np.ndarray, sr: int, low_threshold: float = 0.0
     if problem_windows:
         current_region_start = problem_windows[0]["time_seconds"]
         current_region_end = problem_windows[0]["time_seconds"]
+        current_region_windows = [problem_windows[0]]
         
         for i in range(1, len(problem_windows)):
             prev_time = problem_windows[i-1]["time_seconds"]
@@ -1618,23 +1717,37 @@ def analyze_ms_ratio_temporal(y: np.ndarray, sr: int, low_threshold: float = 0.0
             # If gap is less than 10 seconds, consider it same region
             if curr_time - prev_time <= 10.0:
                 current_region_end = curr_time
+                current_region_windows.append(problem_windows[i])
             else:
                 # Save previous region and start new one
+                avg_ms = sum(w['ms_ratio'] for w in current_region_windows) / len(current_region_windows)
+                issue_type = current_region_windows[0]['issue']  # Use first window's issue type
+                
                 problem_regions.append({
                     "start": format_timestamp(current_region_start),
                     "end": format_timestamp(current_region_end),
                     "start_seconds": current_region_start,
-                    "end_seconds": current_region_end
+                    "end_seconds": current_region_end,
+                    "avg_ms_ratio": avg_ms,
+                    "issue": issue_type,
+                    "severity": "warning"
                 })
                 current_region_start = curr_time
                 current_region_end = curr_time
+                current_region_windows = [problem_windows[i]]
         
         # Don't forget the last region
+        avg_ms = sum(w['ms_ratio'] for w in current_region_windows) / len(current_region_windows)
+        issue_type = current_region_windows[0]['issue']
+        
         problem_regions.append({
             "start": format_timestamp(current_region_start),
             "end": format_timestamp(current_region_end),
             "start_seconds": current_region_start,
-            "end_seconds": current_region_end
+            "end_seconds": current_region_end,
+            "avg_ms_ratio": avg_ms,
+            "issue": issue_type,
+            "severity": "warning"
         })
     
     # v7.3.30: Filter regions (min duration 8s, exclude intro/outro 5s)
@@ -2560,7 +2673,7 @@ def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, s
         
         # If no regions found but TP is high, create informative message
         # This happens when peak is brief (transient) but still problematic
-        if tp_temporal and tp_temporal.get('num_regions', 0) == 0:
+        if tp_temporal and tp_temporal.get('total_regions', 0) == 0:
             lang_picked = _pick_lang(lang)
             if lang_picked == 'es':
                 info_message = (
@@ -2577,11 +2690,9 @@ def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, s
                     "it remains an indicator of mastering-level processing."
                 )
             
-            # Create a synthetic region to display the message
-            tp_temporal['num_regions'] = 0  # Keep 0 to avoid showing timestamps
+            # Add info fields to the temporal data
             tp_temporal['info_only'] = True
             tp_temporal['info_message'] = info_message
-            tp_temporal['percentage_above_threshold'] = 0
     
     tp_metric = {
         "name": METRIC_NAMES[_pick_lang(lang)]["True Peak"],
@@ -2704,13 +2815,63 @@ def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, s
         "message": msg_s
     }
     
-    # Add temporal analysis if available
-    if corr_temporal:
-        stereo_metric["correlation_temporal"] = corr_temporal
-    if ms_temporal:
-        stereo_metric["ms_temporal"] = ms_temporal
-    if lr_temporal:
-        stereo_metric["lr_temporal"] = lr_temporal
+    # Add temporal analysis if available - v7.3.36: Unified structure with chunked mode
+    stereo_temporal = {}
+    
+    if corr_temporal and corr_temporal.get('problem_regions'):
+        # Transform to match chunked mode structure
+        regions = corr_temporal.get('problem_regions', [])
+        stereo_temporal['correlation'] = {
+            'num_regions': len(regions),
+            'regions': [
+                {
+                    'start': r.get('start_seconds', 0),
+                    'end': r.get('end_seconds', 0),
+                    'duration': r.get('end_seconds', 0) - r.get('start_seconds', 0),
+                    'avg_correlation': r.get('avg_correlation', 0),
+                    'issue': r.get('issue', 'very_low'),
+                    'band_correlation': r.get('band_correlation')
+                }
+                for r in regions[:25]
+            ]
+        }
+    
+    if ms_temporal and ms_temporal.get('problem_regions'):
+        regions = ms_temporal.get('problem_regions', [])
+        stereo_temporal['ms_ratio'] = {
+            'num_regions': len(regions),
+            'regions': [
+                {
+                    'start': r.get('start_seconds', 0),
+                    'end': r.get('end_seconds', 0),
+                    'duration': r.get('end_seconds', 0) - r.get('start_seconds', 0),
+                    'avg_ms_ratio': r.get('avg_ms_ratio', r.get('ms_ratio', 0)),
+                    'issue': r.get('issue', 'mono'),
+                    'severity': r.get('severity', 'warning')
+                }
+                for r in regions[:25]
+            ]
+        }
+    
+    if lr_temporal and lr_temporal.get('problem_regions'):
+        regions = lr_temporal.get('problem_regions', [])
+        stereo_temporal['lr_balance'] = {
+            'num_regions': len(regions),
+            'regions': [
+                {
+                    'start': r.get('start_seconds', 0),
+                    'end': r.get('end_seconds', 0),
+                    'duration': r.get('end_seconds', 0) - r.get('start_seconds', 0),
+                    'avg_balance_db': r.get('avg_balance_db', r.get('balance_db', 0)),
+                    'side': r.get('side', 'left' if r.get('avg_balance_db', 0) > 0 else 'right'),
+                    'severity': r.get('severity', 'warning')
+                }
+                for r in regions[:25]
+            ]
+        }
+    
+    if stereo_temporal:
+        stereo_metric["temporal_analysis"] = stereo_temporal
     
     metrics.append(stereo_metric)
 
@@ -3255,7 +3416,7 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
                                     if problem_bands:
                                         band_names = [f"{b['name_es']} ({b['correlation']*100:.0f}%)" for b in problem_bands[:3]]
                                         details += f"      📊 Bandas afectadas: {', '.join(band_names)}\n"
-                                        details += f"      💡 Revisa: {problem_bands[0]['causes_es']}\n"
+                                        details += f"      💡 Posibles causas en {problem_bands[0]['name_es']}: {problem_bands[0]['causes_es']}\n"
                             elif issue == 'negative':
                                 details += f"Correlación negativa ({corr*100:.0f}%)\n"
                                 details += "      → Empieza cancelación de fase - pérdida en mono\n"
@@ -3265,7 +3426,7 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
                                     if problem_bands:
                                         band_names = [f"{b['name_es']} ({b['correlation']*100:.0f}%)" for b in problem_bands[:3]]
                                         details += f"      📊 Bandas afectadas: {', '.join(band_names)}\n"
-                                        details += f"      💡 Revisa: {problem_bands[0]['causes_es']}\n"
+                                        details += f"      💡 Posibles causas en {problem_bands[0]['name_es']}: {problem_bands[0]['causes_es']}\n"
                             elif issue == 'negative_severe':
                                 details += f"Correlación negativa severa ({corr*100:.0f}%)\n"
                                 details += "      → Cancelación de fase severa en mono\n"
@@ -3275,7 +3436,7 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
                                     if problem_bands:
                                         band_names = [f"{b['name_es']} ({b['correlation']*100:.0f}%)" for b in problem_bands[:3]]
                                         details += f"      📊 Bandas afectadas: {', '.join(band_names)}\n"
-                                        details += f"      💡 Revisa: {problem_bands[0]['causes_es']}\n"
+                                        details += f"      💡 Posibles causas en {problem_bands[0]['name_es']}: {problem_bands[0]['causes_es']}\n"
                             else:  # Fallback
                                 details += f"Correlación: {corr*100:.0f}%\n"
                         
@@ -3503,7 +3664,7 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
                                     if problem_bands:
                                         band_names = [f"{b['name_en']} ({b['correlation']*100:.0f}%)" for b in problem_bands[:3]]
                                         details += f"      📊 Affected bands: {', '.join(band_names)}\n"
-                                        details += f"      💡 Check: {problem_bands[0]['causes_en']}\n"
+                                        details += f"      💡 Possible causes in {problem_bands[0]['name_en']}: {problem_bands[0]['causes_en']}\n"
                             elif issue == 'negative':
                                 details += f"Negative correlation ({corr*100:.0f}%)\n"
                                 details += "      → Phase cancellation begins - mono loss\n"
@@ -3513,7 +3674,7 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
                                     if problem_bands:
                                         band_names = [f"{b['name_en']} ({b['correlation']*100:.0f}%)" for b in problem_bands[:3]]
                                         details += f"      📊 Affected bands: {', '.join(band_names)}\n"
-                                        details += f"      💡 Check: {problem_bands[0]['causes_en']}\n"
+                                        details += f"      💡 Possible causes in {problem_bands[0]['name_en']}: {problem_bands[0]['causes_en']}\n"
                             elif issue == 'negative_severe':
                                 details += f"Severe negative correlation ({corr*100:.0f}%)\n"
                                 details += "      → Severe phase cancellation in mono\n"
@@ -3523,7 +3684,7 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
                                     if problem_bands:
                                         band_names = [f"{b['name_en']} ({b['correlation']*100:.0f}%)" for b in problem_bands[:3]]
                                         details += f"      📊 Affected bands: {', '.join(band_names)}\n"
-                                        details += f"      💡 Check: {problem_bands[0]['causes_en']}\n"
+                                        details += f"      💡 Possible causes in {problem_bands[0]['name_en']}: {problem_bands[0]['causes_en']}\n"
                             else:  # Fallback
                                 details += f"Correlation: {corr*100:.0f}%\n"
                         
@@ -4156,14 +4317,30 @@ def analyze_file_chunked(
     st_h, msg_h, _ = status_headroom(final_peak, strict, lang)
     
     # Build clipping temporal analysis if there are clipping chunks
+    # v7.3.36: Unified structure with normal mode
     clipping_temporal = None
     if results['clipping_chunks']:
         # Merge consecutive chunks into regions (clipping doesn't need intro/outro filter)
         regions = merge_chunks_into_regions(results['clipping_chunks'], track_duration=duration, min_region_duration=0)
         
+        # Calculate affected percentage based on clipping duration vs total duration
+        clipping_duration = sum(r['end'] - r['start'] for r in regions)
+        affected_percentage = (clipping_duration / duration * 100) if duration > 0 else 0
+        severity = "widespread" if affected_percentage >= 1.0 else "localized"
+        
         clipping_temporal = {
-            'num_regions': len(regions),
-            'regions': [{'start': r['start'], 'end': r['end']} for r in regions[:10]]
+            'severity': severity,
+            'affected_percentage': round(affected_percentage, 3),
+            'problem_regions': [
+                {
+                    'start': format_timestamp(r['start']),
+                    'end': format_timestamp(r['end']),
+                    'start_seconds': r['start'],
+                    'end_seconds': r['end']
+                }
+                for r in regions[:10]
+            ],
+            'total_regions': len(regions)
         }
     
     headroom_metric = {
@@ -4184,6 +4361,7 @@ def analyze_file_chunked(
     st_tp, msg_tp, _, tp_hard = status_true_peak(final_tp, strict, lang)
     
     # Build temporal analysis if there are problem chunks
+    # v7.3.36: Unified structure with normal mode
     tp_temporal = None
     if results['tp_problem_chunks']:
         # FIRST: Merge consecutive chunks into regions (True Peak uses 10s minimum)
@@ -4196,12 +4374,22 @@ def analyze_file_chunked(
             for region in regions
         )
         percentage = (problem_duration / duration) * 100 if duration > 0 else 0
+        severity = "widespread" if percentage >= 20 else "localized"
         
         tp_temporal = {
-            'total_time_above_threshold': problem_duration,
-            'percentage_above_threshold': percentage,
-            'num_regions': len(regions),
-            'regions': [{'start': r['start'], 'end': r['end']} for r in regions[:10]]
+            'severity': severity,
+            'affected_percentage': round(percentage, 0),
+            'problem_regions': [
+                {
+                    'start': format_timestamp(r['start']),
+                    'end': format_timestamp(r['end']),
+                    'start_seconds': r['start'],
+                    'end_seconds': r['end']
+                }
+                for r in regions[:10]
+            ],
+            'total_regions': len(regions),
+            'max_value': round(final_tp, 1)
         }
     elif final_tp > -1.0:
         # If no regions found but TP is high, create informative message
@@ -4223,10 +4411,13 @@ def analyze_file_chunked(
             )
         
         tp_temporal = {
-            'num_regions': 0,
+            'severity': 'none',
+            'affected_percentage': 0,
+            'problem_regions': [],
+            'total_regions': 0,
+            'max_value': round(final_tp, 1),
             'info_only': True,
-            'info_message': info_message,
-            'percentage_above_threshold': 0
+            'info_message': info_message
         }
     
     tp_metric = {
@@ -4784,7 +4975,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                                     if problem_bands:
                                         band_names = [f"{b['name_es']} ({b['correlation']*100:.0f}%)" for b in problem_bands[:3]]
                                         temporal_message += f"      📊 Bandas afectadas: {', '.join(band_names)}\n"
-                                        temporal_message += f"      💡 Revisa: {problem_bands[0]['causes_es']}\n"
+                                        temporal_message += f"      💡 Posibles causas en {problem_bands[0]['name_es']}: {problem_bands[0]['causes_es']}\n"
                             elif issue == 'negative':
                                 temporal_message += f"Correlación negativa ({corr*100:.0f}%)\n"
                                 temporal_message += "      → Empieza cancelación de fase - pérdida en mono\n"
@@ -4794,7 +4985,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                                     if problem_bands:
                                         band_names = [f"{b['name_es']} ({b['correlation']*100:.0f}%)" for b in problem_bands[:3]]
                                         temporal_message += f"      📊 Bandas afectadas: {', '.join(band_names)}\n"
-                                        temporal_message += f"      💡 Revisa: {problem_bands[0]['causes_es']}\n"
+                                        temporal_message += f"      💡 Posibles causas en {problem_bands[0]['name_es']}: {problem_bands[0]['causes_es']}\n"
                             elif issue == 'negative_severe':
                                 temporal_message += f"Correlación negativa severa ({corr*100:.0f}%)\n"
                                 temporal_message += "      → Cancelación de fase severa en mono\n"
@@ -4804,7 +4995,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                                     if problem_bands:
                                         band_names = [f"{b['name_es']} ({b['correlation']*100:.0f}%)" for b in problem_bands[:3]]
                                         temporal_message += f"      📊 Bandas afectadas: {', '.join(band_names)}\n"
-                                        temporal_message += f"      💡 Revisa: {problem_bands[0]['causes_es']}\n"
+                                        temporal_message += f"      💡 Posibles causas en {problem_bands[0]['name_es']}: {problem_bands[0]['causes_es']}\n"
                             else:  # Fallback
                                 temporal_message += f"Correlación: {corr*100:.0f}%\n"
                         temporal_message += "\n"
@@ -5077,7 +5268,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                                     if problem_bands:
                                         band_names = [f"{b['name_en']} ({b['correlation']*100:.0f}%)" for b in problem_bands[:3]]
                                         temporal_message += f"      📊 Affected bands: {', '.join(band_names)}\n"
-                                        temporal_message += f"      💡 Check: {problem_bands[0]['causes_en']}\n"
+                                        temporal_message += f"      💡 Possible causes in {problem_bands[0]['name_en']}: {problem_bands[0]['causes_en']}\n"
                             elif issue == 'negative':
                                 temporal_message += f"Negative correlation ({corr*100:.0f}%)\n"
                                 temporal_message += "      → Phase cancellation begins - mono loss\n"
@@ -5087,7 +5278,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                                     if problem_bands:
                                         band_names = [f"{b['name_en']} ({b['correlation']*100:.0f}%)" for b in problem_bands[:3]]
                                         temporal_message += f"      📊 Affected bands: {', '.join(band_names)}\n"
-                                        temporal_message += f"      💡 Check: {problem_bands[0]['causes_en']}\n"
+                                        temporal_message += f"      💡 Possible causes in {problem_bands[0]['name_en']}: {problem_bands[0]['causes_en']}\n"
                             elif issue == 'negative_severe':
                                 temporal_message += f"Severe negative correlation ({corr*100:.0f}%)\n"
                                 temporal_message += "      → Severe phase cancellation in mono\n"
@@ -5097,7 +5288,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                                     if problem_bands:
                                         band_names = [f"{b['name_en']} ({b['correlation']*100:.0f}%)" for b in problem_bands[:3]]
                                         temporal_message += f"      📊 Affected bands: {', '.join(band_names)}\n"
-                                        temporal_message += f"      💡 Check: {problem_bands[0]['causes_en']}\n"
+                                        temporal_message += f"      💡 Possible causes in {problem_bands[0]['name_en']}: {problem_bands[0]['causes_en']}\n"
                             else:  # Fallback
                                 temporal_message += f"Correlation: {corr*100:.0f}%\n"
                         temporal_message += "\n"
