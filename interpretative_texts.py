@@ -493,13 +493,13 @@ def _generate_stereo_text_es(balance: float, correlation: float, ms_ratio: float
         if correlation > 0.97 and ms_ratio < 0.05:
             return {
                 "interpretation": (
-                    "Tu mezcla presenta alta coherencia entre canales (excelente compatibilidad mono). "
-                    f"Correlación muy alta ({correlation:.2f}) con M/S ratio bajo ({ms_ratio:.2f}). "
-                    "Esto puede ser intencional o indicar que se exportó en mono."
+                    "La imagen estéreo de tu mezcla es prácticamente mono. "
+                    f"Correlación muy alta ({correlation:.2f}) con M/S ratio muy bajo ({ms_ratio:.2f}). "
+                    "¿Es intencional? Verifica si exportaste en mono por error."
                 ),
                 "recommendation": (
-                    "Si buscas más amplitud estéreo, revisa la exportación y panoramas. "
-                    "Si la mezcla centrada es intencional, está perfecta así."
+                    "Si buscas una mezcla estéreo, revisa la exportación y panoramas. "
+                    "Si es intencional (mono mix), está bien así."
                 )
             }
         else:
@@ -839,13 +839,13 @@ def _generate_stereo_text_en(balance: float, correlation: float, ms_ratio: float
         if correlation > 0.97 and ms_ratio < 0.05:
             return {
                 "interpretation": (
-                    "Your mix shows high channel coherence (excellent mono compatibility). "
-                    f"Very high correlation ({correlation:.2f}) with low M/S ratio ({ms_ratio:.2f}). "
-                    "This may be intentional or indicate a mono export."
+                    "Your mix's stereo image is practically mono. "
+                    f"Very high correlation ({correlation:.2f}) with very low M/S ratio ({ms_ratio:.2f}). "
+                    "Is this intentional? Check if you exported in mono by mistake."
                 ),
                 "recommendation": (
-                    "If you want more stereo width, review export settings and panning. "
-                    "If the centered mix is intentional, it's perfect as is."
+                    "If you want a stereo mix, review export settings and panning. "
+                    "If intentional (mono mix), it's fine as is."
                 )
             }
         else:
