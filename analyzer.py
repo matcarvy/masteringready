@@ -6643,7 +6643,7 @@ def generate_short_mode_report(report: Dict[str, Any], strict: bool = False, lan
         if filename:
             header = f"🎵 Sobre \"{filename}\"\n\n"
         
-        header += f"MR Score: {score}/100\n"
+        header += f"Puntuación MR: {score}/100\n"
         header += f"Veredicto: {verdict}\n\n"
         
         body = ""
@@ -6666,7 +6666,7 @@ def generate_short_mode_report(report: Dict[str, Any], strict: bool = False, lan
         elif score >= 50:
             recommendation = "💡 Recomendación: Necesita varios ajustes antes de enviar a mastering."
         else:
-            recommendation = "💡 Recomendación: Requiere trabajo significativo antes de mastering."
+            recommendation = "💡 Recomendación: Requiere recuperar margen técnico antes de mastering."
         
         # Generate CTA - modo short nunca muestra CTA, solo lo agregamos al resultado
         cta_data = generate_cta(score, strict, lang, mode="short")
@@ -6702,7 +6702,7 @@ def generate_short_mode_report(report: Dict[str, Any], strict: bool = False, lan
         elif score >= 50:
             recommendation = "💡 Recommendation: Needs several adjustments before sending to mastering."
         else:
-            recommendation = "💡 Recommendation: Requires significant work before mastering."
+            recommendation = "💡 Recommendation: Requires recovering technical margin before mastering."
         
         # Generate CTA - modo short nunca muestra CTA, solo lo agregamos al resultado
         cta_data = generate_cta(score, strict, lang, mode="short")
@@ -6972,7 +6972,7 @@ def generate_complete_pdf(
         )
         
         # Header
-        story.append(Paragraph("MASTERINGREADY", title_style))
+        story.append(Paragraph("MASTERING READY", title_style))
         story.append(Paragraph(
             "Reporte Completo de Análisis" if lang == 'es' else "Complete Analysis Report",
             header_subtitle_style
@@ -7026,7 +7026,7 @@ def generate_complete_pdf(
             ["Sample Rate" if lang == 'es' else "Sample Rate", sample_rate_str],
             ["Bit Depth" if lang == 'es' else "Bit Depth", bit_depth_str],
             ["Tiempo de análisis" if lang == 'es' else "Analysis time", analysis_time_str],  # v7.3.50 (no emoji for PDF compatibility)
-            ["MR Score", f"{report.get('score', 0)}/100"],
+            ["Puntuación MR" if lang == 'es' else "MR Score", f"{report.get('score', 0)}/100"],
             ["Veredicto" if lang == 'es' else "Verdict", verdict_text]
         ]
         
@@ -7128,7 +7128,7 @@ def generate_complete_pdf(
                 
                 story.append(Spacer(1, 0.1*inch))
                 story.append(Paragraph(
-                    clean_text_for_pdf(f"📊 {genre_text}"),
+                    clean_text_for_pdf(f"▪ {genre_text}"),
                     ParagraphStyle(
                         'GenreNote',
                         parent=body_style,
@@ -7136,6 +7136,16 @@ def generate_complete_pdf(
                         textColor=colors.HexColor('#4b5563'),
                         leftIndent=10
                     )
+                ))
+            
+            # NEW: Add contextual note for True Peak if critical
+            tp_metric = next((m for m in report['metrics'] if m.get('internal_key') == 'True Peak'), None)
+            if tp_metric and tp_metric.get('status') in ['critical', 'catastrophic']:
+                tp_note = "* True Peak: Estado crítico solo si el archivo será re-masterizado. Ver análisis completo." if lang == 'es' else "* True Peak: Critical status only if file will be re-mastered. See full analysis."
+                story.append(Spacer(1, 0.05*inch))
+                story.append(Paragraph(
+                    clean_text_for_pdf(tp_note),
+                    ParagraphStyle('TPNote', parent=body_style, fontSize=8, textColor=colors.HexColor('#6b7280'), fontStyle='italic')
                 ))
             
             story.append(Spacer(1, 0.3*inch))
@@ -7499,7 +7509,7 @@ def generate_complete_pdf(
         )
         
         story.append(Paragraph(
-            "Analizado con MasteringReady" if lang == 'es' else "Analyzed with MasteringReady",
+            "Analizado con Mastering Ready" if lang == 'es' else "Analyzed with Mastering Ready",
             footer_style
         ))
         story.append(Paragraph("www.masteringready.com", footer_style))
