@@ -431,8 +431,8 @@ def _generate_level_text_es(lufs: float, status: str) -> Dict[str, str]:
                 "interpretation": (
                     "El nivel general de tu mezcla es excesivamente alto. "
                     "Este loudness indica sobrecompresión severa o limitación agresiva, "
-                    "lo que deja muy poco margen para el ingeniero de mastering y "
-                    "probablemente ya ha comprometido la calidad sónica de la mezcla."
+                    "lo que reduce significativamente el margen disponible para el mastering "
+                    "y limita las opciones de procesamiento."
                 ),
                 "recommendation": (
                     f"Es necesario reducir significativamente el nivel (6-10 dB mínimo) y "
@@ -778,8 +778,8 @@ def _generate_level_text_en(lufs: float, status: str) -> Dict[str, str]:
                 "interpretation": (
                     "Your mix's overall level is excessively high. "
                     "This indicates severe over-compression or limiting on the mix bus, "
-                    "leaving almost no headroom for mastering and likely already "
-                    "compromising the mix's dynamic range and clarity."
+                    "significantly reducing available margin for mastering and "
+                    "limiting processing options."
                 ),
                 "recommendation": (
                     f"Significantly reduce level (6-10 dB) and remove or reduce limiting/compression "
