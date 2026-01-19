@@ -1807,6 +1807,139 @@ by Matías Carvajal
                       {lang === 'es' ? '🎵 Sobre' : '🎵 About'} "{result.filename || 'archivo'}"
                     </p>
                     
+                    {/* NEW v7.3.50: Metrics Bars Visual */}
+                    {(result as any).metrics_bars && Object.keys((result as any).metrics_bars).length > 0 && (
+                      <div style={{
+                        background: 'white',
+                        borderRadius: '0.75rem',
+                        padding: '1rem',
+                        marginBottom: '1.5rem',
+                        border: '1px solid #e5e7eb'
+                      }}>
+                        <h4 style={{ 
+                          fontSize: '0.875rem', 
+                          fontWeight: '600', 
+                          color: '#374151', 
+                          marginBottom: '1rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.5rem'
+                        }}>
+                          📊 {lang === 'es' ? 'Estado de Métricas' : 'Metrics Status'}
+                        </h4>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                          {(() => {
+                            const bars = (result as any).metrics_bars;
+                            const metricLabels: { [key: string]: { es: string; en: string } } = {
+                              headroom: { es: 'Headroom', en: 'Headroom' },
+                              true_peak: { es: 'True Peak', en: 'True Peak' },
+                              dynamic_range: { es: 'Rango Dinámico', en: 'Dynamic Range' },
+                              plr: { es: 'PLR', en: 'PLR' },
+                              loudness: { es: 'Loudness (LUFS)', en: 'Loudness (LUFS)' },
+                              lufs: { es: 'LUFS', en: 'LUFS' },
+                              stereo_width: { es: 'Imagen Estéreo', en: 'Stereo Width' },
+                              stereo_correlation: { es: 'Correlación', en: 'Correlation' },
+                              frequency_balance: { es: 'Balance Tonal', en: 'Tonal Balance' },
+                              tonal_balance: { es: 'Balance Tonal', en: 'Tonal Balance' }
+                            };
+                            
+                            const statusColors: { [key: string]: string } = {
+                              excellent: '#10b981',
+                              good: '#3b82f6',
+                              warning: '#f59e0b',
+                              critical: '#ef4444'
+                            };
+                            
+                            const statusBgColors: { [key: string]: string } = {
+                              excellent: '#d1fae5',
+                              good: '#dbeafe',
+                              warning: '#fef3c7',
+                              critical: '#fee2e2'
+                            };
+                            
+                            // Filter and order the metrics we want to show
+                            const orderedKeys = ['headroom', 'true_peak', 'plr', 'dynamic_range', 'lufs', 'loudness', 'stereo_width', 'stereo_correlation', 'frequency_balance', 'tonal_balance'];
+                            const displayedKeys = orderedKeys.filter(key => bars[key]);
+                            
+                            return displayedKeys.map((key) => {
+                              const bar = bars[key];
+                              const label = metricLabels[key] || { es: key, en: key };
+                              const color = statusColors[bar.status] || '#6b7280';
+                              const bgColor = statusBgColors[bar.status] || '#f3f4f6';
+                              
+                              return (
+                                <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                  <div style={{ 
+                                    minWidth: '100px', 
+                                    maxWidth: '120px',
+                                    fontSize: '0.75rem', 
+                                    fontWeight: '500', 
+                                    color: '#4b5563',
+                                    textAlign: 'right'
+                                  }}>
+                                    {lang === 'es' ? label.es : label.en}
+                                  </div>
+                                  <div style={{ 
+                                    flex: 1, 
+                                    background: '#e5e7eb', 
+                                    borderRadius: '9999px', 
+                                    height: '0.5rem',
+                                    overflow: 'hidden'
+                                  }}>
+                                    <div style={{
+                                      background: color,
+                                      height: '100%',
+                                      borderRadius: '9999px',
+                                      width: `${bar.percentage}%`,
+                                      transition: 'width 0.5s ease-out'
+                                    }} />
+                                  </div>
+                                  <div style={{ 
+                                    minWidth: '45px',
+                                    fontSize: '0.75rem', 
+                                    fontWeight: '600', 
+                                    color: color,
+                                    textAlign: 'right'
+                                  }}>
+                                    {bar.percentage}%
+                                  </div>
+                                </div>
+                              );
+                            });
+                          })()}
+                        </div>
+                        
+                        {/* Legend */}
+                        <div style={{ 
+                          display: 'flex', 
+                          flexWrap: 'wrap',
+                          gap: '0.75rem', 
+                          marginTop: '1rem',
+                          paddingTop: '0.75rem',
+                          borderTop: '1px solid #e5e7eb',
+                          fontSize: '0.7rem',
+                          color: '#6b7280'
+                        }}>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981' }}></span>
+                            {lang === 'es' ? 'Excelente' : 'Excellent'}
+                          </span>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#3b82f6' }}></span>
+                            {lang === 'es' ? 'Bueno' : 'Good'}
+                          </span>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#f59e0b' }}></span>
+                            {lang === 'es' ? 'Revisar' : 'Review'}
+                          </span>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#ef4444' }}></span>
+                            {lang === 'es' ? 'Crítico' : 'Critical'}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                    
                     <pre style={{
                       whiteSpace: 'pre-wrap',
                       wordBreak: 'break-word',
