@@ -6912,7 +6912,7 @@ def generate_complete_pdf(
                     clean_text_for_pdf(f"📊 {genre_text}"),
                     ParagraphStyle(
                         'GenreNote',
-                        parent=normal_style,
+                        parent=body_style,
                         fontSize=10,
                         textColor=colors.HexColor('#4b5563'),
                         leftIndent=10
