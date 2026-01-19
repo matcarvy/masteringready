@@ -7240,11 +7240,15 @@ def generate_complete_pdf(
                 bars_table.setStyle(TableStyle(table_style))
                 story.append(bars_table)
                 
-                # Legend - Mastering Ready philosophy: margin, not judgment
+                # Legend - Mastering Ready philosophy: margin, not judgment (WITH COLORS)
                 story.append(Spacer(1, 0.1*inch))
-                legend_text = "● Margen cómodo  ● Margen suficiente  ● Margen reducido  ● Margen comprometido" if lang == 'es' else "● Comfortable margin  ● Sufficient margin  ● Reduced margin  ● Compromised margin"
+                if lang == 'es':
+                    legend_text = '<font color="#10b981">●</font> Margen cómodo  <font color="#3b82f6">●</font> Margen suficiente  <font color="#f59e0b">●</font> Margen reducido  <font color="#ef4444">●</font> Margen comprometido'
+                else:
+                    legend_text = '<font color="#10b981">●</font> Comfortable margin  <font color="#3b82f6">●</font> Sufficient margin  <font color="#f59e0b">●</font> Reduced margin  <font color="#ef4444">●</font> Compromised margin'
+                
                 story.append(Paragraph(
-                    clean_text_for_pdf(legend_text),
+                    legend_text,
                     ParagraphStyle('Legend', parent=body_style, fontSize=8, textColor=colors.HexColor('#6b7280'))
                 ))
                 
