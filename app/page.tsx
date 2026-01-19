@@ -461,7 +461,7 @@ const handleAnalyze = async () => {
 ${'═'.repeat(50)}
 
 ${lang === 'es' ? 'Archivo' : 'File'}: ${result.filename || 'N/A'}
-${lang === 'es' ? 'Puntuación' : 'Score'}: ${result.score}/100
+MR Score: ${result.score}/100
 ${lang === 'es' ? 'Veredicto' : 'Verdict'}: ${result.verdict}
 
 ${lang === 'es' ? 'MÉTRICAS PRINCIPALES' : 'MAIN METRICS'}
@@ -487,7 +487,7 @@ ${new Date().toLocaleDateString()}
 ${'═'.repeat(50)}
 
 ${lang === 'es' ? 'Archivo' : 'File'}: ${result.filename || 'N/A'}
-${lang === 'es' ? 'Puntuación' : 'Score'}: ${result.score}/100
+MR Score: ${result.score}/100
 ${lang === 'es' ? 'Veredicto' : 'Verdict'}: ${result.verdict}
 
 ${'─'.repeat(50)}
@@ -503,7 +503,7 @@ ${new Date().toLocaleDateString()}
 ${'═'.repeat(50)}
 
 ${lang === 'es' ? 'Archivo' : 'File'}: ${result.filename || 'N/A'}
-${lang === 'es' ? 'Puntuación' : 'Score'}: ${result.score}/100
+MR Score: ${result.score}/100
 ${lang === 'es' ? 'Veredicto' : 'Verdict'}: ${result.verdict}
 `
 
@@ -725,7 +725,7 @@ ${lang === 'es' ? 'Fecha' : 'Date'}: ${new Date().toLocaleDateString(lang === 'e
   month: 'long', 
   day: 'numeric' 
 })}
-${lang === 'es' ? 'Puntuación' : 'Score'}: ${result.score}/100
+MR Score: ${result.score}/100
 ${lang === 'es' ? 'Veredicto' : 'Verdict'}: ${result.verdict}
 
 ${lang === 'es' ? 'ANÁLISIS RÁPIDO' : 'QUICK ANALYSIS'}
@@ -1718,7 +1718,7 @@ by Matías Carvajal
                   }}>
                     <div style={{ textAlign: 'left' }}>
                       <span style={{ color: '#374151', fontWeight: '500', fontSize: 'clamp(0.875rem, 2.5vw, 1.125rem)' }}>
-                        {lang === 'es' ? 'Puntuación' : 'Score'}
+                        MR Score
                       </span>
                     </div>
                     <div style={{ textAlign: 'right' }}>
@@ -1747,6 +1747,16 @@ by Matías Carvajal
                     }} />
                   </div>
                   <p style={{ fontSize: '1.125rem', fontWeight: '600' }}>{result.verdict}</p>
+                  <p style={{ 
+                    fontSize: '0.7rem', 
+                    color: '#6b7280', 
+                    fontStyle: 'italic',
+                    marginTop: '0.5rem'
+                  }}>
+                    {lang === 'es' 
+                      ? 'Este índice evalúa margen técnico para procesamiento, no calidad artística.' 
+                      : 'This index evaluates technical margin for processing, not artistic quality.'}
+                  </p>
                 </div>
 
                 {/* Report View Toggle */}
