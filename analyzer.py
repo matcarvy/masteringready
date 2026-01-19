@@ -1280,135 +1280,346 @@ def calculate_tonal_balance_percentage(bass_pct: float, mids_pct: float, highs_p
 
 def calculate_metrics_bars_percentages(metrics: List[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
     """
-    Calculate percentage bars for quick view tab.
-    100% = perfect (no problems), only goes down with issues.
+    Calculate percentage bars for quick view tab using Mastering Ready methodology.
+    
+    Philosophy: Colors indicate MARGIN for decisions, not judgment of the mix.
+    - 🟢 Verde: Comfortable margin
+    - 🔵 Azul: Sufficient margin  
+    - 🟡 Amarillo: Reduced margin
+    - 🔴 Rojo: Compromised margin (RARE - only real limitations)
     
     Args:
         metrics: List of metric dictionaries from analysis
     
     Returns:
-        Dict with percentage and status for each metric
+        Dict with percentage, status, value, and tooltip for each metric
     """
     bars = {}
     
+    # First pass: collect all values for combined logic
+    values = {}
     for m in metrics:
         key = m.get("internal_key", "").lower().replace(" ", "_")
-        status = m.get("status", "")
         value = m.get("value", 0)
+        status = m.get("status", "")
         
         # Parse numeric value if it's a string
         if isinstance(value, str):
-            # Extract number from strings like "-3.2 dBFS", "-14.5 LUFS"
             try:
                 value = float(value.split()[0])
             except:
                 value = 0
         
+        values[key] = {"value": value, "status": status}
+    
+    # Get key values for combined logic
+    headroom_val = values.get("headroom", {}).get("value", -6)
+    true_peak_val = values.get("true_peak", {}).get("value", -1.5)
+    lufs_val = values.get("lufs_(integrated)", {}).get("value", -14)
+    plr_val = values.get("plr", {}).get("value", 10)
+    correlation_val = values.get("stereo_width", {}).get("value", 0.7)
+    
+    # Count warnings for combined logic
+    warnings_count = 0
+    
+    # Tooltips by status (Mastering Ready philosophy)
+    tooltips = {
+        "es": {
+            "excellent": "Dentro del rango recomendado por Mastering Ready.",
+            "good": "Funcional, con margen suficiente para el máster.",
+            "warning": "Revisar si buscas máxima compatibilidad y margen.",
+            "critical": "Revisión prioritaria antes del máster final."
+        },
+        "en": {
+            "excellent": "Within Mastering Ready recommended range.",
+            "good": "Functional, with sufficient margin for mastering.",
+            "warning": "Review if you want maximum compatibility and margin.",
+            "critical": "Priority review before final master."
+        }
+    }
+    
+    for m in metrics:
+        key = m.get("internal_key", "").lower().replace(" ", "_")
+        value = values.get(key, {}).get("value", 0)
+        original_status = values.get(key, {}).get("status", "")
+        
         percentage = 100
         bar_status = "excellent"
+        plr_tooltip_override = None  # For specific PLR messages
         
-        # HEADROOM
+        # ============================================
+        # HEADROOM (dBFS) - Mastering Ready ranges
+        # ============================================
         if "headroom" in key:
-            # Perfect: -6 to -3 dBFS = 100%
-            # Warning: > -3 or < -9 = lower
-            if -6.0 <= value <= -3.0:
+            # 🟢 Verde: ≤ -6 dBFS (Perfecto)
+            # 🔵 Azul: -6 a -4 dBFS (Totalmente funcional)
+            # 🟡 Amarillo: -4 a -2 dBFS (Margen reducido)
+            # 🔴 Rojo: > -2 dBFS (Limita el máster)
+            headroom_tooltip_override = None  # For contextual headroom messages
+            
+            if value <= -6.0:
                 percentage = 100
-            elif -9.0 <= value < -6.0:
+                bar_status = "excellent"
+            elif -6.0 < value <= -4.0:
                 percentage = 85
-            elif -3.0 < value <= -1.0:
-                percentage = 70
-            elif value > -1.0:
-                percentage = max(30, 50 - abs(value) * 10)
-            else:  # < -9
-                percentage = max(60, 85 - abs(value + 9) * 3)
+                bar_status = "good"
+            elif -4.0 < value <= -2.0:
+                percentage = 65
+                bar_status = "warning"
+                warnings_count += 1
+            else:  # > -2
+                percentage = 40
+                bar_status = "critical"
+                # Micro-ajuste 1: If Headroom is red but LUFS is green, soften the message
+                # This indicates "compromised margin" not "bad mix"
+                if lufs_val <= -14:  # LUFS is in green/excellent range
+                    headroom_tooltip_override = {
+                        "es": "Headroom comprometido, pero nivel general adecuado. Baja el nivel antes de exportar para dar margen al máster.",
+                        "en": "Compromised headroom, but overall level is adequate. Lower the level before export to give margin for mastering."
+                    }
+            
+            # Apply headroom-specific tooltip if available
+            if headroom_tooltip_override:
+                plr_tooltip_override = headroom_tooltip_override  # Reuse the same mechanism
         
-        # TRUE PEAK
+        # ============================================
+        # TRUE PEAK (dBTP) - Mastering Ready ranges
+        # ============================================
         elif "true_peak" in key:
-            # Perfect: <= -1.0 dBTP = 100%
-            if value <= -1.0:
+            # 🟢 Verde: ≤ -1.5 dBTP (Ideal)
+            # 🔵 Azul: -1.5 a -1.0 dBTP (Seguro)
+            # 🟡 Amarillo: -1.0 a -0.5 dBTP (Riesgo potencial)
+            # 🔴 Rojo: > -0.5 dBTP (Riesgo real) - ONLY if > 0 dBTP OR combined with other issues
+            if value <= -1.5:
                 percentage = 100
-            elif -1.0 < value <= 0.0:
-                percentage = 80
-            elif 0.0 < value <= 0.3:
-                percentage = 60
-            else:  # > 0.3
-                percentage = max(20, 50 - value * 30)
-        
-        # DYNAMIC RANGE (PLR)
-        elif "dynamic" in key or "plr" in key:
-            # Perfect: >= 10 dB = 100%
-            if value >= 10:
-                percentage = 100
-            elif 8 <= value < 10:
+                bar_status = "excellent"
+            elif -1.5 < value <= -1.0:
                 percentage = 85
-            elif 6 <= value < 8:
-                percentage = 70
-            elif 4 <= value < 6:
-                percentage = 55
-            else:  # < 4
-                percentage = max(30, value * 10)
+                bar_status = "good"
+            elif -1.0 < value <= -0.5:
+                percentage = 65
+                bar_status = "warning"
+                warnings_count += 1
+            else:  # > -0.5
+                # Rojo solo si > 0 dBTP (clipping real) O combinado con LUFS alto / Headroom bajo
+                if value > 0.0 or (lufs_val > -10 or headroom_val > -2):
+                    percentage = 35
+                    bar_status = "critical"
+                else:
+                    percentage = 50
+                    bar_status = "warning"
+                    warnings_count += 1
         
-        # LUFS
+        # ============================================
+        # PLR (Peak-to-Loudness Ratio) - Mastering Ready ranges
+        # ============================================
+        elif "plr" in key or ("dynamic" in key and "range" in key):
+            # 🟢 Verde: 8-12 dB (Óptimo)
+            # 🔵 Azul: 6-8 dB o 12-14 dB (Funcional)
+            # 🟡 Amarillo: 4-6 dB o 14-16 dB (Extremo)
+            # 🔴 Rojo: < 4 dB o > 16 dB (Comprometido) - rare
+            plr_tooltip_override = None  # For specific PLR messages
+            
+            if 8 <= value <= 12:
+                percentage = 100
+                bar_status = "excellent"
+            elif (6 <= value < 8) or (12 < value <= 14):
+                percentage = 85
+                bar_status = "good"
+            elif (4 <= value < 6) or (14 < value <= 16):
+                percentage = 65
+                bar_status = "warning"
+                warnings_count += 1
+            else:  # < 4 or > 16
+                percentage = 45
+                bar_status = "critical"
+                # Micro-ajuste 2: Specific tooltips for extreme PLR values
+                if value > 16:
+                    plr_tooltip_override = {
+                        "es": "Rango dinámico muy amplio. Puede dificultar consistencia de nivel en algunos sistemas.",
+                        "en": "Very wide dynamic range. May cause level inconsistency on some systems."
+                    }
+                elif value < 4:
+                    plr_tooltip_override = {
+                        "es": "Rango dinámico muy comprimido. El máster tiene poco margen para ajustes de dinámica.",
+                        "en": "Very compressed dynamic range. Little margin for dynamics adjustments in mastering."
+                    }
+        
+        # ============================================
+        # LUFS (Integrated) - Mastering Ready ranges
+        # ============================================
         elif "lufs" in key or "loudness" in key:
-            # Perfect: -18 to -14 LUFS = 100%
+            # 🟢 Verde: -18 a -14 LUFS (Ideal)
+            # 🔵 Azul: -14 a -12 LUFS (Funcional)
+            # 🟡 Amarillo: -12 a -10 LUFS (Muy alto)
+            # 🔴 Rojo: > -10 LUFS (Limita decisiones) - CAN be red alone
             if -18 <= value <= -14:
                 percentage = 100
-            elif -22 <= value < -18:
-                percentage = 90
-            elif -14 < value <= -10:
+                bar_status = "excellent"
+            elif -14 < value <= -12:
                 percentage = 85
-            elif -26 <= value < -22:
-                percentage = 75
-            elif -10 < value <= -6:
-                percentage = 60
-            else:  # Very extreme
-                percentage = max(40, 100 - abs(value + 14) * 3)
+                bar_status = "good"
+            elif -12 < value <= -10:
+                percentage = 65
+                bar_status = "warning"
+                warnings_count += 1
+            elif value > -10:
+                # LUFS can go red alone - it conditions the entire flow
+                percentage = 40
+                bar_status = "critical"
+            else:  # < -18 (very quiet, also not ideal)
+                if value >= -22:
+                    percentage = 80
+                    bar_status = "good"
+                else:
+                    percentage = 60
+                    bar_status = "warning"
         
-        # STEREO WIDTH
+        # ============================================
+        # STEREO CORRELATION - Mastering Ready ranges
+        # ============================================
         elif "stereo" in key or "correlation" in key:
-            # Value is correlation coefficient
-            if 0.70 <= value <= 0.97:
+            # Value is correlation coefficient (0-1)
+            # 🟢 Verde: ≥ 0.7 (Muy estable)
+            # 🔵 Azul: 0.5-0.7 (Estable)
+            # 🟡 Amarillo: 0.3-0.5 (Revisar mono)
+            # 🔴 Rojo: < 0.3 (Riesgo de cancelación) - only if persistent
+            
+            # Parse correlation from stereo width value if needed
+            corr_value = value
+            if isinstance(value, str) and "corr" in str(value):
+                try:
+                    corr_value = float(str(value).split("%")[0]) / 100
+                except:
+                    corr_value = 0.5
+            
+            if corr_value >= 0.7:
                 percentage = 100
-            elif 0.50 <= value < 0.70:
+                bar_status = "excellent"
+            elif 0.5 <= corr_value < 0.7:
                 percentage = 85
-            elif 0.97 < value <= 1.0:
-                percentage = 90  # Very centered but OK
-            elif 0.30 <= value < 0.50:
+                bar_status = "good"
+            elif 0.3 <= corr_value < 0.5:
                 percentage = 65
-            elif 0 <= value < 0.30:
-                percentage = 45
+                bar_status = "warning"
+                warnings_count += 1
+            elif 0 <= corr_value < 0.3:
+                # Only critical if also has low PLR or very wide image
+                if plr_val < 6:
+                    percentage = 40
+                    bar_status = "critical"
+                else:
+                    percentage = 50
+                    bar_status = "warning"
+                    warnings_count += 1
             else:  # Negative correlation
-                percentage = max(20, 40 + value * 20)
+                percentage = 35
+                bar_status = "critical"
         
-        # FREQUENCY BALANCE
+        # ============================================
+        # FREQUENCY BALANCE - Based on deviation from profile
+        # ============================================
         elif "frequency" in key or "tonal" in key:
-            # Use status-based percentage
-            if status == "excellent" or status == "perfect":
+            # Based on tonal_percentage from genre detection
+            tonal_pct = m.get("tonal_percentage", 100)
+            
+            # 🟢 Verde: Dentro del perfil (≥90%)
+            # 🔵 Azul: Muy cercano (70-90%)
+            # 🟡 Amarillo: Desviación notable (50-70%)
+            # 🔴 Rojo: Desviación severa (<50%) - only if affects bass or critical presence
+            if tonal_pct >= 90:
                 percentage = 100
-            elif status == "good" or status == "pass":
+                bar_status = "excellent"
+            elif tonal_pct >= 70:
                 percentage = 85
-            elif status == "warning" or status == "info":
+                bar_status = "good"
+            elif tonal_pct >= 50:
                 percentage = 65
+                bar_status = "warning"
             else:
-                percentage = 50
+                # Check if issues affect bass (never red for creative color choices)
+                tonal_issues = m.get("tonal_issues", [])
+                has_bass_issue = any("bass" in str(issue).lower() or "grave" in str(issue).lower() for issue in tonal_issues)
+                if has_bass_issue:
+                    percentage = 45
+                    bar_status = "critical"
+                else:
+                    percentage = 55
+                    bar_status = "warning"
         
-        # Determine bar status based on percentage
-        if percentage >= 85:
-            bar_status = "excellent"
-        elif percentage >= 70:
-            bar_status = "good"
-        elif percentage >= 50:
-            bar_status = "warning"
-        else:
-            bar_status = "critical"
+        # ============================================
+        # DC OFFSET - Simple pass/fail
+        # ============================================
+        elif "dc" in key:
+            if original_status in ["perfect", "pass", "good"]:
+                percentage = 100
+                bar_status = "excellent"
+            else:
+                percentage = 60
+                bar_status = "warning"
+        
+        # ============================================
+        # CREST FACTOR - Informational only
+        # ============================================
+        elif "crest" in key:
+            # Crest factor is informational, always good unless extreme
+            if 10 <= value <= 20:
+                percentage = 100
+                bar_status = "excellent"
+            elif 6 <= value < 10 or 20 < value <= 25:
+                percentage = 85
+                bar_status = "good"
+            else:
+                percentage = 70
+                bar_status = "good"  # Still not warning - it's informational
         
         # Only add if we have a valid key
         if key:
+            # Check for specific tooltip overrides (e.g., PLR extreme values, Headroom contextual)
+            tooltip_es = tooltips["es"].get(bar_status, "")
+            tooltip_en = tooltips["en"].get(bar_status, "")
+            
+            # Apply specific tooltips if available (works for PLR, Headroom, etc.)
+            if plr_tooltip_override:
+                tooltip_es = plr_tooltip_override.get("es", tooltip_es)
+                tooltip_en = plr_tooltip_override.get("en", tooltip_en)
+            
             bars[key] = {
                 "percentage": round(percentage),
                 "status": bar_status,
-                "value": value if isinstance(value, (int, float)) else 0
+                "value": value if isinstance(value, (int, float)) else 0,
+                "tooltip_es": tooltip_es,
+                "tooltip_en": tooltip_en
             }
+        
+        # Reset tooltip override for next iteration
+        plr_tooltip_override = None
+    
+    # ============================================
+    # COMBINED LOGIC: Upgrade to critical if 2+ warnings reinforce each other
+    # ============================================
+    if warnings_count >= 2:
+        # Check for reinforcing combinations
+        headroom_warning = bars.get("headroom", {}).get("status") == "warning"
+        true_peak_warning = bars.get("true_peak", {}).get("status") == "warning"
+        lufs_warning = bars.get("lufs_(integrated)", {}).get("status") == "warning"
+        plr_warning = bars.get("plr", {}).get("status") == "warning"
+        
+        # True Peak + LUFS both warning → True Peak goes critical
+        if true_peak_warning and lufs_warning:
+            if "true_peak" in bars:
+                bars["true_peak"]["status"] = "critical"
+                bars["true_peak"]["percentage"] = 40
+                bars["true_peak"]["tooltip_es"] = tooltips["es"]["critical"]
+                bars["true_peak"]["tooltip_en"] = tooltips["en"]["critical"]
+        
+        # Headroom + PLR both warning → Headroom goes critical
+        if headroom_warning and plr_warning:
+            if "headroom" in bars:
+                bars["headroom"]["status"] = "critical"
+                bars["headroom"]["percentage"] = 40
+                bars["headroom"]["tooltip_es"] = tooltips["es"]["critical"]
+                bars["headroom"]["tooltip_en"] = tooltips["en"]["critical"]
     
     return bars
 
@@ -3895,7 +4106,7 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
                 else:
                     status_word = "revisar"
                 
-                details += f"   📊 Balance tonal similar a: {detected_genre} ({status_word})\n"
+                details += f"   📊 Balance de frecuencias similar a: {detected_genre} ({status_word})\n"
                 
                 if tonal_issues:
                     details += f"   ⚠️ Notas: {', '.join(tonal_issues)}\n"
@@ -4182,7 +4393,7 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
                 else:
                     status_word = "review"
                 
-                details += f"   📊 Tonal balance similar to: {detected_genre} ({status_word})\n"
+                details += f"   📊 Frequency balance similar to: {detected_genre} ({status_word})\n"
                 
                 if tonal_issues:
                     details += f"   ⚠️ Notes: {', '.join(tonal_issues)}\n"
@@ -4221,7 +4432,7 @@ def analyze_file_chunked(
     Returns:
         Same structure as analyze_file() but with chunked=True flag
     """
-    start_time = time.time()  # Start timing
+    analysis_start_time = time.time()  # Start timing (renamed to avoid conflict with chunk offset)
     
     print("🔄 CHUNKED ANALYSIS - Memory Optimized")
     
@@ -5197,7 +5408,7 @@ def analyze_file_chunked(
             "clipping_detected": bool(results['clipping_chunks'])
         },
         "metrics_bars": calculate_metrics_bars_percentages(metrics),  # NEW v7.3.50: Quick view bars
-        "analysis_time_seconds": round(time.time() - start_time, 1)  # Time elapsed
+        "analysis_time_seconds": round(time.time() - analysis_start_time, 1)  # Time elapsed (uses renamed variable)
     }
     
     # CRITICAL: Sanitize all float values to ensure JSON compliance
@@ -6814,7 +7025,7 @@ def generate_complete_pdf(
             ["Duración" if lang == 'es' else "Duration", duration_str],
             ["Sample Rate" if lang == 'es' else "Sample Rate", sample_rate_str],
             ["Bit Depth" if lang == 'es' else "Bit Depth", bit_depth_str],
-            ["⏱ Tiempo de análisis" if lang == 'es' else "⏱ Analysis time", analysis_time_str],  # NEW v7.3.50
+            ["Tiempo de análisis" if lang == 'es' else "Analysis time", analysis_time_str],  # v7.3.50 (no emoji for PDF compatibility)
             ["Puntuación" if lang == 'es' else "Score", f"{report.get('score', 0)}/100"],
             ["Veredicto" if lang == 'es' else "Verdict", verdict_text]
         ]
@@ -6905,7 +7116,7 @@ def generate_complete_pdf(
                 else:
                     status_word = "revisar" if lang == 'es' else "review"
                 
-                genre_text = f"Balance tonal similar a: {detected_genre} ({status_word})" if lang == 'es' else f"Tonal balance similar to: {detected_genre} ({status_word})"
+                genre_text = f"Balance de frecuencias similar a: {detected_genre} ({status_word})" if lang == 'es' else f"Frequency balance similar to: {detected_genre} ({status_word})"
                 
                 story.append(Spacer(1, 0.1*inch))
                 story.append(Paragraph(
@@ -6917,6 +7128,113 @@ def generate_complete_pdf(
                         textColor=colors.HexColor('#4b5563'),
                         leftIndent=10
                     )
+                ))
+            
+            story.append(Spacer(1, 0.3*inch))
+        
+        # ========== NEW v7.3.50: BARRAS VISUALES DE MÉTRICAS ==========
+        if report.get('metrics_bars'):
+            story.append(Paragraph(
+                "ÁREAS DE ATENCIÓN PRIORITARIA" if lang == 'es' else "PRIORITY ATTENTION AREAS",
+                section_style
+            ))
+            story.append(Spacer(1, 0.05*inch))
+            
+            # Subtexto explicativo - Mastering Ready philosophy
+            subtext = "Estos indicadores no significan que tu mezcla esté mal, sino que hay decisiones técnicas que vale la pena revisar antes del máster final." if lang == 'es' else "These indicators don't mean your mix is wrong, but there are technical decisions worth reviewing before the final master."
+            story.append(Paragraph(
+                clean_text_for_pdf(subtext),
+                ParagraphStyle('Subtext', parent=body_style, fontSize=8, textColor=colors.HexColor('#6b7280'), fontStyle='italic')
+            ))
+            story.append(Spacer(1, 0.1*inch))
+            
+            bars = report['metrics_bars']
+            
+            # Define labels and order
+            metric_labels = {
+                'headroom': ('Headroom', 'Headroom'),
+                'true_peak': ('True Peak', 'True Peak'),
+                'dynamic_range': ('Rango Dinámico', 'Dynamic Range'),
+                'plr': ('PLR', 'PLR'),
+                'loudness': ('Loudness (LUFS)', 'Loudness (LUFS)'),
+                'lufs': ('LUFS', 'LUFS'),
+                'lufs_(integrated)': ('LUFS', 'LUFS'),
+                'stereo_width': ('Imagen Estéreo', 'Stereo Width'),
+                'stereo_correlation': ('Correlación', 'Correlation'),
+                'frequency_balance': ('Balance Frecuencias', 'Freq. Balance'),
+                'tonal_balance': ('Balance Frecuencias', 'Freq. Balance')
+            }
+            
+            status_colors = {
+                'excellent': '#10b981',  # Green
+                'good': '#3b82f6',       # Blue
+                'warning': '#f59e0b',    # Yellow/Orange
+                'critical': '#ef4444'    # Red
+            }
+            
+            # Order of metrics to display
+            ordered_keys = ['headroom', 'true_peak', 'plr', 'dynamic_range', 'lufs', 'lufs_(integrated)', 'loudness', 
+                           'stereo_width', 'stereo_correlation', 'frequency_balance', 'tonal_balance']
+            
+            bars_data = [["Métrica" if lang == 'es' else "Metric", "Estado" if lang == 'es' else "Status", "%"]]
+            bar_colors = []
+            
+            for key in ordered_keys:
+                if key in bars:
+                    bar = bars[key]
+                    labels = metric_labels.get(key, (key, key))
+                    label = labels[0] if lang == 'es' else labels[1]
+                    percentage = bar.get('percentage', 0)
+                    status = bar.get('status', 'good')
+                    
+                    # Create visual bar representation using Unicode blocks
+                    filled = int(percentage / 10)
+                    empty = 10 - filled
+                    bar_visual = "█" * filled + "░" * empty
+                    
+                    bars_data.append([label, bar_visual, f"{percentage}%"])
+                    bar_colors.append(status_colors.get(status, '#6b7280'))
+            
+            if len(bars_data) > 1:  # Only if we have data
+                bars_table = Table(bars_data, colWidths=[1.8*inch, 3.5*inch, 0.7*inch])
+                
+                # Build table style
+                table_style = [
+                    ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#667eea')),
+                    ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                    ('FONTNAME', (0, 0), (-1, 0), bold_font),
+                    ('FONTNAME', (0, 1), (-1, -1), base_font),
+                    ('FONTSIZE', (0, 0), (-1, -1), 9),
+                    ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                    ('ALIGN', (2, 0), (2, -1), 'RIGHT'),
+                    ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                    ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#d1d5db')),
+                    ('LEFTPADDING', (0, 0), (-1, -1), 6),
+                    ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+                    ('TOPPADDING', (0, 0), (-1, -1), 4),
+                    ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+                ]
+                
+                # Add color to each bar row
+                for i, color in enumerate(bar_colors):
+                    table_style.append(('TEXTCOLOR', (1, i+1), (1, i+1), colors.HexColor(color)))
+                
+                bars_table.setStyle(TableStyle(table_style))
+                story.append(bars_table)
+                
+                # Legend - Mastering Ready philosophy: margin, not judgment
+                story.append(Spacer(1, 0.1*inch))
+                legend_text = "● Margen cómodo  ● Margen suficiente  ● Margen reducido  ● Margen comprometido" if lang == 'es' else "● Comfortable margin  ● Sufficient margin  ● Reduced margin  ● Compromised margin"
+                story.append(Paragraph(
+                    clean_text_for_pdf(legend_text),
+                    ParagraphStyle('Legend', parent=body_style, fontSize=8, textColor=colors.HexColor('#6b7280'))
+                ))
+                
+                # Footer note
+                footer_note = "Basado en criterios de Mastering Ready para compatibilidad, margen y traducción." if lang == 'es' else "Based on Mastering Ready criteria for compatibility, margin and translation."
+                story.append(Paragraph(
+                    clean_text_for_pdf(footer_note),
+                    ParagraphStyle('FooterNote', parent=body_style, fontSize=7, textColor=colors.HexColor('#9ca3af'), alignment=TA_CENTER)
                 ))
             
             story.append(Spacer(1, 0.3*inch))
