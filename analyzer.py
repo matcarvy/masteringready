@@ -1718,9 +1718,9 @@ def format_temporal_message(temporal_data: Dict[str, Any], parameter_name: str, 
     
     if severity == "widespread":
         if lang == 'es':
-            return f"\n\n⏱️ Temporal: Presente durante la mayor parte del track ({affected_pct:.0f}% del tiempo)."
+            return f"\n\n▶ Temporal: Presente durante la mayor parte del track ({affected_pct:.0f}% del tiempo)."
         else:
-            return f"\n\n⏱️ Temporal: Present throughout most of the track ({affected_pct:.0f}% of the time)."
+            return f"\n\n▶ Temporal: Present throughout most of the track ({affected_pct:.0f}% of the time)."
     
     elif severity == "localized" and problem_moments:
         # Format timestamps
@@ -1733,9 +1733,9 @@ def format_temporal_message(temporal_data: Dict[str, Any], parameter_name: str, 
                 timestamps_str += f" (and {total_occurrences - 5} more)"
         
         if lang == 'es':
-            return f"\n\n⏱️ Temporal: Detectado en {total_occurrences} momento(s) específico(s): {timestamps_str}."
+            return f"\n\n▶ Temporal: Detectado en {total_occurrences} momento(s) específico(s): {timestamps_str}."
         else:
-            return f"\n\n⏱️ Temporal: Detected in {total_occurrences} specific moment(s): {timestamps_str}."
+            return f"\n\n▶ Temporal: Detected in {total_occurrences} specific moment(s): {timestamps_str}."
     
     return ""
 
@@ -3064,37 +3064,37 @@ def score_report(metrics: List[Dict[str, Any]], hard_fail: bool, strict: bool = 
     minimum_score = calculate_minimum_score(metrics)
     score = max(minimum_score, raw_score)
     
-    # Localized verdicts with territory context
+    # Localized verdicts with MARGIN philosophy (not judgment)
     if lang == 'es':
         if score >= 95:
-            verdict = "✅ Perfecta para mastering"
+            verdict = "✅ Margen óptimo para mastering"
         elif score >= 85:
             verdict = "✅ Lista para mastering"
         elif score >= 75:
-            verdict = "⚠️ Aceptable (revisar recomendaciones)"
+            verdict = "⚠️ Margen suficiente (revisar sugerencias)"
         elif score >= 60:
-            verdict = "⚠️ Ajustes menores recomendados"
+            verdict = "⚠️ Margen reducido - revisar antes de mastering"
         elif score >= 40:
-            verdict = "❌ Ajustes significativos necesarios"
+            verdict = "⚠️ Margen limitado - ajustes recomendados"
         elif score >= 20:
-            verdict = "❌ Requiere corrección urgente"
+            verdict = "❌ Margen comprometido para mastering"
         else:
-            verdict = "🚨 Problemas críticos múltiples detectados"
+            verdict = "❌ Sin margen para procesamiento adicional"
     else:
         if score >= 95:
-            verdict = "✅ Perfect for mastering"
+            verdict = "✅ Optimal margin for mastering"
         elif score >= 85:
             verdict = "✅ Ready for mastering"
         elif score >= 75:
-            verdict = "⚠️ Acceptable (review recommendations)"
+            verdict = "⚠️ Sufficient margin (review suggestions)"
         elif score >= 60:
-            verdict = "⚠️ Minor adjustments recommended"
+            verdict = "⚠️ Reduced margin - review before mastering"
         elif score >= 40:
-            verdict = "❌ Significant adjustments needed"
+            verdict = "⚠️ Limited margin - adjustments recommended"
         elif score >= 20:
-            verdict = "❌ Urgent correction required"
+            verdict = "❌ Compromised margin for mastering"
         else:
-            verdict = "🚨 Multiple critical issues detected"
+            verdict = "❌ No margin for additional processing"
     
     return score, verdict
 
@@ -3908,7 +3908,7 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
             if "temporal_analysis" in stereo_metric:
                 temporal = stereo_metric["temporal_analysis"]
                 
-                details += "⏱️ ANÁLISIS TEMPORAL:\n\n"
+                details += "▶ ANÁLISIS TEMPORAL:\n\n"
                 
                 # Correlation temporal
                 if 'correlation' in temporal:
@@ -4201,7 +4201,7 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
             if "temporal_analysis" in stereo_metric:
                 temporal = stereo_metric["temporal_analysis"]
                 
-                details += "⏱️ TEMPORAL ANALYSIS:\n\n"
+                details += "▶ TEMPORAL ANALYSIS:\n\n"
                 
                 # Correlation temporal
                 if 'correlation' in temporal:
@@ -5711,7 +5711,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
             
             # Add temporal analysis section if there's any temporal data
             if has_temporal:
-                message += "⏱️ ANÁLISIS TEMPORAL:\n\n"
+                message += "▶ ANÁLISIS TEMPORAL:\n\n"
                 message += temporal_message
                 message += "💡 Revisa los tiempos indicados arriba en tu DAW para evaluar si lo detectado en el Análisis Temporal responde a una decisión artística o si requiere un ajuste técnico antes del mastering.\n\n"
             
@@ -6023,7 +6023,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
             
             # Add temporal analysis section if there's any temporal data
             if has_temporal:
-                message += "⏱️ TEMPORAL ANALYSIS:\n\n"
+                message += "▶ TEMPORAL ANALYSIS:\n\n"
                 message += temporal_message
                 message += "💡 Review the timestamps above in your DAW to evaluate if what's detected in the Temporal Analysis is an artistic decision or if it requires a technical adjustment before mastering.\n\n"
             
@@ -6643,7 +6643,7 @@ def generate_short_mode_report(report: Dict[str, Any], strict: bool = False, lan
         if filename:
             header = f"🎵 Sobre \"{filename}\"\n\n"
         
-        header += f"Puntuación: {score}/100\n"
+        header += f"MR Score: {score}/100\n"
         header += f"Veredicto: {verdict}\n\n"
         
         body = ""
@@ -6679,7 +6679,7 @@ def generate_short_mode_report(report: Dict[str, Any], strict: bool = False, lan
         if filename:
             header = f"🎵 Regarding \"{filename}\"\n\n"
         
-        header += f"Score: {score}/100\n"
+        header += f"MR Score: {score}/100\n"
         header += f"Verdict: {verdict}\n\n"
         
         body = ""
@@ -7026,7 +7026,7 @@ def generate_complete_pdf(
             ["Sample Rate" if lang == 'es' else "Sample Rate", sample_rate_str],
             ["Bit Depth" if lang == 'es' else "Bit Depth", bit_depth_str],
             ["Tiempo de análisis" if lang == 'es' else "Analysis time", analysis_time_str],  # v7.3.50 (no emoji for PDF compatibility)
-            ["Puntuación" if lang == 'es' else "Score", f"{report.get('score', 0)}/100"],
+            ["MR Score", f"{report.get('score', 0)}/100"],
             ["Veredicto" if lang == 'es' else "Verdict", verdict_text]
         ]
         
@@ -7047,6 +7047,14 @@ def generate_complete_pdf(
         ]))
         
         story.append(file_table)
+        
+        # Nota aclaratoria sobre el MR Score
+        score_note = "Este índice evalúa margen técnico para procesamiento, no calidad artística." if lang == 'es' else "This index evaluates technical margin for processing, not artistic quality."
+        story.append(Paragraph(
+            clean_text_for_pdf(score_note),
+            ParagraphStyle('ScoreNote', parent=body_style, fontSize=8, textColor=colors.HexColor('#6b7280'), fontStyle='italic')
+        ))
+        
         story.append(Spacer(1, 0.3*inch))
         
         # Metrics Table
@@ -7429,6 +7437,19 @@ def generate_complete_pdf(
                     text = text.replace('\n\n\n', '\n\n')
                 text = text.strip()
                 
+                # Section headers that need visual separation (for ANÁLISIS COMPLETO)
+                section_keywords = [
+                    '▶ ANÁLISIS TEMPORAL', '▶ TEMPORAL ANALYSIS',
+                    'Correlación', 'Correlation',
+                    'M/S Ratio',
+                    'SI ESTE ARCHIVO', 'IF THIS FILE',
+                    'SI ESTE ES TU MASTER', 'IF THIS IS YOUR MASTER',
+                    'Lo que recomiendan', 'What platforms recommend',
+                    'Lo que hace la industria', 'What the industry does',
+                    'Tu decisión', 'Your decision',
+                    'Al final del día', 'At the end of the day'
+                ]
+                
                 for line in text.split('\n'):
                     line_stripped = line.strip()
                     if line_stripped:
@@ -7436,8 +7457,26 @@ def generate_complete_pdf(
                             print(f"   📌 Line starts with digit: {repr(line_stripped[:50])}", flush=True)
                             sys.stdout.flush()
                         
+                        # Check if this line is a section header - add spacing before it
+                        is_section_header = any(keyword in line_stripped for keyword in section_keywords)
+                        if is_section_header:
+                            story.append(Spacer(1, 0.15*inch))  # Add space before section headers
+                        
                         try:
-                            story.append(Paragraph(line_stripped, body_style))
+                            # Use subtitle style for certain headers
+                            if '▶ ANÁLISIS TEMPORAL' in line_stripped or '▶ TEMPORAL ANALYSIS' in line_stripped:
+                                story.append(Paragraph(line_stripped, subtitle_style))
+                            elif line_stripped.startswith('Correlación') or line_stripped.startswith('Correlation') or line_stripped.startswith('M/S Ratio'):
+                                # Sub-section headers
+                                story.append(Paragraph(line_stripped, ParagraphStyle(
+                                    'SubSection',
+                                    parent=body_style,
+                                    fontName=bold_font,
+                                    fontSize=10,
+                                    textColor=colors.HexColor('#374151')
+                                )))
+                            else:
+                                story.append(Paragraph(line_stripped, body_style))
                         except Exception as e:
                             # Fallback for problematic characters
                             print(f"   ⚠️  Paragraph creation failed: {repr(line_stripped[:50])} - Error: {e}", flush=True)
