@@ -699,6 +699,9 @@ async def start_analysis(
                         "mode": mode,
                         "lang": lang,
                         "strict": strict,
+                        # NEW v7.3.50: Add analysis time and metrics bars
+                        "analysis_time_seconds": result.get("analysis_time_seconds", 0),
+                        "metrics_bars": result.get("metrics_bars", {}),
                         "privacy_note": "🔒 Audio analizado en memoria y eliminado inmediatamente.",
                         "methodology": "Basado en la metodología 'Mastering Ready' de Matías Carvajal"
                     }
