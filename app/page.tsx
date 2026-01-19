@@ -461,7 +461,7 @@ const handleAnalyze = async () => {
 ${'═'.repeat(50)}
 
 ${lang === 'es' ? 'Archivo' : 'File'}: ${result.filename || 'N/A'}
-MR Score: ${result.score}/100
+${lang === 'es' ? 'Puntuación MR' : 'MR Score'}: ${result.score}/100
 ${lang === 'es' ? 'Veredicto' : 'Verdict'}: ${result.verdict}
 
 ${lang === 'es' ? 'MÉTRICAS PRINCIPALES' : 'MAIN METRICS'}
@@ -487,7 +487,7 @@ ${new Date().toLocaleDateString()}
 ${'═'.repeat(50)}
 
 ${lang === 'es' ? 'Archivo' : 'File'}: ${result.filename || 'N/A'}
-MR Score: ${result.score}/100
+${lang === 'es' ? 'Puntuación MR' : 'MR Score'}: ${result.score}/100
 ${lang === 'es' ? 'Veredicto' : 'Verdict'}: ${result.verdict}
 
 ${'─'.repeat(50)}
@@ -503,7 +503,7 @@ ${new Date().toLocaleDateString()}
 ${'═'.repeat(50)}
 
 ${lang === 'es' ? 'Archivo' : 'File'}: ${result.filename || 'N/A'}
-MR Score: ${result.score}/100
+${lang === 'es' ? 'Puntuación MR' : 'MR Score'}: ${result.score}/100
 ${lang === 'es' ? 'Veredicto' : 'Verdict'}: ${result.verdict}
 `
 
@@ -715,7 +715,7 @@ ${new Date().toLocaleDateString()}
       // Fallback to TXT download
       
       const content = `${'═'.repeat(50)}
-   MASTERINGREADY - ${lang === 'es' ? 'Reporte Completo' : 'Complete Report'}
+   MASTERING READY - ${lang === 'es' ? 'Reporte Completo' : 'Complete Report'}
 ${'═'.repeat(50)}
 
 ${lang === 'es' ? 'INFORMACIÓN DEL ARCHIVO' : 'FILE INFORMATION'}
@@ -725,7 +725,7 @@ ${lang === 'es' ? 'Fecha' : 'Date'}: ${new Date().toLocaleDateString(lang === 'e
   month: 'long', 
   day: 'numeric' 
 })}
-MR Score: ${result.score}/100
+${lang === 'es' ? 'Puntuación MR' : 'MR Score'}: ${result.score}/100
 ${lang === 'es' ? 'Veredicto' : 'Verdict'}: ${result.verdict}
 
 ${lang === 'es' ? 'ANÁLISIS RÁPIDO' : 'QUICK ANALYSIS'}
@@ -1019,8 +1019,8 @@ by Matías Carvajal
               }}>
                 <div style={{ marginBottom: '1.5rem' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                    <span style={{ color: '#6b7280', fontWeight: '500' }}>
-                      {lang === 'es' ? 'Puntuación' : 'Score'}
+                    <span style={{ color: '#6b7280', fontWeight: '500', fontSize: '1.125rem' }}>
+                      {lang === 'es' ? 'Puntuación MR' : 'MR Score'}
                     </span>
                     <span style={{
                       fontSize: '2.25rem',
@@ -1717,8 +1717,8 @@ by Matías Carvajal
                     marginBottom: '1rem'
                   }}>
                     <div style={{ textAlign: 'left' }}>
-                      <span style={{ color: '#374151', fontWeight: '500', fontSize: 'clamp(0.875rem, 2.5vw, 1.125rem)' }}>
-                        MR Score
+                      <span style={{ color: '#374151', fontWeight: '500', fontSize: 'clamp(1rem, 2.5vw, 1.25rem)' }}>
+                        {lang === 'es' ? 'Puntuación MR' : 'MR Score'}
                       </span>
                     </div>
                     <div style={{ textAlign: 'right' }}>
