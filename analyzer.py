@@ -1107,366 +1107,6 @@ def calculate_lr_balance(y: np.ndarray) -> float:
 
 
 # ----------------------------
-# TONAL BALANCE & GENRE DETECTION (v7.3.37 - Fase 2)
-# ----------------------------
-
-# Provisional genre profiles (to be refined with 10-15 pro references per genre)
-GENRE_FREQUENCY_PROFILES = {
-    "Pop/Balada": {
-        "bass": (28, 35),
-        "mids": (50, 58),
-        "highs": (12, 18),
-        "description_es": "Balance vocal-céntrico con claridad",
-        "description_en": "Vocal-centric balance with clarity"
-    },
-    "Rock": {
-        "bass": (35, 42),
-        "mids": (45, 52),
-        "highs": (10, 16),
-        "description_es": "Énfasis en medios (guitarras/voces)",
-        "description_en": "Mid-range emphasis (guitars/vocals)"
-    },
-    "Hip-Hop/Trap": {
-        "bass": (42, 50),
-        "mids": (38, 45),
-        "highs": (10, 16),
-        "description_es": "Sub-bass prominente con highs presentes",
-        "description_en": "Prominent sub-bass with present highs"
-    },
-    "EDM/Electrónica": {
-        "bass": (40, 47),
-        "mids": (40, 47),
-        "highs": (12, 18),
-        "description_es": "Balance energético con extremos marcados",
-        "description_en": "Energetic balance with pronounced extremes"
-    },
-    "Jazz/Acústico": {
-        "bass": (25, 32),
-        "mids": (52, 60),
-        "highs": (12, 20),
-        "description_es": "Rango medio natural y rico",
-        "description_en": "Natural and rich midrange"
-    }
-}
-
-
-def detect_closest_genre(bass_pct: float, mids_pct: float, highs_pct: float) -> Dict[str, Any]:
-    """
-    Detect which genre profile the frequency balance most closely matches.
-    
-    Args:
-        bass_pct: Bass percentage (0-100)
-        mids_pct: Mids percentage (0-100)
-        highs_pct: Highs percentage (0-100)
-    
-    Returns:
-        Dict with genre, confidence, and whether it's a good match
-    """
-    best_genre = None
-    best_distance = float('inf')
-    
-    for genre, profile in GENRE_FREQUENCY_PROFILES.items():
-        # Calculate center of each range
-        bass_center = (profile["bass"][0] + profile["bass"][1]) / 2
-        mids_center = (profile["mids"][0] + profile["mids"][1]) / 2
-        highs_center = (profile["highs"][0] + profile["highs"][1]) / 2
-        
-        # Calculate Euclidean distance
-        distance = (
-            (bass_pct - bass_center) ** 2 +
-            (mids_pct - mids_center) ** 2 +
-            (highs_pct - highs_center) ** 2
-        ) ** 0.5
-        
-        if distance < best_distance:
-            best_distance = distance
-            best_genre = genre
-    
-    # Calculate confidence (0-1)
-    # Distance of 0 = 100% confidence, distance of 30+ = 0% confidence
-    confidence = max(0.0, min(1.0, 1.0 - (best_distance / 30.0)))
-    
-    # Check if values are within genre ranges
-    if best_genre:
-        profile = GENRE_FREQUENCY_PROFILES[best_genre]
-        within_ranges = (
-            profile["bass"][0] <= bass_pct <= profile["bass"][1] and
-            profile["mids"][0] <= mids_pct <= profile["mids"][1] and
-            profile["highs"][0] <= highs_pct <= profile["highs"][1]
-        )
-    else:
-        within_ranges = False
-    
-    return {
-        "genre": best_genre,
-        "confidence": confidence,
-        "within_ranges": within_ranges,
-        "distance": best_distance
-    }
-
-
-def calculate_tonal_balance_percentage(bass_pct: float, mids_pct: float, highs_pct: float) -> Dict[str, Any]:
-    """
-    Calculate health percentage for tonal balance.
-    100% = healthy balance (no technical problems)
-    Lower % only when there are objective technical issues
-    
-    Args:
-        bass_pct: Bass percentage (0-100)
-        mids_pct: Mids percentage (0-100)
-        highs_pct: Highs percentage (0-100)
-    
-    Returns:
-        Dict with percentage, status, and list of issues
-    """
-    issues = []
-    severity = 0
-    
-    # BASS - Check for technical problems
-    if bass_pct > 55:
-        excess = bass_pct - 55
-        severity += excess * 2
-        issues.append(("excess_bass", excess))
-    elif bass_pct < 20:
-        deficit = 20 - bass_pct
-        severity += deficit * 2
-        issues.append(("thin_bass", deficit))
-    
-    # MIDS - Check for technical problems
-    if mids_pct > 65:
-        excess = mids_pct - 65
-        severity += excess * 2
-        issues.append(("congested_mids", excess))
-    elif mids_pct < 30:
-        deficit = 30 - mids_pct
-        severity += deficit * 2
-        issues.append(("hollow_mids", deficit))
-    
-    # HIGHS - Check for technical problems (more critical)
-    if highs_pct > 30:
-        excess = highs_pct - 30
-        severity += excess * 3  # Higher weight - harsh is bad
-        issues.append(("harsh_highs", excess))
-    elif highs_pct < 5:
-        deficit = 5 - highs_pct
-        severity += deficit * 2
-        issues.append(("dull_highs", deficit))
-    
-    # Calculate percentage (100 - severity)
-    percentage = max(0, min(100, 100 - int(severity)))
-    
-    # Determine status
-    if percentage >= 95:
-        status = "excellent"
-    elif percentage >= 80:
-        status = "good"
-    elif percentage >= 60:
-        status = "warning"
-    else:
-        status = "critical"
-    
-    return {
-        "percentage": percentage,
-        "status": status,
-        "issues": [issue[0] for issue in issues],  # Just the issue names
-        "severity": int(severity)
-    }
-
-
-def calculate_metrics_bars_percentages(metrics: List[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
-    """
-    Calculate percentage bars (0-100%) for each metric for visual display.
-    100% = Perfect (no problems)
-    Lower % only when there are technical issues
-    
-    Used for "Quick View" tab with horizontal bar graphs.
-    
-    Args:
-        metrics: List of metric dictionaries from analysis
-    
-    Returns:
-        Dict with percentage, status, and label for each metric
-    """
-    bars = {}
-    
-    # 1. HEADROOM
-    headroom_metric = next((m for m in metrics if "Headroom" in m.get("internal_key", "")), None)
-    if headroom_metric:
-        peak_db = headroom_metric.get("peak_db", 0)
-        try:
-            # Clean the value if it's a string
-            if isinstance(peak_db, str):
-                peak_db = float(peak_db.replace(" dBFS", "").replace("dBFS", ""))
-            
-            # Calculate percentage
-            # Perfect: -6 to -3 dBFS = 100%
-            # Good: -9 to -3 = 80-99%
-            # Warning: -2 to -1 = 40-79%
-            # Critical: >= -1 = 0-39%
-            if -6.0 <= peak_db <= -3.0:
-                percentage = 100
-            elif -9.0 <= peak_db < -6.0:
-                percentage = 80 + int(((peak_db + 9) / 3) * 20)
-            elif -3.0 < peak_db <= -1.0:
-                percentage = 40 + int(((peak_db + 3) / 2) * 60)
-            else:  # >= -1
-                percentage = max(0, 40 - int(abs(peak_db) * 10))
-            
-            bars["headroom"] = {
-                "value": peak_db,
-                "percentage": max(0, min(100, percentage)),
-                "status": "excellent" if percentage >= 95 else "good" if percentage >= 80 else "warning" if percentage >= 40 else "critical",
-                "label": "Headroom"
-            }
-        except:
-            pass
-    
-    # 2. TRUE PEAK
-    tp_metric = next((m for m in metrics if "True Peak" in m.get("internal_key", "")), None)
-    if tp_metric:
-        tp_value_raw = tp_metric.get("value", "0")
-        try:
-            # Extract numeric value
-            if isinstance(tp_value_raw, str):
-                tp_db = float(tp_value_raw.replace(" dBTP", "").replace("dBTP", ""))
-            else:
-                tp_db = float(tp_value_raw)
-            
-            # Perfect: <= -1.0 dBTP = 100%
-            # Good: -1.0 to 0.0 = 80-99%
-            # Warning: 0.0 to +0.5 = 40-79%
-            # Critical: > +0.5 = 0-39%
-            if tp_db <= -1.0:
-                percentage = 100
-            elif -1.0 < tp_db <= 0.0:
-                percentage = 80 + int(((-tp_db) / 1.0) * 20)
-            elif 0.0 < tp_db <= 0.5:
-                percentage = 40 + int(((0.5 - tp_db) / 0.5) * 40)
-            else:  # > 0.5
-                percentage = max(0, 40 - int(tp_db * 20))
-            
-            bars["true_peak"] = {
-                "value": tp_db,
-                "percentage": max(0, min(100, percentage)),
-                "status": "excellent" if percentage >= 95 else "good" if percentage >= 80 else "warning" if percentage >= 40 else "critical",
-                "label": "True Peak"
-            }
-        except:
-            pass
-    
-    # 3. DYNAMIC RANGE (PLR)
-    plr_metric = next((m for m in metrics if "PLR" in m.get("internal_key", "") or "Dynamic Range" in m.get("name", "")), None)
-    if plr_metric:
-        plr_value_raw = plr_metric.get("value", "0")
-        try:
-            if isinstance(plr_value_raw, str):
-                dr = float(plr_value_raw.replace(" dB", "").replace("dB", ""))
-            else:
-                dr = float(plr_value_raw)
-            
-            # Perfect: >= 12 dB = 100%
-            # Good: 8-12 dB = 80-99%
-            # Warning: 6-8 dB = 40-79%
-            # Critical: < 6 dB = 0-39%
-            if dr >= 12:
-                percentage = 100
-            elif 8 <= dr < 12:
-                percentage = 80 + int(((dr - 8) / 4) * 20)
-            elif 6 <= dr < 8:
-                percentage = 40 + int(((dr - 6) / 2) * 40)
-            else:  # < 6
-                percentage = max(0, int((dr / 6) * 40))
-            
-            bars["dynamic_range"] = {
-                "value": dr,
-                "percentage": max(0, min(100, percentage)),
-                "status": "excellent" if percentage >= 95 else "good" if percentage >= 80 else "warning" if percentage >= 40 else "critical",
-                "label": "Dynamic Range"
-            }
-        except:
-            pass
-    
-    # 4. LUFS
-    lufs_metric = next((m for m in metrics if "LUFS" in m.get("internal_key", "")), None)
-    if lufs_metric:
-        lufs_value_raw = lufs_metric.get("value", "-20")
-        try:
-            if isinstance(lufs_value_raw, str):
-                lufs = float(lufs_value_raw.replace(" LUFS", "").replace("LUFS", ""))
-            else:
-                lufs = float(lufs_value_raw)
-            
-            # Perfect: -24 to -16 LUFS = 100%
-            # Good: -28 to -12 LUFS = 80-99%
-            # Warning: -35 to -10 LUFS = 40-79%
-            # Critical: outside range = 0-39%
-            if -24 <= lufs <= -16:
-                percentage = 100
-            elif -28 <= lufs < -24:
-                percentage = 80 + int(((lufs + 28) / 4) * 20)
-            elif -16 < lufs <= -12:
-                percentage = 80 + int(((16 - lufs) / 4) * 20)
-            elif -35 <= lufs < -28 or -12 < lufs <= -10:
-                percentage = 60
-            else:
-                percentage = max(0, 40 - int(abs(lufs + 20) / 2))
-            
-            bars["lufs"] = {
-                "value": lufs,
-                "percentage": max(0, min(100, percentage)),
-                "status": "excellent" if percentage >= 95 else "good" if percentage >= 80 else "warning" if percentage >= 40 else "critical",
-                "label": "LUFS"
-            }
-        except:
-            pass
-    
-    # 5. STEREO WIDTH
-    stereo_metric = next((m for m in metrics if "Stereo" in m.get("internal_key", "")), None)
-    if stereo_metric:
-        corr = stereo_metric.get("correlation", 0.85)
-        try:
-            # Perfect: 0.70-0.97 = 100%
-            # Good: 0.50-0.70 or 0.97-1.0 = 80-99%
-            # Warning: 0.30-0.50 = 40-79%
-            # Critical: < 0.30 or negative = 0-39%
-            if 0.70 <= corr <= 0.97:
-                percentage = 100
-            elif 0.50 <= corr < 0.70 or 0.97 < corr <= 1.0:
-                percentage = 85
-            elif 0.30 <= corr < 0.50:
-                percentage = 60
-            elif 0 <= corr < 0.30:
-                percentage = 30
-            else:  # negative
-                percentage = max(0, 20 + int(corr * 20))
-            
-            bars["stereo_width"] = {
-                "value": corr,
-                "percentage": max(0, min(100, percentage)),
-                "status": "excellent" if percentage >= 95 else "good" if percentage >= 80 else "warning" if percentage >= 40 else "critical",
-                "label": "Stereo Width"
-            }
-        except:
-            pass
-    
-    # 6. TONAL BALANCE
-    freq_metric = next((m for m in metrics if "Frequency" in m.get("internal_key", "")), None)
-    if freq_metric:
-        # Use the calculated tonal_percentage from Parte 1
-        tonal_percentage = freq_metric.get("tonal_percentage", 100)
-        tonal_status = freq_metric.get("tonal_status", "excellent")
-        
-        bars["tonal_balance"] = {
-            "value": None,  # Composite value, not single number
-            "percentage": tonal_percentage,
-            "status": tonal_status,
-            "label": "Tonal Balance"
-        }
-    
-    return bars
-
-
-# ----------------------------
 # TEMPORAL ANALYSIS FUNCTIONS
 # ----------------------------
 
@@ -2943,9 +2583,6 @@ def score_report(metrics: List[Dict[str, Any]], hard_fail: bool, strict: bool = 
 
 def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, strict: bool = False, lang: str = "en", original_metadata: Optional[Dict] = None) -> Dict[str, Any]:
     """Analyze a full audio file."""
-    import time
-    start_time = time.time()
-    
     try:
         info = sf.info(str(path))
     except Exception as e:
@@ -3240,27 +2877,6 @@ def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, s
 
     # 8. Frequency Balance
     fb = band_balance_db(y, sr)
-    
-    # v7.3.37 - Fase 2: Detect closest genre and calculate health percentage
-    genre_detection = detect_closest_genre(
-        fb['low_percent'],
-        fb['mid_percent'],
-        fb['high_percent']
-    )
-    tonal_health = calculate_tonal_balance_percentage(
-        fb['low_percent'],
-        fb['mid_percent'],
-        fb['high_percent']
-    )
-    
-    # Add genre detection and health to fb dict
-    fb['detected_genre'] = genre_detection['genre']
-    fb['genre_confidence'] = genre_detection['confidence']
-    fb['genre_within_ranges'] = genre_detection['within_ranges']
-    fb['tonal_percentage'] = tonal_health['percentage']
-    fb['tonal_status'] = tonal_health['status']
-    fb['tonal_issues'] = tonal_health['issues']
-    
     st_f, msg_f, _ = status_freq(fb, genre, strict, lang)  # ← FIXED: Added strict and lang parameters
     
     # Localize frequency band labels for Spanish users
@@ -3406,13 +3022,6 @@ def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, s
     
     # CRITICAL: Sanitize all float values to ensure JSON compliance
     result = sanitize_dict(result)
-    
-    # Add analysis time
-    analysis_time = time.time() - start_time
-    result["analysis_time_seconds"] = round(analysis_time, 1)
-    
-    # v7.3.37 - Fase 2: Add metrics bars for visual display (Quick View tab)
-    result["metrics_bars"] = calculate_metrics_bars_percentages(metrics)
     
     return result
 
@@ -3766,7 +3375,7 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
             if "temporal_analysis" in stereo_metric:
                 temporal = stereo_metric["temporal_analysis"]
                 
-                details += "⏱️ ANÁLISIS TEMPORAL:\n\n"
+                details += "⚠️ ANÁLISIS TEMPORAL:\n\n"
                 
                 # Correlation temporal
                 if 'correlation' in temporal:
@@ -3803,7 +3412,7 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
                             # v7.3.33: Mensajes más precisos - very_low NO es cancelación
                             if issue == 'high':
                                 details += f"Correlación muy alta ({corr*100:.0f}%)\n"
-                                details += "      → Alta coherencia entre canales (excelente compatibilidad mono)\n"
+                                details += "      → Imagen muy centrada (casi mono)\n"
                             elif issue == 'medium_low':
                                 details += f"Correlación media-baja ({corr*100:.0f}%)\n"
                                 details += "      → Revisa efectos estéreo y reverbs\n"
@@ -3949,26 +3558,8 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
                 details += f"   • Medios (250 Hz-4 kHz): {mid:.0f}%\n"
             if high:
                 details += f"   • Agudos (4 kHz-20 kHz): {high:.0f}%\n"
-            
-            # v7.3.37 - Fase 2: Show detected genre
-            detected_genre = freq_metric.get("detected_genre")
-            tonal_percentage = freq_metric.get("tonal_percentage", 100)
-            tonal_status = freq_metric.get("tonal_status", "excellent")
-            
-            if detected_genre and tonal_percentage >= 80:
-                details += f"\n   📊 Balance tonal similar a: {detected_genre} (saludable)\n"
-            elif detected_genre and tonal_percentage >= 60:
-                details += f"\n   📊 Balance tonal similar a: {detected_genre} (aceptable)\n"
-            elif detected_genre:
-                details += f"\n   📊 Balance tonal detectado: {detected_genre}\n"
-            
             details += "\n"
-            if tonal_status == "excellent":
-                details += "   → Distribución tonal balanceada.\n"
-            elif tonal_status == "good":
-                details += "   → Distribución tonal saludable.\n"
-            else:
-                details += "   → Revisa el balance tonal en diferentes sistemas.\n"
+            details += "   → Distribución tonal balanceada.\n"
         
         return details
     
@@ -4056,7 +3647,7 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
             if "temporal_analysis" in stereo_metric:
                 temporal = stereo_metric["temporal_analysis"]
                 
-                details += "⏱️ TEMPORAL ANALYSIS:\n\n"
+                details += "⚠️ TEMPORAL ANALYSIS:\n\n"
                 
                 # Correlation temporal
                 if 'correlation' in temporal:
@@ -4091,7 +3682,7 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
                             # v7.3.33: More precise messages - very_low is NOT cancellation
                             if issue == 'high':
                                 details += f"Very high correlation ({corr*100:.0f}%)\n"
-                                details += "      → High channel coherence (excellent mono compatibility)\n"
+                                details += "      → Nearly mono\n"
                             elif issue == 'medium_low':
                                 details += f"Medium-low correlation ({corr*100:.0f}%)\n"
                                 details += "      → Check stereo effects and reverbs\n"
@@ -4233,26 +3824,8 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
                 details += f"   • Mids (250 Hz-4 kHz): {mid:.0f}%\n"
             if high:
                 details += f"   • Highs (4 kHz-20 kHz): {high:.0f}%\n"
-            
-            # v7.3.37 - Fase 2: Show detected genre
-            detected_genre = freq_metric.get("detected_genre")
-            tonal_percentage = freq_metric.get("tonal_percentage", 100)
-            tonal_status = freq_metric.get("tonal_status", "excellent")
-            
-            if detected_genre and tonal_percentage >= 80:
-                details += f"\n   📊 Tonal balance similar to: {detected_genre} (healthy)\n"
-            elif detected_genre and tonal_percentage >= 60:
-                details += f"\n   📊 Tonal balance similar to: {detected_genre} (acceptable)\n"
-            elif detected_genre:
-                details += f"\n   📊 Detected tonal balance: {detected_genre}\n"
-            
             details += "\n"
-            if tonal_status == "excellent":
-                details += "   → Balanced tonal distribution.\n"
-            elif tonal_status == "good":
-                details += "   → Healthy tonal distribution.\n"
-            else:
-                details += "   → Check tonal balance across different systems.\n"
+            details += "   → Balanced tonal distribution.\n"
         
         return details
 
@@ -4284,9 +3857,6 @@ def analyze_file_chunked(
     Returns:
         Same structure as analyze_file() but with chunked=True flag
     """
-    
-    import time
-    start_time = time.time()
     
     print("🔄 CHUNKED ANALYSIS - Memory Optimized")
     
@@ -5115,26 +4685,6 @@ def analyze_file_chunked(
         }
         print("\n⚠️  No frequency balance data available (using fallback)")
     
-    # v7.3.37 - Fase 2: Detect closest genre and calculate health percentage
-    genre_detection = detect_closest_genre(
-        fb['low_percent'],
-        fb['mid_percent'],
-        fb['high_percent']
-    )
-    tonal_health = calculate_tonal_balance_percentage(
-        fb['low_percent'],
-        fb['mid_percent'],
-        fb['high_percent']
-    )
-    
-    # Add genre detection and health to fb dict
-    fb['detected_genre'] = genre_detection['genre']
-    fb['genre_confidence'] = genre_detection['confidence']
-    fb['genre_within_ranges'] = genre_detection['within_ranges']
-    fb['tonal_percentage'] = tonal_health['percentage']
-    fb['tonal_status'] = tonal_health['status']
-    fb['tonal_issues'] = tonal_health['issues']
-    
     st_f, msg_f, _ = status_freq(fb, genre, strict, lang)
     
     # Localize frequency band labels
@@ -5273,13 +4823,6 @@ def analyze_file_chunked(
     
     # CRITICAL: Sanitize all float values to ensure JSON compliance
     result = sanitize_dict(result)
-    
-    # Add analysis time
-    analysis_time = time.time() - start_time
-    result["analysis_time_seconds"] = round(analysis_time, 1)
-    
-    # v7.3.37 - Fase 2: Add metrics bars for visual display (Quick View tab)
-    result["metrics_bars"] = calculate_metrics_bars_percentages(metrics)
     
     return result
 def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en', filename: str = "mix") -> str:
@@ -5471,7 +5014,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                             # v7.3.33: Mensajes más precisos - very_low NO es cancelación
                             if issue == 'high':
                                 temporal_message += f"Correlación muy alta ({corr*100:.0f}%)\n"
-                                temporal_message += "      → Alta coherencia entre canales (excelente compatibilidad mono)\n"
+                                temporal_message += "      → Casi mono\n"
                             elif issue == 'medium_low':
                                 temporal_message += f"Correlación media-baja ({corr*100:.0f}%)\n"
                                 temporal_message += "      → Revisa efectos estéreo y reverbs\n"
@@ -5578,7 +5121,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
             
             # Add temporal analysis section if there's any temporal data
             if has_temporal:
-                message += "⏱️ ANÁLISIS TEMPORAL:\n\n"
+                message += "⚠️ ANÁLISIS TEMPORAL:\n\n"
                 message += temporal_message
                 message += "💡 Revisa los tiempos indicados arriba en tu DAW para evaluar si lo detectado en el Análisis Temporal responde a una decisión artística o si requiere un ajuste técnico antes del mastering.\n\n"
             
@@ -5787,7 +5330,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                             # v7.3.33: More precise messages - very_low is NOT cancellation
                             if issue == 'high':
                                 temporal_message += f"Very high correlation ({corr*100:.0f}%)\n"
-                                temporal_message += "      → High channel coherence (excellent mono compatibility)\n"
+                                temporal_message += "      → Nearly mono\n"
                             elif issue == 'medium_low':
                                 temporal_message += f"Medium-low correlation ({corr*100:.0f}%)\n"
                                 temporal_message += "      → Check stereo effects and reverbs\n"
@@ -5890,7 +5433,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
             
             # Add temporal analysis section if there's any temporal data
             if has_temporal:
-                message += "⏱️ TEMPORAL ANALYSIS:\n\n"
+                message += "⚠️ TEMPORAL ANALYSIS:\n\n"
                 message += temporal_message
                 message += "💡 Review the timestamps above in your DAW to evaluate if what's detected in the Temporal Analysis is an artistic decision or if it requires a technical adjustment before mastering.\n\n"
             
@@ -6882,17 +6425,12 @@ def generate_complete_pdf(
         # Format bit depth
         bit_depth_str = f"{bit_depth}-bit" if bit_depth > 0 else "N/A"
         
-        # v7.3.37 - Fase 2: Format analysis time
-        analysis_time = report.get('analysis_time_seconds', 0)
-        analysis_time_str = f"{analysis_time:.1f}s" if analysis_time > 0 else "N/A"
-        
         file_info_data = [
             ["Archivo" if lang == 'es' else "File", clean_filename],
             ["Fecha" if lang == 'es' else "Date", datetime.now().strftime('%d/%m/%Y %H:%M')],
             ["Duración" if lang == 'es' else "Duration", duration_str],
             ["Sample Rate" if lang == 'es' else "Sample Rate", sample_rate_str],
             ["Bit Depth" if lang == 'es' else "Bit Depth", bit_depth_str],
-            ["Tiempo de análisis" if lang == 'es' else "Analysis time", analysis_time_str],
             ["Puntuación" if lang == 'es' else "Score", f"{report.get('score', 0)}/100"],
             ["Veredicto" if lang == 'es' else "Verdict", verdict_text]
         ]
