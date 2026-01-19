@@ -1820,13 +1820,27 @@ by Matías Carvajal
                           fontSize: '0.875rem', 
                           fontWeight: '600', 
                           color: '#374151', 
-                          marginBottom: '1rem',
+                          marginBottom: '0.5rem',
                           display: 'flex',
                           alignItems: 'center',
                           gap: '0.5rem'
                         }}>
-                          📊 {lang === 'es' ? 'Estado de Métricas' : 'Metrics Status'}
+                          📊 {lang === 'es' ? 'Áreas de Atención Prioritaria' : 'Priority Attention Areas'}
                         </h4>
+                        
+                        {/* Subtexto explicativo - Mastering Ready philosophy */}
+                        <p style={{
+                          fontSize: '0.7rem',
+                          color: '#6b7280',
+                          marginBottom: '1rem',
+                          lineHeight: '1.4',
+                          fontStyle: 'italic'
+                        }}>
+                          {lang === 'es' 
+                            ? 'Estos indicadores no significan que tu mezcla esté mal, sino que hay decisiones técnicas que vale la pena revisar antes del máster final.'
+                            : 'These indicators don\'t mean your mix is wrong, but there are technical decisions worth reviewing before the final master.'}
+                        </p>
+                        
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                           {(() => {
                             const bars = (result as any).metrics_bars;
@@ -1837,10 +1851,11 @@ by Matías Carvajal
                               plr: { es: 'PLR', en: 'PLR' },
                               loudness: { es: 'Loudness (LUFS)', en: 'Loudness (LUFS)' },
                               lufs: { es: 'LUFS', en: 'LUFS' },
+                              "lufs_(integrated)": { es: 'LUFS', en: 'LUFS' },
                               stereo_width: { es: 'Imagen Estéreo', en: 'Stereo Width' },
                               stereo_correlation: { es: 'Correlación', en: 'Correlation' },
-                              frequency_balance: { es: 'Balance Tonal', en: 'Tonal Balance' },
-                              tonal_balance: { es: 'Balance Tonal', en: 'Tonal Balance' }
+                              frequency_balance: { es: 'Balance Frecuencias', en: 'Freq. Balance' },
+                              tonal_balance: { es: 'Balance Frecuencias', en: 'Freq. Balance' }
                             };
                             
                             const statusColors: { [key: string]: string } = {
@@ -1850,25 +1865,26 @@ by Matías Carvajal
                               critical: '#ef4444'
                             };
                             
-                            const statusBgColors: { [key: string]: string } = {
-                              excellent: '#d1fae5',
-                              good: '#dbeafe',
-                              warning: '#fef3c7',
-                              critical: '#fee2e2'
-                            };
-                            
                             // Filter and order the metrics we want to show
-                            const orderedKeys = ['headroom', 'true_peak', 'plr', 'dynamic_range', 'lufs', 'loudness', 'stereo_width', 'stereo_correlation', 'frequency_balance', 'tonal_balance'];
+                            const orderedKeys = ['headroom', 'true_peak', 'plr', 'dynamic_range', 'lufs', 'lufs_(integrated)', 'loudness', 'stereo_width', 'stereo_correlation', 'frequency_balance', 'tonal_balance'];
                             const displayedKeys = orderedKeys.filter(key => bars[key]);
                             
                             return displayedKeys.map((key) => {
                               const bar = bars[key];
                               const label = metricLabels[key] || { es: key, en: key };
                               const color = statusColors[bar.status] || '#6b7280';
-                              const bgColor = statusBgColors[bar.status] || '#f3f4f6';
+                              
+                              // Get tooltip from backend or use default
+                              const tooltip = lang === 'es' 
+                                ? (bar.tooltip_es || '')
+                                : (bar.tooltip_en || '');
                               
                               return (
-                                <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                <div 
+                                  key={key} 
+                                  style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}
+                                  title={tooltip}
+                                >
                                   <div style={{ 
                                     minWidth: '100px', 
                                     maxWidth: '120px',
@@ -1909,7 +1925,7 @@ by Matías Carvajal
                           })()}
                         </div>
                         
-                        {/* Legend */}
+                        {/* Legend - Mastering Ready philosophy: margin, not judgment */}
                         <div style={{ 
                           display: 'flex', 
                           flexWrap: 'wrap',
@@ -1917,26 +1933,38 @@ by Matías Carvajal
                           marginTop: '1rem',
                           paddingTop: '0.75rem',
                           borderTop: '1px solid #e5e7eb',
-                          fontSize: '0.7rem',
+                          fontSize: '0.65rem',
                           color: '#6b7280'
                         }}>
-                          <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }} title={lang === 'es' ? 'Dentro del rango recomendado por Mastering Ready' : 'Within Mastering Ready recommended range'}>
                             <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981' }}></span>
-                            {lang === 'es' ? 'Excelente' : 'Excellent'}
+                            {lang === 'es' ? 'Margen cómodo' : 'Comfortable margin'}
                           </span>
-                          <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }} title={lang === 'es' ? 'Funcional, con margen suficiente para el máster' : 'Functional, with sufficient margin for mastering'}>
                             <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#3b82f6' }}></span>
-                            {lang === 'es' ? 'Bueno' : 'Good'}
+                            {lang === 'es' ? 'Margen suficiente' : 'Sufficient margin'}
                           </span>
-                          <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }} title={lang === 'es' ? 'Revisar si buscas máxima compatibilidad y margen' : 'Review if you want maximum compatibility and margin'}>
                             <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#f59e0b' }}></span>
-                            {lang === 'es' ? 'Revisar' : 'Review'}
+                            {lang === 'es' ? 'Margen reducido' : 'Reduced margin'}
                           </span>
-                          <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }} title={lang === 'es' ? 'Revisión prioritaria antes del máster final' : 'Priority review before final master'}>
                             <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#ef4444' }}></span>
-                            {lang === 'es' ? 'Crítico' : 'Critical'}
+                            {lang === 'es' ? 'Margen comprometido' : 'Compromised margin'}
                           </span>
                         </div>
+                        
+                        {/* Footer note */}
+                        <p style={{
+                          fontSize: '0.6rem',
+                          color: '#9ca3af',
+                          marginTop: '0.5rem',
+                          textAlign: 'center'
+                        }}>
+                          {lang === 'es' 
+                            ? 'Basado en criterios de Mastering Ready para compatibilidad, margen y traducción.'
+                            : 'Based on Mastering Ready criteria for compatibility, margin and translation.'}
+                        </p>
                       </div>
                     )}
                     
