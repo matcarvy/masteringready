@@ -6891,6 +6891,34 @@ def generate_complete_pdf(
             ]))
             
             story.append(metrics_table)
+            
+            # NEW v7.3.50: Add genre detection note if available
+            freq_metric = next((m for m in report['metrics'] if m.get('internal_key') == 'Frequency Balance'), None)
+            if freq_metric and freq_metric.get('detected_genre'):
+                detected_genre = freq_metric.get('detected_genre', '')
+                tonal_percentage = freq_metric.get('tonal_percentage', 100)
+                
+                if tonal_percentage >= 90:
+                    status_word = "saludable" if lang == 'es' else "healthy"
+                elif tonal_percentage >= 70:
+                    status_word = "aceptable" if lang == 'es' else "acceptable"
+                else:
+                    status_word = "revisar" if lang == 'es' else "review"
+                
+                genre_text = f"Balance tonal similar a: {detected_genre} ({status_word})" if lang == 'es' else f"Tonal balance similar to: {detected_genre} ({status_word})"
+                
+                story.append(Spacer(1, 0.1*inch))
+                story.append(Paragraph(
+                    clean_text_for_pdf(f"📊 {genre_text}"),
+                    ParagraphStyle(
+                        'GenreNote',
+                        parent=normal_style,
+                        fontSize=10,
+                        textColor=colors.HexColor('#4b5563'),
+                        leftIndent=10
+                    )
+                ))
+            
             story.append(Spacer(1, 0.3*inch))
         
         # ========== NEW: ANÁLISIS TÉCNICO DETALLADO (from interpretations) ==========
