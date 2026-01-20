@@ -546,7 +546,7 @@ def _generate_stereo_text_es(balance: float, correlation: float, ms_ratio: float
             return {
                 "interpretation": (
                     f"La imagen estéreo de tu mezcla está muy centrada (corr: {correlation:.2f}). "
-                    "Aunque es mono-compatible, hay poca información estéreo. "
+                    "El contenido estéreo es muy reducido. "
                     "Esto puede ser intencional según el género."
                 ),
                 "recommendation": (
@@ -892,7 +892,7 @@ def _generate_stereo_text_en(balance: float, correlation: float, ms_ratio: float
             return {
                 "interpretation": (
                     f"Your mix's stereo image is very centered (corr: {correlation:.2f}). "
-                    "While mono-compatible, there's little stereo information. "
+                    "Stereo content is very limited. "
                     "This may be intentional depending on genre."
                 ),
                 "recommendation": (
