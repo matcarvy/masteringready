@@ -567,15 +567,16 @@ def _generate_stereo_text_es(balance: float, correlation: float, ms_ratio: float
                 )
             }
         else:
+            # v7.3.51: Adjusted language - descriptive, not alarmist
             return {
                 "interpretation": (
-                    "La imagen estéreo de tu mezcla presenta algunos problemas de correlación. "
-                    "Esto puede indicar problemas de fase entre canales o uso excesivo de efectos "
-                    "estéreo que causan pérdidas al escuchar en mono."
+                    "La imagen estéreo de tu mezcla presenta correlación moderada entre canales. "
+                    "Esto puede deberse a efectos estéreo amplios o elementos muy panoramizados. "
+                    "Verifica el comportamiento en mono para asegurar compatibilidad."
                 ),
                 "recommendation": (
-                    "Revisa los plugins de widening estéreo y verifica la fase de los micrófonos "
-                    "en instrumentos grabados en estéreo. Considera reducir el width en algunos elementos."
+                    "Revisa los plugins de widening estéreo y verifica la fase en instrumentos "
+                    "grabados en estéreo. Considera ajustar el width en algunos elementos si es necesario."
                 )
             }
     
@@ -912,15 +913,16 @@ def _generate_stereo_text_en(balance: float, correlation: float, ms_ratio: float
                 )
             }
         else:
+            # v7.3.51: Adjusted language - descriptive, not alarmist
             return {
                 "interpretation": (
-                    "Your mix's stereo image presents some correlation issues. "
-                    "This may indicate phase problems between channels or excessive stereo effects "
-                    "causing losses when listening in mono."
+                    "Your mix's stereo image presents moderate correlation between channels. "
+                    "This may be due to wide stereo effects or heavily panned elements. "
+                    "Verify mono behavior to ensure compatibility."
                 ),
                 "recommendation": (
-                    "Review stereo widening plugins and verify phase of microphones on "
-                    "stereo-recorded instruments. Consider reducing width on some elements."
+                    "Review stereo widening plugins and verify phase on stereo-recorded instruments. "
+                    "Consider adjusting width on some elements if needed."
                 )
             }
     
