@@ -4013,8 +4013,15 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
                         attention_word = "a revisar"
                         details += f"📐 M/S Ratio ({num_regions} {region_word} {attention_word}):\n"
                         
+                        # v7.3.51: Variaciones de mensajes para M/S bajo (eBook philosophy)
+                        variaciones_ms_bajo_es = [
+                            "Contenido estéreo reducido en este tramo.\n         Puede ser intencional según el arreglo.",
+                            "Contenido estéreo reducido.\n         Común en secciones centradas (intros, versos, breaks).",
+                            "Contenido estéreo reducido.\n         Verifica si el ancho estéreo coincide con la intención musical."
+                        ]
+                        
                         max_regions_to_show = 25
-                        for region in regions[:max_regions_to_show]:
+                        for region_idx, region in enumerate(regions[:max_regions_to_show]):
                             start_min = int(region['start'] // 60)
                             start_sec = int(region['start'] % 60)
                             end_min = int(region['end'] // 60)
@@ -4026,10 +4033,11 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
                             details += f"   • {start_min}:{start_sec:02d} → {end_min}:{end_sec:02d} ({dur}s): "
                             if issue == 'mono':
                                 details += f"Ratio bajo ({ms:.2f})\n"
-                                details += "      → Mezcla muy mono - poca información estéreo\n"
+                                ms_msg = variaciones_ms_bajo_es[region_idx % len(variaciones_ms_bajo_es)]
+                                details += f"      → {ms_msg}\n"
                             else:
                                 details += f"Ratio alto ({ms:.2f})\n"
-                                details += "      → Exceso de información Side - verifica en mono\n"
+                                details += "      → Estéreo muy amplio - verifica comportamiento en mono\n"
                             
                             # Add spacing between regions for readability
                             details += "\n"
@@ -4306,8 +4314,15 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
                     if num_regions > 0:
                         details += f"📐 M/S Ratio ({num_regions} region{'s' if num_regions > 1 else ''} to review):\n"
                         
+                        # v7.3.51: Message variations for low M/S (eBook philosophy)
+                        variaciones_ms_bajo_en = [
+                            "Reduced stereo content in this section.\n         May be intentional based on the arrangement.",
+                            "Reduced stereo content.\n         Common in centered sections (intros, verses, breaks).",
+                            "Reduced stereo content.\n         Verify if stereo width matches the musical intention."
+                        ]
+                        
                         max_regions_to_show = 25
-                        for region in regions[:max_regions_to_show]:
+                        for region_idx, region in enumerate(regions[:max_regions_to_show]):
                             start_min = int(region['start'] // 60)
                             start_sec = int(region['start'] % 60)
                             end_min = int(region['end'] // 60)
@@ -4319,10 +4334,11 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
                             details += f"   • {start_min}:{start_sec:02d} → {end_min}:{end_sec:02d} ({dur}s): "
                             if issue == 'mono':
                                 details += f"Low ratio ({ms:.2f})\n"
-                                details += "      → Very mono mix - little stereo information\n"
+                                ms_msg = variaciones_ms_bajo_en[region_idx % len(variaciones_ms_bajo_en)]
+                                details += f"      → {ms_msg}\n"
                             else:
                                 details += f"High ratio ({ms:.2f})\n"
-                                details += "      → Excess Side information - check in mono\n"
+                                details += "      → Very wide stereo - verify mono behavior\n"
                             
                             # Add spacing between regions for readability
                             details += "\n"
@@ -5678,7 +5694,15 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                         region_word = "región" if num_regions == 1 else "regiones"
                         attention_word = "a revisar"
                         temporal_message += f"📐 M/S Ratio ({num_regions} {region_word} {attention_word}):\n"
-                        for region in regions[:10]:
+                        
+                        # v7.3.51: Variaciones de mensajes para M/S bajo (eBook philosophy)
+                        variaciones_ms_bajo_es = [
+                            "Contenido estéreo reducido en este tramo.\n         Puede ser intencional según el arreglo.",
+                            "Contenido estéreo reducido.\n         Común en secciones centradas (intros, versos, breaks).",
+                            "Contenido estéreo reducido.\n         Verifica si el ancho estéreo coincide con la intención musical."
+                        ]
+                        
+                        for region_idx, region in enumerate(regions[:10]):
                             start_min = int(region['start'] // 60)
                             start_sec = int(region['start'] % 60)
                             end_min = int(region['end'] // 60)
@@ -5690,10 +5714,11 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                             temporal_message += f"   • {start_min}:{start_sec:02d} → {end_min}:{end_sec:02d} ({dur}s): "
                             if issue == 'mono':
                                 temporal_message += f"Ratio bajo ({ms:.2f})\n"
-                                temporal_message += "      → Muy mono - poca información estéreo\n"
+                                ms_msg = variaciones_ms_bajo_es[region_idx % len(variaciones_ms_bajo_es)]
+                                temporal_message += f"      → {ms_msg}\n"
                             else:
                                 temporal_message += f"Ratio alto ({ms:.2f})\n"
-                                temporal_message += "      → Exceso de información Side - escúchalo en mono\n"
+                                temporal_message += "      → Estéreo muy amplio - verifica comportamiento en mono\n"
                             
                             # Add spacing between regions for readability
                             temporal_message += "\n"
@@ -5997,7 +6022,15 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                     if num_regions > 0:
                         has_temporal = True
                         temporal_message += f"📐 M/S Ratio ({num_regions} region{'s' if num_regions > 1 else ''} to review):\n"
-                        for region in regions[:10]:
+                        
+                        # v7.3.51: Message variations for low M/S (eBook philosophy)
+                        variaciones_ms_bajo_en = [
+                            "Reduced stereo content in this section.\n         May be intentional based on the arrangement.",
+                            "Reduced stereo content.\n         Common in centered sections (intros, verses, breaks).",
+                            "Reduced stereo content.\n         Verify if stereo width matches the musical intention."
+                        ]
+                        
+                        for region_idx, region in enumerate(regions[:10]):
                             start_min = int(region['start'] // 60)
                             start_sec = int(region['start'] % 60)
                             end_min = int(region['end'] // 60)
@@ -6009,10 +6042,11 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                             temporal_message += f"   • {start_min}:{start_sec:02d} → {end_min}:{end_sec:02d} ({dur}s): "
                             if issue == 'mono':
                                 temporal_message += f"Low ratio ({ms:.2f})\n"
-                                temporal_message += "      → Very mono - little stereo info\n"
+                                ms_msg = variaciones_ms_bajo_en[region_idx % len(variaciones_ms_bajo_en)]
+                                temporal_message += f"      → {ms_msg}\n"
                             else:
                                 temporal_message += f"High ratio ({ms:.2f})\n"
-                                temporal_message += "      → Excess Side information - check in mono\n"
+                                temporal_message += "      → Very wide stereo - verify mono behavior\n"
                             
                             # Add spacing between regions for readability
                             temporal_message += "\n"
