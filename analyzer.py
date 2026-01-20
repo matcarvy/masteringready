@@ -1895,11 +1895,12 @@ def analyze_clipping_temporal(y: np.ndarray, sr: int, threshold: float = 0.99999
     }
 
 
-def analyze_correlation_temporal(y: np.ndarray, sr: int, threshold: float = 0.3) -> Dict[str, Any]:
+def analyze_correlation_temporal(y: np.ndarray, sr: int, threshold: float = 0.5) -> Dict[str, Any]:
     """
     Temporal analysis of stereo correlation.
     Detects REGIONS where correlation is problematic (not just individual moments).
     
+    v7.3.51: Changed threshold from 0.3 to 0.5 - only report regions that need attention
     v7.3.36: Added band_correlation for parity with chunked mode
     v7.3.30: Added filtering for:
     - Regions < 8 seconds (noise)
@@ -1976,17 +1977,18 @@ def analyze_correlation_temporal(y: np.ndarray, sr: int, threshold: float = 0.3)
                         if values:
                             avg_band_corr[band] = sum(values) / len(values)
                 
-                # Classify issue type based on avg_correlation
-                if avg_corr > 0.97:
-                    issue_type = 'high'
+                # v7.3.51: Classify issue type - only < 0.5 is reported
+                # High correlation is NOT a problem
+                if avg_corr >= 0.5:
+                    issue_type = 'healthy'  # Won't be included in report
+                elif avg_corr >= 0.3 and avg_corr < 0.5:
+                    issue_type = 'medium_low'
                 elif avg_corr >= 0.0 and avg_corr < 0.3:
                     issue_type = 'very_low'
                 elif avg_corr >= -0.2 and avg_corr < 0.0:
                     issue_type = 'negative'
-                elif avg_corr < -0.2:
-                    issue_type = 'negative_severe'
                 else:
-                    issue_type = 'medium_low'
+                    issue_type = 'negative_severe'
                 
                 problem_regions.append({
                     "start": format_timestamp(current_region_start),
@@ -2014,17 +2016,17 @@ def analyze_correlation_temporal(y: np.ndarray, sr: int, threshold: float = 0.3)
                 if values:
                     avg_band_corr[band] = sum(values) / len(values)
         
-        # Classify issue type
-        if avg_corr > 0.97:
-            issue_type = 'high'
+        # v7.3.51: Classify issue type - only < 0.5 is reported
+        if avg_corr >= 0.5:
+            issue_type = 'healthy'  # Won't be included in report
+        elif avg_corr >= 0.3 and avg_corr < 0.5:
+            issue_type = 'medium_low'
         elif avg_corr >= 0.0 and avg_corr < 0.3:
             issue_type = 'very_low'
         elif avg_corr >= -0.2 and avg_corr < 0.0:
             issue_type = 'negative'
-        elif avg_corr < -0.2:
-            issue_type = 'negative_severe'
         else:
-            issue_type = 'medium_low'
+            issue_type = 'negative_severe'
         
         problem_regions.append({
             "start": format_timestamp(current_region_start),
@@ -2035,6 +2037,9 @@ def analyze_correlation_temporal(y: np.ndarray, sr: int, threshold: float = 0.3)
             "issue": issue_type,
             "band_correlation": avg_band_corr
         })
+    
+    # v7.3.51: Filter out 'healthy' regions (correlation >= 0.5 is not a problem)
+    problem_regions = [r for r in problem_regions if r.get('issue') != 'healthy']
     
     # v7.3.30: Filter regions (min duration 8s, exclude intro/outro 5s)
     problem_regions = filter_temporal_regions(problem_regions, track_duration)
@@ -3910,7 +3915,14 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
                 
                 details += "▶ ANÁLISIS TEMPORAL:\n\n"
                 
-                # Correlation temporal
+                # v7.3.51: Feedback positivo sobre coherencia mono
+                global_corr = stereo_metric.get("correlation", 0)
+                if global_corr and global_corr >= 0.7:
+                    details += "✅ Alta coherencia mono detectada\n"
+                    details += "La mezcla mantiene buena correlación entre canales.\n"
+                    details += "Favorece el proceso de mastering y la compatibilidad en sistemas mono.\n\n"
+                
+                # Correlation temporal - solo regiones que necesitan atención
                 if 'correlation' in temporal:
                     corr_data = temporal['correlation']
                     num_regions = corr_data.get('num_regions', 0)
@@ -3918,8 +3930,7 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
                     
                     if num_regions > 0:
                         region_word = "región" if num_regions == 1 else "regiones"
-                        problem_word = "problemática" if num_regions == 1 else "problemáticas"
-                        details += f"🎧 Correlación ({num_regions} {region_word} {problem_word}):\n"
+                        details += f"⚠️ Correlación ({num_regions} {region_word} para prestar atención):\n"
                         
                         # v7.3.36.4: Variaciones de mensajes de mono para evitar repetición
                         variaciones_mono_es = [
@@ -3941,13 +3952,10 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
                             
                             details += f"   • {start_min}:{start_sec:02d} → {end_min}:{end_sec:02d} ({dur}s): "
                             
-                            # Handle all 5 correlation issue types
-                            # v7.3.33: Mensajes más precisos - very_low NO es cancelación
-                            if issue == 'high':
-                                details += f"Correlación muy alta ({corr*100:.0f}%)\n"
-                                details += "      → Alta coherencia entre canales (excelente compatibilidad mono)\n"
-                            elif issue == 'medium_low':
-                                details += f"Correlación media-baja ({corr*100:.0f}%)\n"
+                            # v7.3.51: Only report issues that need attention (< 0.5)
+                            # Removed 'high' issue type - high correlation is not a problem
+                            if issue == 'medium_low':
+                                details += f"Correlación moderada ({corr*100:.0f}%)\n"
                                 details += "      → Revisa efectos estéreo y reverbs\n"
                             elif issue == 'very_low':
                                 details += f"Correlación muy baja ({corr*100:.0f}%)\n"
@@ -4002,8 +4010,8 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
                     
                     if num_regions > 0:
                         region_word = "región" if num_regions == 1 else "regiones"
-                        problem_word = "problemática" if num_regions == 1 else "problemáticas"
-                        details += f"📐 M/S Ratio ({num_regions} {region_word} {problem_word}):\n"
+                        attention_word = "a revisar"
+                        details += f"📐 M/S Ratio ({num_regions} {region_word} {attention_word}):\n"
                         
                         max_regions_to_show = 25
                         for region in regions[:max_regions_to_show]:
@@ -4041,8 +4049,8 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
                     
                     if num_regions > 0:
                         region_word = "región" if num_regions == 1 else "regiones"
-                        problem_word = "problemática" if num_regions == 1 else "problemáticas"
-                        details += f"⚖️ Balance L/R ({num_regions} {region_word} {problem_word}):\n"
+                        attention_word = "a revisar"
+                        details += f"⚖️ Balance L/R ({num_regions} {region_word} {attention_word}):\n"
                         
                         max_regions_to_show = 25
                         for region in regions[:max_regions_to_show]:
@@ -4203,14 +4211,21 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
                 
                 details += "▶ TEMPORAL ANALYSIS:\n\n"
                 
-                # Correlation temporal
+                # v7.3.51: Positive feedback about mono coherence
+                global_corr = stereo_metric.get("correlation", 0)
+                if global_corr and global_corr >= 0.7:
+                    details += "✅ High mono coherence detected\n"
+                    details += "The mix maintains good correlation between channels.\n"
+                    details += "Favors the mastering process and mono system compatibility.\n\n"
+                
+                # Correlation temporal - only regions that need attention
                 if 'correlation' in temporal:
                     corr_data = temporal['correlation']
                     num_regions = corr_data.get('num_regions', 0)
                     regions = corr_data.get('regions', [])
                     
                     if num_regions > 0:
-                        details += f"🎧 Correlation ({num_regions} problematic region{'s' if num_regions > 1 else ''}):\n"
+                        details += f"⚠️ Correlation ({num_regions} region{'s' if num_regions > 1 else ''} to pay attention to):\n"
                         
                         # v7.3.36.4: Variations to avoid mechanical repetition
                         variaciones_mono_en = [
@@ -4232,13 +4247,10 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
                             
                             details += f"   • {start_min}:{start_sec:02d} → {end_min}:{end_sec:02d} ({dur}s): "
                             
-                            # Handle all 5 correlation issue types
-                            # v7.3.33: More precise messages - very_low is NOT cancellation
-                            if issue == 'high':
-                                details += f"Very high correlation ({corr*100:.0f}%)\n"
-                                details += "      → High channel coherence (excellent mono compatibility)\n"
-                            elif issue == 'medium_low':
-                                details += f"Medium-low correlation ({corr*100:.0f}%)\n"
+                            # v7.3.51: Only report issues that need attention (< 0.5)
+                            # Removed 'high' issue type - high correlation is not a problem
+                            if issue == 'medium_low':
+                                details += f"Moderate correlation ({corr*100:.0f}%)\n"
                                 details += "      → Check stereo effects and reverbs\n"
                             elif issue == 'very_low':
                                 details += f"Very low correlation ({corr*100:.0f}%)\n"
@@ -4292,7 +4304,7 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
                     regions = ms_data.get('regions', [])
                     
                     if num_regions > 0:
-                        details += f"📐 M/S Ratio ({num_regions} problematic region{'s' if num_regions > 1 else ''}):\n"
+                        details += f"📐 M/S Ratio ({num_regions} region{'s' if num_regions > 1 else ''} to review):\n"
                         
                         max_regions_to_show = 25
                         for region in regions[:max_regions_to_show]:
@@ -4329,7 +4341,7 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
                     regions = lr_data.get('regions', [])
                     
                     if num_regions > 0:
-                        details += f"⚖️ L/R Balance ({num_regions} problematic region{'s' if num_regions > 1 else ''}):\n"
+                        details += f"⚖️ L/R Balance ({num_regions} region{'s' if num_regions > 1 else ''} to review):\n"
                         
                         max_regions_to_show = 25
                         for region in regions[:max_regions_to_show]:
@@ -4656,20 +4668,23 @@ def analyze_file_chunked(
                 # (to avoid overhead on healthy windows)
                 band_corr = None
                 
-                if window_corr > 0.97:
-                    # Nearly mono - only if >97% (was 0.95)
+                # v7.3.51: REMOVED correlation > 0.97 detection
+                # High correlation is NOT a problem - it's excellent mono compatibility
+                # Only report correlation issues that need attention (< 0.5)
+                
+                # v7.3.51: Added 0.3-0.5 range as "medium_low" (needs review)
+                if window_corr >= 0.3 and window_corr < 0.5:
+                    # Medium-low correlation - worth reviewing
                     results['correlation_problem_chunks'].append({
                         'chunk': i + 1,
                         'window': w + 1,
                         'start_time': window_time,
                         'end_time': window_time + window_dur,
                         'correlation': window_corr,
-                        'issue': 'high',
+                        'issue': 'medium_low',
                         'severity': 'warning',
-                        'band_correlation': None  # Not needed for "too mono" issues
+                        'band_correlation': None
                     })
-                # v7.3.30: REMOVED 0.3-0.7 range - this is HEALTHY stereo!
-                # Old code marked 30-70% as "medium_low" problem, but this is wrong
                 elif window_corr < 0.3 and window_corr >= 0.0:
                     # Very low correlation - v7.3.35: analyze which bands have the problem
                     band_corr = correlation_by_band(window, sr)
@@ -4821,23 +4836,24 @@ def analyze_file_chunked(
     print(f"📍 Territory: {territory}")
     print(f"🎛️  {'Mastered' if is_mastered else 'Mix (not mastered)'}")
     
-    # v7.3.34 FIX: Helper function to classify correlation issue based on actual value
+    # v7.3.51 FIX: Helper function to classify correlation issue based on actual value
+    # Only issues < 0.5 are reported - high correlation is NOT a problem
     def _classify_correlation_issue(corr: float) -> str:
         """
         Classify correlation issue based on the actual correlation value.
-        This ensures the issue type matches the displayed percentage,
-        fixing the bug where avg_correlation didn't match the issue type from first chunk.
+        v7.3.51: Removed 'high' classification - high correlation is not a problem.
+        Only correlation < 0.5 is reported.
         """
-        if corr > 0.97:
-            return 'high'
+        if corr >= 0.5:
+            return 'healthy'  # Not a problem - won't be reported
+        elif corr >= 0.3 and corr < 0.5:
+            return 'medium_low'  # Worth reviewing
         elif corr >= 0.0 and corr < 0.3:
             return 'very_low'
         elif corr >= -0.2 and corr < 0.0:
             return 'negative'
-        elif corr < -0.2:
-            return 'negative_severe'
         else:
-            return 'medium_low'
+            return 'negative_severe'
     
     # Helper function to merge consecutive chunks into regions
     def merge_chunks_into_regions(problem_chunks, gap_threshold=2.5, track_duration=None, 
@@ -5569,7 +5585,15 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
             if stereo_metric and "temporal_analysis" in stereo_metric:
                 temporal = stereo_metric["temporal_analysis"]
                 
-                # Correlation temporal
+                # v7.3.51: Feedback positivo sobre coherencia mono
+                global_corr = stereo_metric.get("correlation", 0)
+                if global_corr and global_corr >= 0.7:
+                    has_temporal = True
+                    temporal_message += "✅ Alta coherencia mono detectada\n"
+                    temporal_message += "La mezcla mantiene buena correlación entre canales.\n"
+                    temporal_message += "Favorece el proceso de mastering y la compatibilidad en sistemas mono.\n\n"
+                
+                # Correlation temporal - solo regiones que necesitan atención
                 if 'correlation' in temporal:
                     corr_data = temporal['correlation']
                     num_regions = corr_data.get('num_regions', 0)
@@ -5578,8 +5602,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                     if num_regions > 0:
                         has_temporal = True
                         region_word = "región" if num_regions == 1 else "regiones"
-                        problem_word = "problemática" if num_regions == 1 else "problemáticas"
-                        temporal_message += f"🎧 Correlación ({num_regions} {region_word} {problem_word}):\n"
+                        temporal_message += f"⚠️ Correlación ({num_regions} {region_word} para prestar atención):\n"
                         
                         # v7.3.36.4: Variaciones de mensajes de mono para evitar repetición
                         variaciones_mono_es = [
@@ -5600,13 +5623,10 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                             
                             temporal_message += f"   • {start_min}:{start_sec:02d} → {end_min}:{end_sec:02d} ({dur}s): "
                             
-                            # Handle all 5 correlation issue types
-                            # v7.3.33: Mensajes más precisos - very_low NO es cancelación
-                            if issue == 'high':
-                                temporal_message += f"Correlación muy alta ({corr*100:.0f}%)\n"
-                                temporal_message += "      → Alta coherencia entre canales (excelente compatibilidad mono)\n"
-                            elif issue == 'medium_low':
-                                temporal_message += f"Correlación media-baja ({corr*100:.0f}%)\n"
+                            # v7.3.51: Only report issues that need attention (< 0.5)
+                            # Removed 'high' issue type - high correlation is not a problem
+                            if issue == 'medium_low':
+                                temporal_message += f"Correlación moderada ({corr*100:.0f}%)\n"
                                 temporal_message += "      → Revisa efectos estéreo y reverbs\n"
                             elif issue == 'very_low':
                                 temporal_message += f"Correlación muy baja ({corr*100:.0f}%)\n"
@@ -5656,8 +5676,8 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                     if num_regions > 0:
                         has_temporal = True
                         region_word = "región" if num_regions == 1 else "regiones"
-                        problem_word = "problemática" if num_regions == 1 else "problemáticas"
-                        temporal_message += f"📐 M/S Ratio ({num_regions} {region_word} {problem_word}):\n"
+                        attention_word = "a revisar"
+                        temporal_message += f"📐 M/S Ratio ({num_regions} {region_word} {attention_word}):\n"
                         for region in regions[:10]:
                             start_min = int(region['start'] // 60)
                             start_sec = int(region['start'] % 60)
@@ -5688,8 +5708,8 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                     if num_regions > 0:
                         has_temporal = True
                         region_word = "región" if num_regions == 1 else "regiones"
-                        problem_word = "problemática" if num_regions == 1 else "problemáticas"
-                        temporal_message += f"⚖️ Balance L/R ({num_regions} {region_word} {problem_word}):\n"
+                        attention_word = "a revisar"
+                        temporal_message += f"⚖️ Balance L/R ({num_regions} {region_word} {attention_word}):\n"
                         for region in regions[:10]:
                             start_min = int(region['start'] // 60)
                             start_sec = int(region['start'] % 60)
@@ -5887,7 +5907,15 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
             if stereo_metric and "temporal_analysis" in stereo_metric:
                 temporal = stereo_metric["temporal_analysis"]
                 
-                # Correlation temporal
+                # v7.3.51: Positive feedback about mono coherence
+                global_corr = stereo_metric.get("correlation", 0)
+                if global_corr and global_corr >= 0.7:
+                    has_temporal = True
+                    temporal_message += "✅ High mono coherence detected\n"
+                    temporal_message += "The mix maintains good correlation between channels.\n"
+                    temporal_message += "Favors the mastering process and mono system compatibility.\n\n"
+                
+                # Correlation temporal - only regions that need attention
                 if 'correlation' in temporal:
                     corr_data = temporal['correlation']
                     num_regions = corr_data.get('num_regions', 0)
@@ -5895,7 +5923,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                     
                     if num_regions > 0:
                         has_temporal = True
-                        temporal_message += f"🎧 Correlation ({num_regions} problematic region{'s' if num_regions > 1 else ''}):\n"
+                        temporal_message += f"⚠️ Correlation ({num_regions} region{'s' if num_regions > 1 else ''} to pay attention to):\n"
                         
                         # v7.3.36.4: Variations to avoid mechanical repetition
                         variaciones_mono_en = [
@@ -5916,13 +5944,10 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                             
                             temporal_message += f"   • {start_min}:{start_sec:02d} → {end_min}:{end_sec:02d} ({dur}s): "
                             
-                            # Handle all 5 correlation issue types
-                            # v7.3.33: More precise messages - very_low is NOT cancellation
-                            if issue == 'high':
-                                temporal_message += f"Very high correlation ({corr*100:.0f}%)\n"
-                                temporal_message += "      → High channel coherence (excellent mono compatibility)\n"
-                            elif issue == 'medium_low':
-                                temporal_message += f"Medium-low correlation ({corr*100:.0f}%)\n"
+                            # v7.3.51: Only report issues that need attention (< 0.5)
+                            # Removed 'high' issue type - high correlation is not a problem
+                            if issue == 'medium_low':
+                                temporal_message += f"Moderate correlation ({corr*100:.0f}%)\n"
                                 temporal_message += "      → Check stereo effects and reverbs\n"
                             elif issue == 'very_low':
                                 temporal_message += f"Very low correlation ({corr*100:.0f}%)\n"
@@ -5971,7 +5996,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                     
                     if num_regions > 0:
                         has_temporal = True
-                        temporal_message += f"📐 M/S Ratio ({num_regions} problematic region{'s' if num_regions > 1 else ''}):\n"
+                        temporal_message += f"📐 M/S Ratio ({num_regions} region{'s' if num_regions > 1 else ''} to review):\n"
                         for region in regions[:10]:
                             start_min = int(region['start'] // 60)
                             start_sec = int(region['start'] % 60)
@@ -6001,7 +6026,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                     
                     if num_regions > 0:
                         has_temporal = True
-                        temporal_message += f"⚖️ L/R Balance ({num_regions} problematic region{'s' if num_regions > 1 else ''}):\n"
+                        temporal_message += f"⚖️ L/R Balance ({num_regions} region{'s' if num_regions > 1 else ''} to review):\n"
                         for region in regions[:10]:
                             start_min = int(region['start'] // 60)
                             start_sec = int(region['start'] % 60)
