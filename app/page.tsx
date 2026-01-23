@@ -447,6 +447,20 @@ const handleAnalyze = async () => {
     setProgress(0)
   }
 
+  /**
+   * Helper function to find metrics flexibly by partial name match
+   * Works for both ES and EN, normal and chunked modes
+   * FIX v7.3.51: Resolves N/A bug in quick analysis .txt download
+   */
+  const findMetric = (metrics: any[], ...searchTerms: string[]) => {
+    if (!metrics || !Array.isArray(metrics)) return null
+    return metrics.find((m: any) => 
+      searchTerms.some(term => 
+        m.name?.toLowerCase().includes(term.toLowerCase())
+      )
+    )
+  }
+
   const handleDownload = () => {
     if (!result) return
     
@@ -466,12 +480,11 @@ ${lang === 'es' ? 'Veredicto' : 'Verdict'}: ${result.verdict}
 
 ${lang === 'es' ? 'MÉTRICAS PRINCIPALES' : 'MAIN METRICS'}
 ${'─'.repeat(50)}
-Headroom:              ${result.metrics?.find((m: any) => m.name === 'Headroom')?.value || 'N/A'}
-True Peak:             ${result.metrics?.find((m: any) => m.name === 'True Peak')?.value || 'N/A'}
-${lang === 'es' ? 'Balance Estéreo' : 'Stereo Balance'}:       ${result.metrics?.find((m: any) => m.name === 'Stereo Balance' || m.name === 'Balance Estéreo')?.value || 'N/A'}
-LUFS:                  ${result.metrics?.find((m: any) => m.name === 'LUFS')?.value || 'N/A'}
-PLR:                   ${result.metrics?.find((m: any) => m.name === 'PLR')?.value || 'N/A'}
-${lang === 'es' ? 'Correlación' : 'Correlation'}:           ${result.metrics?.find((m: any) => m.name === 'Correlation' || m.name === 'Correlación')?.value || 'N/A'}
+Headroom:              ${findMetric(result.metrics, 'headroom')?.value || 'N/A'}
+True Peak:             ${findMetric(result.metrics, 'true peak', 'peak')?.value || 'N/A'}
+LUFS:                  ${findMetric(result.metrics, 'lufs')?.value || 'N/A'}
+PLR:                   ${findMetric(result.metrics, 'plr')?.value || 'N/A'}
+${lang === 'es' ? 'Ancho Estéreo' : 'Stereo Width'}:        ${findMetric(result.metrics, 'stereo', 'ancho', 'width')?.value || 'N/A'}
 
 ${lang === 'es' ? 'ANÁLISIS DETALLADO' : 'DETAILED ANALYSIS'}
 ${'─'.repeat(50)}
