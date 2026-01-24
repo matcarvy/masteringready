@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Download, Check, Upload, Zap, Shield, TrendingUp, Play, Music } from 'lucide-react'
-import { UserMenu } from '@/components/auth'
+import { Download, Check, Upload, Zap, Shield, TrendingUp, Play, Music, Lock, X } from 'lucide-react'
+import { UserMenu, useAuth } from '@/components/auth'
 import { analyzeFile } from '@/lib/api'
 import { startAnalysisPolling, getAnalysisStatus } from '@/lib/api'
 import { compressAudioFile } from '@/lib/audio-compression'
@@ -136,12 +136,16 @@ function InterpretativeSection({ title, interpretation, recommendation, metrics,
 }
 
 function Home() {
+  // Auth state - check if user is logged in
+  const { user, loading: authLoading } = useAuth()
+  const isLoggedIn = !!user
+
   const [file, setFile] = useState<File | null>(null)
   const [lang, setLang] = useState<'es' | 'en'>('es')
   const [mode, setMode] = useState<'short' | 'write'>('write')
   const [strict, setStrict] = useState(false)
   const [langDetected, setLangDetected] = useState(false)
-  
+
   const [loading, setLoading] = useState(false)
   const [progress, setProgress] = useState(0)
   const [result, setResult] = useState<any>(null)
@@ -150,6 +154,7 @@ function Home() {
   const [compressionProgress, setCompressionProgress] = useState(0)
   const [showContactModal, setShowContactModal] = useState(false)
   const [showFeedbackModal, setShowFeedbackModal] = useState(false)
+  const [showUnlockModal, setShowUnlockModal] = useState(false)
   const [reportView, setReportView] = useState<'visual' | 'short' | 'write'>('visual')
   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false)
   const [feedback, setFeedback] = useState({ rating: 0, liked: '', change: '', add: '' })
@@ -1775,7 +1780,14 @@ by Matías Carvajal
                   {(['visual', 'short', 'write'] as const).map((view) => (
                     <button
                       key={view}
-                      onClick={() => setReportView(view)}
+                      onClick={() => {
+                        // Check if user is logged in for Resumen/Completo tabs
+                        if ((view === 'short' || view === 'write') && !isLoggedIn) {
+                          setShowUnlockModal(true)
+                          return
+                        }
+                        setReportView(view)
+                      }}
                       style={{
                         flex: '1 1 calc(33.333% - 0.5rem)',
                         minWidth: '90px',
@@ -1788,9 +1800,19 @@ by Matías Carvajal
                         fontSize: 'clamp(0.75rem, 2vw, 0.875rem)',
                         cursor: 'pointer',
                         transition: 'all 0.2s',
-                        boxShadow: reportView === view ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+                        boxShadow: reportView === view ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                        position: 'relative'
                       }}
                     >
+                      {/* Lock icon for non-logged users on Resumen/Completo */}
+                      {(view === 'short' || view === 'write') && !isLoggedIn && (
+                        <Lock size={12} style={{
+                          position: 'absolute',
+                          top: '4px',
+                          right: '4px',
+                          color: '#9ca3af'
+                        }} />
+                      )}
                       {view === 'visual' ? (lang === 'es' ? '⚡ Rápido' : '⚡ Quick') :
                        view === 'short' ? (lang === 'es' ? '📝 Resumen' : '📝 Summary') :
                        (lang === 'es' ? '📄 Completo' : '📄 Complete')}
@@ -1981,19 +2003,62 @@ by Matías Carvajal
                       </div>
                     )}
                     
-                    <pre style={{
-                      whiteSpace: 'pre-wrap',
-                      wordBreak: 'break-word',
-                      overflowWrap: 'break-word',
-                      fontSize: 'clamp(0.8rem, 2vw, 0.875rem)',
-                      lineHeight: '1.6',
-                      fontFamily: 'Inter, system-ui, sans-serif',
-                      overflowX: 'auto',
-                      maxWidth: '100%',
-                      margin: 0
-                    }}>
-                      {cleanReportText((result as any).report_visual || result.report_short || result.report)}
-                    </pre>
+                    {/* Report content with blur for non-logged users */}
+                    <div
+                      style={{ position: 'relative' }}
+                      onClick={() => {
+                        if (!isLoggedIn) setShowUnlockModal(true)
+                      }}
+                    >
+                      <pre style={{
+                        whiteSpace: 'pre-wrap',
+                        wordBreak: 'break-word',
+                        overflowWrap: 'break-word',
+                        fontSize: 'clamp(0.8rem, 2vw, 0.875rem)',
+                        lineHeight: '1.6',
+                        fontFamily: 'Inter, system-ui, sans-serif',
+                        overflowX: 'auto',
+                        maxWidth: '100%',
+                        margin: 0,
+                        filter: !isLoggedIn ? 'blur(4px)' : 'none',
+                        userSelect: !isLoggedIn ? 'none' : 'auto',
+                        cursor: !isLoggedIn ? 'pointer' : 'auto'
+                      }}>
+                        {cleanReportText((result as any).report_visual || result.report_short || result.report)}
+                      </pre>
+                      {/* Unlock overlay for non-logged users */}
+                      {!isLoggedIn && (
+                        <div style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          background: 'rgba(255, 255, 255, 0.3)',
+                          borderRadius: '0.5rem',
+                          cursor: 'pointer'
+                        }}>
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            padding: '0.75rem 1.25rem',
+                            background: 'white',
+                            borderRadius: '9999px',
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                            color: '#667eea',
+                            fontWeight: '600',
+                            fontSize: '0.875rem'
+                          }}>
+                            <Lock size={16} />
+                            {lang === 'es' ? 'Desbloquear análisis' : 'Unlock analysis'}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
 
@@ -2137,7 +2202,13 @@ by Matías Carvajal
                 <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
                   {/* Download Current View */}
                   <button
-                    onClick={handleDownload}
+                    onClick={() => {
+                      if (!isLoggedIn) {
+                        setShowUnlockModal(true)
+                        return
+                      }
+                      handleDownload()
+                    }}
                     style={{
                       flex: 1,
                       minWidth: '160px',
@@ -2147,8 +2218,8 @@ by Matías Carvajal
                       gap: '0.5rem',
                       padding: '0.875rem 1.25rem',
                       background: 'white',
-                      color: '#667eea',
-                      border: '2px solid #667eea',
+                      color: !isLoggedIn ? '#9ca3af' : '#667eea',
+                      border: `2px solid ${!isLoggedIn ? '#d1d5db' : '#667eea'}`,
                       borderRadius: '0.75rem',
                       fontWeight: '600',
                       fontSize: 'clamp(0.8rem, 2vw, 0.9rem)',
@@ -2164,15 +2235,21 @@ by Matías Carvajal
                       e.currentTarget.style.transform = 'translateY(0)'
                     }}
                   >
-                    <Download size={18} />
-                    {lang === 'es' 
+                    {!isLoggedIn ? <Lock size={18} /> : <Download size={18} />}
+                    {lang === 'es'
                       ? `Descargar ${reportView === 'visual' ? 'Rápido' : reportView === 'short' ? 'Resumen' : 'Completo'}`
                       : `Download ${reportView === 'visual' ? 'Quick' : reportView === 'short' ? 'Summary' : 'Complete'}`}
                   </button>
 
                   {/* Download Full Report */}
                   <button
-                    onClick={handleDownloadFull}
+                    onClick={() => {
+                      if (!isLoggedIn) {
+                        setShowUnlockModal(true)
+                        return
+                      }
+                      handleDownloadFull()
+                    }}
                     style={{
                       flex: 1,
                       minWidth: '160px',
@@ -2181,26 +2258,30 @@ by Matías Carvajal
                       justifyContent: 'center',
                       gap: '0.5rem',
                       padding: '0.875rem 1.25rem',
-                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                      color: 'white',
+                      background: !isLoggedIn ? '#e5e7eb' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      color: !isLoggedIn ? '#6b7280' : 'white',
                       border: 'none',
                       borderRadius: '0.75rem',
                       fontWeight: '600',
                       fontSize: 'clamp(0.8rem, 2vw, 0.9rem)',
                       cursor: 'pointer',
                       transition: 'all 0.2s',
-                      boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)'
+                      boxShadow: !isLoggedIn ? 'none' : '0 4px 12px rgba(102, 126, 234, 0.3)'
                     }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.transform = 'translateY(-2px)'
-                      e.currentTarget.style.boxShadow = '0 6px 20px rgba(102, 126, 234, 0.4)'
+                      if (isLoggedIn) {
+                        e.currentTarget.style.boxShadow = '0 6px 20px rgba(102, 126, 234, 0.4)'
+                      }
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.transform = 'translateY(0)'
-                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.3)'
+                      if (isLoggedIn) {
+                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.3)'
+                      }
                     }}
                   >
-                    <Download size={18} />
+                    {!isLoggedIn ? <Lock size={18} /> : <Download size={18} />}
                     {lang === 'es' ? 'Análisis Detallado' : 'Detailed Analysis'}
                   </button>
                 </div>
@@ -3201,6 +3282,158 @@ by Matías Carvajal
                 {lang === 'es' ? 'Enviar Feedback' : 'Send Feedback'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Unlock Modal - Paywall for non-logged users */}
+      {showUnlockModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 100,
+          padding: '1rem'
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '1rem',
+            padding: '2rem',
+            maxWidth: '420px',
+            width: '100%',
+            position: 'relative',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+          }}>
+            {/* Close button */}
+            <button
+              onClick={() => setShowUnlockModal(false)}
+              style={{
+                position: 'absolute',
+                top: '1rem',
+                right: '1rem',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                color: '#6b7280',
+                padding: '0.25rem'
+              }}
+            >
+              <X size={20} />
+            </button>
+
+            {/* Lock Icon */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'center',
+              marginBottom: '1rem'
+            }}>
+              <div style={{
+                width: '48px',
+                height: '48px',
+                background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <Lock size={24} style={{ color: '#d97706' }} />
+              </div>
+            </div>
+
+            {/* Title */}
+            <h3 style={{
+              fontSize: '1.375rem',
+              fontWeight: '700',
+              textAlign: 'center',
+              marginBottom: '1.5rem',
+              color: '#111827'
+            }}>
+              {lang === 'es' ? 'Desbloquea tu análisis completo' : 'Unlock your full analysis'}
+            </h3>
+
+            {/* Benefits */}
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.875rem',
+              marginBottom: '1.75rem'
+            }}>
+              {[
+                { es: 'Leer todo el análisis', en: 'Read the full analysis' },
+                { es: 'Descargar el PDF', en: 'Download the PDF' },
+                { es: 'Obtener 1 análisis adicional gratis', en: 'Get 1 additional free analysis' }
+              ].map((benefit, i) => (
+                <div key={i} style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.75rem'
+                }}>
+                  <Check size={20} style={{ color: '#667eea', flexShrink: 0 }} />
+                  <span style={{
+                    fontSize: '1rem',
+                    color: '#374151'
+                  }}>
+                    {lang === 'es' ? benefit.es : benefit.en}
+                    {i === 2 && <strong style={{ fontWeight: '700' }}> {lang === 'es' ? 'gratis' : ''}</strong>}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            {/* CTA Button */}
+            <a
+              href={`/auth/signup?lang=${lang}`}
+              style={{
+                display: 'block',
+                width: '100%',
+                padding: '0.875rem',
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                color: 'white',
+                textAlign: 'center',
+                textDecoration: 'none',
+                borderRadius: '0.5rem',
+                fontWeight: '600',
+                fontSize: '1rem',
+                marginBottom: '1rem',
+                transition: 'transform 0.2s, box-shadow 0.2s'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-2px)'
+                e.currentTarget.style.boxShadow = '0 10px 25px rgba(102, 126, 234, 0.4)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)'
+                e.currentTarget.style.boxShadow = 'none'
+              }}
+            >
+              {lang === 'es' ? 'Crear cuenta gratis' : 'Create free account'}
+            </a>
+
+            {/* Login Link */}
+            <p style={{
+              textAlign: 'center',
+              color: '#6b7280',
+              fontSize: '0.95rem'
+            }}>
+              {lang === 'es' ? 'Ya tienes cuenta?' : 'Already have an account?'}{' '}
+              <a
+                href={`/auth/login?lang=${lang}`}
+                style={{
+                  color: '#667eea',
+                  fontWeight: '600',
+                  textDecoration: 'none'
+                }}
+              >
+                {lang === 'es' ? 'Inicia sesión' : 'Sign in'}
+              </a>
+            </p>
           </div>
         </div>
       )}
