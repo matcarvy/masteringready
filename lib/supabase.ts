@@ -191,9 +191,9 @@ export async function canUserAnalyze(): Promise<boolean> {
     return true
   }
 
-  const { data, error } = await supabase.rpc('can_user_analyze' as any, {
+  const { data, error } = await (supabase.rpc as any)('can_user_analyze', {
     p_user_id: user.id
-  }) as { data: boolean | null; error: any }
+  })
 
   if (error) {
     console.error('Error checking analysis limit / Error verificando límite de análisis:', error)
@@ -263,7 +263,7 @@ export async function saveAnalysis(analysisData: {
   // Increment user's analysis count if logged in
   // Incrementar contador de análisis del usuario si está logueado
   if (user) {
-    await supabase.rpc('increment_analysis_count' as any, { p_user_id: user.id })
+    await (supabase.rpc as any)('increment_analysis_count', { p_user_id: user.id })
   }
 
   return data
