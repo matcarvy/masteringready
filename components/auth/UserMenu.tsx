@@ -93,15 +93,15 @@ export function UserMenu({ lang = 'es' }: UserMenuProps) {
             padding: '0.5rem 1rem',
             minWidth: '6.5rem',
             textAlign: 'center',
-            color: 'white',
+            color: '#6b7280',
             textDecoration: 'none',
             fontSize: '0.95rem',
             fontWeight: '500',
             borderRadius: '0.5rem',
-            transition: 'background 0.2s'
+            transition: 'color 0.2s'
           }}
-          onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
-          onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+          onMouseEnter={(e) => e.currentTarget.style.color = '#667eea'}
+          onMouseLeave={(e) => e.currentTarget.style.color = '#6b7280'}
         >
           {t.login}
         </Link>
@@ -117,10 +117,17 @@ export function UserMenu({ lang = 'es' }: UserMenuProps) {
             fontSize: '0.95rem',
             fontWeight: '600',
             borderRadius: '0.5rem',
-            transition: 'opacity 0.2s'
+            border: '2px solid #667eea',
+            transition: 'all 0.2s'
           }}
-          onMouseEnter={(e) => e.currentTarget.style.opacity = '0.9'}
-          onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = '#667eea'
+            e.currentTarget.style.color = 'white'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'white'
+            e.currentTarget.style.color = '#667eea'
+          }}
         >
           {t.signUp}
         </Link>
