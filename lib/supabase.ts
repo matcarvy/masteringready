@@ -10,7 +10,8 @@
  */
 
 import { createClient } from '@supabase/supabase-js'
-import { Database } from './database.types'
+// Types are available in ./database.types for reference
+// Los tipos están disponibles en ./database.types como referencia
 
 // ============================================================================
 // ENVIRONMENT VARIABLES / VARIABLES DE ENTORNO
@@ -45,7 +46,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
  * - Hooks del lado del cliente
  * - Código solo para navegador
  */
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
@@ -72,7 +73,7 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
  * - getServerSideProps
  */
 export function createServerSupabaseClient() {
-  return createClient<Database>(supabaseUrl, supabaseAnonKey, {
+  return createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
       persistSession: false,
       autoRefreshToken: false
@@ -101,7 +102,7 @@ export function createAdminSupabaseClient() {
     )
   }
 
-  return createClient<Database>(supabaseUrl, serviceRoleKey, {
+  return createClient(supabaseUrl, serviceRoleKey, {
     auth: {
       persistSession: false,
       autoRefreshToken: false
@@ -191,7 +192,7 @@ export async function canUserAnalyze(): Promise<boolean> {
     return true
   }
 
-  const { data, error } = await (supabase.rpc as any)('can_user_analyze', {
+  const { data, error } = await supabase.rpc('can_user_analyze', {
     p_user_id: user.id
   })
 
@@ -263,7 +264,7 @@ export async function saveAnalysis(analysisData: {
   // Increment user's analysis count if logged in
   // Incrementar contador de análisis del usuario si está logueado
   if (user) {
-    await (supabase.rpc as any)('increment_analysis_count', { p_user_id: user.id })
+    await supabase.rpc('increment_analysis_count', { p_user_id: user.id })
   }
 
   return data
