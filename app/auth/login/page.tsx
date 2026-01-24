@@ -137,45 +137,28 @@ function LoginContent() {
       padding: '1rem',
       fontFamily: 'Inter, system-ui, sans-serif'
     }}>
-      {/* Language Toggle */}
-      <div style={{
-        position: 'absolute',
-        top: '1rem',
-        right: '1rem',
-        display: 'flex',
-        gap: '0.5rem'
-      }}>
-        <button
-          onClick={() => setLang('es')}
-          style={{
-            padding: '0.5rem 1rem',
-            minWidth: '3rem',
-            background: lang === 'es' ? 'white' : 'rgba(255,255,255,0.2)',
-            color: lang === 'es' ? '#667eea' : 'white',
-            border: 'none',
-            borderRadius: '0.5rem',
-            cursor: 'pointer',
-            fontWeight: lang === 'es' ? '600' : '400'
-          }}
-        >
-          ES
-        </button>
-        <button
-          onClick={() => setLang('en')}
-          style={{
-            padding: '0.5rem 1rem',
-            minWidth: '3rem',
-            background: lang === 'en' ? 'white' : 'rgba(255,255,255,0.2)',
-            color: lang === 'en' ? '#667eea' : 'white',
-            border: 'none',
-            borderRadius: '0.5rem',
-            cursor: 'pointer',
-            fontWeight: lang === 'en' ? '600' : '400'
-          }}
-        >
-          EN
-        </button>
-      </div>
+      {/* Language Toggle - Single button like main page */}
+      <button
+        onClick={() => setLang(lang === 'es' ? 'en' : 'es')}
+        style={{
+          position: 'absolute',
+          top: '1rem',
+          right: '1rem',
+          fontSize: '0.875rem',
+          fontWeight: '500',
+          color: 'white',
+          cursor: 'pointer',
+          border: 'none',
+          background: 'rgba(255,255,255,0.15)',
+          padding: '0.5rem 1rem',
+          borderRadius: '0.5rem',
+          transition: 'background 0.2s'
+        }}
+        onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.25)'}
+        onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.15)'}
+      >
+        {lang === 'es' ? 'EN' : 'ES'}
+      </button>
 
       {/* Login Card */}
       <div style={{

@@ -1755,14 +1755,16 @@ by Matías Carvajal
                     }} />
                   </div>
                   <p style={{ fontSize: '1.125rem', fontWeight: '600' }}>{result.verdict}</p>
-                  <p style={{ 
-                    fontSize: '0.7rem', 
-                    color: '#6b7280', 
+                  <p style={{
+                    fontSize: '0.7rem',
+                    color: '#6b7280',
                     fontStyle: 'italic',
-                    marginTop: '0.5rem'
+                    marginTop: '0.5rem',
+                    filter: !isLoggedIn ? 'blur(3px)' : 'none',
+                    userSelect: !isLoggedIn ? 'none' : 'auto'
                   }}>
-                    {lang === 'es' 
-                      ? 'Este índice evalúa margen técnico para procesamiento, no calidad artística.' 
+                    {lang === 'es'
+                      ? 'Este índice evalúa margen técnico para procesamiento, no calidad artística.'
                       : 'This index evaluates technical margin for processing, not artistic quality.'}
                   </p>
                 </div>
@@ -1994,9 +1996,11 @@ by Matías Carvajal
                           fontSize: '0.6rem',
                           color: '#9ca3af',
                           marginTop: '0.5rem',
-                          textAlign: 'center'
+                          textAlign: 'center',
+                          filter: !isLoggedIn ? 'blur(3px)' : 'none',
+                          userSelect: !isLoggedIn ? 'none' : 'auto'
                         }}>
-                          {lang === 'es' 
+                          {lang === 'es'
                             ? 'Basado en criterios de Mastering Ready para compatibilidad, margen y traducción.'
                             : 'Based on Mastering Ready criteria for compatibility, margin and translation.'}
                         </p>
@@ -3366,9 +3370,10 @@ by Matías Carvajal
               marginBottom: '1.75rem'
             }}>
               {[
-                { es: 'Leer todo el análisis', en: 'Read the full analysis' },
-                { es: 'Descargar el PDF', en: 'Download the PDF' },
-                { es: 'Obtener 1 análisis adicional gratis', en: 'Get 1 additional free analysis' }
+                { es: 'Leer Rápido y Resumen completos', en: 'Read Quick and Summary in full' },
+                { es: 'Descargar PDF del análisis rápido', en: 'Download quick analysis PDF' },
+                { es: 'Dashboard con historial de análisis', en: 'Dashboard with analysis history' },
+                { es: '2 análisis adicionales gratis', en: '2 additional free analyses' }
               ].map((benefit, i) => (
                 <div key={i} style={{
                   display: 'flex',
@@ -3381,7 +3386,7 @@ by Matías Carvajal
                     color: '#374151'
                   }}>
                     {lang === 'es' ? benefit.es : benefit.en}
-                    {i === 2 && <strong style={{ fontWeight: '700' }}> {lang === 'es' ? 'gratis' : ''}</strong>}
+                    {i === 3 && <strong style={{ fontWeight: '700' }}> {lang === 'es' ? 'gratis' : 'free'}</strong>}
                   </span>
                 </div>
               ))}
