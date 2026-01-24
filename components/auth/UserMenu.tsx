@@ -91,6 +91,8 @@ export function UserMenu({ lang = 'es' }: UserMenuProps) {
           href={`/auth/login?lang=${lang}`}
           style={{
             padding: '0.5rem 1rem',
+            minWidth: '6.5rem',
+            textAlign: 'center',
             color: 'white',
             textDecoration: 'none',
             fontSize: '0.95rem',
@@ -107,6 +109,8 @@ export function UserMenu({ lang = 'es' }: UserMenuProps) {
           href={`/auth/signup?lang=${lang}`}
           style={{
             padding: '0.5rem 1rem',
+            minWidth: '6rem',
+            textAlign: 'center',
             background: 'white',
             color: '#667eea',
             textDecoration: 'none',

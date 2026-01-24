@@ -3370,10 +3370,10 @@ by Matías Carvajal
               marginBottom: '1.75rem'
             }}>
               {[
-                { es: 'Leer Rápido y Resumen completos', en: 'Read Quick and Summary in full' },
-                { es: 'Descargar PDF del análisis rápido', en: 'Download quick analysis PDF' },
+                { es: 'Leer Rápido y Resumen completos', en: 'Read full Quick and Summary modes' },
+                { es: 'Descargar .txt del modo Rápido y Resumen', en: 'Download .txt of Quick and Summary modes' },
                 { es: 'Dashboard con historial de análisis', en: 'Dashboard with analysis history' },
-                { es: '2 análisis adicionales gratis', en: '2 additional free analyses' }
+                { es: '1 análisis adicional gratis', en: '1 additional free analysis' }
               ].map((benefit, i) => (
                 <div key={i} style={{
                   display: 'flex',
@@ -3386,59 +3386,72 @@ by Matías Carvajal
                     color: '#374151'
                   }}>
                     {lang === 'es' ? benefit.es : benefit.en}
-                    {i === 3 && <strong style={{ fontWeight: '700' }}> {lang === 'es' ? 'gratis' : 'free'}</strong>}
                   </span>
                 </div>
               ))}
             </div>
 
-            {/* CTA Button */}
-            <a
-              href={`/auth/signup?lang=${lang}`}
-              style={{
-                display: 'block',
-                width: '100%',
-                padding: '0.875rem',
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                color: 'white',
-                textAlign: 'center',
-                textDecoration: 'none',
-                borderRadius: '0.5rem',
-                fontWeight: '600',
-                fontSize: '1rem',
-                marginBottom: '1rem',
-                transition: 'transform 0.2s, box-shadow 0.2s'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-2px)'
-                e.currentTarget.style.boxShadow = '0 10px 25px rgba(102, 126, 234, 0.4)'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)'
-                e.currentTarget.style.boxShadow = 'none'
-              }}
-            >
-              {lang === 'es' ? 'Crear cuenta gratis' : 'Create free account'}
-            </a>
+            {/* CTA Buttons */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              {/* Primary Button - Signup */}
+              <a
+                href={`/auth/signup?lang=${lang}`}
+                style={{
+                  display: 'block',
+                  width: '100%',
+                  padding: '0.875rem',
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  color: 'white',
+                  textAlign: 'center',
+                  textDecoration: 'none',
+                  borderRadius: '0.5rem',
+                  fontWeight: '600',
+                  fontSize: '1rem',
+                  transition: 'transform 0.2s, box-shadow 0.2s',
+                  boxSizing: 'border-box'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-2px)'
+                  e.currentTarget.style.boxShadow = '0 10px 25px rgba(102, 126, 234, 0.4)'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)'
+                  e.currentTarget.style.boxShadow = 'none'
+                }}
+              >
+                {lang === 'es' ? 'Crear cuenta gratis' : 'Create free account'}
+              </a>
 
-            {/* Login Link */}
-            <p style={{
-              textAlign: 'center',
-              color: '#6b7280',
-              fontSize: '0.95rem'
-            }}>
-              {lang === 'es' ? 'Ya tienes cuenta?' : 'Already have an account?'}{' '}
+              {/* Secondary Button - Login */}
               <a
                 href={`/auth/login?lang=${lang}`}
                 style={{
+                  display: 'block',
+                  width: '100%',
+                  padding: '0.875rem',
+                  background: 'transparent',
                   color: '#667eea',
+                  textAlign: 'center',
+                  textDecoration: 'none',
+                  borderRadius: '0.5rem',
                   fontWeight: '600',
-                  textDecoration: 'none'
+                  fontSize: '1rem',
+                  border: '2px solid #667eea',
+                  transition: 'background 0.2s, color 0.2s',
+                  boxSizing: 'border-box'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = '#667eea'
+                  e.currentTarget.style.color = 'white'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent'
+                  e.currentTarget.style.color = '#667eea'
                 }}
               >
-                {lang === 'es' ? 'Inicia sesión' : 'Sign in'}
+                {lang === 'es' ? 'Iniciar sesión' : 'Sign in'}
               </a>
-            </p>
+            </div>
           </div>
         </div>
       )}
