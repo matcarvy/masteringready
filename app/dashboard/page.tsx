@@ -363,6 +363,8 @@ export default function DashboardPage() {
               onClick={() => setLang(lang === 'es' ? 'en' : 'es')}
               style={{
                 padding: '0.375rem 0.75rem',
+                minWidth: '2.5rem',
+                textAlign: 'center',
                 background: 'transparent',
                 color: '#6b7280',
                 border: 'none',

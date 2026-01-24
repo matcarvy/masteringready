@@ -887,7 +887,9 @@ by Matías Carvajal
                   cursor: 'pointer',
                   border: 'none',
                   background: 'none',
-                  padding: 'clamp(0.25rem, 1vw, 0.5rem) clamp(0.5rem, 2vw, 1rem)'
+                  padding: 'clamp(0.25rem, 1vw, 0.5rem) clamp(0.5rem, 2vw, 1rem)',
+                  minWidth: '2.5rem',
+                  textAlign: 'center'
                 }}
               >
                 {lang === 'es' ? 'EN' : 'ES'}
