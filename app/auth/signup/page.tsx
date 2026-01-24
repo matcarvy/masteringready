@@ -260,6 +260,7 @@ function SignupContent() {
           onClick={() => setLang('es')}
           style={{
             padding: '0.5rem 1rem',
+            minWidth: '3rem',
             background: lang === 'es' ? 'white' : 'rgba(255,255,255,0.2)',
             color: lang === 'es' ? '#667eea' : 'white',
             border: 'none',
@@ -274,6 +275,7 @@ function SignupContent() {
           onClick={() => setLang('en')}
           style={{
             padding: '0.5rem 1rem',
+            minWidth: '3rem',
             background: lang === 'en' ? 'white' : 'rgba(255,255,255,0.2)',
             color: lang === 'en' ? '#667eea' : 'white',
             border: 'none',
