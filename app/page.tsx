@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { Download, Check, Upload, Zap, Shield, TrendingUp, Play, Music } from 'lucide-react'
+import { UserMenu } from '@/components/auth'
 import { analyzeFile } from '@/lib/api'
 import { startAnalysisPolling, getAnalysisStatus } from '@/lib/api'
 import { compressAudioFile } from '@/lib/audio-compression'
@@ -886,6 +887,8 @@ by Matías Carvajal
               >
                 {lang === 'es' ? 'EN' : 'ES'}
               </button>
+              {/* User Menu - Login/Signup or User Dropdown */}
+              <UserMenu lang={lang} />
               <button
                 onClick={scrollToAnalyzer}
                 style={{
