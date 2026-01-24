@@ -6,7 +6,7 @@
  * Soporta email/contraseña y OAuth (Google, Apple, Facebook)
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
@@ -58,7 +58,7 @@ const translations = {
 // COMPONENT / COMPONENTE
 // ============================================================================
 
-export default function LoginPage() {
+function LoginContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [lang, setLang] = useState<'es' | 'en'>('es')
@@ -426,5 +426,27 @@ export default function LoginPage() {
         </p>
       </div>
     </div>
+  )
+}
+
+// ============================================================================
+// EXPORT WITH SUSPENSE WRAPPER
+// ============================================================================
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div style={{
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}>
+        <div style={{ color: 'white', fontSize: '1.25rem' }}>Loading...</div>
+      </div>
+    }>
+      <LoginContent />
+    </Suspense>
   )
 }
