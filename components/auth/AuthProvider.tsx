@@ -85,12 +85,23 @@ async function savePendingAnalysisForUser(userId: string) {
       score: analysis.score,
       verdict: analysis.verdict,
       hasMetrics: !!analysis.metrics,
-      hasInterpretations: !!analysis.interpretations
+      hasInterpretations: !!analysis.interpretations,
+      hasReportShort: !!analysis.report_short,
+      hasReportWrite: !!analysis.report_write,
+      hasReportVisual: !!analysis.report_visual,
+      // Also check alternative field names
+      hasReport: !!analysis.report,
+      allKeys: Object.keys(analysis).join(', ')
     })
 
     // Prepare the insert data
     const mappedVerdict = mapVerdictToEnum(analysis.verdict)
     console.log('[SaveAnalysis] Mapped verdict:', analysis.verdict, '->', mappedVerdict)
+
+    // Handle report fields - API might return 'report' or specific fields
+    const reportShort = analysis.report_short || analysis.report || null
+    const reportWrite = analysis.report_write || analysis.report || null
+    const reportVisual = analysis.report_visual || analysis.report_short || analysis.report || null
 
     const insertData = {
       user_id: userId,
@@ -102,11 +113,17 @@ async function savePendingAnalysisForUser(userId: string) {
       report_mode: 'write',
       metrics: analysis.metrics || null,
       interpretations: analysis.interpretations || null,
-      report_short: analysis.report_short || null,
-      report_write: analysis.report_write || null,
-      report_visual: analysis.report_visual || null,
+      report_short: reportShort,
+      report_write: reportWrite,
+      report_visual: reportVisual,
       created_at: analysis.created_at || new Date().toISOString()
     }
+
+    console.log('[SaveAnalysis] Report fields:', {
+      report_short: reportShort ? reportShort.substring(0, 50) + '...' : null,
+      report_write: reportWrite ? reportWrite.substring(0, 50) + '...' : null,
+      report_visual: reportVisual ? reportVisual.substring(0, 50) + '...' : null
+    })
 
     console.log('[SaveAnalysis] Inserting to analyses table...')
 
@@ -129,6 +146,36 @@ async function savePendingAnalysisForUser(userId: string) {
 
     if (rpcError) {
       console.error('[SaveAnalysis] RPC ERROR:', rpcError.message, rpcError.details)
+
+      // Fallback: Direct profile update if RPC doesn't exist
+      console.log('[SaveAnalysis] Trying direct profile update as fallback...')
+
+      // First get current values
+      const { data: profile, error: fetchError } = await supabase
+        .from('profiles')
+        .select('total_analyses, analyses_this_month')
+        .eq('id', userId)
+        .single()
+
+      if (fetchError) {
+        console.error('[SaveAnalysis] Could not fetch profile:', fetchError.message)
+      } else if (profile) {
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update({
+            total_analyses: (profile.total_analyses || 0) + 1,
+            analyses_this_month: (profile.analyses_this_month || 0) + 1,
+            last_analysis_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', userId)
+
+        if (updateError) {
+          console.error('[SaveAnalysis] Profile update failed:', updateError.message)
+        } else {
+          console.log('[SaveAnalysis] Profile updated successfully via fallback')
+        }
+      }
     } else {
       console.log('[SaveAnalysis] RPC success:', rpcData)
     }
