@@ -6,6 +6,89 @@ import { UserMenu, useAuth, AuthModal } from '@/components/auth'
 import { analyzeFile, checkIpLimit, IpCheckResult } from '@/lib/api'
 import { startAnalysisPolling, getAnalysisStatus } from '@/lib/api'
 import { compressAudioFile } from '@/lib/audio-compression'
+import { supabase } from '@/lib/supabase'
+
+// ============================================================================
+// Helper: Map verdict string to database enum
+// ============================================================================
+function mapVerdictToEnum(verdict: string): 'ready' | 'almost_ready' | 'needs_work' | 'critical' {
+  if (!verdict) return 'needs_work'
+  const v = verdict.toLowerCase()
+  if (v.includes('óptimo') || v.includes('optimo') || v.includes('listo') ||
+      v.includes('ready') || v.includes('excellent') || v.includes('excelente')) {
+    return 'ready'
+  }
+  if (v.includes('casi') || v.includes('almost') || v.includes('good') ||
+      v.includes('bien') || v.includes('aceptable')) {
+    return 'almost_ready'
+  }
+  if (v.includes('critical') || v.includes('crítico') || v.includes('critico') ||
+      v.includes('serious') || v.includes('grave')) {
+    return 'critical'
+  }
+  return 'needs_work'
+}
+
+// ============================================================================
+// Helper: Save analysis directly to database for logged-in users
+// ============================================================================
+async function saveAnalysisToDatabase(userId: string, analysis: any) {
+  console.log('[SaveAnalysis] Saving for logged-in user:', userId, 'file:', analysis.filename)
+
+  const mappedVerdict = mapVerdictToEnum(analysis.verdict)
+  const reportShort = analysis.report_short || analysis.report || null
+  const reportWrite = analysis.report_write || analysis.report || null
+  const reportVisual = analysis.report_visual || analysis.report_short || analysis.report || null
+
+  // Insert to analyses table
+  const { data: insertedData, error } = await supabase
+    .from('analyses')
+    .insert({
+      user_id: userId,
+      filename: analysis.filename || 'Unknown',
+      score: analysis.score,
+      verdict: mappedVerdict,
+      lang: analysis.lang || 'es',
+      strict_mode: analysis.strict || false,
+      report_mode: 'write',
+      metrics: analysis.metrics || null,
+      interpretations: analysis.interpretations || null,
+      report_short: reportShort,
+      report_write: reportWrite,
+      report_visual: reportVisual,
+      created_at: analysis.created_at || new Date().toISOString()
+    })
+    .select()
+
+  if (error) {
+    console.error('[SaveAnalysis] INSERT ERROR:', error.message)
+    throw error
+  }
+
+  console.log('[SaveAnalysis] Insert successful:', insertedData)
+
+  // Update profile counters
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('total_analyses, analyses_this_month')
+    .eq('id', userId)
+    .single()
+
+  if (profile) {
+    await supabase
+      .from('profiles')
+      .update({
+        total_analyses: (profile.total_analyses || 0) + 1,
+        analyses_this_month: (profile.analyses_this_month || 0) + 1,
+        last_analysis_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', userId)
+    console.log('[SaveAnalysis] Profile counters updated')
+  }
+
+  return insertedData
+}
 
 // Interpretative Section Component
 interface InterpretativeSectionProps {
@@ -494,16 +577,33 @@ const handleAnalyze = async () => {
     setProgress(100)
     setResult(data)
 
-    // Save to localStorage if not logged in (for later account linking)
-    if (!isLoggedIn && data) {
-      const pendingAnalysis = {
-        ...data,
-        filename: file.name,
-        created_at: new Date().toISOString(),
-        lang,
-        strict
+    // Save analysis
+    if (data) {
+      if (isLoggedIn && user) {
+        // Save directly to database for logged-in users
+        console.log('[Analysis] Saving to database for logged-in user:', user.id)
+        try {
+          await saveAnalysisToDatabase(user.id, {
+            ...data,
+            filename: file.name,
+            created_at: new Date().toISOString(),
+            lang,
+            strict
+          })
+        } catch (saveErr) {
+          console.error('[Analysis] Failed to save to database:', saveErr)
+        }
+      } else {
+        // Save to localStorage for later account linking (anonymous users)
+        const pendingAnalysis = {
+          ...data,
+          filename: file.name,
+          created_at: new Date().toISOString(),
+          lang,
+          strict
+        }
+        localStorage.setItem('pendingAnalysis', JSON.stringify(pendingAnalysis))
       }
-      localStorage.setItem('pendingAnalysis', JSON.stringify(pendingAnalysis))
     }
 
     // Scroll to results
