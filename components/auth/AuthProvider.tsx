@@ -41,6 +41,34 @@ const AuthContext = createContext<AuthContextType>({
 // PROVIDER / PROVEEDOR
 // ============================================================================
 
+// Map human-readable verdict to database enum
+function mapVerdictToEnum(verdict: string): 'ready' | 'almost_ready' | 'needs_work' | 'critical' {
+  if (!verdict) return 'needs_work'
+
+  const v = verdict.toLowerCase()
+
+  // Ready / Listo
+  if (v.includes('óptimo') || v.includes('optimo') || v.includes('listo') ||
+      v.includes('ready') || v.includes('excellent') || v.includes('excelente')) {
+    return 'ready'
+  }
+
+  // Almost ready / Casi listo
+  if (v.includes('casi') || v.includes('almost') || v.includes('good') ||
+      v.includes('bien') || v.includes('aceptable')) {
+    return 'almost_ready'
+  }
+
+  // Critical
+  if (v.includes('critical') || v.includes('crítico') || v.includes('critico') ||
+      v.includes('serious') || v.includes('grave')) {
+    return 'critical'
+  }
+
+  // Default: needs_work
+  return 'needs_work'
+}
+
 // Save pending analysis from localStorage to database
 async function savePendingAnalysisForUser(userId: string) {
   try {
@@ -61,11 +89,14 @@ async function savePendingAnalysisForUser(userId: string) {
     })
 
     // Prepare the insert data
+    const mappedVerdict = mapVerdictToEnum(analysis.verdict)
+    console.log('[SaveAnalysis] Mapped verdict:', analysis.verdict, '->', mappedVerdict)
+
     const insertData = {
       user_id: userId,
       filename: analysis.filename || 'Unknown',
       score: analysis.score,
-      verdict: analysis.verdict?.toLowerCase().replace(/ /g, '_') || 'needs_work',
+      verdict: mappedVerdict,
       lang: analysis.lang || 'es',
       strict_mode: analysis.strict || false,
       report_mode: 'write',
