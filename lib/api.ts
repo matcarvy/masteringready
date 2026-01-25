@@ -67,12 +67,13 @@ export async function startAnalysisPolling(
     lang: 'es' | 'en'
     mode: 'short' | 'write'
     strict: boolean
-    originalMetadata?: {  // NEW: Optional original metadata
+    originalMetadata?: {
       sampleRate: number
       bitDepth: number
       numberOfChannels: number
       duration: number
     }
+    isAuthenticated?: boolean  // NEW: Whether user is logged in
   }
 ) {
   const formData = new FormData()
@@ -80,16 +81,13 @@ export async function startAnalysisPolling(
   formData.append('lang', options.lang)
   formData.append('mode', options.mode)
   formData.append('strict', String(options.strict))
+  formData.append('is_authenticated', String(options.isAuthenticated || false))
 
-  // ============================================================
   // CRITICAL: Add original metadata if provided
   // Backend expects 'original_metadata_json' parameter name
-  // ============================================================
   if (options.originalMetadata) {
     formData.append('original_metadata_json', JSON.stringify(options.originalMetadata))
-  } else {
   }
-  // ============================================================
 
   const res = await fetch(`${API_URL}/api/analyze/start`, {
     method: 'POST',
@@ -116,4 +114,59 @@ export async function getAnalysisStatus(jobId: string) {
   }
 
   return res.json()
+}
+
+// ============================================================================
+// IP RATE LIMITING
+// ============================================================================
+
+export interface IpCheckResult {
+  can_analyze: boolean
+  reason: 'OK' | 'LIMIT_REACHED' | 'VPN_DETECTED' | 'DISABLED' | 'AUTHENTICATED'
+  analyses_used: number
+  max_analyses: number
+  is_vpn: boolean
+  vpn_service?: string
+  ip_limit_enabled: boolean
+}
+
+/**
+ * Check if the current IP can perform an analysis.
+ * Should be called BEFORE starting analysis for anonymous users.
+ *
+ * @param isAuthenticated - Whether the user is logged in
+ * @returns IpCheckResult with can_analyze and reason
+ */
+export async function checkIpLimit(isAuthenticated: boolean = false): Promise<IpCheckResult> {
+  try {
+    const res = await fetch(`${API_URL}/api/check-ip?is_authenticated=${isAuthenticated}`, {
+      method: 'GET',
+    })
+
+    if (!res.ok) {
+      // If endpoint not available, allow analysis (feature not deployed yet)
+      console.warn('IP check endpoint not available, allowing analysis')
+      return {
+        can_analyze: true,
+        reason: 'DISABLED',
+        analyses_used: 0,
+        max_analyses: 1,
+        is_vpn: false,
+        ip_limit_enabled: false
+      }
+    }
+
+    return res.json()
+  } catch (error) {
+    // Network error or endpoint not available - allow analysis
+    console.warn('IP check failed, allowing analysis:', error)
+    return {
+      can_analyze: true,
+      reason: 'DISABLED',
+      analyses_used: 0,
+      max_analyses: 1,
+      is_vpn: false,
+      ip_limit_enabled: false
+    }
+  }
 }
