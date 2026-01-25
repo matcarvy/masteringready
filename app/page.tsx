@@ -1,9 +1,9 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Download, Check, Upload, Zap, Shield, TrendingUp, Play, Music, Lock, X } from 'lucide-react'
+import { Download, Check, Upload, Zap, Shield, TrendingUp, Play, Music, Lock, X, AlertTriangle, Globe } from 'lucide-react'
 import { UserMenu, useAuth } from '@/components/auth'
-import { analyzeFile } from '@/lib/api'
+import { analyzeFile, checkIpLimit, IpCheckResult } from '@/lib/api'
 import { startAnalysisPolling, getAnalysisStatus } from '@/lib/api'
 import { compressAudioFile } from '@/lib/audio-compression'
 
@@ -155,6 +155,9 @@ function Home() {
   const [showContactModal, setShowContactModal] = useState(false)
   const [showFeedbackModal, setShowFeedbackModal] = useState(false)
   const [showUnlockModal, setShowUnlockModal] = useState(false)
+  const [showIpLimitModal, setShowIpLimitModal] = useState(false)
+  const [showVpnModal, setShowVpnModal] = useState(false)
+  const [vpnServiceName, setVpnServiceName] = useState<string | null>(null)
   const [reportView, setReportView] = useState<'visual' | 'short' | 'write'>('visual')
   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false)
   const [feedback, setFeedback] = useState({ rating: 0, liked: '', change: '', add: '' })
@@ -318,9 +321,37 @@ const handleAnalyze = async () => {
   setProgress(0)
   setError(null)
   try {
+    // ============================================================
+    // IP RATE LIMITING CHECK (for anonymous users only)
+    // ============================================================
+    if (!isLoggedIn) {
+      try {
+        const ipCheck = await checkIpLimit(false)
+
+        if (!ipCheck.can_analyze) {
+          setLoading(false)
+
+          if (ipCheck.reason === 'VPN_DETECTED') {
+            setVpnServiceName(ipCheck.vpn_service || null)
+            setShowVpnModal(true)
+            return
+          }
+
+          if (ipCheck.reason === 'LIMIT_REACHED') {
+            setShowIpLimitModal(true)
+            return
+          }
+        }
+      } catch (ipError) {
+        // If IP check fails, allow analysis (feature may not be deployed)
+        console.warn('IP check failed, allowing analysis:', ipError)
+      }
+    }
+    // ============================================================
+
     let fileToAnalyze = file
     let originalMetadata = undefined
-    
+
     // Check if file needs compression
     const maxSize = 30 * 1024 * 1024  // 30MB threshold
     if (file.size > maxSize) {
@@ -362,11 +393,12 @@ const handleAnalyze = async () => {
     }
     
     // START ANALYSIS (returns job_id immediately)
-    const startData = await startAnalysisPolling(fileToAnalyze, { 
-      lang, 
-      mode, 
+    const startData = await startAnalysisPolling(fileToAnalyze, {
+      lang,
+      mode,
       strict,
-      originalMetadata
+      originalMetadata,
+      isAuthenticated: isLoggedIn
     })
     const jobId = startData.job_id
     
@@ -422,10 +454,22 @@ const handleAnalyze = async () => {
     
     // Wait for result
     const data = await pollForResult()
-    
+
     setProgress(100)
     setResult(data)
-    
+
+    // Save to localStorage if not logged in (for later account linking)
+    if (!isLoggedIn && data) {
+      const pendingAnalysis = {
+        ...data,
+        filename: file.name,
+        created_at: new Date().toISOString(),
+        lang,
+        strict
+      }
+      localStorage.setItem('pendingAnalysis', JSON.stringify(pendingAnalysis))
+    }
+
     // Scroll to results
     setTimeout(() => {
       const resultsElement = document.getElementById('results')
@@ -1007,7 +1051,7 @@ by Matías Carvajal
               
               <div className="hero-checks" style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem', fontSize: '0.875rem' }}>
                 {[
-                  'Privacy-first',
+                  lang === 'es' ? 'Privacidad primero' : 'Privacy-first',
                   lang === 'es' ? 'Inglés y Español' : 'English & Spanish'
                 ].map((text, i) => (
                   <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -1132,7 +1176,7 @@ by Matías Carvajal
               },
               {
                 icon: <Shield size={48} color="#667eea" />,
-                title: 'Privacy-First',
+                title: lang === 'es' ? 'Privacidad Primero' : 'Privacy-First',
                 desc: lang === 'es'
                   ? 'Tu audio se analiza solo en memoria y se elimina inmediatamente.'
                   : 'Your audio is analyzed in-memory only and deleted immediately.'
@@ -1201,7 +1245,7 @@ by Matías Carvajal
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
                   <Shield size={20} color="#059669" />
                   <span style={{ fontWeight: '600', color: '#064e3b' }}>
-                    🔒 Privacy-First Analyzer
+                    {lang === 'es' ? '🔒 Analizador con Privacidad' : '🔒 Privacy-First Analyzer'}
                   </span>
                 </div>
                 <p style={{ fontSize: '0.875rem', color: '#065f46' }}>
@@ -3452,6 +3496,325 @@ by Matías Carvajal
                 }}
               >
                 {lang === 'es' ? 'Iniciar sesión' : 'Sign in'}
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* IP Limit Reached Modal - Anonymous user already used free analysis */}
+      {showIpLimitModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 100,
+          padding: '1rem'
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '1rem',
+            padding: '2rem',
+            maxWidth: '420px',
+            width: '100%',
+            position: 'relative',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+          }}>
+            {/* Close button */}
+            <button
+              onClick={() => setShowIpLimitModal(false)}
+              style={{
+                position: 'absolute',
+                top: '1rem',
+                right: '1rem',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                color: '#6b7280',
+                padding: '0.25rem'
+              }}
+            >
+              <X size={20} />
+            </button>
+
+            {/* Warning Icon */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'center',
+              marginBottom: '1rem'
+            }}>
+              <div style={{
+                width: '48px',
+                height: '48px',
+                background: 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <AlertTriangle size={24} style={{ color: '#dc2626' }} />
+              </div>
+            </div>
+
+            {/* Title */}
+            <h3 style={{
+              fontSize: '1.375rem',
+              fontWeight: '700',
+              textAlign: 'center',
+              marginBottom: '0.75rem',
+              color: '#111827'
+            }}>
+              {lang === 'es' ? 'Ya usaste tu análisis gratis' : 'You already used your free analysis'}
+            </h3>
+
+            {/* Description */}
+            <p style={{
+              fontSize: '1rem',
+              color: '#6b7280',
+              textAlign: 'center',
+              marginBottom: '1.5rem',
+              lineHeight: '1.5'
+            }}>
+              {lang === 'es'
+                ? 'Cada dispositivo tiene 1 análisis gratis. Crea una cuenta para continuar analizando tus mixes.'
+                : 'Each device gets 1 free analysis. Create an account to continue analyzing your mixes.'}
+            </p>
+
+            {/* Benefits reminder */}
+            <div style={{
+              background: '#f3f4f6',
+              borderRadius: '0.75rem',
+              padding: '1rem',
+              marginBottom: '1.5rem'
+            }}>
+              <p style={{
+                fontSize: '0.875rem',
+                color: '#374151',
+                fontWeight: '600',
+                marginBottom: '0.5rem'
+              }}>
+                {lang === 'es' ? 'Con una cuenta gratis obtienes:' : 'With a free account you get:'}
+              </p>
+              <ul style={{
+                margin: 0,
+                paddingLeft: '1.25rem',
+                fontSize: '0.875rem',
+                color: '#6b7280',
+                lineHeight: '1.6'
+              }}>
+                <li>{lang === 'es' ? '1 análisis adicional gratis' : '1 additional free analysis'}</li>
+                <li>{lang === 'es' ? 'Historial de análisis' : 'Analysis history'}</li>
+                <li>{lang === 'es' ? 'Descargas en .txt' : '.txt downloads'}</li>
+              </ul>
+            </div>
+
+            {/* CTA Buttons */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              <a
+                href={`/auth/signup?lang=${lang}`}
+                style={{
+                  display: 'block',
+                  width: '100%',
+                  padding: '0.875rem',
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  color: 'white',
+                  textAlign: 'center',
+                  textDecoration: 'none',
+                  borderRadius: '0.5rem',
+                  fontWeight: '600',
+                  fontSize: '1rem',
+                  boxSizing: 'border-box'
+                }}
+              >
+                {lang === 'es' ? 'Crear cuenta gratis' : 'Create free account'}
+              </a>
+
+              <a
+                href={`/auth/login?lang=${lang}`}
+                style={{
+                  display: 'block',
+                  width: '100%',
+                  padding: '0.875rem',
+                  background: 'transparent',
+                  color: '#667eea',
+                  textAlign: 'center',
+                  textDecoration: 'none',
+                  borderRadius: '0.5rem',
+                  fontWeight: '600',
+                  fontSize: '1rem',
+                  border: '2px solid #667eea',
+                  boxSizing: 'border-box'
+                }}
+              >
+                {lang === 'es' ? 'Ya tengo cuenta' : 'I have an account'}
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* VPN Detected Modal */}
+      {showVpnModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 100,
+          padding: '1rem'
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '1rem',
+            padding: '2rem',
+            maxWidth: '420px',
+            width: '100%',
+            position: 'relative',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+          }}>
+            {/* Close button */}
+            <button
+              onClick={() => setShowVpnModal(false)}
+              style={{
+                position: 'absolute',
+                top: '1rem',
+                right: '1rem',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                color: '#6b7280',
+                padding: '0.25rem'
+              }}
+            >
+              <X size={20} />
+            </button>
+
+            {/* Globe Icon */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'center',
+              marginBottom: '1rem'
+            }}>
+              <div style={{
+                width: '48px',
+                height: '48px',
+                background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <Globe size={24} style={{ color: '#d97706' }} />
+              </div>
+            </div>
+
+            {/* Title */}
+            <h3 style={{
+              fontSize: '1.375rem',
+              fontWeight: '700',
+              textAlign: 'center',
+              marginBottom: '0.75rem',
+              color: '#111827'
+            }}>
+              {lang === 'es' ? 'VPN o Proxy detectado' : 'VPN or Proxy detected'}
+            </h3>
+
+            {/* Description */}
+            <p style={{
+              fontSize: '1rem',
+              color: '#6b7280',
+              textAlign: 'center',
+              marginBottom: '1rem',
+              lineHeight: '1.5'
+            }}>
+              {lang === 'es'
+                ? 'Para usar el análisis gratuito, desactiva tu VPN o proxy y recarga la página.'
+                : 'To use the free analysis, please disable your VPN or proxy and reload the page.'}
+            </p>
+
+            {vpnServiceName && (
+              <p style={{
+                fontSize: '0.875rem',
+                color: '#9ca3af',
+                textAlign: 'center',
+                marginBottom: '1.5rem'
+              }}>
+                {lang === 'es' ? 'Servicio detectado: ' : 'Detected service: '}{vpnServiceName}
+              </p>
+            )}
+
+            {/* Alternative */}
+            <div style={{
+              background: '#f3f4f6',
+              borderRadius: '0.75rem',
+              padding: '1rem',
+              marginBottom: '1.5rem',
+              textAlign: 'center'
+            }}>
+              <p style={{
+                fontSize: '0.875rem',
+                color: '#374151',
+                marginBottom: '0'
+              }}>
+                {lang === 'es'
+                  ? 'Alternativamente, crea una cuenta para analizar sin restricciones.'
+                  : 'Alternatively, create an account to analyze without restrictions.'}
+              </p>
+            </div>
+
+            {/* CTA Buttons */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              <button
+                onClick={() => {
+                  setShowVpnModal(false)
+                  window.location.reload()
+                }}
+                style={{
+                  width: '100%',
+                  padding: '0.875rem',
+                  background: '#374151',
+                  color: 'white',
+                  textAlign: 'center',
+                  borderRadius: '0.5rem',
+                  fontWeight: '600',
+                  fontSize: '1rem',
+                  border: 'none',
+                  cursor: 'pointer'
+                }}
+              >
+                {lang === 'es' ? 'Recargar página' : 'Reload page'}
+              </button>
+
+              <a
+                href={`/auth/signup?lang=${lang}`}
+                style={{
+                  display: 'block',
+                  width: '100%',
+                  padding: '0.875rem',
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  color: 'white',
+                  textAlign: 'center',
+                  textDecoration: 'none',
+                  borderRadius: '0.5rem',
+                  fontWeight: '600',
+                  fontSize: '1rem',
+                  boxSizing: 'border-box'
+                }}
+              >
+                {lang === 'es' ? 'Crear cuenta gratis' : 'Create free account'}
               </a>
             </div>
           </div>

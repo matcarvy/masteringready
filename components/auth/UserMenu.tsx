@@ -138,7 +138,13 @@ export function UserMenu({ lang = 'es' }: UserMenuProps) {
   // Logged in - show user menu
   const avatarUrl = user.user_metadata?.avatar_url
   const displayName = user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0]
-  const initials = displayName?.slice(0, 2).toUpperCase() || 'U'
+  // Get actual initials (first letter of each word)
+  const initials = displayName
+    ?.split(' ')
+    .map((word: string) => word.charAt(0))
+    .join('')
+    .toUpperCase()
+    .slice(0, 2) || 'U'
 
   const handleLogout = async () => {
     setIsOpen(false)
@@ -195,7 +201,7 @@ export function UserMenu({ lang = 'es' }: UserMenuProps) {
 
         {/* Name (hidden on mobile) */}
         <span style={{
-          color: 'white',
+          color: '#374151',
           fontSize: '0.875rem',
           fontWeight: '500',
           maxWidth: '120px',
@@ -208,7 +214,7 @@ export function UserMenu({ lang = 'es' }: UserMenuProps) {
 
         <ChevronDown
           size={16}
-          color="white"
+          color="#374151"
           style={{
             transform: isOpen ? 'rotate(180deg)' : 'rotate(0)',
             transition: 'transform 0.2s'

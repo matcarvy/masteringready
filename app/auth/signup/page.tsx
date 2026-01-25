@@ -40,7 +40,7 @@ const translations = {
     error: 'Error al crear la cuenta. Intenta de nuevo.',
     emailExists: 'Ya existe una cuenta con este correo electrónico.',
     success: '¡Cuenta creada! Revisa tu correo para confirmar.',
-    freeAnalyses: '3 análisis gratis',
+    freeAnalyses: '2 análisis gratis',
     noCard: 'Sin tarjeta de crédito',
     cancelAnytime: 'Cancela cuando quieras'
   },
@@ -66,7 +66,7 @@ const translations = {
     error: 'Error creating account. Please try again.',
     emailExists: 'An account with this email already exists.',
     success: 'Account created! Check your email to confirm.',
-    freeAnalyses: '3 free analyses',
+    freeAnalyses: '2 free analyses',
     noCard: 'No credit card required',
     cancelAnytime: 'Cancel anytime'
   }

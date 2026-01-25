@@ -39,6 +39,48 @@ const AuthContext = createContext<AuthContextType>({
 // PROVIDER / PROVEEDOR
 // ============================================================================
 
+// Save pending analysis from localStorage to database
+async function savePendingAnalysis(userId: string) {
+  try {
+    const pendingData = localStorage.getItem('pendingAnalysis')
+    if (!pendingData) return
+
+    const analysis = JSON.parse(pendingData)
+
+    // Save to analyses table
+    const { error } = await supabase.from('analyses').insert({
+      user_id: userId,
+      filename: analysis.filename || 'Unknown',
+      score: analysis.score,
+      verdict: analysis.verdict?.toLowerCase().replace(/ /g, '_') || 'needs_work',
+      lang: analysis.lang || 'es',
+      strict_mode: analysis.strict || false,
+      report_mode: 'write',
+      metrics: analysis.metrics,
+      interpretations: analysis.interpretations,
+      report_short: analysis.report_short,
+      report_write: analysis.report_write,
+      report_visual: analysis.report_visual,
+      created_at: analysis.created_at || new Date().toISOString()
+    })
+
+    if (error) {
+      console.error('Error saving pending analysis:', error)
+      return
+    }
+
+    // Update profile counters
+    await supabase.rpc('increment_analysis_count', { p_user_id: userId })
+
+    // Clear localStorage
+    localStorage.removeItem('pendingAnalysis')
+    console.log('Pending analysis saved successfully')
+
+  } catch (err) {
+    console.error('Error processing pending analysis:', err)
+  }
+}
+
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null)
   const [session, setSession] = useState<Session | null>(null)
@@ -71,6 +113,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
         setSession(session)
         setUser(session?.user ?? null)
         setLoading(false)
+
+        // Check for pending analysis after login/signup
+        if ((event === 'SIGNED_IN' || event === 'USER_UPDATED') && session?.user) {
+          savePendingAnalysis(session.user.id)
+        }
       }
     )
 

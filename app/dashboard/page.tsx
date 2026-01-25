@@ -50,7 +50,7 @@ const translations = {
     proRequired: 'Requiere Pro',
     upgradeToPro: 'Actualizar a Pro',
     upgradeDescription: 'Desbloquea análisis completos, descargas ilimitadas y más',
-    analysesThisMonth: 'Análisis este mes',
+    analysesThisMonth: 'Análisis restantes',
     totalAnalyses: 'Total de análisis',
     currentPlan: 'Plan actual',
     free: 'Gratis',
@@ -97,7 +97,7 @@ const translations = {
     proRequired: 'Requires Pro',
     upgradeToPro: 'Upgrade to Pro',
     upgradeDescription: 'Unlock complete analyses, unlimited downloads and more',
-    analysesThisMonth: 'Analyses this month',
+    analysesThisMonth: 'Analyses remaining',
     totalAnalyses: 'Total analyses',
     currentPlan: 'Current plan',
     free: 'Free',
@@ -420,7 +420,7 @@ export default function DashboardPage() {
             gridColumn: 'span 2'
           }}>
             <h1 style={{ fontSize: '1.5rem', fontWeight: '700', marginBottom: '0.5rem' }}>
-              {t.welcome}, {profile?.full_name || user.email?.split('@')[0]}!
+              {t.welcome}, {(user.user_metadata?.full_name || profile?.full_name || user.email?.split('@')[0])?.split(' ')[0]}!
             </h1>
             <p style={{ opacity: 0.9, fontSize: '0.95rem' }}>
               {t.dashboard}
@@ -477,9 +477,9 @@ export default function DashboardPage() {
               <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>{t.analysesThisMonth}</span>
             </div>
             <p style={{ fontSize: '1.5rem', fontWeight: '700', color: '#111827' }}>
-              {profile?.analyses_this_month || 0}
+              {isPro ? '∞' : Math.max(0, 2 - (profile?.total_analyses || 0))}
               <span style={{ fontSize: '0.875rem', fontWeight: '400', color: '#6b7280' }}>
-                {' '}/ {isPro ? '∞' : '3'}
+                {isPro ? '' : ' / 2'}
               </span>
             </p>
           </div>
@@ -531,7 +531,7 @@ export default function DashboardPage() {
               <p style={{ fontSize: '1.125rem', marginBottom: '0.5rem' }}>{t.noAnalyses}</p>
               <p style={{ fontSize: '0.875rem', marginBottom: '1.5rem' }}>{t.startAnalyzing}</p>
               <Link
-                href="/"
+                href="/#analyze"
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
