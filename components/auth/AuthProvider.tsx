@@ -18,6 +18,7 @@ interface AuthContextType {
   session: Session | null
   loading: boolean
   signOut: () => Promise<void>
+  savePendingAnalysis: () => Promise<void>
 }
 
 interface AuthProviderProps {
@@ -32,7 +33,8 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   session: null,
   loading: true,
-  signOut: async () => {}
+  signOut: async () => {},
+  savePendingAnalysis: async () => {}
 })
 
 // ============================================================================
@@ -40,12 +42,16 @@ const AuthContext = createContext<AuthContextType>({
 // ============================================================================
 
 // Save pending analysis from localStorage to database
-async function savePendingAnalysis(userId: string) {
+async function savePendingAnalysisForUser(userId: string) {
   try {
     const pendingData = localStorage.getItem('pendingAnalysis')
-    if (!pendingData) return
+    if (!pendingData) {
+      console.log('No pending analysis to save')
+      return false
+    }
 
     const analysis = JSON.parse(pendingData)
+    console.log('Saving pending analysis for user:', userId, 'filename:', analysis.filename)
 
     // Save to analyses table
     const { error } = await supabase.from('analyses').insert({
@@ -66,18 +72,23 @@ async function savePendingAnalysis(userId: string) {
 
     if (error) {
       console.error('Error saving pending analysis:', error)
-      return
+      return false
     }
 
     // Update profile counters
-    await supabase.rpc('increment_analysis_count', { p_user_id: userId })
+    const { error: rpcError } = await supabase.rpc('increment_analysis_count', { p_user_id: userId })
+    if (rpcError) {
+      console.error('Error incrementing analysis count:', rpcError)
+    }
 
     // Clear localStorage
     localStorage.removeItem('pendingAnalysis')
-    console.log('Pending analysis saved successfully')
+    console.log('Pending analysis saved successfully!')
+    return true
 
   } catch (err) {
     console.error('Error processing pending analysis:', err)
+    return false
   }
 }
 
@@ -85,6 +96,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
+
+  // Exposed function to save pending analysis (can be called from components)
+  const savePendingAnalysis = async () => {
+    const currentUser = user || (await supabase.auth.getUser()).data.user
+    if (currentUser) {
+      await savePendingAnalysisForUser(currentUser.id)
+    } else {
+      console.error('No user available to save pending analysis')
+    }
+  }
 
   useEffect(() => {
     // Get initial session / Obtener sesión inicial
@@ -116,7 +137,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
         // Check for pending analysis after login/signup
         if ((event === 'SIGNED_IN' || event === 'USER_UPDATED') && session?.user) {
-          savePendingAnalysis(session.user.id)
+          savePendingAnalysisForUser(session.user.id)
         }
       }
     )
@@ -138,7 +159,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, signOut }}>
+    <AuthContext.Provider value={{ user, session, loading, signOut, savePendingAnalysis }}>
       {children}
     </AuthContext.Provider>
   )

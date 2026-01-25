@@ -137,7 +137,7 @@ function InterpretativeSection({ title, interpretation, recommendation, metrics,
 
 function Home() {
   // Auth state - check if user is logged in
-  const { user, loading: authLoading } = useAuth()
+  const { user, loading: authLoading, savePendingAnalysis } = useAuth()
   const isLoggedIn = !!user
 
   const [file, setFile] = useState<File | null>(null)
@@ -3383,10 +3383,14 @@ by Matías Carvajal
       <AuthModal
         isOpen={showAuthModal}
         onClose={() => setShowAuthModal(false)}
-        onSuccess={() => {
+        onSuccess={async () => {
           setShowAuthModal(false)
           // Trigger unlock animation
           setIsUnlocking(true)
+
+          // Explicitly save the pending analysis
+          await savePendingAnalysis()
+
           setTimeout(() => {
             setIsUnlocking(false)
           }, 800)
@@ -3406,16 +3410,45 @@ by Matías Carvajal
           zIndex: 99,
           overflow: 'hidden'
         }}>
+          {/* Multiple ripples for more dramatic effect */}
           <div style={{
             position: 'absolute',
             top: '50%',
             left: '50%',
-            width: '100px',
-            height: '100px',
-            background: 'radial-gradient(circle, rgba(102, 126, 234, 0.3) 0%, transparent 70%)',
+            width: '80px',
+            height: '80px',
+            background: 'radial-gradient(circle, rgba(16, 185, 129, 0.4) 0%, rgba(16, 185, 129, 0.1) 50%, transparent 70%)',
             borderRadius: '50%',
             animation: 'unlockRipple 0.8s ease-out forwards'
           }} />
+          <div style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            width: '80px',
+            height: '80px',
+            background: 'radial-gradient(circle, rgba(102, 126, 234, 0.3) 0%, rgba(102, 126, 234, 0.1) 50%, transparent 70%)',
+            borderRadius: '50%',
+            animation: 'unlockRipple 0.8s ease-out 0.15s forwards'
+          }} />
+          {/* Center unlock icon */}
+          <div style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: '64px',
+            height: '64px',
+            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+            borderRadius: '50%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 4px 20px rgba(16, 185, 129, 0.4)',
+            animation: 'unlockPop 0.5s ease-out forwards'
+          }}>
+            <Unlock size={28} style={{ color: 'white' }} />
+          </div>
         </div>
       )}
 
@@ -3424,10 +3457,24 @@ by Matías Carvajal
         @keyframes unlockRipple {
           0% {
             transform: translate(-50%, -50%) scale(0);
-            opacity: 0.6;
+            opacity: 1;
           }
           100% {
-            transform: translate(-50%, -50%) scale(20);
+            transform: translate(-50%, -50%) scale(25);
+            opacity: 0;
+          }
+        }
+        @keyframes unlockPop {
+          0% {
+            transform: translate(-50%, -50%) scale(0);
+            opacity: 0;
+          }
+          50% {
+            transform: translate(-50%, -50%) scale(1.2);
+            opacity: 1;
+          }
+          100% {
+            transform: translate(-50%, -50%) scale(1);
             opacity: 0;
           }
         }
