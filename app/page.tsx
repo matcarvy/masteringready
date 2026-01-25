@@ -34,6 +34,13 @@ function mapVerdictToEnum(verdict: string): 'ready' | 'almost_ready' | 'needs_wo
 // ============================================================================
 async function saveAnalysisToDatabase(userId: string, analysis: any) {
   console.log('[SaveAnalysis] Saving for logged-in user:', userId, 'file:', analysis.filename)
+  console.log('[SaveAnalysis] API response keys:', Object.keys(analysis).join(', '))
+  console.log('[SaveAnalysis] Report fields:', {
+    report: analysis.report ? `${analysis.report.substring(0, 50)}...` : null,
+    report_short: analysis.report_short ? `${analysis.report_short.substring(0, 50)}...` : null,
+    report_write: analysis.report_write ? `${analysis.report_write.substring(0, 50)}...` : null,
+    report_visual: analysis.report_visual ? `${analysis.report_visual.substring(0, 50)}...` : null
+  })
 
   const mappedVerdict = mapVerdictToEnum(analysis.verdict)
   const reportShort = analysis.report_short || analysis.report || null

@@ -839,7 +839,7 @@ export default function DashboardPage() {
                   margin: 0,
                   color: '#374151'
                 }}>
-                  {selectedAnalysis.report_visual || lang === 'es' ? 'No hay datos de análisis rápido disponibles.' : 'No quick analysis data available.'}
+                  {selectedAnalysis.report_visual || (lang === 'es' ? 'No hay datos de análisis rápido disponibles.' : 'No quick analysis data available.')}
                 </pre>
               )}
               {reportTab === 'summary' && (
@@ -852,7 +852,7 @@ export default function DashboardPage() {
                   margin: 0,
                   color: '#374151'
                 }}>
-                  {selectedAnalysis.report_short || lang === 'es' ? 'No hay datos de resumen disponibles.' : 'No summary data available.'}
+                  {selectedAnalysis.report_short || (lang === 'es' ? 'No hay datos de resumen disponibles.' : 'No summary data available.')}
                 </pre>
               )}
               {reportTab === 'complete' && isPro && (
@@ -865,7 +865,7 @@ export default function DashboardPage() {
                   margin: 0,
                   color: '#374151'
                 }}>
-                  {selectedAnalysis.report_write || lang === 'es' ? 'No hay datos de análisis completo disponibles.' : 'No complete analysis data available.'}
+                  {selectedAnalysis.report_write || (lang === 'es' ? 'No hay datos de análisis completo disponibles.' : 'No complete analysis data available.')}
                 </pre>
               )}
             </div>
