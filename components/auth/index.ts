@@ -6,3 +6,4 @@
 export { AuthProvider, useAuth } from './AuthProvider'
 export { SocialLoginButtons } from './SocialLoginButtons'
 export { UserMenu } from './UserMenu'
+export { AuthModal } from './AuthModal'

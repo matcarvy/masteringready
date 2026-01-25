@@ -18,6 +18,7 @@ interface SocialLoginButtonsProps {
   lang?: 'es' | 'en'
   redirectTo?: string
   onError?: (error: string) => void
+  onBeforeRedirect?: () => void
 }
 
 type Provider = 'google' | 'apple' | 'facebook'
@@ -92,13 +93,17 @@ const providers: { id: Provider; name: string; icon: JSX.Element; bgColor: strin
 export function SocialLoginButtons({
   lang = 'es',
   redirectTo,
-  onError
+  onError,
+  onBeforeRedirect
 }: SocialLoginButtonsProps) {
   const [loadingProvider, setLoadingProvider] = useState<Provider | null>(null)
   const t = translations[lang]
 
   const handleSocialLogin = async (provider: Provider) => {
     setLoadingProvider(provider)
+
+    // Call onBeforeRedirect before OAuth redirect (for modal flow)
+    onBeforeRedirect?.()
 
     try {
       const { error } = await supabase.auth.signInWithOAuth({

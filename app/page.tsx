@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Download, Check, Upload, Zap, Shield, TrendingUp, Play, Music, Lock, X, AlertTriangle, Globe } from 'lucide-react'
-import { UserMenu, useAuth } from '@/components/auth'
+import { Download, Check, Upload, Zap, Shield, TrendingUp, Play, Music, Lock, X, AlertTriangle, Globe, Unlock } from 'lucide-react'
+import { UserMenu, useAuth, AuthModal } from '@/components/auth'
 import { analyzeFile, checkIpLimit, IpCheckResult } from '@/lib/api'
 import { startAnalysisPolling, getAnalysisStatus } from '@/lib/api'
 import { compressAudioFile } from '@/lib/audio-compression'
@@ -154,7 +154,8 @@ function Home() {
   const [compressionProgress, setCompressionProgress] = useState(0)
   const [showContactModal, setShowContactModal] = useState(false)
   const [showFeedbackModal, setShowFeedbackModal] = useState(false)
-  const [showUnlockModal, setShowUnlockModal] = useState(false)
+  const [showAuthModal, setShowAuthModal] = useState(false)
+  const [isUnlocking, setIsUnlocking] = useState(false)
   const [showIpLimitModal, setShowIpLimitModal] = useState(false)
   const [showVpnModal, setShowVpnModal] = useState(false)
   const [vpnServiceName, setVpnServiceName] = useState<string | null>(null)
@@ -258,8 +259,8 @@ function Home() {
       const resultsElement = document.getElementById('analysis-results')
       if (resultsElement) {
         setTimeout(() => {
-          resultsElement.scrollIntoView({ 
-            behavior: 'smooth', 
+          resultsElement.scrollIntoView({
+            behavior: 'smooth',
             block: 'start',
             inline: 'nearest'
           })
@@ -267,6 +268,41 @@ function Home() {
       }
     }
   }, [result])
+
+  // Check for OAuth redirect and trigger unlock animation
+  useEffect(() => {
+    if (isLoggedIn && !authLoading) {
+      try {
+        const authFlowData = localStorage.getItem('authModalFlow')
+        if (authFlowData) {
+          const { fromModal, timestamp } = JSON.parse(authFlowData)
+          const fiveMinutes = 5 * 60 * 1000
+
+          // Check if flag is recent (within 5 minutes)
+          if (fromModal && timestamp && (Date.now() - timestamp) < fiveMinutes) {
+            // Clear the flag
+            localStorage.removeItem('authModalFlow')
+
+            // Trigger unlock animation if there's a pending analysis
+            const pendingAnalysis = localStorage.getItem('pendingAnalysis')
+            if (pendingAnalysis) {
+              setIsUnlocking(true)
+              // Animation duration: 800ms
+              setTimeout(() => {
+                setIsUnlocking(false)
+              }, 800)
+            }
+          } else {
+            // Clear expired flag
+            localStorage.removeItem('authModalFlow')
+          }
+        }
+      } catch (e) {
+        console.error('Error checking auth flow:', e)
+        localStorage.removeItem('authModalFlow')
+      }
+    }
+  }, [isLoggedIn, authLoading])
 
   // Progress message helper
   const getProgressMessage = (progress: number) => {
@@ -1806,8 +1842,9 @@ by Matías Carvajal
                     color: '#6b7280',
                     fontStyle: 'italic',
                     marginTop: '0.5rem',
-                    filter: !isLoggedIn ? 'blur(3px)' : 'none',
-                    userSelect: !isLoggedIn ? 'none' : 'auto'
+                    filter: (!isLoggedIn && !isUnlocking) ? 'blur(3px)' : 'none',
+                    transition: 'filter 0.6s ease-out',
+                    userSelect: (!isLoggedIn && !isUnlocking) ? 'none' : 'auto'
                   }}>
                     {lang === 'es'
                       ? 'Este índice evalúa margen técnico para procesamiento, no calidad artística.'
@@ -1831,7 +1868,7 @@ by Matías Carvajal
                       onClick={() => {
                         // Check if user is logged in for Resumen/Completo tabs
                         if ((view === 'short' || view === 'write') && !isLoggedIn) {
-                          setShowUnlockModal(true)
+                          setShowAuthModal(true)
                           return
                         }
                         setReportView(view)
@@ -2043,8 +2080,9 @@ by Matías Carvajal
                           color: '#9ca3af',
                           marginTop: '0.5rem',
                           textAlign: 'center',
-                          filter: !isLoggedIn ? 'blur(3px)' : 'none',
-                          userSelect: !isLoggedIn ? 'none' : 'auto'
+                          filter: (!isLoggedIn && !isUnlocking) ? 'blur(3px)' : 'none',
+                          transition: 'filter 0.6s ease-out',
+                          userSelect: (!isLoggedIn && !isUnlocking) ? 'none' : 'auto'
                         }}>
                           {lang === 'es'
                             ? 'Basado en criterios de Mastering Ready para compatibilidad, margen y traducción.'
@@ -2057,7 +2095,7 @@ by Matías Carvajal
                     <div
                       style={{ position: 'relative' }}
                       onClick={() => {
-                        if (!isLoggedIn) setShowUnlockModal(true)
+                        if (!isLoggedIn) setShowAuthModal(true)
                       }}
                     >
                       <pre style={{
@@ -2070,8 +2108,9 @@ by Matías Carvajal
                         overflowX: 'auto',
                         maxWidth: '100%',
                         margin: 0,
-                        filter: !isLoggedIn ? 'blur(4px)' : 'none',
-                        userSelect: !isLoggedIn ? 'none' : 'auto',
+                        filter: (!isLoggedIn && !isUnlocking) ? 'blur(4px)' : 'none',
+                        transition: 'filter 0.6s ease-out',
+                        userSelect: (!isLoggedIn && !isUnlocking) ? 'none' : 'auto',
                         cursor: !isLoggedIn ? 'pointer' : 'auto'
                       }}>
                         {cleanReportText((result as any).report_visual || result.report_short || result.report)}
@@ -2089,7 +2128,10 @@ by Matías Carvajal
                           justifyContent: 'center',
                           background: 'rgba(255, 255, 255, 0.3)',
                           borderRadius: '0.5rem',
-                          cursor: 'pointer'
+                          cursor: 'pointer',
+                          opacity: isUnlocking ? 0 : 1,
+                          transition: 'opacity 0.4s ease-out',
+                          pointerEvents: isUnlocking ? 'none' : 'auto'
                         }}>
                           <div style={{
                             display: 'flex',
@@ -2099,11 +2141,12 @@ by Matías Carvajal
                             background: 'white',
                             borderRadius: '9999px',
                             boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                            color: '#667eea',
+                            color: isUnlocking ? '#10b981' : '#667eea',
                             fontWeight: '600',
-                            fontSize: '0.875rem'
+                            fontSize: '0.875rem',
+                            transition: 'color 0.3s ease'
                           }}>
-                            <Lock size={16} />
+                            {isUnlocking ? <Unlock size={16} /> : <Lock size={16} />}
                             {lang === 'es' ? 'Desbloquear análisis' : 'Unlock analysis'}
                           </div>
                         </div>
@@ -2254,7 +2297,7 @@ by Matías Carvajal
                   <button
                     onClick={() => {
                       if (!isLoggedIn) {
-                        setShowUnlockModal(true)
+                        setShowAuthModal(true)
                         return
                       }
                       handleDownload()
@@ -2295,7 +2338,7 @@ by Matías Carvajal
                   <button
                     onClick={() => {
                       if (!isLoggedIn) {
-                        setShowUnlockModal(true)
+                        setShowAuthModal(true)
                         return
                       }
                       handleDownloadFull()
@@ -3336,171 +3379,59 @@ by Matías Carvajal
         </div>
       )}
 
-      {/* Unlock Modal - Paywall for non-logged users */}
-      {showUnlockModal && (
+      {/* Auth Modal - Inline login/signup with unlock animation */}
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        onSuccess={() => {
+          setShowAuthModal(false)
+          // Trigger unlock animation
+          setIsUnlocking(true)
+          setTimeout(() => {
+            setIsUnlocking(false)
+          }, 800)
+        }}
+        lang={lang}
+      />
+
+      {/* Unlock Animation Overlay - Ripple effect when auth succeeds */}
+      {isUnlocking && (
         <div style={{
           position: 'fixed',
           top: 0,
           left: 0,
           right: 0,
           bottom: 0,
-          background: 'rgba(0, 0, 0, 0.5)',
-          backdropFilter: 'blur(4px)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 100,
-          padding: '1rem'
+          pointerEvents: 'none',
+          zIndex: 99,
+          overflow: 'hidden'
         }}>
           <div style={{
-            background: 'white',
-            borderRadius: '1rem',
-            padding: '2rem',
-            maxWidth: '420px',
-            width: '100%',
-            position: 'relative',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
-          }}>
-            {/* Close button */}
-            <button
-              onClick={() => setShowUnlockModal(false)}
-              style={{
-                position: 'absolute',
-                top: '1rem',
-                right: '1rem',
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                color: '#6b7280',
-                padding: '0.25rem'
-              }}
-            >
-              <X size={20} />
-            </button>
-
-            {/* Lock Icon */}
-            <div style={{
-              display: 'flex',
-              justifyContent: 'center',
-              marginBottom: '1rem'
-            }}>
-              <div style={{
-                width: '48px',
-                height: '48px',
-                background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
-                borderRadius: '50%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-                <Lock size={24} style={{ color: '#d97706' }} />
-              </div>
-            </div>
-
-            {/* Title */}
-            <h3 style={{
-              fontSize: '1.375rem',
-              fontWeight: '700',
-              textAlign: 'center',
-              marginBottom: '1.5rem',
-              color: '#111827'
-            }}>
-              {lang === 'es' ? 'Desbloquea tu análisis completo' : 'Unlock your full analysis'}
-            </h3>
-
-            {/* Benefits */}
-            <div style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '0.875rem',
-              marginBottom: '1.75rem'
-            }}>
-              {[
-                { es: 'Leer Rápido y Resumen completos', en: 'Read full Quick and Summary modes' },
-                { es: 'Descargar .txt del modo Rápido y Resumen', en: 'Download .txt of Quick and Summary modes' },
-                { es: 'Dashboard con historial de análisis', en: 'Dashboard with analysis history' },
-                { es: '1 análisis adicional gratis', en: '1 additional free analysis' }
-              ].map((benefit, i) => (
-                <div key={i} style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.75rem'
-                }}>
-                  <Check size={20} style={{ color: '#667eea', flexShrink: 0 }} />
-                  <span style={{
-                    fontSize: '1rem',
-                    color: '#374151'
-                  }}>
-                    {lang === 'es' ? benefit.es : benefit.en}
-                  </span>
-                </div>
-              ))}
-            </div>
-
-            {/* CTA Buttons */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              {/* Primary Button - Signup */}
-              <a
-                href={`/auth/signup?lang=${lang}`}
-                style={{
-                  display: 'block',
-                  width: '100%',
-                  padding: '0.875rem',
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  color: 'white',
-                  textAlign: 'center',
-                  textDecoration: 'none',
-                  borderRadius: '0.5rem',
-                  fontWeight: '600',
-                  fontSize: '1rem',
-                  transition: 'transform 0.2s, box-shadow 0.2s',
-                  boxSizing: 'border-box'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-2px)'
-                  e.currentTarget.style.boxShadow = '0 10px 25px rgba(102, 126, 234, 0.4)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)'
-                  e.currentTarget.style.boxShadow = 'none'
-                }}
-              >
-                {lang === 'es' ? 'Crear cuenta gratis' : 'Create free account'}
-              </a>
-
-              {/* Secondary Button - Login */}
-              <a
-                href={`/auth/login?lang=${lang}`}
-                style={{
-                  display: 'block',
-                  width: '100%',
-                  padding: '0.875rem',
-                  background: 'transparent',
-                  color: '#667eea',
-                  textAlign: 'center',
-                  textDecoration: 'none',
-                  borderRadius: '0.5rem',
-                  fontWeight: '600',
-                  fontSize: '1rem',
-                  border: '2px solid #667eea',
-                  transition: 'background 0.2s, color 0.2s',
-                  boxSizing: 'border-box'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = '#667eea'
-                  e.currentTarget.style.color = 'white'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'transparent'
-                  e.currentTarget.style.color = '#667eea'
-                }}
-              >
-                {lang === 'es' ? 'Iniciar sesión' : 'Sign in'}
-              </a>
-            </div>
-          </div>
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            width: '100px',
+            height: '100px',
+            background: 'radial-gradient(circle, rgba(102, 126, 234, 0.3) 0%, transparent 70%)',
+            borderRadius: '50%',
+            animation: 'unlockRipple 0.8s ease-out forwards'
+          }} />
         </div>
       )}
+
+      {/* CSS for unlock animation */}
+      <style jsx global>{`
+        @keyframes unlockRipple {
+          0% {
+            transform: translate(-50%, -50%) scale(0);
+            opacity: 0.6;
+          }
+          100% {
+            transform: translate(-50%, -50%) scale(20);
+            opacity: 0;
+          }
+        }
+      `}</style>
 
       {/* IP Limit Reached Modal - Anonymous user already used free analysis */}
       {showIpLimitModal && (

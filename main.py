@@ -1,8 +1,14 @@
 """
-MasteringReady API v7.3.9 - Stats Endpoints
+MasteringReady API v7.4.0 - IP Rate Limiting
 =====================================================
 
 FastAPI backend for MasteringReady web application.
+
+FEATURES in v7.4.0:
+- IP-based rate limiting for anonymous users (1 free analysis per IP)
+- VPN/Proxy detection to prevent circumvention
+- Feature flags for easy launch control (ENABLE_IP_RATE_LIMIT)
+- /api/check-ip endpoint for pre-analysis limit checking
 
 FIXES in v7.3.9:
 - Added /api/stats endpoint for daily statistics
@@ -30,10 +36,10 @@ Previous fixes (v7.3.5):
 
 Based on Matías Carvajal's "Mastering Ready" methodology
 Author: Matías Carvajal García (@matcarvy)
-Version: 7.3.8-production
+Version: 7.4.0-production
 """
 
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException, BackgroundTasks
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, BackgroundTasks, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, FileResponse
 import tempfile
@@ -48,6 +54,17 @@ import urllib.parse
 from typing import Optional, Dict, Any
 from datetime import datetime, timedelta
 import soundfile as sf
+
+# Import IP rate limiting and VPN detection
+try:
+    from ip_limiter import init_ip_limiter, get_ip_limiter, get_client_ip, IPLimiter
+    from vpn_detector import init_vpn_detector, get_vpn_detector, VPNDetector
+    IP_LIMITER_AVAILABLE = True
+    logger_placeholder = logging.getLogger(__name__)  # Will be replaced
+except ImportError as e:
+    IP_LIMITER_AVAILABLE = False
+    logger_placeholder = logging.getLogger(__name__)
+    logger_placeholder.warning(f"⚠️ IP limiter not available: {e}")
 
 # Setup logging
 logging.basicConfig(
@@ -170,8 +187,113 @@ app.add_middleware(
 MAX_FILE_SIZE = 200 * 1024 * 1024  # 200MB
 ALLOWED_EXTENSIONS = {'.wav', '.mp3', '.aiff'}
 
+# Initialize IP rate limiter and VPN detector
+if IP_LIMITER_AVAILABLE:
+    ip_limiter = init_ip_limiter()
+    vpn_detector = init_vpn_detector()
+    logger.info(f"✅ IP Limiter initialized. Enabled: {ip_limiter.is_enabled()}")
+    logger.info(f"✅ VPN Detector initialized. Enabled: {vpn_detector.is_enabled()}")
+else:
+    ip_limiter = None
+    vpn_detector = None
+    logger.warning("⚠️ IP rate limiting not available")
 
-# ============== HELPER: SHORT MODE ==============
+
+# ============== IP RATE LIMITING ENDPOINTS ==============
+
+@app.get("/api/check-ip")
+async def check_ip_limit(request: Request, is_authenticated: bool = False):
+    """
+    Check if the client IP can perform an analysis.
+
+    Frontend should call this BEFORE starting an analysis for anonymous users.
+    Returns whether analysis is allowed and any blocking reasons.
+
+    Args:
+        is_authenticated: If true, skip IP check (logged-in users have separate limits)
+
+    Returns:
+        {
+            "can_analyze": bool,
+            "reason": "OK" | "LIMIT_REACHED" | "VPN_DETECTED" | "DISABLED",
+            "analyses_used": int,
+            "max_analyses": int,
+            "is_vpn": bool,
+            "ip_limited_enabled": bool
+        }
+    """
+    # Logged-in users bypass IP limiting
+    if is_authenticated:
+        return {
+            "can_analyze": True,
+            "reason": "AUTHENTICATED",
+            "analyses_used": 0,
+            "max_analyses": -1,
+            "is_vpn": False,
+            "ip_limit_enabled": False
+        }
+
+    # If IP limiter not available, allow all
+    if not IP_LIMITER_AVAILABLE or not ip_limiter:
+        return {
+            "can_analyze": True,
+            "reason": "DISABLED",
+            "analyses_used": 0,
+            "max_analyses": 1,
+            "is_vpn": False,
+            "ip_limit_enabled": False
+        }
+
+    # If IP limiting is disabled via env var, allow all
+    if not ip_limiter.is_enabled():
+        return {
+            "can_analyze": True,
+            "reason": "DISABLED",
+            "analyses_used": 0,
+            "max_analyses": 1,
+            "is_vpn": False,
+            "ip_limit_enabled": False
+        }
+
+    # Get client IP
+    client_ip = get_client_ip(request)
+    user_agent = request.headers.get('User-Agent')
+
+    logger.info(f"🔍 IP check request from: {client_ip[:16]}...")
+
+    # Check VPN first (if enabled)
+    vpn_info = {'is_vpn': False, 'is_proxy': False, 'is_tor': False}
+    if vpn_detector and vpn_detector.is_enabled():
+        try:
+            vpn_info = await vpn_detector.detect(client_ip)
+
+            if vpn_info.get('is_vpn') or vpn_info.get('is_proxy') or vpn_info.get('is_tor'):
+                logger.warning(f"🚫 VPN/Proxy detected for IP: {client_ip[:16]}...")
+                return {
+                    "can_analyze": False,
+                    "reason": "VPN_DETECTED",
+                    "analyses_used": 0,
+                    "max_analyses": 1,
+                    "is_vpn": True,
+                    "vpn_service": vpn_info.get('service_name'),
+                    "ip_limit_enabled": True
+                }
+        except Exception as e:
+            logger.warning(f"⚠️ VPN detection failed: {e}")
+
+    # Check IP limit
+    can_analyze, message, details = await ip_limiter.check_ip_limit(client_ip, user_agent)
+
+    return {
+        "can_analyze": can_analyze,
+        "reason": message,
+        "analyses_used": details.get('analyses_used', 0),
+        "max_analyses": 1,
+        "is_vpn": details.get('is_vpn', False),
+        "ip_limit_enabled": True
+    }
+
+
 # ============== HEALTH CHECK ==============
 @app.get("/")
 async def root():
@@ -403,18 +525,20 @@ def generate_short_mode_report(result: Dict[str, Any], lang: str, filename: str,
 
 @app.post("/api/analyze/start")
 async def start_analysis(
+    request: Request,
     file: UploadFile = File(...),
     lang: str = Form("es"),
     mode: str = Form("write"),
     strict: bool = Form(False),
-    original_metadata_json: Optional[str] = Form(None)  # NEW: Original file metadata from frontend
+    original_metadata_json: Optional[str] = Form(None),  # Original file metadata from frontend
+    is_authenticated: bool = Form(False)  # Whether user is logged in
 ):
     """
     Start analysis and return job_id immediately (<1 sec).
     Client polls /api/analyze/status/{job_id} for progress and result.
-    
+
     This endpoint avoids Render's 30-second timeout by returning immediately.
-    
+
     Parameters:
     - file: Audio file
     - lang: Language (es/en)
@@ -422,8 +546,17 @@ async def start_analysis(
     - strict: Strict mode (true/false)
     - original_metadata_json: (Optional) JSON with original file metadata
         Example: {"sampleRate": 48000, "bitDepth": 24, "duration": 391.2, "numberOfChannels": 2}
+    - is_authenticated: Whether user is logged in (bypasses IP limit)
     """
-    
+
+    # Get client IP for rate limiting
+    client_ip = None
+    user_agent = None
+    if IP_LIMITER_AVAILABLE and ip_limiter and ip_limiter.is_enabled() and not is_authenticated:
+        client_ip = get_client_ip(request)
+        user_agent = request.headers.get('User-Agent')
+        logger.info(f"📍 Request from IP: {client_ip[:16]}... (authenticated: {is_authenticated})")
+
     # Cleanup old jobs
     await cleanup_old_jobs()
     
@@ -734,8 +867,25 @@ async def start_analysis(
                         )
                     except Exception as alert_err:
                         logger.warning(f"⚠️ Failed to send Telegram alert: {alert_err}")
-                
-                
+
+                # 📍 RECORD IP USAGE: Track anonymous user analysis
+                if client_ip and IP_LIMITER_AVAILABLE and ip_limiter and ip_limiter.is_enabled():
+                    try:
+                        # Get VPN info if we have the detector
+                        vpn_info = {}
+                        if vpn_detector and vpn_detector.is_enabled():
+                            vpn_info = await vpn_detector.detect(client_ip)
+
+                        await ip_limiter.record_analysis(
+                            ip_address=client_ip,
+                            user_agent=user_agent,
+                            vpn_info=vpn_info
+                        )
+                        logger.info(f"📍 [{job_id}] Recorded IP usage for: {client_ip[:16]}...")
+                    except Exception as ip_err:
+                        logger.warning(f"⚠️ Failed to record IP usage: {ip_err}")
+
+
         except Exception as e:
             logger.error(f"❌ [{job_id}] Analysis error: {str(e)}")
             async with jobs_lock:
