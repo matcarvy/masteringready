@@ -3389,11 +3389,16 @@ by Matías Carvajal
           setIsUnlocking(true)
 
           // Explicitly save the pending analysis
-          await savePendingAnalysis()
+          try {
+            await savePendingAnalysis()
+            console.log('Analysis save completed from modal')
+          } catch (err) {
+            console.error('Failed to save analysis from modal:', err)
+          }
 
           setTimeout(() => {
             setIsUnlocking(false)
-          }, 800)
+          }, 1500)
         }}
         lang={lang}
       />
@@ -3410,16 +3415,16 @@ by Matías Carvajal
           zIndex: 99,
           overflow: 'hidden'
         }}>
-          {/* Multiple ripples for more dramatic effect */}
+          {/* Multiple ripples - purple theme matching the page */}
           <div style={{
             position: 'absolute',
             top: '50%',
             left: '50%',
             width: '80px',
             height: '80px',
-            background: 'radial-gradient(circle, rgba(16, 185, 129, 0.4) 0%, rgba(16, 185, 129, 0.1) 50%, transparent 70%)',
+            background: 'radial-gradient(circle, rgba(102, 126, 234, 0.5) 0%, rgba(118, 75, 162, 0.2) 50%, transparent 70%)',
             borderRadius: '50%',
-            animation: 'unlockRipple 0.8s ease-out forwards'
+            animation: 'unlockRipple 1.4s ease-out forwards'
           }} />
           <div style={{
             position: 'absolute',
@@ -3427,11 +3432,21 @@ by Matías Carvajal
             left: '50%',
             width: '80px',
             height: '80px',
-            background: 'radial-gradient(circle, rgba(102, 126, 234, 0.3) 0%, rgba(102, 126, 234, 0.1) 50%, transparent 70%)',
+            background: 'radial-gradient(circle, rgba(118, 75, 162, 0.4) 0%, rgba(102, 126, 234, 0.15) 50%, transparent 70%)',
             borderRadius: '50%',
-            animation: 'unlockRipple 0.8s ease-out 0.15s forwards'
+            animation: 'unlockRipple 1.4s ease-out 0.2s forwards'
           }} />
-          {/* Center unlock icon */}
+          <div style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            width: '80px',
+            height: '80px',
+            background: 'radial-gradient(circle, rgba(102, 126, 234, 0.3) 0%, rgba(118, 75, 162, 0.1) 50%, transparent 70%)',
+            borderRadius: '50%',
+            animation: 'unlockRipple 1.4s ease-out 0.4s forwards'
+          }} />
+          {/* Center unlock icon - purple gradient */}
           <div style={{
             position: 'absolute',
             top: '50%',
@@ -3439,13 +3454,13 @@ by Matías Carvajal
             transform: 'translate(-50%, -50%)',
             width: '64px',
             height: '64px',
-            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
             borderRadius: '50%',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: '0 4px 20px rgba(16, 185, 129, 0.4)',
-            animation: 'unlockPop 0.5s ease-out forwards'
+            boxShadow: '0 4px 20px rgba(102, 126, 234, 0.5)',
+            animation: 'unlockPop 0.7s ease-out forwards'
           }}>
             <Unlock size={28} style={{ color: 'white' }} />
           </div>
@@ -3460,7 +3475,7 @@ by Matías Carvajal
             opacity: 1;
           }
           100% {
-            transform: translate(-50%, -50%) scale(25);
+            transform: translate(-50%, -50%) scale(30);
             opacity: 0;
           }
         }
@@ -3469,12 +3484,16 @@ by Matías Carvajal
             transform: translate(-50%, -50%) scale(0);
             opacity: 0;
           }
-          50% {
-            transform: translate(-50%, -50%) scale(1.2);
+          40% {
+            transform: translate(-50%, -50%) scale(1.15);
+            opacity: 1;
+          }
+          70% {
+            transform: translate(-50%, -50%) scale(1);
             opacity: 1;
           }
           100% {
-            transform: translate(-50%, -50%) scale(1);
+            transform: translate(-50%, -50%) scale(0.9);
             opacity: 0;
           }
         }
