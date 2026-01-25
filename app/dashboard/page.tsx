@@ -9,7 +9,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { useAuth } from '@/components/auth'
+import { useAuth, UserMenu } from '@/components/auth'
 import { supabase } from '@/lib/supabase'
 import {
   Music,
@@ -340,25 +340,41 @@ export default function DashboardPage() {
           alignItems: 'center',
           justifyContent: 'space-between'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <Link
-              href="/"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                color: '#6b7280',
-                textDecoration: 'none',
-                fontSize: '0.875rem'
-              }}
-            >
-              <ArrowLeft size={16} />
-              {t.backToHome}
-            </Link>
-          </div>
+          {/* Left side: Logo */}
+          <Link
+            href="/"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              textDecoration: 'none'
+            }}
+          >
+            <div style={{
+              width: '32px',
+              height: '32px',
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              borderRadius: '0.5rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <Music size={18} color="white" />
+            </div>
+            <span style={{
+              fontWeight: '700',
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text'
+            }}>
+              MasteringReady
+            </span>
+          </Link>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            {/* Language Toggle - Single button like main page */}
+          {/* Right side: Actions */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            {/* Language Toggle */}
             <button
               onClick={() => setLang(lang === 'es' ? 'en' : 'es')}
               style={{
@@ -376,25 +392,37 @@ export default function DashboardPage() {
               {lang === 'es' ? 'EN' : 'ES'}
             </button>
 
-            {/* Logo */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem'
-            }}>
-              <div style={{
-                width: '32px',
-                height: '32px',
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                borderRadius: '0.5rem',
+            {/* User Menu with Logout */}
+            <UserMenu lang={lang} />
+
+            {/* Analyze Button */}
+            <Link
+              href="/#analyze"
+              style={{
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-                <Music size={18} color="white" />
-              </div>
-              <span style={{ fontWeight: '700', color: '#111827' }}>MasteringReady</span>
-            </div>
+                gap: '0.5rem',
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                color: 'white',
+                padding: '0.5rem 1rem',
+                borderRadius: '9999px',
+                fontWeight: '600',
+                fontSize: '0.875rem',
+                textDecoration: 'none',
+                transition: 'transform 0.2s, box-shadow 0.2s'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-2px)'
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.4)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)'
+                e.currentTarget.style.boxShadow = 'none'
+              }}
+            >
+              <Zap size={16} />
+              {lang === 'es' ? 'Analizar' : 'Analyze'}
+            </Link>
           </div>
         </div>
       </header>
