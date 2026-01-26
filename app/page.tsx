@@ -47,6 +47,12 @@ async function saveAnalysisToDatabase(userId: string, analysis: any) {
   const reportWrite = analysis.report_write || analysis.report || null
   const reportVisual = analysis.report_visual || analysis.report_short || analysis.report || null
 
+  // Combine metrics and metrics_bars into one object for storage
+  const metricsData = {
+    metrics: analysis.metrics || [],
+    metrics_bars: analysis.metrics_bars || null
+  }
+
   // Insert to analyses table
   const { data: insertedData, error } = await supabase
     .from('analyses')
@@ -58,7 +64,7 @@ async function saveAnalysisToDatabase(userId: string, analysis: any) {
       lang: analysis.lang || 'es',
       strict_mode: analysis.strict || false,
       report_mode: 'write',
-      metrics: analysis.metrics || null,
+      metrics: metricsData,
       interpretations: analysis.interpretations || null,
       report_short: reportShort,
       report_write: reportWrite,

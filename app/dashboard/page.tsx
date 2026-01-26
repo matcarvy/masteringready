@@ -1077,16 +1077,176 @@ export default function DashboardPage() {
               padding: '1.5rem'
             }}>
               {reportTab === 'rapid' && (
-                <div style={{
-                  whiteSpace: 'pre-wrap',
-                  wordBreak: 'break-word',
-                  fontSize: '0.875rem',
-                  lineHeight: '1.8',
-                  fontFamily: 'Inter, system-ui, sans-serif',
-                  margin: 0,
-                  color: '#374151'
-                }}>
-                  {cleanReportText(selectedAnalysis.report_visual || '') || (lang === 'es' ? 'No hay datos de análisis rápido disponibles.' : 'No quick analysis data available.')}
+                <div>
+                  {/* Title */}
+                  <h4 style={{
+                    fontSize: '1rem',
+                    fontWeight: '600',
+                    color: '#374151',
+                    marginBottom: '0.5rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem'
+                  }}>
+                    ⚡ {lang === 'es' ? 'Análisis Rápido' : 'Quick Analysis'}
+                  </h4>
+
+                  <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '1.5rem' }}>
+                    🎵 {lang === 'es' ? 'Sobre' : 'About'} "{selectedAnalysis.filename}"
+                  </p>
+
+                  {/* Visual Metrics Bars */}
+                  {selectedAnalysis.metrics?.metrics_bars && Object.keys(selectedAnalysis.metrics.metrics_bars).length > 0 && (
+                    <div style={{
+                      background: '#fef7f0',
+                      borderRadius: '0.75rem',
+                      padding: '1.25rem',
+                      marginBottom: '1.5rem',
+                      border: '1px solid #fed7aa'
+                    }}>
+                      <h4 style={{
+                        fontSize: '0.875rem',
+                        fontWeight: '600',
+                        color: '#374151',
+                        marginBottom: '0.5rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem'
+                      }}>
+                        📊 {lang === 'es' ? 'Áreas de Atención Prioritaria' : 'Priority Attention Areas'}
+                      </h4>
+
+                      <p style={{
+                        fontSize: '0.7rem',
+                        color: '#6b7280',
+                        marginBottom: '1rem',
+                        lineHeight: '1.4',
+                        fontStyle: 'italic'
+                      }}>
+                        {lang === 'es'
+                          ? 'Estos indicadores no significan que tu mezcla esté mal, sino que hay decisiones técnicas que vale la pena revisar antes del máster final.'
+                          : 'These indicators don\'t mean your mix is wrong, but there are technical decisions worth reviewing before the final master.'}
+                      </p>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                        {(() => {
+                          const bars = selectedAnalysis.metrics.metrics_bars;
+                          const metricLabels: { [key: string]: { es: string; en: string } } = {
+                            headroom: { es: 'Headroom', en: 'Headroom' },
+                            true_peak: { es: 'True Peak', en: 'True Peak' },
+                            dynamic_range: { es: 'Rango Dinámico', en: 'Dynamic Range' },
+                            plr: { es: 'PLR', en: 'PLR' },
+                            loudness: { es: 'Loudness (LUFS)', en: 'Loudness (LUFS)' },
+                            lufs: { es: 'LUFS', en: 'LUFS' },
+                            "lufs_(integrated)": { es: 'LUFS', en: 'LUFS' },
+                            stereo_width: { es: 'Imagen Estéreo', en: 'Stereo Width' },
+                            stereo_correlation: { es: 'Correlación', en: 'Correlation' },
+                            frequency_balance: { es: 'Balance Frecuencias', en: 'Freq. Balance' },
+                            tonal_balance: { es: 'Balance Frecuencias', en: 'Freq. Balance' }
+                          };
+
+                          const statusColors: { [key: string]: string } = {
+                            excellent: '#10b981',
+                            good: '#3b82f6',
+                            warning: '#f59e0b',
+                            critical: '#ef4444'
+                          };
+
+                          const orderedKeys = ['headroom', 'true_peak', 'plr', 'dynamic_range', 'lufs', 'lufs_(integrated)', 'loudness', 'stereo_width', 'stereo_correlation', 'frequency_balance', 'tonal_balance'];
+                          const displayedKeys = orderedKeys.filter(key => bars[key]);
+
+                          return displayedKeys.map((key) => {
+                            const bar = bars[key];
+                            const label = metricLabels[key] || { es: key, en: key };
+                            const color = statusColors[bar.status] || '#6b7280';
+
+                            return (
+                              <div
+                                key={key}
+                                style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}
+                              >
+                                <div style={{
+                                  minWidth: '100px',
+                                  maxWidth: '120px',
+                                  fontSize: '0.75rem',
+                                  fontWeight: '500',
+                                  color: '#4b5563',
+                                  textAlign: 'right'
+                                }}>
+                                  {lang === 'es' ? label.es : label.en}
+                                </div>
+                                <div style={{
+                                  flex: 1,
+                                  background: '#e5e7eb',
+                                  borderRadius: '9999px',
+                                  height: '0.5rem',
+                                  overflow: 'hidden'
+                                }}>
+                                  <div style={{
+                                    background: color,
+                                    height: '100%',
+                                    borderRadius: '9999px',
+                                    width: `${bar.percentage}%`,
+                                    transition: 'width 0.5s ease-out'
+                                  }} />
+                                </div>
+                                <div style={{
+                                  minWidth: '45px',
+                                  fontSize: '0.75rem',
+                                  fontWeight: '600',
+                                  color: color,
+                                  textAlign: 'right'
+                                }}>
+                                  {bar.percentage}%
+                                </div>
+                              </div>
+                            );
+                          });
+                        })()}
+                      </div>
+
+                      {/* Legend */}
+                      <div style={{
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        gap: '0.75rem',
+                        marginTop: '1rem',
+                        paddingTop: '0.75rem',
+                        borderTop: '1px solid #e5e7eb',
+                        fontSize: '0.65rem',
+                        color: '#6b7280'
+                      }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                          <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981' }}></span>
+                          {lang === 'es' ? 'Margen cómodo' : 'Comfortable'}
+                        </span>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                          <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#3b82f6' }}></span>
+                          {lang === 'es' ? 'Margen suficiente' : 'Sufficient'}
+                        </span>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                          <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#f59e0b' }}></span>
+                          {lang === 'es' ? 'Margen reducido' : 'Reduced'}
+                        </span>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                          <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#ef4444' }}></span>
+                          {lang === 'es' ? 'Margen comprometido' : 'Compromised'}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Text Report */}
+                  <div style={{
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-word',
+                    fontSize: '0.875rem',
+                    lineHeight: '1.8',
+                    fontFamily: 'Inter, system-ui, sans-serif',
+                    color: '#374151'
+                  }}>
+                    {cleanReportText(selectedAnalysis.report_visual || '') || (lang === 'es' ? 'No hay datos de análisis rápido disponibles.' : 'No quick analysis data available.')}
+                  </div>
                 </div>
               )}
               {reportTab === 'summary' && (
