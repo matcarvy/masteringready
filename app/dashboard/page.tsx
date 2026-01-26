@@ -12,7 +12,7 @@ import Link from 'next/link'
 import { useAuth, UserMenu } from '@/components/auth'
 import { supabase, getUserAnalysisStatus, checkCanBuyAddon, UserDashboardStatus } from '@/lib/supabase'
 import { useGeo } from '@/lib/useGeo'
-import { calculateLocalPrice, PRICING } from '@/lib/geoip'
+import { getPlanDisplayPrice, PRICING } from '@/lib/geoip'
 import {
   Music,
   FileAudio,
@@ -276,10 +276,10 @@ export default function DashboardPage() {
   const t = translations[lang]
   const isPro = subscription?.plan?.type === 'pro' || subscription?.plan?.type === 'studio'
 
-  // Calculate regional prices
-  const proPrice = calculateLocalPrice(PRICING.PRO_MONTHLY, geo)
-  const singlePrice = calculateLocalPrice(PRICING.SINGLE, geo)
-  const addonPrice = calculateLocalPrice(PRICING.ADDON_PACK, geo)
+  // Calculate regional prices with local currency display
+  const proPrice = getPlanDisplayPrice(PRICING.PRO_MONTHLY, geo)
+  const singlePrice = getPlanDisplayPrice(PRICING.SINGLE, geo)
+  const addonPrice = getPlanDisplayPrice(PRICING.ADDON_PACK, geo)
 
   // Detect language
   useEffect(() => {
@@ -754,7 +754,7 @@ export default function DashboardPage() {
                     width: '100%'
                   }}
                 >
-                  {t.buyAddon}
+                  {lang === 'es' ? 'Comprar 10 análisis' : 'Buy 10 analyses'} ({addonPrice.showLocal ? `~${addonPrice.formattedLocal}` : addonPrice.formatted})
                 </button>
               </div>
             )}
@@ -1535,13 +1535,41 @@ export default function DashboardPage() {
               textAlign: 'center',
               marginBottom: '1rem'
             }}>
-              <span style={{
-                fontSize: '2rem',
-                fontWeight: '700',
-                color: '#111827'
-              }}>
-                ${proPrice.toFixed(2)}/{lang === 'es' ? 'mes' : 'month'}
-              </span>
+              {proPrice.showLocal ? (
+                <>
+                  <span style={{
+                    fontSize: '1.75rem',
+                    fontWeight: '700',
+                    color: '#111827'
+                  }}>
+                    ~{proPrice.formattedLocal}
+                  </span>
+                  <span style={{
+                    fontSize: '1rem',
+                    color: '#6b7280',
+                    display: 'block',
+                    marginTop: '0.25rem'
+                  }}>
+                    ({proPrice.formatted}/{lang === 'es' ? 'mes' : 'month'})
+                  </span>
+                  <span style={{
+                    fontSize: '0.7rem',
+                    color: '#9ca3af',
+                    display: 'block',
+                    marginTop: '0.25rem'
+                  }}>
+                    {lang === 'es' ? 'Cobro en USD' : 'Charged in USD'}
+                  </span>
+                </>
+              ) : (
+                <span style={{
+                  fontSize: '2rem',
+                  fontWeight: '700',
+                  color: '#111827'
+                }}>
+                  {proPrice.formatted}/{lang === 'es' ? 'mes' : 'month'}
+                </span>
+              )}
             </div>
 
             {/* CTA Button */}
@@ -1596,7 +1624,11 @@ export default function DashboardPage() {
                   cursor: 'pointer'
                 }}
               >
-                ${singlePrice.toFixed(2)} - {lang === 'es' ? '1 análisis' : '1 analysis'}
+                {singlePrice.showLocal ? (
+                  <>~{singlePrice.formattedLocal}</>
+                ) : (
+                  <>{singlePrice.formatted}</>
+                )} - {lang === 'es' ? '1 análisis' : '1 analysis'}
               </button>
             </div>
           </div>

@@ -260,21 +260,27 @@ export function formatPrice(price: number, currency: string, locale?: string): s
  *
  * @param baseUsdPrice - Base price in USD
  * @param geo - GeoData from detectCountry()
- * @returns Object with price amount and formatted string
+ * @returns Object with price amount and formatted strings
  */
 export function getPlanDisplayPrice(baseUsdPrice: number, geo: GeoData): {
   amount: number
   formatted: string
+  formattedLocal: string
   currency: string
+  localCurrency: string
+  showLocal: boolean
 } {
-  const localPrice = calculateLocalPrice(baseUsdPrice, geo)
+  const adjustedUsdPrice = calculateLocalPrice(baseUsdPrice, geo)
+  const localCurrency = geo.currency || 'USD'
+  const showLocal = localCurrency !== 'USD' && EXCHANGE_RATES[localCurrency] !== undefined
 
-  // For simplicity at launch, we charge in USD but show the adjusted price
-  // This avoids currency conversion complexity while still offering PPP pricing
   return {
-    amount: localPrice,
-    formatted: formatPrice(localPrice, 'USD'),
-    currency: 'USD'
+    amount: adjustedUsdPrice,
+    formatted: formatPrice(adjustedUsdPrice, 'USD'),
+    formattedLocal: showLocal ? formatLocalCurrencyPrice(adjustedUsdPrice, localCurrency) : formatPrice(adjustedUsdPrice, 'USD'),
+    currency: 'USD',
+    localCurrency: localCurrency,
+    showLocal: showLocal
   }
 }
 
@@ -285,3 +291,136 @@ export const PRICING = {
   PRO_MONTHLY: 9.99,
   ADDON_PACK: 3.99
 } as const
+
+// ============================================================================
+// EXCHANGE RATES (Static - Updated Monthly)
+// ============================================================================
+// Last updated: January 2025
+// These are approximate rates for display purposes only
+// Actual charge is always in USD via Stripe
+
+export const EXCHANGE_RATES: Record<string, number> = {
+  // North America
+  'USD': 1,
+  'CAD': 1.35,
+  'MXN': 17.50,
+
+  // Europe
+  'EUR': 0.92,
+  'GBP': 0.79,
+
+  // South America
+  'COP': 4200,    // Colombian Peso
+  'BRL': 5.00,    // Brazilian Real
+  'ARS': 850,     // Argentine Peso (volatile)
+  'CLP': 900,     // Chilean Peso
+  'PEN': 3.80,    // Peruvian Sol
+  'UYU': 40,      // Uruguayan Peso
+  'PYG': 7500,    // Paraguayan Guarani
+  'BOB': 6.90,    // Bolivian Boliviano
+  'VES': 36,      // Venezuelan Bolivar
+
+  // Central America
+  'GTQ': 7.80,    // Guatemalan Quetzal
+  'HNL': 25,      // Honduran Lempira
+  'NIO': 36.70,   // Nicaraguan Cordoba
+  'CRC': 530,     // Costa Rican Colon
+  'PAB': 1,       // Panamanian Balboa (pegged to USD)
+  'DOP': 58,      // Dominican Peso
+}
+
+// Currency symbols for display
+export const CURRENCY_SYMBOLS: Record<string, string> = {
+  'USD': '$',
+  'CAD': 'CA$',
+  'MXN': 'MX$',
+  'EUR': '€',
+  'GBP': '£',
+  'COP': '$',
+  'BRL': 'R$',
+  'ARS': '$',
+  'CLP': '$',
+  'PEN': 'S/',
+  'UYU': '$',
+  'PYG': '₲',
+  'BOB': 'Bs',
+  'VES': 'Bs',
+  'GTQ': 'Q',
+  'HNL': 'L',
+  'NIO': 'C$',
+  'CRC': '₡',
+  'PAB': 'B/.',
+  'DOP': 'RD$',
+}
+
+/**
+ * Convert USD price to local currency
+ *
+ * @param usdPrice - Price in USD
+ * @param currency - Target currency code
+ * @returns Price in local currency
+ */
+export function convertToLocalCurrency(usdPrice: number, currency: string): number {
+  const rate = EXCHANGE_RATES[currency] || 1
+  return usdPrice * rate
+}
+
+/**
+ * Format price in local currency for display
+ *
+ * @param usdPrice - Price in USD (after PPP adjustment)
+ * @param currency - Local currency code
+ * @returns Formatted string with local currency
+ */
+export function formatLocalCurrencyPrice(usdPrice: number, currency: string): string {
+  const localPrice = convertToLocalCurrency(usdPrice, currency)
+
+  // Currencies that don't use decimals
+  const noDecimalCurrencies = ['COP', 'CLP', 'PYG', 'VES', 'HNL', 'NIO', 'CRC']
+  const decimals = noDecimalCurrencies.includes(currency) ? 0 : 2
+
+  // Round appropriately
+  let displayPrice: number
+  if (decimals === 0) {
+    // Round to nearest 100 for large currencies like COP
+    if (currency === 'COP' || currency === 'PYG') {
+      displayPrice = Math.round(localPrice / 100) * 100
+    } else if (currency === 'CLP' || currency === 'CRC') {
+      displayPrice = Math.round(localPrice / 10) * 10
+    } else {
+      displayPrice = Math.round(localPrice)
+    }
+  } else {
+    displayPrice = Math.round(localPrice * 100) / 100
+  }
+
+  // Format with locale
+  const localeMap: Record<string, string> = {
+    'USD': 'en-US',
+    'EUR': 'de-DE',
+    'GBP': 'en-GB',
+    'MXN': 'es-MX',
+    'COP': 'es-CO',
+    'BRL': 'pt-BR',
+    'ARS': 'es-AR',
+    'CLP': 'es-CL',
+    'PEN': 'es-PE',
+    'UYU': 'es-UY',
+    'PYG': 'es-PY',
+  }
+
+  const locale = localeMap[currency] || 'en-US'
+
+  try {
+    return new Intl.NumberFormat(locale, {
+      style: 'currency',
+      currency: currency,
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals
+    }).format(displayPrice)
+  } catch {
+    // Fallback
+    const symbol = CURRENCY_SYMBOLS[currency] || '$'
+    return `${symbol}${displayPrice.toLocaleString()}`
+  }
+}

@@ -7,6 +7,8 @@ import { analyzeFile, checkIpLimit, IpCheckResult } from '@/lib/api'
 import { startAnalysisPolling, getAnalysisStatus } from '@/lib/api'
 import { compressAudioFile } from '@/lib/audio-compression'
 import { supabase, checkCanAnalyze, AnalysisStatus } from '@/lib/supabase'
+import { useGeo } from '@/lib/useGeo'
+import { getPlanDisplayPrice, PRICING } from '@/lib/geoip'
 
 // ============================================================================
 // Helper: Map verdict string to database enum
@@ -245,7 +247,12 @@ function Home() {
   const [reportView, setReportView] = useState<'visual' | 'short' | 'write'>('visual')
   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false)
   const [feedback, setFeedback] = useState({ rating: 0, liked: '', change: '', add: '' })
-  
+
+  // Geo detection for regional pricing
+  const { geo } = useGeo()
+  const proPrice = getPlanDisplayPrice(PRICING.PRO_MONTHLY, geo)
+  const singlePrice = getPlanDisplayPrice(PRICING.SINGLE, geo)
+
   // Store request ID for PDF download
   const requestIdRef = useRef<string>('')
 
@@ -3875,8 +3882,22 @@ by Matías Carvajal
                 fontWeight: '600',
                 marginBottom: '0.5rem'
               }}>
-                {lang === 'es' ? 'MasteringReady Pro - $9.99/mes' : 'MasteringReady Pro - $9.99/mo'}
+                MasteringReady Pro - {proPrice.showLocal ? (
+                  <>~{proPrice.formattedLocal}/{lang === 'es' ? 'mes' : 'mo'}</>
+                ) : (
+                  <>{proPrice.formatted}/{lang === 'es' ? 'mes' : 'mo'}</>
+                )}
               </p>
+              {proPrice.showLocal && (
+                <p style={{
+                  fontSize: '0.7rem',
+                  color: '#7c3aed',
+                  marginBottom: '0.5rem',
+                  fontStyle: 'italic'
+                }}>
+                  ({proPrice.formatted} USD)
+                </p>
+              )}
               <ul style={{
                 margin: 0,
                 paddingLeft: '1.25rem',
@@ -3928,7 +3949,7 @@ by Matías Carvajal
                   boxSizing: 'border-box'
                 }}
               >
-                {lang === 'es' ? 'Comprar 1 análisis ($5.99)' : 'Buy 1 analysis ($5.99)'}
+                {lang === 'es' ? 'Comprar 1 análisis' : 'Buy 1 analysis'} ({singlePrice.showLocal ? `~${singlePrice.formattedLocal}` : singlePrice.formatted})
               </a>
             </div>
           </div>
