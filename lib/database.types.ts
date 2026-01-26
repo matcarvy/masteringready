@@ -15,7 +15,7 @@ export type Json =
   | Json[]
 
 // Enum types
-export type PlanType = 'free' | 'pro' | 'studio'
+export type PlanType = 'free' | 'pro' | 'studio' | 'single' | 'addon'
 export type SubscriptionStatus = 'active' | 'canceled' | 'past_due' | 'trialing' | 'paused'
 export type PaymentStatus = 'pending' | 'succeeded' | 'failed' | 'refunded'
 export type AnalysisVerdict = 'ready' | 'almost_ready' | 'needs_work' | 'critical'
@@ -39,9 +39,15 @@ export interface Database {
           type: PlanType
           price_monthly: number
           price_yearly: number | null
+          price_usd_benchmark: number | null
           stripe_price_id_monthly: string | null
           stripe_price_id_yearly: string | null
           analyses_per_month: number
+          analyses_total: number | null
+          is_lifetime_limit: boolean
+          is_addon: boolean
+          requires_subscription_type: PlanType | null
+          max_per_cycle: number | null
           reference_comparisons_per_day: number
           batch_processing: boolean
           api_access: boolean
@@ -63,9 +69,15 @@ export interface Database {
           type: PlanType
           price_monthly?: number
           price_yearly?: number | null
+          price_usd_benchmark?: number | null
           stripe_price_id_monthly?: string | null
           stripe_price_id_yearly?: string | null
           analyses_per_month?: number
+          analyses_total?: number | null
+          is_lifetime_limit?: boolean
+          is_addon?: boolean
+          requires_subscription_type?: PlanType | null
+          max_per_cycle?: number | null
           reference_comparisons_per_day?: number
           batch_processing?: boolean
           api_access?: boolean
@@ -87,9 +99,15 @@ export interface Database {
           type?: PlanType
           price_monthly?: number
           price_yearly?: number | null
+          price_usd_benchmark?: number | null
           stripe_price_id_monthly?: string | null
           stripe_price_id_yearly?: string | null
           analyses_per_month?: number
+          analyses_total?: number | null
+          is_lifetime_limit?: boolean
+          is_addon?: boolean
+          requires_subscription_type?: PlanType | null
+          max_per_cycle?: number | null
           reference_comparisons_per_day?: number
           batch_processing?: boolean
           api_access?: boolean
@@ -115,10 +133,14 @@ export interface Database {
           preferred_language: string
           total_analyses: number
           analyses_this_month: number
+          analyses_lifetime_used: number
           last_analysis_at: string | null
           default_strict_mode: boolean
           default_report_mode: string
           email_notifications: boolean
+          country_code: string | null
+          detected_country_code: string | null
+          country_detected_at: string | null
           created_at: string
           updated_at: string
         }
@@ -130,10 +152,14 @@ export interface Database {
           preferred_language?: string
           total_analyses?: number
           analyses_this_month?: number
+          analyses_lifetime_used?: number
           last_analysis_at?: string | null
           default_strict_mode?: boolean
           default_report_mode?: string
           email_notifications?: boolean
+          country_code?: string | null
+          detected_country_code?: string | null
+          country_detected_at?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -145,10 +171,14 @@ export interface Database {
           preferred_language?: string
           total_analyses?: number
           analyses_this_month?: number
+          analyses_lifetime_used?: number
           last_analysis_at?: string | null
           default_strict_mode?: boolean
           default_report_mode?: string
           email_notifications?: boolean
+          country_code?: string | null
+          detected_country_code?: string | null
+          country_detected_at?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -166,6 +196,9 @@ export interface Database {
           current_period_end: string
           trial_end: string | null
           canceled_at: string | null
+          analyses_used_this_cycle: number
+          addon_analyses_remaining: number
+          addon_packs_this_cycle: number
           created_at: string
           updated_at: string
         }
@@ -181,6 +214,9 @@ export interface Database {
           current_period_end: string
           trial_end?: string | null
           canceled_at?: string | null
+          analyses_used_this_cycle?: number
+          addon_analyses_remaining?: number
+          addon_packs_this_cycle?: number
           created_at?: string
           updated_at?: string
         }
@@ -196,6 +232,9 @@ export interface Database {
           current_period_end?: string
           trial_end?: string | null
           canceled_at?: string | null
+          analyses_used_this_cycle?: number
+          addon_analyses_remaining?: number
+          addon_packs_this_cycle?: number
           created_at?: string
           updated_at?: string
         }
@@ -409,6 +448,99 @@ export interface Database {
           created_at?: string
         }
       }
+      // Purchases - One-off purchases (single analysis, addon packs)
+      purchases: {
+        Row: {
+          id: string
+          user_id: string
+          plan_id: string
+          stripe_payment_intent_id: string | null
+          stripe_checkout_session_id: string | null
+          amount: number
+          currency: string
+          country_code: string | null
+          analyses_granted: number
+          analyses_used: number
+          status: PaymentStatus
+          subscription_id: string | null
+          created_at: string
+          expires_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          plan_id: string
+          stripe_payment_intent_id?: string | null
+          stripe_checkout_session_id?: string | null
+          amount: number
+          currency?: string
+          country_code?: string | null
+          analyses_granted?: number
+          analyses_used?: number
+          status?: PaymentStatus
+          subscription_id?: string | null
+          created_at?: string
+          expires_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          plan_id?: string
+          stripe_payment_intent_id?: string | null
+          stripe_checkout_session_id?: string | null
+          amount?: number
+          currency?: string
+          country_code?: string | null
+          analyses_granted?: number
+          analyses_used?: number
+          status?: PaymentStatus
+          subscription_id?: string | null
+          created_at?: string
+          expires_at?: string | null
+          updated_at?: string
+        }
+      }
+      // Regional Pricing - PPP-adjusted pricing by country
+      regional_pricing: {
+        Row: {
+          id: string
+          country_code: string
+          currency: string
+          multiplier: number
+          tier: number
+          payment_provider: string
+          is_active: boolean
+          notes: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          country_code: string
+          currency: string
+          multiplier?: number
+          tier?: number
+          payment_provider?: string
+          is_active?: boolean
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          country_code?: string
+          currency?: string
+          multiplier?: number
+          tier?: number
+          payment_provider?: string
+          is_active?: boolean
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
       // User Feedback / Retroalimentación de Usuarios
       user_feedback: {
         Row: {
@@ -537,14 +669,59 @@ export interface Database {
     Functions: {
       can_user_analyze: {
         Args: { p_user_id: string }
-        Returns: boolean
+        Returns: {
+          can_analyze: boolean
+          reason: string
+          analyses_used: number
+          analyses_limit: number
+          is_lifetime: boolean
+        }[]
       }
       increment_analysis_count: {
         Args: { p_user_id: string }
-        Returns: undefined
+        Returns: {
+          success: boolean
+          source: string
+        }[]
       }
       reset_monthly_counters: {
         Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      can_buy_addon: {
+        Args: { p_user_id: string }
+        Returns: {
+          can_buy: boolean
+          reason: string
+          packs_this_cycle: number
+          max_packs: number
+        }[]
+      }
+      get_user_analysis_status: {
+        Args: { p_user_id: string }
+        Returns: {
+          plan_type: PlanType
+          plan_name: string
+          is_lifetime: boolean
+          analyses_used: number
+          analyses_limit: number
+          addon_remaining: number
+          addon_packs_available: number
+          can_analyze: boolean
+          subscription_status: SubscriptionStatus
+          current_period_end: string
+        }[]
+      }
+      use_single_purchase: {
+        Args: { p_user_id: string; p_purchase_id: string }
+        Returns: boolean
+      }
+      add_addon_pack: {
+        Args: { p_user_id: string; p_purchase_id: string }
+        Returns: boolean
+      }
+      reset_subscription_cycle: {
+        Args: { p_user_id: string; p_new_period_start: string; p_new_period_end: string }
         Returns: undefined
       }
     }
@@ -569,6 +746,8 @@ export type Analysis = Database['public']['Tables']['analyses']['Row']
 export type UsageTracking = Database['public']['Tables']['usage_tracking']['Row']
 export type Payment = Database['public']['Tables']['payments']['Row']
 export type ApiKey = Database['public']['Tables']['api_keys']['Row']
+export type Purchase = Database['public']['Tables']['purchases']['Row']
+export type RegionalPricing = Database['public']['Tables']['regional_pricing']['Row']
 
 // Insert types
 export type PlanInsert = Database['public']['Tables']['plans']['Insert']
@@ -578,6 +757,8 @@ export type AnalysisInsert = Database['public']['Tables']['analyses']['Insert']
 export type UsageTrackingInsert = Database['public']['Tables']['usage_tracking']['Insert']
 export type PaymentInsert = Database['public']['Tables']['payments']['Insert']
 export type ApiKeyInsert = Database['public']['Tables']['api_keys']['Insert']
+export type PurchaseInsert = Database['public']['Tables']['purchases']['Insert']
+export type RegionalPricingInsert = Database['public']['Tables']['regional_pricing']['Insert']
 
 // Update types
 export type PlanUpdate = Database['public']['Tables']['plans']['Update']
@@ -587,6 +768,22 @@ export type AnalysisUpdate = Database['public']['Tables']['analyses']['Update']
 export type UsageTrackingUpdate = Database['public']['Tables']['usage_tracking']['Update']
 export type PaymentUpdate = Database['public']['Tables']['payments']['Update']
 export type ApiKeyUpdate = Database['public']['Tables']['api_keys']['Update']
+export type PurchaseUpdate = Database['public']['Tables']['purchases']['Update']
+export type RegionalPricingUpdate = Database['public']['Tables']['regional_pricing']['Update']
+
+// User analysis status (from get_user_analysis_status function)
+export type UserAnalysisStatus = {
+  plan_type: PlanType
+  plan_name: string
+  is_lifetime: boolean
+  analyses_used: number
+  analyses_limit: number
+  addon_remaining: number
+  addon_packs_available: number
+  can_analyze: boolean
+  subscription_status: SubscriptionStatus
+  current_period_end: string
+}
 export type UserFeedbackUpdate = Database['public']['Tables']['user_feedback']['Update']
 export type FeedbackVoteUpdate = Database['public']['Tables']['feedback_votes']['Update']
 

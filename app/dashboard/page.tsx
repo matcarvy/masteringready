@@ -10,7 +10,9 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth, UserMenu } from '@/components/auth'
-import { supabase } from '@/lib/supabase'
+import { supabase, getUserAnalysisStatus, checkCanBuyAddon, UserDashboardStatus } from '@/lib/supabase'
+import { useGeo } from '@/lib/useGeo'
+import { calculateLocalPrice, PRICING } from '@/lib/geoip'
 import {
   Music,
   FileAudio,
@@ -78,7 +80,16 @@ const translations = {
       'Procesamiento prioritario'
     ],
     monthlyPrice: '$9.99/mes',
-    getProNow: 'Obtener Pro'
+    getProNow: 'Obtener Pro',
+    freeAnalysesLeft: 'análisis gratis restantes',
+    lifetimeLimit: 'de por vida',
+    proAnalysesLeft: 'análisis este mes',
+    proLimit: 'de 30',
+    addonAvailable: 'Necesitas más? Compra un paquete adicional',
+    buyAddon: 'Comprar 10 análisis ($3.99)',
+    singlePurchase: 'Comprar 1 análisis ($5.99)',
+    limitReached: 'Límite alcanzado',
+    upgradeNow: 'Actualizar ahora'
   },
   en: {
     dashboard: 'Dashboard',
@@ -125,7 +136,16 @@ const translations = {
       'Priority processing'
     ],
     monthlyPrice: '$9.99/month',
-    getProNow: 'Get Pro'
+    getProNow: 'Get Pro',
+    freeAnalysesLeft: 'free analyses remaining',
+    lifetimeLimit: 'lifetime',
+    proAnalysesLeft: 'analyses this month',
+    proLimit: 'of 30',
+    addonAvailable: 'Need more? Buy an add-on pack',
+    buyAddon: 'Buy 10 analyses ($3.99)',
+    singlePurchase: 'Buy 1 analysis ($5.99)',
+    limitReached: 'Limit reached',
+    upgradeNow: 'Upgrade now'
   }
 }
 
@@ -152,12 +172,24 @@ interface Profile {
   email: string
   total_analyses: number
   analyses_this_month: number
+  analyses_lifetime_used: number
   preferred_language: string
 }
+
+// Dashboard state types per spec
+type DashboardState =
+  | 'new_user'        // 0 analyses, show 2 free available
+  | 'has_analyses'    // Has analyses, show history
+  | 'free_limit_reached' // Free user, 2 used, upgrade CTA
+  | 'pro_active'      // Pro with analyses remaining
+  | 'pro_limit_reached' // Pro at 30, addon CTA
+  | 'pro_expired'     // Pro cancelled, read-only
 
 interface Subscription {
   id: string
   status: string
+  stripe_subscription_id: string | null
+  stripe_customer_id: string | null
   plan: {
     type: 'free' | 'pro' | 'studio'
     name: string
@@ -180,9 +212,18 @@ export default function DashboardPage() {
   const [selectedAnalysis, setSelectedAnalysis] = useState<Analysis | null>(null)
   const [reportTab, setReportTab] = useState<'rapid' | 'summary' | 'complete'>('rapid')
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
+  const [userStatus, setUserStatus] = useState<UserDashboardStatus | null>(null)
+  const [dashboardState, setDashboardState] = useState<DashboardState>('new_user')
+  const [canBuyAddon, setCanBuyAddon] = useState(false)
 
+  const { geo } = useGeo()
   const t = translations[lang]
   const isPro = subscription?.plan?.type === 'pro' || subscription?.plan?.type === 'studio'
+
+  // Calculate regional prices
+  const proPrice = calculateLocalPrice(PRICING.PRO_MONTHLY, geo)
+  const singlePrice = calculateLocalPrice(PRICING.SINGLE, geo)
+  const addonPrice = calculateLocalPrice(PRICING.ADDON_PACK, geo)
 
   // Detect language
   useEffect(() => {
@@ -248,6 +289,38 @@ export default function DashboardPage() {
         if (analysesData) {
           setAnalyses(analysesData)
         }
+
+        // Fetch user analysis status
+        const status = await getUserAnalysisStatus()
+        if (status) {
+          setUserStatus(status)
+
+          // Determine dashboard state based on spec
+          if (status.subscription_status === 'canceled' || status.subscription_status === 'past_due') {
+            setDashboardState('pro_expired')
+          } else if (status.plan_type === 'pro' || status.plan_type === 'studio') {
+            if (status.analyses_used >= 30 && status.addon_remaining === 0) {
+              setDashboardState('pro_limit_reached')
+            } else {
+              setDashboardState('pro_active')
+            }
+          } else {
+            // Free plan
+            if (status.analyses_used >= 2) {
+              setDashboardState('free_limit_reached')
+            } else if (status.analyses_used === 0 && (!analysesData || analysesData.length === 0)) {
+              setDashboardState('new_user')
+            } else {
+              setDashboardState('has_analyses')
+            }
+          }
+
+          // Check if Pro user can buy addon
+          if (status.plan_type === 'pro') {
+            const addonCheck = await checkCanBuyAddon()
+            setCanBuyAddon(addonCheck.can_buy)
+          }
+        }
       } catch (error) {
         console.error('Error fetching dashboard data:', error)
       } finally {
@@ -296,6 +369,51 @@ export default function DashboardPage() {
       return
     }
     setReportTab(tab)
+  }
+
+  // Handle Stripe checkout
+  const handleCheckout = async (productType: 'pro_monthly' | 'single' | 'addon') => {
+    try {
+      const response = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          productType,
+          countryCode: geo.countryCode
+        })
+      })
+
+      const data = await response.json()
+
+      if (data.url) {
+        window.location.href = data.url
+      } else {
+        console.error('Checkout error:', data.error)
+        alert(lang === 'es' ? 'Error al iniciar el pago' : 'Error starting payment')
+      }
+    } catch (error) {
+      console.error('Checkout error:', error)
+      alert(lang === 'es' ? 'Error al iniciar el pago' : 'Error starting payment')
+    }
+  }
+
+  // Handle customer portal
+  const handleManageSubscription = async () => {
+    try {
+      const response = await fetch('/api/customer-portal', {
+        method: 'POST'
+      })
+
+      const data = await response.json()
+
+      if (data.url) {
+        window.location.href = data.url
+      } else {
+        console.error('Portal error:', data.error)
+      }
+    } catch (error) {
+      console.error('Portal error:', error)
+    }
   }
 
   // Loading state
@@ -491,25 +609,99 @@ export default function DashboardPage() {
                 {t.upgradeToPro}
               </button>
             )}
+            {isPro && subscription?.stripe_subscription_id && (
+              <button
+                onClick={handleManageSubscription}
+                style={{
+                  marginTop: '0.75rem',
+                  padding: '0.5rem 1rem',
+                  background: 'transparent',
+                  color: '#6b7280',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '0.5rem',
+                  fontSize: '0.75rem',
+                  fontWeight: '500',
+                  cursor: 'pointer'
+                }}
+              >
+                {lang === 'es' ? 'Administrar suscripción' : 'Manage subscription'}
+              </button>
+            )}
           </div>
 
-          {/* Analyses This Month */}
+          {/* Analyses Remaining - Updated per spec */}
           <div style={{
             background: 'white',
             borderRadius: '1rem',
             padding: '1.5rem',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+            ...(dashboardState === 'free_limit_reached' || dashboardState === 'pro_limit_reached' ? {
+              border: '2px solid #f59e0b'
+            } : {})
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
-              <Clock size={20} style={{ color: '#3b82f6' }} />
-              <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>{t.analysesThisMonth}</span>
+              <Clock size={20} style={{ color: dashboardState.includes('limit') ? '#f59e0b' : '#3b82f6' }} />
+              <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+                {isPro ? t.proAnalysesLeft : t.freeAnalysesLeft}
+              </span>
             </div>
             <p style={{ fontSize: '1.5rem', fontWeight: '700', color: '#111827' }}>
-              {isPro ? '∞' : Math.max(0, 2 - (profile?.total_analyses || 0))}
-              <span style={{ fontSize: '0.875rem', fontWeight: '400', color: '#6b7280' }}>
-                {isPro ? '' : ' / 2'}
-              </span>
+              {isPro ? (
+                <>
+                  {userStatus ? Math.max(0, 30 - userStatus.analyses_used + userStatus.addon_remaining) : 30}
+                  <span style={{ fontSize: '0.875rem', fontWeight: '400', color: '#6b7280' }}>
+                    {' '}{t.proLimit}
+                  </span>
+                </>
+              ) : (
+                <>
+                  {userStatus ? Math.max(0, 2 - userStatus.analyses_used) : 2}
+                  <span style={{ fontSize: '0.875rem', fontWeight: '400', color: '#6b7280' }}>
+                    {' / 2 '}{t.lifetimeLimit}
+                  </span>
+                </>
+              )}
             </p>
+            {/* Limit reached CTAs */}
+            {dashboardState === 'free_limit_reached' && (
+              <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <button
+                  onClick={() => setShowUpgradeModal(true)}
+                  style={{
+                    padding: '0.5rem',
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '0.375rem',
+                    fontSize: '0.75rem',
+                    fontWeight: '600',
+                    cursor: 'pointer'
+                  }}
+                >
+                  {t.upgradeNow}
+                </button>
+              </div>
+            )}
+            {dashboardState === 'pro_limit_reached' && canBuyAddon && (
+              <div style={{ marginTop: '0.75rem' }}>
+                <button
+                  onClick={() => handleCheckout('addon')}
+                  style={{
+                    padding: '0.5rem',
+                    background: '#f59e0b',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '0.375rem',
+                    fontSize: '0.75rem',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    width: '100%'
+                  }}
+                >
+                  {t.buyAddon}
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Total Analyses */}
@@ -996,15 +1188,15 @@ export default function DashboardPage() {
                 fontWeight: '700',
                 color: '#111827'
               }}>
-                {t.monthlyPrice}
+                ${proPrice.toFixed(2)}/{lang === 'es' ? 'mes' : 'month'}
               </span>
             </div>
 
             {/* CTA Button */}
             <button
               onClick={() => {
-                // TODO: Implement Stripe checkout
-                alert(lang === 'es' ? 'Próximamente! Stripe checkout' : 'Coming soon! Stripe checkout')
+                setShowUpgradeModal(false)
+                handleCheckout('pro_monthly')
               }}
               style={{
                 width: '100%',
@@ -1025,6 +1217,36 @@ export default function DashboardPage() {
               <Crown size={18} />
               {t.getProNow}
             </button>
+
+            {/* Single purchase option */}
+            <div style={{
+              textAlign: 'center',
+              marginTop: '1rem',
+              paddingTop: '1rem',
+              borderTop: '1px solid #e5e7eb'
+            }}>
+              <p style={{ fontSize: '0.8rem', color: '#6b7280', marginBottom: '0.5rem' }}>
+                {lang === 'es' ? 'O compra un análisis individual' : 'Or buy a single analysis'}
+              </p>
+              <button
+                onClick={() => {
+                  setShowUpgradeModal(false)
+                  handleCheckout('single')
+                }}
+                style={{
+                  padding: '0.5rem 1rem',
+                  background: 'transparent',
+                  color: '#667eea',
+                  border: '1px solid #667eea',
+                  borderRadius: '0.375rem',
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  cursor: 'pointer'
+                }}
+              >
+                ${singlePrice.toFixed(2)} - {lang === 'es' ? '1 análisis' : '1 analysis'}
+              </button>
+            </div>
           </div>
         </div>
       )}

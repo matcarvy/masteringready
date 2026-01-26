@@ -6,7 +6,7 @@ import { UserMenu, useAuth, AuthModal } from '@/components/auth'
 import { analyzeFile, checkIpLimit, IpCheckResult } from '@/lib/api'
 import { startAnalysisPolling, getAnalysisStatus } from '@/lib/api'
 import { compressAudioFile } from '@/lib/audio-compression'
-import { supabase } from '@/lib/supabase'
+import { supabase, checkCanAnalyze, AnalysisStatus } from '@/lib/supabase'
 
 // ============================================================================
 // Helper: Map verdict string to database enum
@@ -249,6 +249,8 @@ function Home() {
   const [showIpLimitModal, setShowIpLimitModal] = useState(false)
   const [showVpnModal, setShowVpnModal] = useState(false)
   const [vpnServiceName, setVpnServiceName] = useState<string | null>(null)
+  const [showFreeLimitModal, setShowFreeLimitModal] = useState(false)
+  const [userAnalysisStatus, setUserAnalysisStatus] = useState<AnalysisStatus | null>(null)
   const [reportView, setReportView] = useState<'visual' | 'short' | 'write'>('visual')
   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false)
   const [feedback, setFeedback] = useState({ rating: 0, liked: '', change: '', add: '' })
@@ -471,6 +473,25 @@ const handleAnalyze = async () => {
       } catch (ipError) {
         // If IP check fails, allow analysis (feature may not be deployed)
         console.warn('IP check failed, allowing analysis:', ipError)
+      }
+    } else {
+      // ============================================================
+      // USER LIMIT CHECK (for logged-in users)
+      // ============================================================
+      try {
+        const analysisStatus = await checkCanAnalyze()
+        setUserAnalysisStatus(analysisStatus)
+
+        if (!analysisStatus.can_analyze) {
+          setLoading(false)
+
+          // Show the free limit modal with upgrade options
+          setShowFreeLimitModal(true)
+          return
+        }
+      } catch (statusError) {
+        // If status check fails, allow analysis (graceful degradation)
+        console.warn('User status check failed, allowing analysis:', statusError)
       }
     }
     // ============================================================
@@ -3758,6 +3779,165 @@ by Matías Carvajal
                 }}
               >
                 {lang === 'es' ? 'Ya tengo cuenta' : 'I have an account'}
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Free Limit Reached Modal - Logged-in user used all free analyses */}
+      {showFreeLimitModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 100,
+          padding: '1rem'
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '1rem',
+            padding: '2rem',
+            maxWidth: '420px',
+            width: '100%',
+            position: 'relative',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+          }}>
+            {/* Close button */}
+            <button
+              onClick={() => setShowFreeLimitModal(false)}
+              style={{
+                position: 'absolute',
+                top: '1rem',
+                right: '1rem',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                color: '#6b7280',
+                padding: '0.25rem'
+              }}
+            >
+              <X size={20} />
+            </button>
+
+            {/* Lock Icon */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'center',
+              marginBottom: '1rem'
+            }}>
+              <div style={{
+                width: '48px',
+                height: '48px',
+                background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <Lock size={24} style={{ color: '#d97706' }} />
+              </div>
+            </div>
+
+            {/* Title */}
+            <h3 style={{
+              fontSize: '1.375rem',
+              fontWeight: '700',
+              textAlign: 'center',
+              marginBottom: '0.75rem',
+              color: '#111827'
+            }}>
+              {lang === 'es' ? 'Alcanzaste tu límite gratuito' : 'You reached your free limit'}
+            </h3>
+
+            {/* Description */}
+            <p style={{
+              fontSize: '1rem',
+              color: '#6b7280',
+              textAlign: 'center',
+              marginBottom: '1.5rem',
+              lineHeight: '1.5'
+            }}>
+              {lang === 'es'
+                ? `Has usado ${userAnalysisStatus?.analyses_used || 2} de ${userAnalysisStatus?.analyses_limit || 2} análisis gratuitos de por vida. Mejora a Pro o compra un análisis individual para continuar.`
+                : `You've used ${userAnalysisStatus?.analyses_used || 2} of ${userAnalysisStatus?.analyses_limit || 2} lifetime free analyses. Upgrade to Pro or buy a single analysis to continue.`}
+            </p>
+
+            {/* Pro Plan Highlight */}
+            <div style={{
+              background: 'linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%)',
+              borderRadius: '0.75rem',
+              padding: '1rem',
+              marginBottom: '1rem',
+              border: '1px solid #c4b5fd'
+            }}>
+              <p style={{
+                fontSize: '0.875rem',
+                color: '#5b21b6',
+                fontWeight: '600',
+                marginBottom: '0.5rem'
+              }}>
+                {lang === 'es' ? 'MasteringReady Pro - $9.99/mes' : 'MasteringReady Pro - $9.99/mo'}
+              </p>
+              <ul style={{
+                margin: 0,
+                paddingLeft: '1.25rem',
+                fontSize: '0.875rem',
+                color: '#7c3aed',
+                lineHeight: '1.6'
+              }}>
+                <li>{lang === 'es' ? '30 análisis al mes' : '30 analyses per month'}</li>
+                <li>{lang === 'es' ? 'Reportes PDF completos' : 'Full PDF reports'}</li>
+                <li>{lang === 'es' ? 'Procesamiento prioritario' : 'Priority processing'}</li>
+              </ul>
+            </div>
+
+            {/* CTA Buttons */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              <a
+                href={`/dashboard?upgrade=pro&lang=${lang}`}
+                style={{
+                  display: 'block',
+                  width: '100%',
+                  padding: '0.875rem',
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  color: 'white',
+                  textAlign: 'center',
+                  textDecoration: 'none',
+                  borderRadius: '0.5rem',
+                  fontWeight: '600',
+                  fontSize: '1rem',
+                  boxSizing: 'border-box'
+                }}
+              >
+                {lang === 'es' ? 'Actualizar a Pro' : 'Upgrade to Pro'}
+              </a>
+
+              <a
+                href={`/dashboard?upgrade=single&lang=${lang}`}
+                style={{
+                  display: 'block',
+                  width: '100%',
+                  padding: '0.875rem',
+                  background: 'transparent',
+                  color: '#667eea',
+                  textAlign: 'center',
+                  textDecoration: 'none',
+                  borderRadius: '0.5rem',
+                  fontWeight: '600',
+                  fontSize: '1rem',
+                  border: '2px solid #667eea',
+                  boxSizing: 'border-box'
+                }}
+              >
+                {lang === 'es' ? 'Comprar 1 análisis ($5.99)' : 'Buy 1 analysis ($5.99)'}
               </a>
             </div>
           </div>

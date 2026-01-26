@@ -180,16 +180,33 @@ export async function getCurrentSubscription() {
 }
 
 /**
+ * Analysis status result from database function
+ */
+export interface AnalysisStatus {
+  can_analyze: boolean
+  reason: string
+  analyses_used: number
+  analyses_limit: number
+  is_lifetime: boolean
+}
+
+/**
  * Check if user can perform analysis (within limits)
+ * Returns detailed status including reason and limits
  * Verificar si el usuario puede realizar análisis (dentro de límites)
  */
-export async function canUserAnalyze(): Promise<boolean> {
+export async function checkCanAnalyze(): Promise<AnalysisStatus> {
   const user = await getCurrentUser()
 
   if (!user) {
-    // Anonymous users can analyze (tracked differently)
-    // Usuarios anónimos pueden analizar (rastreados de manera diferente)
-    return true
+    // Anonymous users can analyze (tracked differently via IP)
+    return {
+      can_analyze: true,
+      reason: 'ANONYMOUS',
+      analyses_used: 0,
+      analyses_limit: 1,
+      is_lifetime: false
+    }
   }
 
   const { data, error } = await supabase.rpc('can_user_analyze', {
@@ -197,11 +214,149 @@ export async function canUserAnalyze(): Promise<boolean> {
   })
 
   if (error) {
-    console.error('Error checking analysis limit / Error verificando límite de análisis:', error)
-    return false
+    console.error('Error checking analysis limit:', error)
+    return {
+      can_analyze: false,
+      reason: 'ERROR',
+      analyses_used: 0,
+      analyses_limit: 0,
+      is_lifetime: false
+    }
   }
 
-  return data ?? false
+  // The function returns an array with one row
+  const result = Array.isArray(data) ? data[0] : data
+  return result || {
+    can_analyze: false,
+    reason: 'NO_DATA',
+    analyses_used: 0,
+    analyses_limit: 0,
+    is_lifetime: false
+  }
+}
+
+/**
+ * Legacy function for backwards compatibility
+ * @deprecated Use checkCanAnalyze() instead
+ */
+export async function canUserAnalyze(): Promise<boolean> {
+  const status = await checkCanAnalyze()
+  return status.can_analyze
+}
+
+/**
+ * User analysis status for dashboard display
+ */
+export interface UserDashboardStatus {
+  plan_type: string
+  plan_name: string
+  is_lifetime: boolean
+  analyses_used: number
+  analyses_limit: number
+  addon_remaining: number
+  addon_packs_available: number
+  can_analyze: boolean
+  subscription_status: string
+  current_period_end: string | null
+}
+
+/**
+ * Get complete user analysis status for dashboard
+ * Obtener estado completo de análisis del usuario para dashboard
+ */
+export async function getUserAnalysisStatus(): Promise<UserDashboardStatus | null> {
+  const user = await getCurrentUser()
+
+  if (!user) return null
+
+  const { data, error } = await supabase.rpc('get_user_analysis_status', {
+    p_user_id: user.id
+  })
+
+  if (error) {
+    console.error('Error getting user status:', error)
+    return null
+  }
+
+  // The function returns an array with one row
+  const result = Array.isArray(data) ? data[0] : data
+  return result || null
+}
+
+/**
+ * Get user's available single purchases (unused)
+ * Obtener compras individuales disponibles del usuario
+ */
+export async function getAvailablePurchases() {
+  const user = await getCurrentUser()
+
+  if (!user) return []
+
+  const { data, error } = await supabase
+    .from('purchases')
+    .select('*')
+    .eq('user_id', user.id)
+    .eq('status', 'succeeded')
+    .gt('analyses_granted', supabase.rpc('coalesce', { col: 'analyses_used', default_val: 0 }))
+
+  if (error) {
+    // Fallback query without the comparison
+    const { data: fallbackData } = await supabase
+      .from('purchases')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('status', 'succeeded')
+
+    return (fallbackData || []).filter((p: { analyses_granted: number; analyses_used: number }) =>
+      p.analyses_granted > (p.analyses_used || 0)
+    )
+  }
+
+  return data || []
+}
+
+/**
+ * Check if Pro user can buy addon pack
+ * Verificar si usuario Pro puede comprar paquete adicional
+ */
+export async function checkCanBuyAddon(): Promise<{
+  can_buy: boolean
+  reason: string
+  packs_this_cycle: number
+  max_packs: number
+}> {
+  const user = await getCurrentUser()
+
+  if (!user) {
+    return {
+      can_buy: false,
+      reason: 'NOT_LOGGED_IN',
+      packs_this_cycle: 0,
+      max_packs: 0
+    }
+  }
+
+  const { data, error } = await supabase.rpc('can_buy_addon', {
+    p_user_id: user.id
+  })
+
+  if (error) {
+    console.error('Error checking addon eligibility:', error)
+    return {
+      can_buy: false,
+      reason: 'ERROR',
+      packs_this_cycle: 0,
+      max_packs: 2
+    }
+  }
+
+  const result = Array.isArray(data) ? data[0] : data
+  return result || {
+    can_buy: false,
+    reason: 'NO_DATA',
+    packs_this_cycle: 0,
+    max_packs: 2
+  }
 }
 
 // ============================================================================
@@ -264,10 +419,34 @@ export async function saveAnalysis(analysisData: {
   // Increment user's analysis count if logged in
   // Incrementar contador de análisis del usuario si está logueado
   if (user) {
-    await supabase.rpc('increment_analysis_count', { p_user_id: user.id })
+    const { data: incrementResult } = await supabase.rpc('increment_analysis_count', { p_user_id: user.id })
+    // incrementResult contains { success: boolean, source: 'free' | 'pro' | 'addon' | 'single' }
+    console.log('Analysis count incremented:', incrementResult)
   }
 
   return data
+}
+
+/**
+ * Use a single purchase credit for analysis
+ * Usar un crédito de compra individual para análisis
+ */
+export async function useSinglePurchase(purchaseId: string): Promise<boolean> {
+  const user = await getCurrentUser()
+
+  if (!user) return false
+
+  const { data, error } = await supabase.rpc('use_single_purchase', {
+    p_user_id: user.id,
+    p_purchase_id: purchaseId
+  })
+
+  if (error) {
+    console.error('Error using single purchase:', error)
+    return false
+  }
+
+  return data ?? false
 }
 
 /**
