@@ -197,6 +197,61 @@ interface Subscription {
 }
 
 // ============================================================================
+// HELPER: Clean and format report text for display
+// ============================================================================
+
+const cleanReportText = (text: string): string => {
+  if (!text) return ''
+
+  return text
+    // Remove song title header (already shown above)
+    .replace(/^🎵\s*Sobre\s*"[^"]*"\s*\n*/i, '')
+    .replace(/^🎵\s*About\s*"[^"]*"\s*\n*/i, '')
+    // Remove score and verdict lines (already shown in header)
+    .replace(/^Puntuación:\s*\d+\/100\s*\n*/im, '')
+    .replace(/^Score:\s*\d+\/100\s*\n*/im, '')
+    .replace(/^Puntuación MR:\s*\d+\/100\s*\n*/im, '')
+    .replace(/^MR Score:\s*\d+\/100\s*\n*/im, '')
+    .replace(/^Veredicto:\s*[^\n]+\s*\n*/im, '')
+    .replace(/^Verdict:\s*[^\n]+\s*\n*/im, '')
+    // Remove ALL decorative lines (multiple patterns)
+    .replace(/[═─━_]{3,}/g, '')              // Lines with 3+ chars (including underscores)
+    .replace(/^[═─━_\s]+$/gm, '')            // Lines that are ONLY decorative chars
+    .replace(/[═─━]{2,}/g, '')              // Lines with 2+ chars (more aggressive)
+    // Fix headers: Add emojis and proper casing (ONLY if not already present)
+    .replace(/(?<!✅\s)ASPECTOS POSITIVOS/g, '✅ Aspectos Positivos')
+    .replace(/(?<!✅\s)POSITIVE ASPECTS/g, '✅ Positive Aspects')
+    .replace(/(?<!⚠️\s)ASPECTOS PARA REVISAR/g, '⚠️ Aspectos para Revisar')
+    .replace(/(?<!⚠️\s)AREAS TO REVIEW/g, '⚠️ Areas to Review')
+    .replace(/(?<!⚠️\s)ÁREAS A MEJORAR/g, '⚠️ Áreas a Mejorar')
+    .replace(/(?<!⚠️\s)AREAS TO IMPROVE/g, '⚠️ Areas to Improve')
+    // Fix additional headers
+    .replace(/(?<!⚠️\s)SI ESTE ARCHIVO CORRESPONDE A UNA MEZCLA:/g, '⚠️ Si este archivo corresponde a una mezcla:')
+    .replace(/(?<!⚠️\s)IF THIS FILE IS A MIX:/g, '⚠️ If this file is a mix:')
+    .replace(/(?<!✅\s)SI ESTE ES TU MASTER FINAL:/g, '✅ Si este es tu master final:')
+    .replace(/(?<!✅\s)IF THIS IS YOUR FINAL MASTER:/g, '✅ If this is your final master:')
+    // Convert plain checkmarks and arrows to styled ones
+    .replace(/^✓\s*/gm, '• ')
+    .replace(/^→\s*/gm, '• ')
+    // Add recommendation emoji if missing
+    .replace(/(?<!💡\s)Recomendación:/g, '💡 Recomendación:')
+    .replace(/(?<!💡\s)Recommendation:/g, '💡 Recommendation:')
+    // Remove duplicate emojis
+    .replace(/✅\s*✅/g, '✅')
+    .replace(/⚠️\s*⚠️/g, '⚠️')
+    // Remove excessive newlines (max 2 consecutive)
+    .replace(/\n{3,}/g, '\n\n')
+    // Remove lines that are just spaces
+    .split('\n')
+    .map(line => line.trim())
+    .join('\n')
+    // Final cleanup - max 2 newlines
+    .replace(/\n{3,}/g, '\n\n')
+    // Trim
+    .trim()
+}
+
+// ============================================================================
 // COMPONENT
 // ============================================================================
 
@@ -1022,43 +1077,43 @@ export default function DashboardPage() {
               padding: '1.5rem'
             }}>
               {reportTab === 'rapid' && (
-                <pre style={{
+                <div style={{
                   whiteSpace: 'pre-wrap',
                   wordBreak: 'break-word',
                   fontSize: '0.875rem',
-                  lineHeight: '1.6',
+                  lineHeight: '1.8',
                   fontFamily: 'Inter, system-ui, sans-serif',
                   margin: 0,
                   color: '#374151'
                 }}>
-                  {selectedAnalysis.report_visual || (lang === 'es' ? 'No hay datos de análisis rápido disponibles.' : 'No quick analysis data available.')}
-                </pre>
+                  {cleanReportText(selectedAnalysis.report_visual || '') || (lang === 'es' ? 'No hay datos de análisis rápido disponibles.' : 'No quick analysis data available.')}
+                </div>
               )}
               {reportTab === 'summary' && (
-                <pre style={{
+                <div style={{
                   whiteSpace: 'pre-wrap',
                   wordBreak: 'break-word',
                   fontSize: '0.875rem',
-                  lineHeight: '1.6',
+                  lineHeight: '1.8',
                   fontFamily: 'Inter, system-ui, sans-serif',
                   margin: 0,
                   color: '#374151'
                 }}>
-                  {selectedAnalysis.report_short || (lang === 'es' ? 'No hay datos de resumen disponibles.' : 'No summary data available.')}
-                </pre>
+                  {cleanReportText(selectedAnalysis.report_short || '') || (lang === 'es' ? 'No hay datos de resumen disponibles.' : 'No summary data available.')}
+                </div>
               )}
               {reportTab === 'complete' && isPro && (
-                <pre style={{
+                <div style={{
                   whiteSpace: 'pre-wrap',
                   wordBreak: 'break-word',
                   fontSize: '0.875rem',
-                  lineHeight: '1.6',
+                  lineHeight: '1.8',
                   fontFamily: 'Inter, system-ui, sans-serif',
                   margin: 0,
                   color: '#374151'
                 }}>
-                  {selectedAnalysis.report_write || (lang === 'es' ? 'No hay datos de análisis completo disponibles.' : 'No complete analysis data available.')}
-                </pre>
+                  {cleanReportText(selectedAnalysis.report_write || '') || (lang === 'es' ? 'No hay datos de análisis completo disponibles.' : 'No complete analysis data available.')}
+                </div>
               )}
             </div>
           </div>
