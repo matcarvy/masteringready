@@ -80,25 +80,10 @@ async function saveAnalysisToDatabase(userId: string, analysis: any) {
 
   console.log('[SaveAnalysis] Insert successful:', insertedData)
 
-  // Update profile counters
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('total_analyses, analyses_this_month')
-    .eq('id', userId)
-    .single()
-
-  if (profile) {
-    await supabase
-      .from('profiles')
-      .update({
-        total_analyses: (profile.total_analyses || 0) + 1,
-        analyses_this_month: (profile.analyses_this_month || 0) + 1,
-        last_analysis_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', userId)
-    console.log('[SaveAnalysis] Profile counters updated')
-  }
+  // Call increment function which handles all plan-specific counter logic
+  // (updates analyses_lifetime_used for free, analyses_used_this_cycle for pro, etc.)
+  const { data: incrementResult } = await supabase.rpc('increment_analysis_count', { p_user_id: userId })
+  console.log('[SaveAnalysis] Analysis count incremented:', incrementResult)
 
   return insertedData
 }

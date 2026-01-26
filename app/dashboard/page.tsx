@@ -27,7 +27,8 @@ import {
   BarChart3,
   Clock,
   Star,
-  X
+  X,
+  Download
 } from 'lucide-react'
 
 // ============================================================================
@@ -1275,6 +1276,142 @@ export default function DashboardPage() {
                   {cleanReportText(selectedAnalysis.report_write || '') || (lang === 'es' ? 'No hay datos de análisis completo disponibles.' : 'No complete analysis data available.')}
                 </div>
               )}
+
+              {/* Download Buttons */}
+              <div style={{
+                display: 'flex',
+                gap: '0.75rem',
+                marginTop: '1.5rem',
+                paddingTop: '1rem',
+                borderTop: '1px solid #e5e7eb'
+              }}>
+                {/* Download Rápido - Available for all */}
+                {reportTab === 'rapid' && selectedAnalysis.report_visual && (
+                  <button
+                    onClick={() => {
+                      const content = `MasteringReady - Análisis Rápido\n${'='.repeat(40)}\n\nArchivo: ${selectedAnalysis.filename}\nPuntuación: ${selectedAnalysis.score}/100\nFecha: ${new Date(selectedAnalysis.created_at).toLocaleDateString()}\n\n${selectedAnalysis.report_visual}`
+                      const blob = new Blob([content], { type: 'text/plain;charset=utf-8' })
+                      const url = URL.createObjectURL(blob)
+                      const a = document.createElement('a')
+                      a.href = url
+                      a.download = `${selectedAnalysis.filename.replace(/\.[^/.]+$/, '')}_rapido.txt`
+                      a.click()
+                      URL.revokeObjectURL(url)
+                    }}
+                    style={{
+                      flex: 1,
+                      padding: '0.75rem',
+                      background: 'white',
+                      border: '2px solid #e5e7eb',
+                      borderRadius: '0.5rem',
+                      fontSize: '0.875rem',
+                      fontWeight: '500',
+                      color: '#374151',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.5rem'
+                    }}
+                  >
+                    <Download size={16} />
+                    {lang === 'es' ? 'Descargar Rápido' : 'Download Quick'}
+                  </button>
+                )}
+
+                {/* Download Resumen - Available for all */}
+                {reportTab === 'summary' && selectedAnalysis.report_short && (
+                  <button
+                    onClick={() => {
+                      const content = `MasteringReady - Resumen\n${'='.repeat(40)}\n\nArchivo: ${selectedAnalysis.filename}\nPuntuación: ${selectedAnalysis.score}/100\nFecha: ${new Date(selectedAnalysis.created_at).toLocaleDateString()}\n\n${selectedAnalysis.report_short}`
+                      const blob = new Blob([content], { type: 'text/plain;charset=utf-8' })
+                      const url = URL.createObjectURL(blob)
+                      const a = document.createElement('a')
+                      a.href = url
+                      a.download = `${selectedAnalysis.filename.replace(/\.[^/.]+$/, '')}_resumen.txt`
+                      a.click()
+                      URL.revokeObjectURL(url)
+                    }}
+                    style={{
+                      flex: 1,
+                      padding: '0.75rem',
+                      background: 'white',
+                      border: '2px solid #e5e7eb',
+                      borderRadius: '0.5rem',
+                      fontSize: '0.875rem',
+                      fontWeight: '500',
+                      color: '#374151',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.5rem'
+                    }}
+                  >
+                    <Download size={16} />
+                    {lang === 'es' ? 'Descargar Resumen' : 'Download Summary'}
+                  </button>
+                )}
+
+                {/* Download Completo - Pro only */}
+                {reportTab === 'complete' && isPro && selectedAnalysis.report_write && (
+                  <button
+                    onClick={() => {
+                      const content = `MasteringReady - Análisis Completo\n${'='.repeat(40)}\n\nArchivo: ${selectedAnalysis.filename}\nPuntuación: ${selectedAnalysis.score}/100\nFecha: ${new Date(selectedAnalysis.created_at).toLocaleDateString()}\n\n${selectedAnalysis.report_write}`
+                      const blob = new Blob([content], { type: 'text/plain;charset=utf-8' })
+                      const url = URL.createObjectURL(blob)
+                      const a = document.createElement('a')
+                      a.href = url
+                      a.download = `${selectedAnalysis.filename.replace(/\.[^/.]+$/, '')}_completo.txt`
+                      a.click()
+                      URL.revokeObjectURL(url)
+                    }}
+                    style={{
+                      flex: 1,
+                      padding: '0.75rem',
+                      background: 'white',
+                      border: '2px solid #e5e7eb',
+                      borderRadius: '0.5rem',
+                      fontSize: '0.875rem',
+                      fontWeight: '500',
+                      color: '#374151',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.5rem'
+                    }}
+                  >
+                    <Download size={16} />
+                    {lang === 'es' ? 'Descargar Completo' : 'Download Complete'}
+                  </button>
+                )}
+
+                {/* Upgrade prompt for Completo when not Pro */}
+                {reportTab === 'complete' && !isPro && (
+                  <button
+                    onClick={() => setShowUpgradeModal(true)}
+                    style={{
+                      flex: 1,
+                      padding: '0.75rem',
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      border: 'none',
+                      borderRadius: '0.5rem',
+                      fontSize: '0.875rem',
+                      fontWeight: '600',
+                      color: 'white',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.5rem'
+                    }}
+                  >
+                    <Lock size={16} />
+                    {lang === 'es' ? 'Desbloquear Completo' : 'Unlock Complete'}
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>
