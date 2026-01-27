@@ -2668,46 +2668,98 @@ by Matías Carvajal
               {/* CTA for Mastering Service — dynamic from backend based on score */}
               {result.cta_message && result.cta_button && (
                 <div style={{
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  borderRadius: '1rem',
-                  padding: '1.5rem',
-                  color: 'white'
+                  background: 'linear-gradient(to bottom right, #818cf8 0%, #6366f1 100%)',
+                  borderRadius: '1.5rem',
+                  padding: isMobile ? '1.5rem' : '2.5rem 2rem',
+                  color: 'white',
+                  boxShadow: '0 20px 40px rgba(99, 102, 241, 0.2)'
                 }}>
                   <div style={{
                     display: 'flex',
-                    alignItems: isMobile ? 'flex-start' : 'center',
-                    flexDirection: isMobile ? 'column' : 'row',
-                    gap: '1rem'
+                    alignItems: 'flex-start',
+                    gap: '1rem',
+                    marginBottom: '1.5rem'
                   }}>
+                    {/* Icon circle — dynamic based on score */}
+                    <div style={{
+                      width: '4rem',
+                      height: '4rem',
+                      background: 'rgba(255, 255, 255, 0.2)',
+                      borderRadius: '50%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backdropFilter: 'blur(10px)',
+                      flexShrink: 0
+                    }}>
+                      <span style={{ fontSize: '2rem' }}>
+                        {result.score >= 85 ? '🎧' :
+                         result.score >= 60 ? '🔧' :
+                         result.score >= 40 ? '🔍' :
+                         result.score >= 20 ? '🔧' : '💬'}
+                      </span>
+                    </div>
+
+                    {/* Message */}
                     <div style={{ flex: 1 }}>
-                      <h4 style={{ fontSize: '1.1rem', fontWeight: '600', marginBottom: '0.375rem' }}>
+                      <h3 style={{
+                        fontSize: isMobile ? '1.125rem' : '1.375rem',
+                        lineHeight: '1.3',
+                        fontWeight: '600',
+                        marginBottom: '1rem',
+                        marginTop: '0.25rem'
+                      }}>
                         {(() => {
                           let title = result.cta_message.split('\n')[0]
                           title = title.replace(/^[\p{Emoji}\p{Symbol}\p{Punctuation}\s]+/gu, '')
                           return title
                         })()}
-                      </h4>
-                      <p style={{ fontSize: '0.875rem', opacity: 0.9, margin: 0, lineHeight: 1.5 }}>
-                        {result.cta_message.split('\n').slice(1).join(' ')}
+                      </h3>
+                      <p style={{
+                        fontSize: isMobile ? '0.9rem' : '1.0625rem',
+                        lineHeight: '1.5',
+                        opacity: 0.95,
+                        margin: 0
+                      }}>
+                        {(() => {
+                          const fullText = result.cta_message.split('\n').slice(1).join(' ')
+                          if (isMobile) {
+                            const firstSentence = fullText.split('.')[0]
+                            return firstSentence.length > 80
+                              ? firstSentence.substring(0, 77) + '...'
+                              : firstSentence + '.'
+                          }
+                          return fullText
+                        })()}
                       </p>
                     </div>
+                  </div>
+
+                  {/* CTA Button */}
+                  <div style={{ paddingLeft: isMobile ? '0' : '5rem' }}>
                     <button
                       onClick={() => setShowContactModal(true)}
                       style={{
-                        background: 'rgba(255,255,255,0.2)',
-                        color: 'white',
-                        border: '1px solid rgba(255,255,255,0.4)',
-                        padding: '0.625rem 1.25rem',
-                        borderRadius: '0.5rem',
+                        background: 'white',
+                        color: '#6366f1',
+                        padding: '1rem 2rem',
+                        borderRadius: '0.75rem',
+                        border: 'none',
                         fontWeight: '600',
-                        fontSize: '0.9rem',
                         cursor: 'pointer',
-                        transition: 'background 0.2s',
-                        whiteSpace: 'nowrap',
+                        fontSize: '1.125rem',
+                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+                        transition: 'all 0.2s',
                         width: isMobile ? '100%' : 'auto'
                       }}
-                      onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.35)'}
-                      onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = 'translateY(-2px)'
+                        e.currentTarget.style.boxShadow = '0 6px 16px rgba(0, 0, 0, 0.15)'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = 'translateY(0)'
+                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.1)'
+                      }}
                     >
                       {result.cta_button}
                     </button>

@@ -1319,42 +1319,68 @@ export default function DashboardPage() {
               {/* CTA — dynamic based on score */}
               {(() => {
                 const cta = getCtaForScore(selectedAnalysis.score, lang)
+                const score = selectedAnalysis.score
+                const emoji = score >= 85 ? '🎧' : score >= 60 ? '🔧' : score >= 40 ? '🔍' : score >= 20 ? '🔧' : '💬'
                 return (
                   <div style={{
-                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                    borderRadius: '0.75rem',
+                    background: 'linear-gradient(to bottom right, #818cf8 0%, #6366f1 100%)',
+                    borderRadius: '1rem',
                     padding: '1.25rem',
                     marginTop: '1.5rem',
                     color: 'white',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '1rem',
-                    flexWrap: 'wrap'
+                    boxShadow: '0 10px 25px rgba(99, 102, 241, 0.15)'
                   }}>
-                    <div style={{ flex: 1, minWidth: '180px' }}>
-                      <p style={{ fontWeight: '600', fontSize: '0.95rem', marginBottom: '0.25rem' }}>
-                        {cta.title}
-                      </p>
-                      <p style={{ fontSize: '0.8rem', opacity: 0.9, margin: 0, lineHeight: 1.4 }}>
-                        {cta.subtext}
-                      </p>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: '0.75rem',
+                      marginBottom: '1rem'
+                    }}>
+                      {/* Icon circle — dynamic */}
+                      <div style={{
+                        width: '2.75rem',
+                        height: '2.75rem',
+                        background: 'rgba(255,255,255,0.2)',
+                        borderRadius: '50%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0
+                      }}>
+                        <span style={{ fontSize: '1.375rem' }}>{emoji}</span>
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <p style={{ fontWeight: '600', fontSize: '0.95rem', marginBottom: '0.25rem' }}>
+                          {cta.title}
+                        </p>
+                        <p style={{ fontSize: '0.8rem', opacity: 0.9, margin: 0, lineHeight: 1.4 }}>
+                          {cta.subtext}
+                        </p>
+                      </div>
                     </div>
                     <button
                       onClick={() => setShowContactModal(true)}
                       style={{
-                        background: 'rgba(255,255,255,0.2)',
-                        color: 'white',
-                        border: '1px solid rgba(255,255,255,0.4)',
-                        padding: '0.5rem 1rem',
+                        background: 'white',
+                        color: '#6366f1',
+                        padding: '0.625rem 1.25rem',
                         borderRadius: '0.5rem',
+                        border: 'none',
                         fontWeight: '600',
                         fontSize: '0.85rem',
                         cursor: 'pointer',
-                        transition: 'background 0.2s',
-                        whiteSpace: 'nowrap'
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                        transition: 'all 0.2s',
+                        marginLeft: '3.5rem'
                       }}
-                      onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.35)'}
-                      onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = 'translateY(-1px)'
+                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.12)'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = 'translateY(0)'
+                        e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)'
+                      }}
                     >
                       {cta.button}
                     </button>
