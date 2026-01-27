@@ -152,6 +152,26 @@ const translations = {
 }
 
 // ============================================================================
+// CTA HELPER — replicates backend generate_cta() logic by score
+// ============================================================================
+
+function getCtaForScore(score: number, lang: 'es' | 'en'): { title: string; subtext: string; button: string } {
+  if (score >= 85) {
+    return lang === 'es'
+      ? { title: 'Masterizar este track conmigo', subtext: 'Trabajo el mastering respetando esta mezcla y corrigiendo estos puntos.', button: 'Masterizar mi canción' }
+      : { title: 'Master this track with me', subtext: "I'll master this respecting your mix and addressing these points.", button: 'Master my song' }
+  }
+  if (score >= 60) {
+    return lang === 'es'
+      ? { title: 'Ayuda con la mezcla antes del mastering', subtext: 'Revisión técnica para corregir estos puntos antes del master final.', button: 'Preparar mi mezcla' }
+      : { title: 'Help with the mix before mastering', subtext: 'Technical review to address these points before the final master.', button: 'Prepare my mix' }
+  }
+  return lang === 'es'
+    ? { title: '¿Revisamos tu mezcla juntos?', subtext: 'Te ayudo a identificar y resolver los puntos críticos de tu sesión.', button: 'Revisar mi mezcla' }
+    : { title: "Let's review your mix together", subtext: "I'll help you identify and resolve the critical points in your session.", button: 'Review my mix' }
+}
+
+// ============================================================================
 // TYPES
 // ============================================================================
 
@@ -269,6 +289,7 @@ export default function DashboardPage() {
   const [selectedAnalysis, setSelectedAnalysis] = useState<Analysis | null>(null)
   const [reportTab, setReportTab] = useState<'rapid' | 'summary' | 'complete'>('rapid')
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
+  const [showContactModal, setShowContactModal] = useState(false)
   const [userStatus, setUserStatus] = useState<UserDashboardStatus | null>(null)
   const [dashboardState, setDashboardState] = useState<DashboardState>('new_user')
   const [canBuyAddon, setCanBuyAddon] = useState(false)
@@ -1295,11 +1316,57 @@ export default function DashboardPage() {
                 </div>
               )}
 
+              {/* CTA — dynamic based on score */}
+              {(() => {
+                const cta = getCtaForScore(selectedAnalysis.score, lang)
+                return (
+                  <div style={{
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    borderRadius: '0.75rem',
+                    padding: '1.25rem',
+                    marginTop: '1.5rem',
+                    color: 'white',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '1rem',
+                    flexWrap: 'wrap'
+                  }}>
+                    <div style={{ flex: 1, minWidth: '180px' }}>
+                      <p style={{ fontWeight: '600', fontSize: '0.95rem', marginBottom: '0.25rem' }}>
+                        {cta.title}
+                      </p>
+                      <p style={{ fontSize: '0.8rem', opacity: 0.9, margin: 0, lineHeight: 1.4 }}>
+                        {cta.subtext}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setShowContactModal(true)}
+                      style={{
+                        background: 'rgba(255,255,255,0.2)',
+                        color: 'white',
+                        border: '1px solid rgba(255,255,255,0.4)',
+                        padding: '0.5rem 1rem',
+                        borderRadius: '0.5rem',
+                        fontWeight: '600',
+                        fontSize: '0.85rem',
+                        cursor: 'pointer',
+                        transition: 'background 0.2s',
+                        whiteSpace: 'nowrap'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.35)'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}
+                    >
+                      {cta.button}
+                    </button>
+                  </div>
+                )
+              })()}
+
               {/* Download Buttons */}
               <div style={{
                 display: 'flex',
                 gap: '0.75rem',
-                marginTop: '1.5rem',
+                marginTop: '1rem',
                 paddingTop: '1rem',
                 borderTop: '1px solid #e5e7eb'
               }}>
@@ -1648,6 +1715,126 @@ export default function DashboardPage() {
                   <>{singlePrice.formatted}</>
                 )} - {lang === 'es' ? '1 análisis' : '1 analysis'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Contact Modal */}
+      {showContactModal && (
+        <div
+          onClick={() => setShowContactModal(false)}
+          style={{
+            position: 'fixed',
+            top: 0, left: 0, right: 0, bottom: 0,
+            background: 'rgba(0,0,0,0.6)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 110,
+            padding: '1.5rem'
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: 'white',
+              borderRadius: '1rem',
+              padding: '2rem',
+              maxWidth: '500px',
+              width: '100%',
+              boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+              position: 'relative'
+            }}
+          >
+            <button
+              onClick={() => setShowContactModal(false)}
+              style={{
+                position: 'absolute', top: '1rem', right: '1rem',
+                background: 'none', border: 'none', cursor: 'pointer',
+                color: '#6b7280', padding: '0.25rem'
+              }}
+            >
+              <X size={20} />
+            </button>
+
+            <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+              <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>🎧</div>
+              <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>
+                {lang === 'es' ? '¡Trabajemos juntos!' : "Let's work together!"}
+              </h3>
+              <p style={{ color: '#6b7280' }}>
+                {lang === 'es' ? 'Elige cómo prefieres contactarme:' : 'Choose how you prefer to contact me:'}
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              {/* WhatsApp */}
+              <a
+                href={`https://wa.me/573155576115?text=${encodeURIComponent(
+                  lang === 'es'
+                    ? `Hola! Acabo de analizar mi mezcla en Mastering Ready y me gustaría hablar sobre el mastering.\n\nPuntuación obtenida: ${selectedAnalysis?.score || 'N/A'}/100`
+                    : `Hi! I just analyzed my mix on Mastering Ready and would like to talk about mastering.\n\nScore obtained: ${selectedAnalysis?.score || 'N/A'}/100`
+                )}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '1rem',
+                  padding: '1rem 1.5rem', background: '#f0fdf4',
+                  border: '1px solid #86efac', borderRadius: '0.75rem',
+                  textDecoration: 'none', color: '#166534', cursor: 'pointer'
+                }}
+              >
+                <div style={{ fontSize: '2rem' }}>📱</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: '600', marginBottom: '0.25rem' }}>WhatsApp</div>
+                  <div style={{ fontSize: '0.875rem', color: '#15803d' }}>
+                    {lang === 'es' ? 'Mensaje directo instantáneo' : 'Instant direct message'}
+                  </div>
+                </div>
+              </a>
+
+              {/* Email */}
+              <a
+                href={`mailto:mat@matcarvy.com?subject=${encodeURIComponent(
+                  lang === 'es' ? 'Solicitud de Mastering - Mastering Ready' : 'Mastering Request - Mastering Ready'
+                )}&body=${encodeURIComponent(
+                  lang === 'es'
+                    ? `Hola Matías,\n\nAcabo de analizar mi mezcla en Mastering Ready y me gustaría hablar sobre el proceso de mastering.\n\nPuntuación obtenida: ${selectedAnalysis?.score || 'N/A'}/100\nArchivo: ${selectedAnalysis?.filename || 'N/A'}\n\nGracias!`
+                    : `Hi Matías,\n\nI just analyzed my mix on Mastering Ready and would like to discuss the mastering process.\n\nScore obtained: ${selectedAnalysis?.score || 'N/A'}/100\nFile: ${selectedAnalysis?.filename || 'N/A'}\n\nThanks!`
+                )}`}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '1rem',
+                  padding: '1rem 1.5rem', background: '#eff6ff',
+                  border: '1px solid #93c5fd', borderRadius: '0.75rem',
+                  textDecoration: 'none', color: '#1e40af', cursor: 'pointer'
+                }}
+              >
+                <div style={{ fontSize: '2rem' }}>📧</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: '600', marginBottom: '0.25rem' }}>Email</div>
+                  <div style={{ fontSize: '0.875rem', color: '#1e3a8a' }}>mat@matcarvy.com</div>
+                </div>
+              </a>
+
+              {/* Instagram */}
+              <a
+                href="https://instagram.com/matcarvy"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '1rem',
+                  padding: '1rem 1.5rem', background: '#fdf2f8',
+                  border: '1px solid #f9a8d4', borderRadius: '0.75rem',
+                  textDecoration: 'none', color: '#9f1239', cursor: 'pointer'
+                }}
+              >
+                <div style={{ fontSize: '2rem' }}>📷</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: '600', marginBottom: '0.25rem' }}>Instagram</div>
+                  <div style={{ fontSize: '0.875rem', color: '#be123c' }}>@matcarvy</div>
+                </div>
+              </a>
             </div>
           </div>
         </div>

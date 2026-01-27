@@ -2665,10 +2665,8 @@ by Matías Carvajal
                 </div>
               </div>
 
-              {/* Contextual CTAs (per spec Section 11) — always visible */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-
-                {/* Primary: Mastering Service */}
+              {/* CTA for Mastering Service — dynamic from backend based on score */}
+              {result.cta_message && result.cta_button && (
                 <div style={{
                   background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                   borderRadius: '1rem',
@@ -2683,12 +2681,14 @@ by Matías Carvajal
                   }}>
                     <div style={{ flex: 1 }}>
                       <h4 style={{ fontSize: '1.1rem', fontWeight: '600', marginBottom: '0.375rem' }}>
-                        {lang === 'es' ? 'Masterizar este track conmigo' : 'Master this track with me'}
+                        {(() => {
+                          let title = result.cta_message.split('\n')[0]
+                          title = title.replace(/^[\p{Emoji}\p{Symbol}\p{Punctuation}\s]+/gu, '')
+                          return title
+                        })()}
                       </h4>
                       <p style={{ fontSize: '0.875rem', opacity: 0.9, margin: 0, lineHeight: 1.5 }}>
-                        {lang === 'es'
-                          ? 'Trabajo el mastering respetando esta mezcla y corrigiendo estos puntos.'
-                          : "I'll master this respecting your mix and addressing these points."}
+                        {result.cta_message.split('\n').slice(1).join(' ')}
                       </p>
                     </div>
                     <button
@@ -2709,64 +2709,11 @@ by Matías Carvajal
                       onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.35)'}
                       onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}
                     >
-                      {lang === 'es' ? 'Contactar' : 'Get in touch'}
+                      {result.cta_button}
                     </button>
                   </div>
                 </div>
-
-                {/* Secondary: Mix Help */}
-                <div style={{
-                  background: '#f8fafc',
-                  borderRadius: '1rem',
-                  padding: '1.5rem',
-                  border: '1px solid #e2e8f0'
-                }}>
-                  <div style={{
-                    display: 'flex',
-                    alignItems: isMobile ? 'flex-start' : 'center',
-                    flexDirection: isMobile ? 'column' : 'row',
-                    gap: '1rem'
-                  }}>
-                    <div style={{ flex: 1 }}>
-                      <h4 style={{ fontSize: '1.05rem', fontWeight: '600', color: '#334155', marginBottom: '0.375rem' }}>
-                        {lang === 'es' ? 'Ayuda con la mezcla antes del mastering' : 'Help with the mix before mastering'}
-                      </h4>
-                      <p style={{ fontSize: '0.85rem', color: '#64748b', margin: 0, lineHeight: 1.5 }}>
-                        {lang === 'es'
-                          ? 'Revisión técnica para corregir estos puntos antes del master final.'
-                          : 'Technical review to address these points before the final master.'}
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => setShowContactModal(true)}
-                      style={{
-                        background: 'white',
-                        color: '#667eea',
-                        border: '1px solid #667eea',
-                        padding: '0.625rem 1.25rem',
-                        borderRadius: '0.5rem',
-                        fontWeight: '600',
-                        fontSize: '0.9rem',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s',
-                        whiteSpace: 'nowrap',
-                        width: isMobile ? '100%' : 'auto'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background = '#667eea'
-                        e.currentTarget.style.color = 'white'
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = 'white'
-                        e.currentTarget.style.color = '#667eea'
-                      }}
-                    >
-                      {lang === 'es' ? 'Contactar' : 'Get in touch'}
-                    </button>
-                  </div>
-                </div>
-
-              </div>
+              )}
 
               {/* Feedback Button - SECOND */}
               {!feedbackSubmitted && (
