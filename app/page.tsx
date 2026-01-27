@@ -454,10 +454,10 @@ function Home() {
 
   // Rotating methodology loading messages (per spec Section 9)
   const loadingMessages = [
-    { es: 'Aplicando la metodología Mastering Ready…', en: 'Applying Mastering Ready methodology…' },
-    { es: 'Evaluando headroom y dinámica…', en: 'Evaluating headroom and dynamics…' },
-    { es: 'Analizando balance tonal y estéreo…', en: 'Analyzing tonal and stereo balance…' },
-    { es: 'Preparando métricas técnicas para el mastering…', en: 'Preparing technical metrics for mastering…' }
+    { es: '🎧 Aplicando la metodología Mastering Ready…', en: '🎧 Applying Mastering Ready methodology…' },
+    { es: '🎧 Evaluando headroom y dinámica…', en: '🎧 Evaluating headroom and dynamics…' },
+    { es: '🎧 Analizando balance tonal y estéreo…', en: '🎧 Analyzing tonal and stereo balance…' },
+    { es: '🎧 Preparando métricas técnicas para el mastering…', en: '🎧 Preparing technical metrics for mastering…' }
   ]
 
   // File validation helper
@@ -1957,27 +1957,36 @@ by Matías Carvajal
                         {loadingMessages[loadingMsgIndex][lang]}
                       </p>
 
-                      {/* Progress bar */}
+                      {/* Progress bar + percentage */}
                       <div style={{ width: '100%' }}>
                         <div style={{
                           width: '100%',
                           background: '#e5e7eb',
                           borderRadius: '9999px',
-                          height: '0.5rem',
+                          height: '1rem',
                           overflow: 'hidden'
                         }}>
                           <div style={{
                             background: 'linear-gradient(90deg, #667eea 0%, #764ba2 100%)',
-                            height: '0.5rem',
+                            height: '1rem',
                             borderRadius: '9999px',
                             transition: 'width 0.3s ease-out',
                             width: `${progress}%`,
-                            boxShadow: '0 1px 4px rgba(102, 126, 234, 0.3)'
+                            boxShadow: '0 2px 8px rgba(102, 126, 234, 0.4)'
                           }} />
                         </div>
-                        <p style={{ textAlign: 'center', color: '#9ca3af', fontSize: '0.75rem', marginTop: '0.5rem' }}>
-                          {lang === 'es' ? 'Puede tardar hasta 60 segundos' : 'May take up to 60 seconds'}
-                        </p>
+                        <div style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          marginTop: '0.5rem',
+                          fontSize: '0.875rem',
+                          opacity: 0.9
+                        }}>
+                          <span style={{ fontWeight: '600' }}>{progress}%</span>
+                          <span style={{ color: '#9ca3af', fontSize: '0.75rem' }}>
+                            {lang === 'es' ? 'Puede tardar hasta 60 segundos' : 'May take up to 60 seconds'}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   ) : (
