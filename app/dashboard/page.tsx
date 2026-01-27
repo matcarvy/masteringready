@@ -1359,7 +1359,7 @@ export default function DashboardPage() {
               {(() => {
                 const cta = getCtaForScore(selectedAnalysis.score, lang)
                 const score = selectedAnalysis.score
-                const emoji = score >= 85 ? '🎧' : score >= 60 ? '🔧' : score >= 40 ? '🔍' : score >= 20 ? '🔧' : '💬'
+                const emoji = score >= 85 ? '🎧' : score >= 60 ? '🔧' : score >= 40 ? '🔍' : score >= 20 ? '🔍' : '💬'
                 return (
                   <div style={{
                     background: 'linear-gradient(to bottom right, #818cf8 0%, #6366f1 100%)',

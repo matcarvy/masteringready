@@ -2705,7 +2705,7 @@ by Matías Carvajal
                         {result.score >= 85 ? '🎧' :
                          result.score >= 60 ? '🔧' :
                          result.score >= 40 ? '🔍' :
-                         result.score >= 20 ? '🔧' : '💬'}
+                         result.score >= 20 ? '🔍' : '💬'}
                       </span>
                     </div>
 
