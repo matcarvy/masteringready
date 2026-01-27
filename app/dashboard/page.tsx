@@ -816,6 +816,45 @@ export default function DashboardPage() {
           </div>
         </div>
 
+        {/* Analyses Summary */}
+        {analyses.length > 0 && (() => {
+          const ready = analyses.filter(a => a.score >= 85).length
+          const adjustments = analyses.filter(a => a.score >= 60 && a.score < 85).length
+          const review = analyses.filter(a => a.score < 60).length
+          return (
+            <div style={{
+              background: 'white',
+              borderRadius: '1rem',
+              padding: '1.25rem 1.5rem',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+              marginBottom: '1.5rem'
+            }}>
+              <h3 style={{
+                fontSize: '1rem',
+                fontWeight: '700',
+                color: '#111827',
+                marginBottom: '1rem'
+              }}>
+                {lang === 'es' ? 'Resumen de tus análisis' : 'Your analyses summary'}
+              </h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.925rem', color: '#374151' }}>
+                  <span>✅</span>
+                  <span><strong>{ready}</strong> {lang === 'es' ? 'listas para mastering' : 'ready for mastering'}</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.925rem', color: '#374151' }}>
+                  <span>🔧</span>
+                  <span><strong>{adjustments}</strong> {lang === 'es' ? 'necesitan ajustes' : 'need adjustments'}</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.925rem', color: '#374151' }}>
+                  <span>⚠️</span>
+                  <span><strong>{review}</strong> {lang === 'es' ? 'requieren revisión' : 'require review'}</span>
+                </div>
+              </div>
+            </div>
+          )
+        })()}
+
         {/* Analyses List */}
         <div style={{
           background: 'white',
