@@ -10,6 +10,7 @@ import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
+import { getLanguageCookie, setLanguageCookie } from '@/lib/language'
 import { SocialLoginButtons } from '@/components/auth/SocialLoginButtons'
 import { Music, Mail, Lock, ArrowLeft, Eye, EyeOff } from 'lucide-react'
 
@@ -71,14 +72,19 @@ function LoginContent() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Detect language from URL or browser
+  // Detect language: URL param > cookie > browser
   useEffect(() => {
     const urlLang = searchParams.get('lang')
     if (urlLang === 'en' || urlLang === 'es') {
       setLang(urlLang)
-    } else if (typeof navigator !== 'undefined') {
-      const browserLang = navigator.language.split('-')[0]
-      setLang(browserLang === 'es' ? 'es' : 'en')
+    } else {
+      const cookieLang = getLanguageCookie()
+      if (cookieLang) {
+        setLang(cookieLang)
+      } else if (typeof navigator !== 'undefined') {
+        const browserLang = navigator.language.split('-')[0]
+        setLang(browserLang === 'es' ? 'es' : 'en')
+      }
     }
   }, [searchParams])
 
@@ -139,7 +145,11 @@ function LoginContent() {
     }}>
       {/* Language Toggle - Single button like main page */}
       <button
-        onClick={() => setLang(lang === 'es' ? 'en' : 'es')}
+        onClick={() => {
+          const newLang = lang === 'es' ? 'en' : 'es'
+          setLang(newLang)
+          setLanguageCookie(newLang)
+        }}
         style={{
           position: 'absolute',
           top: '1rem',

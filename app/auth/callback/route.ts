@@ -7,6 +7,7 @@
 
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
+import { getLanguageFromCookieHeader } from '@/lib/language'
 
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url)
@@ -19,11 +20,17 @@ export async function GET(request: NextRequest) {
   // Get the origin for redirects
   const origin = requestUrl.origin
 
+  // Read language preference from cookie to preserve across auth flow
+  const cookieLang = getLanguageFromCookieHeader(request.headers.get('cookie'))
+  const langParam = cookieLang ? `lang=${cookieLang}` : ''
+
   // Handle OAuth/Auth errors
   if (error) {
     console.error('Auth error:', error, errorDescription)
+    const errorParam = `error=${encodeURIComponent(errorDescription || error)}`
+    const params = langParam ? `${errorParam}&${langParam}` : errorParam
     return NextResponse.redirect(
-      new URL(`/auth/login?error=${encodeURIComponent(errorDescription || error)}`, origin)
+      new URL(`/auth/login?${params}`, origin)
     )
   }
 
@@ -41,17 +48,22 @@ export async function GET(request: NextRequest) {
 
       if (verifyError) {
         console.error('Email verification error:', verifyError)
+        const errorParam = `error=${encodeURIComponent(verifyError.message)}`
+        const params = langParam ? `${errorParam}&${langParam}` : errorParam
         return NextResponse.redirect(
-          new URL(`/auth/login?error=${encodeURIComponent(verifyError.message)}`, origin)
+          new URL(`/auth/login?${params}`, origin)
         )
       }
 
-      // Success - redirect to home
-      return NextResponse.redirect(new URL('/?verified=true', origin))
+      // Success - redirect to home with language
+      const params = langParam ? `verified=true&${langParam}` : 'verified=true'
+      return NextResponse.redirect(new URL(`/?${params}`, origin))
     } catch (err) {
       console.error('Verification error:', err)
+      const errorParam = 'error=verification_error'
+      const params = langParam ? `${errorParam}&${langParam}` : errorParam
       return NextResponse.redirect(
-        new URL('/auth/login?error=verification_error', origin)
+        new URL(`/auth/login?${params}`, origin)
       )
     }
   }
@@ -63,21 +75,27 @@ export async function GET(request: NextRequest) {
 
       if (sessionError) {
         console.error('Session exchange error:', sessionError)
+        const errorParam = `error=${encodeURIComponent(sessionError.message)}`
+        const params = langParam ? `${errorParam}&${langParam}` : errorParam
         return NextResponse.redirect(
-          new URL(`/auth/login?error=${encodeURIComponent(sessionError.message)}`, origin)
+          new URL(`/auth/login?${params}`, origin)
         )
       }
 
-      // Success - redirect to home
-      return NextResponse.redirect(new URL('/', origin))
+      // Success - redirect to home with language
+      const redirectUrl = langParam ? `/?${langParam}` : '/'
+      return NextResponse.redirect(new URL(redirectUrl, origin))
     } catch (err) {
       console.error('Callback error:', err)
+      const errorParam = 'error=callback_error'
+      const params = langParam ? `${errorParam}&${langParam}` : errorParam
       return NextResponse.redirect(
-        new URL('/auth/login?error=callback_error', origin)
+        new URL(`/auth/login?${params}`, origin)
       )
     }
   }
 
   // No code or token provided - redirect to login
-  return NextResponse.redirect(new URL('/auth/login', origin))
+  const loginUrl = langParam ? `/auth/login?${langParam}` : '/auth/login'
+  return NextResponse.redirect(new URL(loginUrl, origin))
 }

@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Download, Check, Upload, Zap, Shield, TrendingUp, Play, Music, Lock, X, AlertTriangle, Globe, Unlock } from 'lucide-react'
+import Link from 'next/link'
+import { Download, Check, Upload, Zap, Shield, TrendingUp, Play, Music, Lock, X, AlertTriangle, Globe, Unlock, Menu } from 'lucide-react'
 import { UserMenu, useAuth, AuthModal } from '@/components/auth'
 import { analyzeFile, checkIpLimit, IpCheckResult } from '@/lib/api'
 import { startAnalysisPolling, getAnalysisStatus } from '@/lib/api'
@@ -9,6 +10,7 @@ import { compressAudioFile } from '@/lib/audio-compression'
 import { supabase, checkCanAnalyze, AnalysisStatus } from '@/lib/supabase'
 import { useGeo } from '@/lib/useGeo'
 import { getPlanDisplayPrice, PRICING } from '@/lib/geoip'
+import { getLanguageCookie, setLanguageCookie } from '@/lib/language'
 
 // ============================================================================
 // Helper: Map verdict string to database enum
@@ -236,6 +238,13 @@ function Home() {
   const [compressing, setCompressing] = useState(false)
   const [compressionProgress, setCompressionProgress] = useState(0)
   const [showContactModal, setShowContactModal] = useState(false)
+
+  // Mobile detection
+  const [isMobile, setIsMobile] = useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const mobileMenuRef = useRef<HTMLDivElement>(null)
+  const [loadingMsgIndex, setLoadingMsgIndex] = useState(0)
+  const [glossaryOpen, setGlossaryOpen] = useState(false)
   const [showFeedbackModal, setShowFeedbackModal] = useState(false)
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [isUnlocking, setIsUnlocking] = useState(false)
@@ -256,19 +265,68 @@ function Home() {
   // Store request ID for PDF download
   const requestIdRef = useRef<string>('')
 
+  // Mobile detection
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
+
+  // Close mobile menu on outside click
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (mobileMenuRef.current && !mobileMenuRef.current.contains(event.target as Node)) {
+        setMobileMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  // Rotate loading methodology messages every 2.5s
+  useEffect(() => {
+    if (!loading) {
+      setLoadingMsgIndex(0)
+      return
+    }
+    const interval = setInterval(() => {
+      setLoadingMsgIndex(prev => (prev + 1) % 4)
+    }, 2500)
+    return () => clearInterval(interval)
+  }, [loading])
+
   // Auto-detect language based on user's location
+  // Priority: URL param > cookie > timezone/browser detection
   useEffect(() => {
     if (!langDetected) {
-      // Try to detect language from browser/timezone
       const detectLanguage = async () => {
         try {
-          // Get timezone
+          // 1. Check URL param (e.g., after logout redirect)
+          const urlParams = new URLSearchParams(window.location.search)
+          const urlLang = urlParams.get('lang')
+          if (urlLang === 'es' || urlLang === 'en') {
+            setLang(urlLang)
+            setLanguageCookie(urlLang)
+            setLangDetected(true)
+            return
+          }
+
+          // 2. Check cookie (user's previous explicit choice)
+          const cookieLang = getLanguageCookie()
+          if (cookieLang) {
+            setLang(cookieLang)
+            setLangDetected(true)
+            return
+          }
+
+          // 3. Fall back to timezone/browser detection
           const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone
-          
+
           // English-speaking regions in Americas (exclude these first)
           const englishRegions = [
             'America/New_York',
-            'America/Chicago', 
+            'America/Chicago',
             'America/Denver',
             'America/Los_Angeles',
             'America/Phoenix',
@@ -281,7 +339,7 @@ function Home() {
             'America/Winnipeg',
             'America/Edmonton'
           ]
-          
+
           // Portuguese-speaking (Brazil)
           const portugueseRegions = [
             'America/Sao_Paulo',
@@ -300,11 +358,11 @@ function Home() {
             'America/Maceio',
             'America/Noronha'
           ]
-          
+
           // Check if it's an English or Portuguese region first
           const isEnglishRegion = englishRegions.some(region => timezone === region)
           const isPortugueseRegion = portugueseRegions.some(region => timezone === region)
-          
+
           if (isEnglishRegion || isPortugueseRegion) {
             setLang('en')
           } else {
@@ -315,14 +373,14 @@ function Home() {
               'Atlantic/Canary', // Canary Islands
               'Africa/Ceuta' // Spanish territories
             ]
-            
+
             // Check if timezone matches Spanish-speaking regions
             const isSpanishRegion = spanishRegions.some(region => timezone.startsWith(region))
-            
+
             // Also check browser language as fallback
             const browserLang = navigator.language || navigator.languages?.[0] || ''
             const isSpanishLang = browserLang.toLowerCase().startsWith('es')
-            
+
             // Set Spanish if either timezone or browser language indicates Spanish
             if (isSpanishRegion || isSpanishLang) {
               setLang('es')
@@ -331,14 +389,14 @@ function Home() {
               setLang('en')
             }
           }
-          
+
           setLangDetected(true)
         } catch (error) {
           // If detection fails, keep default (Spanish)
           setLangDetected(true)
         }
       }
-      
+
       detectLanguage()
     }
   }, [langDetected])
@@ -394,20 +452,13 @@ function Home() {
     }
   }, [isLoggedIn, authLoading])
 
-  // Progress message helper
-  const getProgressMessage = (progress: number) => {
-    if (progress < 5) {
-      return lang === 'es' ? 'Cargando archivo...' : 'Loading file...'
-    } else if (progress < 10) {
-      return compressing 
-        ? (lang === 'es' ? 'Comprimiendo archivo...' : 'Compressing file...')
-        : (lang === 'es' ? 'Preparando análisis...' : 'Preparing analysis...')
-    } else if (progress < 70) {
-      return lang === 'es' ? 'Analizando audio...' : 'Analyzing audio...'
-    } else {
-      return lang === 'es' ? 'Generando reportes...' : 'Generating reports...'
-    }
-  }
+  // Rotating methodology loading messages (per spec Section 9)
+  const loadingMessages = [
+    { es: 'Aplicando la metodología Mastering Ready…', en: 'Applying Mastering Ready methodology…' },
+    { es: 'Evaluando headroom y dinámica…', en: 'Evaluating headroom and dynamics…' },
+    { es: 'Analizando balance tonal y estéreo…', en: 'Analyzing tonal and stereo balance…' },
+    { es: 'Preparando métricas técnicas para el mastering…', en: 'Preparing technical metrics for mastering…' }
+  ]
 
   // File validation helper
   const validateFile = (file: File): { valid: boolean; error?: string } => {
@@ -1084,24 +1135,34 @@ by Matías Carvajal
               </span>
             </div>
             <div style={{ display: 'flex', gap: 'clamp(0.5rem, 2vw, 1rem)', alignItems: 'center' }}>
-              <button
-                onClick={() => setLang(lang === 'es' ? 'en' : 'es')}
-                style={{
-                  fontSize: 'clamp(0.75rem, 2vw, 0.875rem)',
-                  fontWeight: '500',
-                  color: '#6b7280',
-                  cursor: 'pointer',
-                  border: 'none',
-                  background: 'none',
-                  padding: 'clamp(0.25rem, 1vw, 0.5rem) clamp(0.5rem, 2vw, 1rem)',
-                  minWidth: '2.5rem',
-                  textAlign: 'center'
-                }}
-              >
-                {lang === 'es' ? 'EN' : 'ES'}
-              </button>
-              {/* User Menu - Login/Signup or User Dropdown */}
-              <UserMenu lang={lang} />
+              {/* Language toggle — hidden on mobile (moves to hamburger) */}
+              {!isMobile && (
+                <button
+                  onClick={() => {
+                    const newLang = lang === 'es' ? 'en' : 'es'
+                    setLang(newLang)
+                    setLanguageCookie(newLang)
+                  }}
+                  style={{
+                    fontSize: 'clamp(0.75rem, 2vw, 0.875rem)',
+                    fontWeight: '500',
+                    color: '#6b7280',
+                    cursor: 'pointer',
+                    border: 'none',
+                    background: 'none',
+                    padding: 'clamp(0.25rem, 1vw, 0.5rem) clamp(0.5rem, 2vw, 1rem)',
+                    minWidth: '2.5rem',
+                    textAlign: 'center'
+                  }}
+                >
+                  {lang === 'es' ? 'EN' : 'ES'}
+                </button>
+              )}
+
+              {/* User Menu — hidden on mobile when not logged in (hamburger handles it) */}
+              <UserMenu lang={lang} isMobile={isMobile} />
+
+              {/* Analyze CTA — always visible */}
               <button
                 onClick={scrollToAnalyzer}
                 style={{
@@ -1127,6 +1188,110 @@ by Matías Carvajal
               >
                 {lang === 'es' ? 'Analizar' : 'Analyze'}
               </button>
+
+              {/* Hamburger menu — mobile only, when not logged in */}
+              {isMobile && !user && (
+                <div ref={mobileMenuRef} style={{ position: 'relative' }}>
+                  <button
+                    onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: '36px',
+                      height: '36px',
+                      background: 'none',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '0.5rem',
+                      cursor: 'pointer',
+                      color: '#374151'
+                    }}
+                  >
+                    {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+                  </button>
+
+                  {mobileMenuOpen && (
+                    <div style={{
+                      position: 'absolute',
+                      top: 'calc(100% + 0.5rem)',
+                      right: 0,
+                      background: 'white',
+                      borderRadius: '0.75rem',
+                      boxShadow: '0 10px 40px rgba(0,0,0,0.15)',
+                      minWidth: '200px',
+                      overflow: 'hidden',
+                      zIndex: 50
+                    }}>
+                      {/* Language toggle */}
+                      <div style={{
+                        padding: '0.75rem 1rem',
+                        borderBottom: '1px solid #e5e7eb'
+                      }}>
+                        <button
+                          onClick={() => {
+                            const newLang = lang === 'es' ? 'en' : 'es'
+                            setLang(newLang)
+                            setLanguageCookie(newLang)
+                          }}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            color: '#374151',
+                            fontSize: '0.95rem',
+                            fontWeight: '500',
+                            width: '100%',
+                            textAlign: 'left'
+                          }}
+                        >
+                          <Globe size={18} color="#6b7280" />
+                          {lang === 'es' ? 'English' : 'Español'}
+                        </button>
+                      </div>
+
+                      {/* Auth links */}
+                      <div style={{ padding: '0.5rem 0' }}>
+                        <Link
+                          href={`/auth/login?lang=${lang}`}
+                          onClick={() => setMobileMenuOpen(false)}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.75rem',
+                            padding: '0.75rem 1rem',
+                            color: '#374151',
+                            textDecoration: 'none',
+                            fontSize: '0.95rem',
+                            transition: 'background 0.2s'
+                          }}
+                        >
+                          {lang === 'es' ? 'Iniciar Sesión' : 'Sign In'}
+                        </Link>
+                        <Link
+                          href={`/auth/signup?lang=${lang}`}
+                          onClick={() => setMobileMenuOpen(false)}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.75rem',
+                            padding: '0.75rem 1rem',
+                            color: '#667eea',
+                            textDecoration: 'none',
+                            fontSize: '0.95rem',
+                            fontWeight: '600',
+                            transition: 'background 0.2s'
+                          }}
+                        >
+                          {lang === 'es' ? 'Registrarse' : 'Sign Up'}
+                        </Link>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -1142,7 +1307,7 @@ by Matías Carvajal
         <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+            gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)',
             gap: '3rem',
             alignItems: 'center'
           }}>
@@ -1777,48 +1942,42 @@ by Matías Carvajal
                       </div>
                     </div>
                   ) : loading ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', width: '100%' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                        <svg style={{ animation: 'spin 1s linear infinite', height: '1.5rem', width: '1.5rem' }} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                          <circle style={{ opacity: 0.25 }} cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path style={{ opacity: 0.75 }} fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        <span style={{ fontSize: '1.125rem', fontWeight: '600' }}>
-                          {lang === 'es' ? 'Analizando...' : 'Analyzing...'}
-                        </span>
-                      </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.25rem', width: '100%' }}>
+                      {/* Rotating methodology message */}
+                      <p
+                        key={loadingMsgIndex}
+                        style={{
+                          textAlign: 'center',
+                          fontSize: '1.05rem',
+                          fontWeight: '500',
+                          color: '#374151',
+                          animation: 'fadeInMsg 0.5s ease-in-out'
+                        }}
+                      >
+                        {loadingMessages[loadingMsgIndex][lang]}
+                      </p>
+
+                      {/* Progress bar */}
                       <div style={{ width: '100%' }}>
                         <div style={{
                           width: '100%',
                           background: '#e5e7eb',
                           borderRadius: '9999px',
-                          height: '1rem',
+                          height: '0.5rem',
                           overflow: 'hidden'
                         }}>
                           <div style={{
                             background: 'linear-gradient(90deg, #667eea 0%, #764ba2 100%)',
-                            height: '1rem',
+                            height: '0.5rem',
                             borderRadius: '9999px',
                             transition: 'width 0.3s ease-out',
                             width: `${progress}%`,
-                            boxShadow: '0 2px 8px rgba(102, 126, 234, 0.4)'
+                            boxShadow: '0 1px 4px rgba(102, 126, 234, 0.3)'
                           }} />
                         </div>
-                        <p style={{ textAlign: 'center', color: '#6b7280', marginTop: '0.5rem', fontSize: '0.875rem' }}>
-                          {getProgressMessage(progress)}
-                        </p>
-                        <p style={{ textAlign: 'center', color: '#9ca3af', fontSize: '0.75rem', marginTop: '0.25rem' }}>
+                        <p style={{ textAlign: 'center', color: '#9ca3af', fontSize: '0.75rem', marginTop: '0.5rem' }}>
                           {lang === 'es' ? 'Puede tardar hasta 60 segundos' : 'May take up to 60 seconds'}
                         </p>
-                        <div style={{ 
-                          display: 'flex', 
-                          justifyContent: 'space-between', 
-                          marginTop: '0.75rem',
-                          fontSize: '0.875rem',
-                          opacity: 0.9
-                        }}>
-                          <span style={{ fontWeight: '600' }}>{progress}%</span>
-                        </div>
                       </div>
                     </div>
                   ) : (
@@ -2506,113 +2665,108 @@ by Matías Carvajal
                 </div>
               </div>
 
-              {/* CTA for Mastering Service - Dynamic from backend */}
-              {result.cta_message && result.cta_button && (
+              {/* Contextual CTAs (per spec Section 11) — always visible */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+
+                {/* Primary: Mastering Service */}
                 <div style={{
-                  background: 'linear-gradient(to bottom right, #818cf8 0%, #6366f1 100%)',
-                  borderRadius: '1.5rem',
-                  padding: '2.5rem 2rem',
-                  color: 'white',
-                  boxShadow: '0 20px 40px rgba(99, 102, 241, 0.2)'
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  borderRadius: '1rem',
+                  padding: '1.5rem',
+                  color: 'white'
                 }}>
                   <div style={{
                     display: 'flex',
-                    alignItems: 'flex-start',
-                    gap: '1rem',
-                    marginBottom: '1.5rem'
+                    alignItems: isMobile ? 'flex-start' : 'center',
+                    flexDirection: isMobile ? 'column' : 'row',
+                    gap: '1rem'
                   }}>
-                    {/* Icon circle - dynamic based on score */}
-                    <div style={{
-                      width: '4rem',
-                      height: '4rem',
-                      background: 'rgba(255, 255, 255, 0.2)',
-                      borderRadius: '50%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      backdropFilter: 'blur(10px)',
-                      flexShrink: 0
-                    }}>
-                      <span style={{ fontSize: '2rem' }}>
-                        {result.score >= 85 ? '🎧' : 
-                         result.score >= 60 ? '🔧' : 
-                         result.score >= 40 ? '🔍' : 
-                         result.score >= 20 ? '🔧' : '💬'}
-                      </span>
-                    </div>
-                    
-                    {/* Message */}
                     <div style={{ flex: 1 }}>
-                      {/* Title - clean, no extra icons */}
-                      <h3 style={{
-                        fontSize: '1.375rem',
-                        lineHeight: '1.3',
-                        fontWeight: '600',
-                        marginBottom: '1rem',
-                        marginTop: '0.25rem'
-                      }}>
-                        {(() => {
-                          let title = result.cta_message.split('\n')[0];
-                          // Remove ALL emojis, symbols, and special characters from the start
-                          // This regex removes: emojis, symbols, punctuation, whitespace at the start
-                          title = title.replace(/^[\p{Emoji}\p{Symbol}\p{Punctuation}\s]+/gu, '');
-                          return title;
-                        })()}
-                      </h3>
-                      
-                      {/* Description - full on desktop, shortened on mobile */}
-                      <p style={{
-                        fontSize: window.innerWidth >= 768 ? '1.0625rem' : '1rem',
-                        lineHeight: '1.5',
-                        opacity: '0.95',
-                        margin: 0
-                      }}>
-                        {(() => {
-                          const fullText = result.cta_message.split('\n').slice(1).join(' ');
-                          // On mobile, shorten to first sentence or ~80 chars
-                          if (window.innerWidth < 768) {
-                            const firstSentence = fullText.split('.')[0];
-                            return firstSentence.length > 80 
-                              ? firstSentence.substring(0, 77) + '...'
-                              : firstSentence + '.';
-                          }
-                          return fullText;
-                        })()}
+                      <h4 style={{ fontSize: '1.1rem', fontWeight: '600', marginBottom: '0.375rem' }}>
+                        {lang === 'es' ? 'Masterizar este track conmigo' : 'Master this track with me'}
+                      </h4>
+                      <p style={{ fontSize: '0.875rem', opacity: 0.9, margin: 0, lineHeight: 1.5 }}>
+                        {lang === 'es'
+                          ? 'Trabajo el mastering respetando esta mezcla y corrigiendo estos puntos.'
+                          : "I'll master this respecting your mix and addressing these points."}
                       </p>
                     </div>
+                    <button
+                      onClick={() => setShowContactModal(true)}
+                      style={{
+                        background: 'rgba(255,255,255,0.2)',
+                        color: 'white',
+                        border: '1px solid rgba(255,255,255,0.4)',
+                        padding: '0.625rem 1.25rem',
+                        borderRadius: '0.5rem',
+                        fontWeight: '600',
+                        fontSize: '0.9rem',
+                        cursor: 'pointer',
+                        transition: 'background 0.2s',
+                        whiteSpace: 'nowrap',
+                        width: isMobile ? '100%' : 'auto'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.35)'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}
+                    >
+                      {lang === 'es' ? 'Contactar' : 'Get in touch'}
+                    </button>
                   </div>
-                  
-                  {/* CTA Button */}
-                  <div style={{ paddingLeft: window.innerWidth >= 768 ? '5rem' : '0' }}>
+                </div>
+
+                {/* Secondary: Mix Help */}
+                <div style={{
+                  background: '#f8fafc',
+                  borderRadius: '1rem',
+                  padding: '1.5rem',
+                  border: '1px solid #e2e8f0'
+                }}>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: isMobile ? 'flex-start' : 'center',
+                    flexDirection: isMobile ? 'column' : 'row',
+                    gap: '1rem'
+                  }}>
+                    <div style={{ flex: 1 }}>
+                      <h4 style={{ fontSize: '1.05rem', fontWeight: '600', color: '#334155', marginBottom: '0.375rem' }}>
+                        {lang === 'es' ? 'Ayuda con la mezcla antes del mastering' : 'Help with the mix before mastering'}
+                      </h4>
+                      <p style={{ fontSize: '0.85rem', color: '#64748b', margin: 0, lineHeight: 1.5 }}>
+                        {lang === 'es'
+                          ? 'Revisión técnica para corregir estos puntos antes del master final.'
+                          : 'Technical review to address these points before the final master.'}
+                      </p>
+                    </div>
                     <button
                       onClick={() => setShowContactModal(true)}
                       style={{
                         background: 'white',
-                        color: '#6366f1',
-                        padding: '1rem 2rem',
-                        borderRadius: '0.75rem',
-                        border: 'none',
+                        color: '#667eea',
+                        border: '1px solid #667eea',
+                        padding: '0.625rem 1.25rem',
+                        borderRadius: '0.5rem',
                         fontWeight: '600',
+                        fontSize: '0.9rem',
                         cursor: 'pointer',
-                        fontSize: '1.125rem',
-                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
                         transition: 'all 0.2s',
-                        width: window.innerWidth < 768 ? '100%' : 'auto'
+                        whiteSpace: 'nowrap',
+                        width: isMobile ? '100%' : 'auto'
                       }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.transform = 'translateY(-2px)'
-                        e.currentTarget.style.boxShadow = '0 6px 16px rgba(0, 0, 0, 0.15)'
+                        e.currentTarget.style.background = '#667eea'
+                        e.currentTarget.style.color = 'white'
                       }}
                       onMouseLeave={(e) => {
-                        e.currentTarget.style.transform = 'translateY(0)'
-                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.1)'
+                        e.currentTarget.style.background = 'white'
+                        e.currentTarget.style.color = '#667eea'
                       }}
                     >
-                      {result.cta_button}
+                      {lang === 'es' ? 'Contactar' : 'Get in touch'}
                     </button>
                   </div>
                 </div>
-              )}
+
+              </div>
 
               {/* Feedback Button - SECOND */}
               {!feedbackSubmitted && (
@@ -2673,6 +2827,157 @@ by Matías Carvajal
                   </p>
                 </div>
               )}
+
+              {/* Mini-Glossary (per spec Section 12) */}
+              <div style={{
+                background: '#f8fafc',
+                borderRadius: '0.75rem',
+                border: '1px solid #e2e8f0',
+                overflow: 'hidden'
+              }}>
+                <button
+                  onClick={() => setGlossaryOpen(!glossaryOpen)}
+                  style={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '1rem 1.25rem',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    textAlign: 'left'
+                  }}
+                >
+                  <span style={{ fontSize: '1rem', fontWeight: '600', color: '#1e293b' }}>
+                    {lang === 'es' ? '📘 ¿Qué significan estos términos?' : '📘 What do these terms mean?'}
+                  </span>
+                  <span style={{
+                    transform: glossaryOpen ? 'rotate(180deg)' : 'rotate(0)',
+                    transition: 'transform 0.2s',
+                    fontSize: '1.25rem',
+                    color: '#64748b'
+                  }}>
+                    ▾
+                  </span>
+                </button>
+
+                {glossaryOpen && (
+                  <div style={{ padding: '0 1.25rem 1.25rem' }}>
+                    <p style={{ fontSize: '0.875rem', color: '#64748b', marginBottom: '1rem' }}>
+                      {lang === 'es'
+                        ? 'Algunos conceptos técnicos usados en este análisis están explicados brevemente aquí.'
+                        : 'Some technical concepts used in this analysis are briefly explained here.'}
+                    </p>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                      {/* Headroom */}
+                      <div>
+                        <span style={{ fontWeight: '600', color: '#334155', fontSize: '0.9rem' }}>Headroom</span>
+                        <p style={{ fontSize: '0.825rem', color: '#64748b', margin: '0.125rem 0 0' }}>
+                          {lang === 'es'
+                            ? 'Espacio dinámico disponible antes del clipping. Permite al ingeniero de mastering trabajar sin distorsión.'
+                            : 'Dynamic space available before clipping. Allows the mastering engineer to work without distortion.'}
+                        </p>
+                      </div>
+
+                      {/* True Peak */}
+                      <div>
+                        <span style={{ fontWeight: '600', color: '#334155', fontSize: '0.9rem' }}>True Peak</span>
+                        <p style={{ fontSize: '0.825rem', color: '#64748b', margin: '0.125rem 0 0' }}>
+                          {lang === 'es'
+                            ? 'Nivel real máximo considerando la reconstrucción digital. Importante para evitar distorsión en conversión.'
+                            : 'Actual maximum level considering digital reconstruction. Important to avoid distortion during conversion.'}
+                        </p>
+                      </div>
+
+                      {/* LUFS */}
+                      <div>
+                        <span style={{ fontWeight: '600', color: '#334155', fontSize: '0.9rem' }}>LUFS (Integrated)</span>
+                        <p style={{ fontSize: '0.825rem', color: '#64748b', margin: '0.125rem 0 0' }}>
+                          {lang === 'es'
+                            ? 'Medida del volumen percibido. Es informativo: el volumen final se ajusta en mastering.'
+                            : 'Measure of perceived loudness. Informative only: final loudness is adjusted in mastering.'}
+                        </p>
+                      </div>
+
+                      {/* PLR */}
+                      <div>
+                        <span style={{ fontWeight: '600', color: '#334155', fontSize: '0.9rem' }}>PLR (Peak-to-Loudness Ratio)</span>
+                        <p style={{ fontSize: '0.825rem', color: '#64748b', margin: '0.125rem 0 0' }}>
+                          {lang === 'es'
+                            ? 'Relación entre el pico y el nivel promedio. Indica cuánta dinámica tiene tu mezcla.'
+                            : 'Ratio between peak and average level. Indicates how much dynamics your mix has.'}
+                        </p>
+                      </div>
+
+                      {/* Stereo Image */}
+                      <div>
+                        <span style={{ fontWeight: '600', color: '#334155', fontSize: '0.9rem' }}>
+                          {lang === 'es' ? 'Imagen Estéreo' : 'Stereo Image'}
+                        </span>
+                        <p style={{ fontSize: '0.825rem', color: '#64748b', margin: '0.125rem 0 0' }}>
+                          {lang === 'es'
+                            ? 'Distribución espacial del contenido entre izquierda y derecha. Afecta la amplitud y compatibilidad mono.'
+                            : 'Spatial distribution of content between left and right. Affects width and mono compatibility.'}
+                        </p>
+                      </div>
+
+                      {/* Frequency Balance */}
+                      <div>
+                        <span style={{ fontWeight: '600', color: '#334155', fontSize: '0.9rem' }}>
+                          {lang === 'es' ? 'Balance de Frecuencias' : 'Frequency Balance'}
+                        </span>
+                        <p style={{ fontSize: '0.825rem', color: '#64748b', margin: '0.125rem 0 0' }}>
+                          {lang === 'es'
+                            ? 'Distribución tonal entre graves, medios y agudos. Un balance saludable facilita el mastering.'
+                            : 'Tonal distribution between lows, mids, and highs. A healthy balance makes mastering easier.'}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* eBook link */}
+                    <div style={{
+                      marginTop: '1.25rem',
+                      paddingTop: '1rem',
+                      borderTop: '1px solid #e2e8f0'
+                    }}>
+                      <p style={{ fontSize: '0.825rem', color: '#64748b', marginBottom: '0.75rem' }}>
+                        {lang === 'es'
+                          ? 'Para un glosario completo y la metodología completa de Mastering Ready, puedes profundizar en el eBook.'
+                          : 'For a complete glossary and the full Mastering Ready methodology, you can dive deeper in the eBook.'}
+                      </p>
+                      <a
+                        href="https://masteringready.com/ebook"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          display: 'inline-block',
+                          fontSize: '0.875rem',
+                          fontWeight: '500',
+                          color: '#667eea',
+                          textDecoration: 'none',
+                          padding: '0.5rem 1rem',
+                          border: '1px solid #667eea',
+                          borderRadius: '0.5rem',
+                          transition: 'all 0.2s'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = '#667eea'
+                          e.currentTarget.style.color = 'white'
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = 'transparent'
+                          e.currentTarget.style.color = '#667eea'
+                        }}
+                      >
+                        {lang === 'es' ? 'Ver metodología completa en el eBook' : 'See full methodology in the eBook'}
+                      </a>
+                    </div>
+                  </div>
+                )}
+              </div>
+
             </div>
           )}
         </div>
@@ -4121,6 +4426,11 @@ by Matías Carvajal
         @keyframes spin {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
+        }
+
+        @keyframes fadeInMsg {
+          0% { opacity: 0; }
+          100% { opacity: 1; }
         }
 
         /* ============================================

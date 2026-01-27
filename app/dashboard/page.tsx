@@ -13,6 +13,7 @@ import { useAuth, UserMenu } from '@/components/auth'
 import { supabase, getUserAnalysisStatus, checkCanBuyAddon, UserDashboardStatus } from '@/lib/supabase'
 import { useGeo } from '@/lib/useGeo'
 import { getPlanDisplayPrice, PRICING } from '@/lib/geoip'
+import { getLanguageCookie, setLanguageCookie } from '@/lib/language'
 import {
   Music,
   FileAudio,
@@ -52,7 +53,7 @@ const translations = {
     completeView: 'Completo',
     proRequired: 'Requiere Pro',
     upgradeToPro: 'Actualizar a Pro',
-    upgradeDescription: 'Desbloquea análisis completos, descargas ilimitadas y más',
+    upgradeDescription: 'Desbloquea análisis completos, descarga de PDFs y más',
     analysesThisMonth: 'Análisis restantes',
     totalAnalyses: 'Total de análisis',
     currentPlan: 'Plan actual',
@@ -77,7 +78,7 @@ const translations = {
     unlockBenefits: [
       'Acceso a análisis Completo y Detallado',
       'Descargar PDFs completos',
-      'Análisis ilimitados',
+      '30 análisis al mes',
       'Procesamiento prioritario'
     ],
     monthlyPrice: '$9.99/mes',
@@ -108,7 +109,7 @@ const translations = {
     completeView: 'Complete',
     proRequired: 'Requires Pro',
     upgradeToPro: 'Upgrade to Pro',
-    upgradeDescription: 'Unlock complete analyses, unlimited downloads and more',
+    upgradeDescription: 'Unlock complete analyses, PDF downloads and more',
     analysesThisMonth: 'Analyses remaining',
     totalAnalyses: 'Total analyses',
     currentPlan: 'Current plan',
@@ -133,7 +134,7 @@ const translations = {
     unlockBenefits: [
       'Access to Complete and Detailed analysis',
       'Download complete PDFs',
-      'Unlimited analyses',
+      '30 analyses per month',
       'Priority processing'
     ],
     monthlyPrice: '$9.99/month',
@@ -281,9 +282,12 @@ export default function DashboardPage() {
   const singlePrice = getPlanDisplayPrice(PRICING.SINGLE, geo)
   const addonPrice = getPlanDisplayPrice(PRICING.ADDON_PACK, geo)
 
-  // Detect language
+  // Detect language: cookie > browser
   useEffect(() => {
-    if (typeof navigator !== 'undefined') {
+    const cookieLang = getLanguageCookie()
+    if (cookieLang) {
+      setLang(cookieLang)
+    } else if (typeof navigator !== 'undefined') {
       const browserLang = navigator.language.split('-')[0]
       setLang(browserLang === 'es' ? 'es' : 'en')
     }
@@ -550,7 +554,21 @@ export default function DashboardPage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             {/* Language Toggle */}
             <button
-              onClick={() => setLang(lang === 'es' ? 'en' : 'es')}
+              onClick={() => {
+                const newLang = lang === 'es' ? 'en' : 'es'
+                setLang(newLang)
+                setLanguageCookie(newLang)
+                // Also persist to profile for logged-in users
+                if (user) {
+                  supabase
+                    .from('profiles')
+                    .update({ preferred_language: newLang })
+                    .eq('id', user.id)
+                    .then(({ error }) => {
+                      if (error) console.error('Error saving language preference:', error)
+                    })
+                }
+              }}
               style={{
                 padding: '0.375rem 0.75rem',
                 minWidth: '2.5rem',

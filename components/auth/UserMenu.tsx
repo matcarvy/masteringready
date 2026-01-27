@@ -11,7 +11,7 @@
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { useAuth } from './AuthProvider'
-import { User, LogOut, Settings, History, CreditCard, ChevronDown } from 'lucide-react'
+import { User, LogOut, ChevronDown } from 'lucide-react'
 
 // ============================================================================
 // TYPES / TIPOS
@@ -19,6 +19,7 @@ import { User, LogOut, Settings, History, CreditCard, ChevronDown } from 'lucide
 
 interface UserMenuProps {
   lang?: 'es' | 'en'
+  isMobile?: boolean
 }
 
 // ============================================================================
@@ -29,20 +30,14 @@ const translations = {
   es: {
     login: 'Iniciar Sesión',
     signUp: 'Registrarse',
-    myAccount: 'Mi Cuenta',
-    history: 'Historial',
-    subscription: 'Suscripción',
-    settings: 'Configuración',
+    myAccount: 'Mis Análisis',
     logout: 'Cerrar Sesión',
     loading: 'Cargando...'
   },
   en: {
     login: 'Sign In',
     signUp: 'Sign Up',
-    myAccount: 'My Account',
-    history: 'History',
-    subscription: 'Subscription',
-    settings: 'Settings',
+    myAccount: 'My Analyses',
     logout: 'Sign Out',
     loading: 'Loading...'
   }
@@ -52,7 +47,7 @@ const translations = {
 // COMPONENT / COMPONENTE
 // ============================================================================
 
-export function UserMenu({ lang = 'es' }: UserMenuProps) {
+export function UserMenu({ lang = 'es', isMobile = false }: UserMenuProps) {
   const { user, loading, signOut } = useAuth()
   const [isOpen, setIsOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -83,8 +78,12 @@ export function UserMenu({ lang = 'es' }: UserMenuProps) {
     )
   }
 
-  // Not logged in - show login/signup buttons
+  // Not logged in
   if (!user) {
+    // On mobile, login/signup is handled by hamburger menu in page.tsx
+    if (isMobile) return null
+
+    // Desktop: show login/signup buttons
     return (
       <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
         <Link
@@ -149,6 +148,8 @@ export function UserMenu({ lang = 'es' }: UserMenuProps) {
   const handleLogout = async () => {
     setIsOpen(false)
     await signOut()
+    // Redirect to home preserving current language (cookie persists, URL param as safety net)
+    window.location.href = `/?lang=${lang}`
   }
 
   return (
@@ -277,66 +278,6 @@ export function UserMenu({ lang = 'es' }: UserMenuProps) {
             >
               <User size={18} color="#6b7280" />
               {t.myAccount}
-            </Link>
-
-            <Link
-              href="/history"
-              onClick={() => setIsOpen(false)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem',
-                padding: '0.75rem 1rem',
-                color: '#374151',
-                textDecoration: 'none',
-                fontSize: '0.95rem',
-                transition: 'background 0.2s'
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.background = '#f3f4f6'}
-              onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-            >
-              <History size={18} color="#6b7280" />
-              {t.history}
-            </Link>
-
-            <Link
-              href="/subscription"
-              onClick={() => setIsOpen(false)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem',
-                padding: '0.75rem 1rem',
-                color: '#374151',
-                textDecoration: 'none',
-                fontSize: '0.95rem',
-                transition: 'background 0.2s'
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.background = '#f3f4f6'}
-              onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-            >
-              <CreditCard size={18} color="#6b7280" />
-              {t.subscription}
-            </Link>
-
-            <Link
-              href="/settings"
-              onClick={() => setIsOpen(false)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem',
-                padding: '0.75rem 1rem',
-                color: '#374151',
-                textDecoration: 'none',
-                fontSize: '0.95rem',
-                transition: 'background 0.2s'
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.background = '#f3f4f6'}
-              onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-            >
-              <Settings size={18} color="#6b7280" />
-              {t.settings}
             </Link>
           </div>
 
