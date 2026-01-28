@@ -292,9 +292,31 @@ export default function SettingsPage() {
     setDeleteLoading(true)
 
     try {
+      // Anti-abuse: Record email + usage before deletion
+      // This prevents users from deleting and re-creating accounts to get fresh free analyses
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('email, total_analyses, analyses_lifetime_used')
+        .eq('id', user!.id)
+        .single()
+
+      if (profileData) {
+        await supabase.from('deleted_accounts').insert({
+          email: profileData.email,
+          analyses_lifetime_used: profileData.analyses_lifetime_used || 0,
+          total_analyses: profileData.total_analyses || 0
+        })
+      }
+
       // Delete analyses
       await supabase
         .from('analyses')
+        .delete()
+        .eq('user_id', user!.id)
+
+      // Delete subscription
+      await supabase
+        .from('subscriptions')
         .delete()
         .eq('user_id', user!.id)
 

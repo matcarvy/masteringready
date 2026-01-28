@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { Download, Check, Upload, Zap, Shield, TrendingUp, Play, Music, Crown, X, AlertTriangle, Globe, Unlock, Menu } from 'lucide-react'
+import { Download, Check, Upload, Zap, Shield, TrendingUp, Play, Music, Crown, X, AlertTriangle, Globe, Headphones, Menu } from 'lucide-react'
 import { UserMenu, useAuth, AuthModal } from '@/components/auth'
 import { analyzeFile, checkIpLimit, IpCheckResult } from '@/lib/api'
 import { startAnalysisPolling, getAnalysisStatus } from '@/lib/api'
@@ -935,21 +935,27 @@ ${new Date().toLocaleDateString()}
     try {
       // Try PDF first if endpoint is available
       if (requestIdRef.current) {
-        
+
         try {
           const formData = new FormData()
           formData.append('request_id', requestIdRef.current)
           formData.append('lang', lang)
 
-          // Use full backend URL instead of relative path
-          const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'https://masteringready.onrender.com'
+          // Use full backend URL — guard against placeholder values
+          const envUrl = process.env.NEXT_PUBLIC_API_URL
+          const backendUrl = (envUrl && !envUrl.includes('your-backend'))
+            ? envUrl
+            : 'https://masteringready.onrender.com'
           const pdfUrl = `${backendUrl}/api/download/pdf`
-          
+
+          console.log('[PDF Download] Requesting:', pdfUrl, 'request_id:', requestIdRef.current)
+
           const response = await fetch(pdfUrl, {
             method: 'POST',
             body: formData
           })
 
+          console.log('[PDF Download] Response status:', response.status)
 
           if (response.ok) {
             // PDF download successful
@@ -963,16 +969,17 @@ ${new Date().toLocaleDateString()}
             a.click()
             document.body.removeChild(a)
             URL.revokeObjectURL(url)
-            
+
             return
           } else {
             const errorText = await response.text()
-            console.error('PDF error response:', errorText)
+            console.error('[PDF Download] Error response:', response.status, errorText)
           }
         } catch (pdfError) {
-          console.error('PDF exception:', pdfError)
+          console.error('[PDF Download] Exception:', pdfError)
         }
       } else {
+        console.warn('[PDF Download] No request_id available, falling back to TXT')
       }
       
       // Fallback to TXT download
@@ -2440,7 +2447,7 @@ by Matías Carvajal
                             fontSize: '0.875rem',
                             transition: 'color 0.3s ease'
                           }}>
-                            {isUnlocking ? <Unlock size={16} /> : <Crown size={16} />}
+                            {isUnlocking ? <Headphones size={16} /> : <Crown size={16} />}
                             {lang === 'es' ? 'Obtener análisis completo' : 'Get complete analysis'}
                           </div>
                         </div>
@@ -3901,7 +3908,7 @@ by Matías Carvajal
             boxShadow: '0 4px 20px rgba(102, 126, 234, 0.5)',
             animation: 'unlockPop 0.7s ease-out forwards'
           }}>
-            <Unlock size={28} style={{ color: 'white' }} />
+            <Headphones size={28} style={{ color: 'white' }} />
           </div>
         </div>
       )}

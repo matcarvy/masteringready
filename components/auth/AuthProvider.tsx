@@ -78,8 +78,13 @@ async function savePendingAnalysisForUser(userId: string) {
       return false
     }
 
+    // IMPORTANT: Remove from localStorage IMMEDIATELY to prevent race condition.
+    // Both AuthProvider.onAuthStateChange and AuthModal.onSuccess can call this
+    // concurrently — the first caller claims the data, the second finds nothing.
+    localStorage.removeItem('pendingAnalysis')
+
     const analysis = JSON.parse(pendingData)
-    console.log('[SaveAnalysis] Found pending analysis:', {
+    console.log('[SaveAnalysis] Found pending analysis (claimed from localStorage):', {
       userId,
       filename: analysis.filename,
       score: analysis.score,
@@ -89,7 +94,6 @@ async function savePendingAnalysisForUser(userId: string) {
       hasReportShort: !!analysis.report_short,
       hasReportWrite: !!analysis.report_write,
       hasReportVisual: !!analysis.report_visual,
-      // Also check alternative field names
       hasReport: !!analysis.report,
       allKeys: Object.keys(analysis).join(', ')
     })
@@ -111,7 +115,10 @@ async function savePendingAnalysisForUser(userId: string) {
       lang: analysis.lang || 'es',
       strict_mode: analysis.strict || false,
       report_mode: 'write',
-      metrics: analysis.metrics || null,
+      metrics: {
+        metrics: analysis.metrics || [],
+        metrics_bars: analysis.metrics_bars || null
+      },
       interpretations: analysis.interpretations || null,
       report_short: reportShort,
       report_write: reportWrite,
@@ -180,9 +187,7 @@ async function savePendingAnalysisForUser(userId: string) {
       console.log('[SaveAnalysis] RPC success:', rpcData)
     }
 
-    // Clear localStorage
-    localStorage.removeItem('pendingAnalysis')
-    console.log('[SaveAnalysis] Complete! Cleared localStorage')
+    console.log('[SaveAnalysis] Complete!')
     return true
 
   } catch (err) {
@@ -266,6 +271,27 @@ export function AuthProvider({ children }: AuthProviderProps) {
               full_name: u.user_metadata?.full_name || u.user_metadata?.name || null,
               avatar_url: u.user_metadata?.avatar_url || null
             })
+
+            // Anti-abuse: Check if this email was previously deleted
+            // Carry over lifetime usage so users can't delete/recreate for fresh free analyses
+            const { data: deletedRecord } = await supabase
+              .from('deleted_accounts')
+              .select('analyses_lifetime_used, total_analyses')
+              .eq('email', u.email || '')
+              .order('deleted_at', { ascending: false })
+              .limit(1)
+              .single()
+
+            if (deletedRecord && deletedRecord.analyses_lifetime_used > 0) {
+              console.log('[AntiAbuse] Carrying over usage for re-registered email:', u.email, deletedRecord)
+              await supabase
+                .from('profiles')
+                .update({
+                  analyses_lifetime_used: deletedRecord.analyses_lifetime_used,
+                  total_analyses: deletedRecord.total_analyses || 0
+                })
+                .eq('id', u.id)
+            }
 
             // Create free subscription
             const { data: freePlan } = await supabase

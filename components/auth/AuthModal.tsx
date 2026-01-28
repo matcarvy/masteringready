@@ -10,7 +10,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { SocialLoginButtons } from './SocialLoginButtons'
-import { X, Mail, Lock, User, Eye, EyeOff, Check, Unlock } from 'lucide-react'
+import { X, Mail, Lock, User, Eye, EyeOff, Check, Headphones, Music } from 'lucide-react'
 
 // ============================================================================
 // TYPES / TIPOS
@@ -66,7 +66,7 @@ const translations = {
     emailExists: 'Ya existe una cuenta con este email',
     error: 'Error. Intenta de nuevo.',
     // Success
-    unlocking: 'Desbloqueando...'
+    unlocking: 'Accediendo...'
   },
   en: {
     // Tabs
@@ -104,7 +104,7 @@ const translations = {
     emailExists: 'Account already exists',
     error: 'Error. Please try again.',
     // Success
-    unlocking: 'Unlocking...'
+    unlocking: 'Accessing...'
   }
 }
 
@@ -341,7 +341,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, lang }: AuthModalProps) 
           <X size={20} />
         </button>
 
-        {/* Success state with lock animation */}
+        {/* Success state with headphones animation */}
         {authSuccess ? (
           <div style={{
             display: 'flex',
@@ -349,13 +349,13 @@ export function AuthModal({ isOpen, onClose, onSuccess, lang }: AuthModalProps) 
             alignItems: 'center',
             padding: '2rem 0'
           }}>
-            {/* Animated Lock Icon */}
+            {/* Animated Headphones Icon */}
             <div style={{
               width: '80px',
               height: '80px',
               background: lockAnimationPhase === 'green'
                 ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
-                : 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
+                : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
               borderRadius: '50%',
               display: 'flex',
               alignItems: 'center',
@@ -367,15 +367,15 @@ export function AuthModal({ isOpen, onClose, onSuccess, lang }: AuthModalProps) 
               {lockAnimationPhase === 'green' ? (
                 <Check size={40} style={{ color: 'white' }} />
               ) : lockAnimationPhase === 'open' ? (
-                <Unlock
+                <Music
                   size={40}
                   style={{
-                    color: '#d97706',
+                    color: 'white',
                     animation: 'lockOpen 0.4s ease-out forwards'
                   }}
                 />
               ) : (
-                <Lock size={40} style={{ color: '#d97706' }} />
+                <Headphones size={40} style={{ color: 'white' }} />
               )}
             </div>
 
@@ -390,7 +390,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, lang }: AuthModalProps) 
           </div>
         ) : (
           <>
-            {/* Lock Icon Header */}
+            {/* Headphones Icon Header */}
             <div style={{
               display: 'flex',
               justifyContent: 'center',
@@ -399,13 +399,13 @@ export function AuthModal({ isOpen, onClose, onSuccess, lang }: AuthModalProps) 
               <div style={{
                 width: '48px',
                 height: '48px',
-                background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                 borderRadius: '50%',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center'
               }}>
-                <Lock size={24} style={{ color: '#d97706' }} />
+                <Headphones size={24} style={{ color: 'white' }} />
               </div>
             </div>
 

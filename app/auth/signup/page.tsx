@@ -160,6 +160,7 @@ function SignupContent() {
       })
 
       if (signUpError) {
+        console.error('Signup error details:', JSON.stringify(signUpError, null, 2))
         if (signUpError.message.includes('already registered')) {
           setError(t.emailExists)
         } else {
