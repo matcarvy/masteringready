@@ -1,8 +1,26 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Mix Analyzer v7.3.51 - Stereo Bar Percentage Fix
-================================================
+Mix Analyzer v7.4.0 - Major Bug Fixes
+=====================================
+
+v7.4.0 MAJOR FIXES:
+- BUG 1 (CRITICAL): Fixed RMS calculation in chunked mode - was averaging dB values directly
+  * Now converts dB to linear, averages, then converts back to dB
+  * Crest Factor now calculated correctly in chunked mode
+- BUG 2: LUFS energy sum edge case - handles all chunks below -70dB gracefully
+  * Returns -70.0 LUFS with reliable=False flag instead of crashing
+- BUG 3: Correlation threshold alignment - now matches bar display thresholds
+  * ≥0.7 excellent, 0.5-0.7 good, 0.3-0.5 warning, 0.1-0.3 poor, <0.1 critical
+- BUG 4: Band correlation for empty bands - returns None instead of misleading 1.0
+  * Bands with insufficient energy excluded from average
+- BUG 5: PLR when LUFS unreliable - no longer calculates PLR for short files
+  * Files <4s show "PLR not available" instead of unreliable value
+- BUG 6: Mono file detection - detects true mono AND pseudo-stereo (identical channels)
+  * Shows "Mono file - stereo analysis does not apply" instead of "perfect correlation"
+- BUG 7: M/S ratio precision - uses float64 instead of float32
+- BUG 8: Silent file handling - returns None values instead of misleading 33.33%
+- BUG 9: Score floor - minimum score is 5, never 0
 
 v7.3.51 FIX:
 - Fixed stereo image bar showing 50% despite healthy correlation (0.86)
@@ -506,26 +524,31 @@ class ScoringThresholds:
         }
     }
     
+    # v7.4.0 FIX: Aligned thresholds with bar display - gradual transitions
+    # ≥0.7 excellent, 0.5-0.7 good, 0.3-0.5 warning, 0.1-0.3 poor, <0.1 critical
     STEREO_WIDTH = {
         "strict": {
-            "perfect": lambda corr: 0.75 <= corr <= 0.85,  # Más estrecho que normal
-            "pass": lambda corr: (0.70 <= corr < 0.75) or (0.85 < corr <= 0.90),
-            "warning": lambda corr: (0.60 <= corr < 0.70) or (0.90 < corr <= 0.97) or (-0.2 < corr < 0.60),  # v7.3.30: 0.95→0.97
-            "critical": lambda corr: -0.5 <= corr <= -0.2,
-            "catastrophic": lambda corr: corr < -0.5,  # Antifase severa
+            "perfect": lambda corr: corr >= 0.7,  # ≥0.7 excellent
+            "pass": lambda corr: 0.5 <= corr < 0.7,  # 0.5-0.7 good
+            "warning": lambda corr: 0.3 <= corr < 0.5,  # 0.3-0.5 warning
+            "poor": lambda corr: 0.1 <= corr < 0.3,  # 0.1-0.3 poor (new)
+            "critical": lambda corr: 0 <= corr < 0.1,  # 0-0.1 critical
+            "catastrophic": lambda corr: corr < 0,  # Negative = phase issues
         },
         "normal": {
-            "perfect": lambda corr: 0.7 <= corr <= 0.97,  # v7.3.30: 0.95→0.97 (85% no es "casi mono")
-            "pass": lambda corr: (0.5 <= corr < 0.7) or (0.97 < corr <= 1.0),  # v7.3.30: 0.95→0.97
-            "warning": lambda corr: (0.3 <= corr < 0.5) or (-0.2 < corr <= 0.3),
-            "critical": lambda corr: -0.5 <= corr <= -0.2,
-            "catastrophic": lambda corr: corr < -0.5,  # Antifase severa
+            "perfect": lambda corr: corr >= 0.7,  # ≥0.7 excellent
+            "pass": lambda corr: 0.5 <= corr < 0.7,  # 0.5-0.7 good
+            "warning": lambda corr: 0.3 <= corr < 0.5,  # 0.3-0.5 warning
+            "poor": lambda corr: 0.1 <= corr < 0.3,  # 0.1-0.3 poor (new)
+            "critical": lambda corr: 0 <= corr < 0.1,  # 0-0.1 critical
+            "catastrophic": lambda corr: corr < 0,  # Negative = phase issues
         }
     }
 
     SCORES = {
-        "catastrophic": -2.0,  # Nuevo: casos extremos
+        "catastrophic": -2.0,  # Casos extremos (fase negativa severa)
         "critical": -1.0,
+        "poor": -0.3,         # v7.4.0: New status for correlation 0.1-0.3
         "warning": 0.0,
         "pass": 0.7,
         "perfect": 1.0,
@@ -606,20 +629,25 @@ def calculate_stereo_score(correlation: float, strict: bool) -> Tuple[str, float
     """
     Calculate stereo width score WITHOUT language dependency.
     Returns: (status, score_delta)
+
+    v7.4.0: Aligned thresholds with bar display - gradual transitions
+    ≥0.7 excellent, 0.5-0.7 good, 0.3-0.5 warning, 0.1-0.3 poor, <0.1 critical
     """
     mode = "strict" if strict else "normal"
     thresholds = ScoringThresholds.STEREO_WIDTH[mode]
-    
+
     if thresholds["catastrophic"](correlation):
         return "catastrophic", ScoringThresholds.SCORES["catastrophic"]
     elif thresholds["critical"](correlation):
         return "critical", ScoringThresholds.SCORES["critical"]
-    elif thresholds["perfect"](correlation):
-        return "perfect", ScoringThresholds.SCORES["perfect"]
+    elif thresholds["poor"](correlation):
+        return "poor", ScoringThresholds.SCORES["poor"]
+    elif thresholds["warning"](correlation):
+        return "warning", ScoringThresholds.SCORES["warning"]
     elif thresholds["pass"](correlation):
         return "pass", ScoringThresholds.SCORES["pass"]
-    else:  # warning
-        return "warning", 0.3
+    else:  # perfect
+        return "perfect", ScoringThresholds.SCORES["perfect"]
 
 
 # ----------------------------
@@ -968,10 +996,11 @@ def correlation_by_band(y: np.ndarray, sr: int) -> Dict[str, float]:
             # Check if filtered signal has energy
             L_energy = np.std(L_filtered)
             R_energy = np.std(R_filtered)
-            
+
+            # v7.4.0 FIX: Return None for bands with insufficient energy instead of misleading 1.0
             if L_energy < 1e-10 or R_energy < 1e-10:
-                # Very little energy in this band - consider it mono
-                results[name] = 1.0
+                # Very little energy in this band - cannot evaluate correlation
+                results[name] = None  # Changed from 1.0 to None
                 continue
             
             # Calculate correlation for this band
@@ -1036,6 +1065,9 @@ def identify_problem_bands(band_correlations: Dict[str, float], threshold: float
     
     problems = []
     for band_name, corr in band_correlations.items():
+        # v7.4.0 FIX: Skip bands with None correlation (insufficient energy)
+        if corr is None:
+            continue
         if corr < threshold:
             info = band_info.get(band_name, {})
             problems.append({
@@ -1077,9 +1109,10 @@ def calculate_ms_ratio(y: np.ndarray, debug: bool = False) -> Tuple[float, float
         identical_percentage = (identical_samples / total_samples) * 100
         
     
-    mid = (L + R) / 2
-    side = (L - R) / 2
-    
+    # v7.4.0 FIX: Use float64 for precision
+    mid = (L.astype(np.float64) + R.astype(np.float64)) / 2
+    side = (L.astype(np.float64) - R.astype(np.float64)) / 2
+
     mid_rms = float(np.sqrt(np.mean(mid**2)))
     side_rms = float(np.sqrt(np.mean(side**2)))
     
@@ -1506,6 +1539,8 @@ def calculate_metrics_bars_percentages(metrics: List[Dict[str, Any]]) -> Dict[st
             elif isinstance(corr_value, (int, float)) and corr_value > 1:
                 corr_value = corr_value / 100
 
+            # v7.4.0 FIX: Aligned with new thresholds - gradual transitions
+            # ≥0.7 excellent, 0.5-0.7 good, 0.3-0.5 warning, 0.1-0.3 poor, <0.1 critical
             if corr_value >= 0.7:
                 percentage = 100
                 bar_status = "excellent"
@@ -1516,17 +1551,17 @@ def calculate_metrics_bars_percentages(metrics: List[Dict[str, Any]]) -> Dict[st
                 percentage = 65
                 bar_status = "warning"
                 warnings_count += 1
-            elif 0 <= corr_value < 0.3:
-                # Only critical if also has low PLR or very wide image
-                if plr_val < 6:
-                    percentage = 40
-                    bar_status = "critical"
-                else:
-                    percentage = 50
-                    bar_status = "warning"
-                    warnings_count += 1
-            else:  # Negative correlation
-                percentage = 35
+            elif 0.1 <= corr_value < 0.3:
+                # Poor - low correlation but not critical
+                percentage = 50
+                bar_status = "warning"  # Show as yellow (poor maps to warning visually)
+                warnings_count += 1
+            elif 0 <= corr_value < 0.1:
+                # Critical - very low positive correlation
+                percentage = 40
+                bar_status = "critical"
+            else:  # Negative correlation - phase issues
+                percentage = 30
                 bar_status = "critical"
         
         # ============================================
@@ -2488,8 +2523,20 @@ def band_balance_db(y: np.ndarray, sr: int) -> Dict[str, float]:
         mid_percent = max(0.0, min(100.0, mid_percent))
         high_percent = max(0.0, min(100.0, high_percent))
     else:
-        # Si no hay energía detectable, distribuir equitativamente
-        low_percent = mid_percent = high_percent = 33.33
+        # v7.4.0 FIX: Return None values for silent files instead of misleading 33.33%
+        return {
+            "low_db": -120.0,
+            "mid_db": -120.0,
+            "high_db": -120.0,
+            "d_low_mid_db": 0.0,
+            "d_high_mid_db": 0.0,
+            "low_percent": None,
+            "mid_percent": None,
+            "high_percent": None,
+            "is_silent": True,
+            "message_es": "Archivo silencioso o con nivel muy bajo para analizar",
+            "message_en": "Silent file or level too low to analyze"
+        }
 
     return {
         "low_db": low_db,
@@ -2500,6 +2547,7 @@ def band_balance_db(y: np.ndarray, sr: int) -> Dict[str, float]:
         "low_percent": low_percent,
         "mid_percent": mid_percent,
         "high_percent": high_percent,
+        "is_silent": False
     }
 
 
@@ -2640,23 +2688,22 @@ def _status_stereo_en(corr: float, strict: bool = False) -> Tuple[str, str, floa
     status, score = calculate_stereo_score(corr, strict)
     
     # TRACK 2: Format message (Matías Voice - English)
-    # v7.3.33: Differentiate between low positive (wide stereo) and negative (phase cancellation)
-    if status == "warning":
-        if corr >= 0:
-            # Low positive: wide stereo but NO cancellation yet
-            message = f"Very wide stereo image ({corr:.0%}). Check wideners, chorus or stereo delays. Test in mono: may lose body, though no phase cancellation yet."
-        else:
-            # Negative: phase cancellation BEGINS
-            message = f"Phase cancellation begins ({corr:.0%}). Volume loss in mono expected. Check widening plugins, M/S processing or inverted channels."
+    # v7.4.0: Added "poor" status for correlation 0.1-0.3
+    if status == "poor":
+        # Low positive correlation - possible phase issues
+        message = f"Low stereo correlation ({corr:.0%}). Possible phase issues detected. Check in mono for volume loss. Review wideners, chorus effects, or stereo plugins."
+    elif status == "warning":
+        # Reduced correlation - worth checking
+        message = f"Reduced stereo correlation ({corr:.0%}). Check mono compatibility. Review stereo widening plugins or M/S processing."
     elif status == "critical":
-        message = f"Significant phase cancellation ({corr:.0%}). Elements will lose volume or disappear in mono (Bluetooth speakers, phones, clubs). Check channel polarity, M/S plugins or phase-inverted effects."
+        message = f"Very low stereo correlation ({corr:.0%}). Significant mono compatibility issues expected. Check stereo plugins, channel polarity, or phase relationships."
     elif status == "catastrophic":
-        message = f"SEVERE: Near-total phase inversion ({corr:.0%}). The mix will almost completely cancel in mono. Check for: inverted phase plugins, M/S processing errors, or accidentally inverted channels."
+        message = f"SEVERE: Phase cancellation detected ({corr:.0%}). The mix will lose significant content in mono. Check for: inverted channels, phase-inverted plugins, or M/S processing errors."
     elif status == "perfect":
         message = "Excellent stereo correlation (mono compatible). The mix will translate well on all playback systems."
     else:  # pass
         message = "Good stereo correlation. The mix maintains a healthy stereo image with good mono compatibility."
-    
+
     return status, message, score
 
 def _status_freq_en(fb: Dict[str, float], genre: Optional[str] = None, strict: bool = False) -> Tuple[str, str, float]:
@@ -2875,23 +2922,22 @@ def _status_stereo_es(corr: float, strict: bool = False) -> Tuple[str, str, floa
     status, score = calculate_stereo_score(corr, strict)
     
     # TRACK 2: Formatear mensaje (Matías Voice - del eBook)
-    # v7.3.33: Diferenciar entre positivo bajo (stereo amplio) y negativo (cancelación)
-    if status == "warning":
-        if corr >= 0:
-            # Positivo bajo: stereo amplio pero SIN cancelación todavía
-            message = f"Imagen estéreo muy amplia ({corr:.0%}). Revisa ensanchadores, chorus o delays estéreo. Prueba en mono: puede perder cuerpo, aunque aún no hay cancelación."
-        else:
-            # Negativo: EMPIEZA la cancelación de fase
-            message = f"Empieza la cancelación de fase ({corr:.0%}). Pérdida de volumen en mono esperada. Revisa plugins de ensanchamiento, procesamiento M/S o canales invertidos."
+    # v7.4.0: Agregado estado "poor" para correlación 0.1-0.3
+    if status == "poor":
+        # Correlación baja - posibles problemas de fase
+        message = f"Correlación estéreo baja ({corr:.0%}). Posibles problemas de fase detectados. Escúchalo en mono para verificar pérdida de volumen. Revisa ensanchadores, chorus o plugins estéreo."
+    elif status == "warning":
+        # Correlación reducida - vale la pena revisar
+        message = f"Correlación estéreo reducida ({corr:.0%}). Revisa compatibilidad mono. Verifica plugins de ensanchamiento estéreo o procesamiento M/S."
     elif status == "critical":
-        message = f"Cancelación de fase significativa ({corr:.0%}). Elementos perderán volumen o desaparecerán en mono (parlantes Bluetooth, teléfonos, clubes). Verifica polaridad de canales, plugins M/S o efectos con fase invertida."
+        message = f"Correlación estéreo muy baja ({corr:.0%}). Problemas significativos de compatibilidad mono esperados. Verifica plugins estéreo, polaridad de canales o relaciones de fase."
     elif status == "catastrophic":
-        message = f"SEVERO: Inversión de fase casi total ({corr:.0%}). La mezcla se cancelará casi por completo en mono. Verifica: plugins con fase invertida, errores en procesamiento M/S, o canales accidentalmente invertidos."
+        message = f"SEVERO: Cancelación de fase detectada ({corr:.0%}). La mezcla perderá contenido significativo en mono. Verifica: canales invertidos, plugins con fase invertida, o errores en procesamiento M/S."
     elif status == "perfect":
         message = "Excelente correlación estéreo (mono compatible). La mezcla se traducirá bien en todos los sistemas de reproducción."
     else:  # pass
         message = "Buena correlación estéreo. La mezcla mantiene una imagen estéreo saludable con buena compatibilidad en mono."
-    
+
     return status, message, score
 
 def _status_freq_es(fb: Dict[str, float], genre: Optional[str] = None, strict: bool = False) -> Tuple[str, str, float]:
@@ -3039,13 +3085,15 @@ def status_dc_offset(dc_data: Dict[str, Any], lang: str = 'en') -> Tuple[str, st
 def score_report(metrics: List[Dict[str, Any]], hard_fail: bool, strict: bool = False, lang: str = 'en') -> Tuple[int, str]:
     """Calculate global score (0-100) and verdict with localization support."""
     lang = _pick_lang(lang)
-    
+
+    # v7.4.0 FIX: Minimum score is 5, never 0
     if hard_fail:
         if lang == 'es':
-            return 0, "❌ Se requieren ajustes antes del mastering"
-        return 0, "❌ Adjustments required before mastering"
+            return 5, "❌ Requiere revisión antes del mastering"
+        return 5, "❌ Requires review before mastering"
 
-    mult = {"perfect": 1.0, "pass": 0.9, "warning": 0.7, "critical": 0.0, "catastrophic": 0.0, "info": 1.0}
+    # v7.4.0: Added "poor" status for correlation 0.1-0.3
+    mult = {"perfect": 1.0, "pass": 0.9, "warning": 0.7, "poor": 0.4, "critical": 0.0, "catastrophic": 0.0, "info": 1.0}
     total = 0.0
     wsum = 0.0
     
@@ -3077,12 +3125,14 @@ def score_report(metrics: List[Dict[str, Any]], hard_fail: bool, strict: bool = 
         return 50, "⚠️ Partial results"
 
     raw_score = int(round(100.0 * (total / wsum)))
-    
-    # Apply intelligent minimum score - never 0
+
+    # Apply intelligent minimum score
     minimum_score = calculate_minimum_score(metrics)
-    score = max(minimum_score, raw_score)
-    
+    # v7.4.0 FIX: Floor at 5, never return scores below 5
+    score = max(5, max(minimum_score, raw_score))
+
     # Localized verdicts with MARGIN philosophy (not judgment)
+    # v7.4.0: Added verdicts for scores 5-19
     if lang == 'es':
         if score >= 95:
             verdict = "✅ Margen óptimo para mastering"
@@ -3096,6 +3146,9 @@ def score_report(metrics: List[Dict[str, Any]], hard_fail: bool, strict: bool = 
             verdict = "⚠️ Margen limitado - ajustes recomendados"
         elif score >= 20:
             verdict = "❌ Margen comprometido para mastering"
+        elif score >= 5:
+            # v7.4.0: New verdict for scores 5-19
+            verdict = "❌ Requiere revisión - tu archivo necesita trabajo antes del mastering"
         else:
             verdict = "❌ Sin margen para procesamiento adicional"
     else:
@@ -3111,9 +3164,12 @@ def score_report(metrics: List[Dict[str, Any]], hard_fail: bool, strict: bool = 
             verdict = "⚠️ Limited margin - adjustments recommended"
         elif score >= 20:
             verdict = "❌ Compromised margin for mastering"
+        elif score >= 5:
+            # v7.4.0: New verdict for scores 5-19
+            verdict = "❌ Requires review - your file needs work before mastering"
         else:
             verdict = "❌ No margin for additional processing"
-    
+
     return score, verdict
 
 
@@ -4513,7 +4569,24 @@ def analyze_file_chunked(
     # Calculate number of chunks
     num_chunks = int(np.ceil(duration / chunk_duration))
     print(f"📦 Processing in {num_chunks} chunks")
-    
+
+    # v7.4.0 FIX: Detect mono file BEFORE processing
+    # Load a small sample to check channel configuration
+    y_check, _ = librosa.load(str(path), sr=sr, duration=0.5, mono=False, res_type='kaiser_fast')
+    is_true_mono = False
+    if y_check.ndim == 1:
+        # File is natively mono
+        is_true_mono = True
+        print("ℹ️  Mono file detected - stereo analysis will not apply")
+    elif y_check.shape[0] >= 2:
+        # Check if stereo channels are identical (pseudo-stereo / bounced mono)
+        if y_check.shape[0] > y_check.shape[1]:
+            y_check = y_check.T
+        if np.allclose(y_check[0], y_check[1], rtol=1e-5, atol=1e-8):
+            is_true_mono = True
+            print("ℹ️  Pseudo-stereo (identical channels) detected - treating as mono")
+    del y_check  # Free memory
+
     # 2. Initialize accumulators
     results = {
         'peaks': [],
@@ -4529,7 +4602,8 @@ def analyze_file_chunked(
         'clipping_chunks': [],              # Track chunks with sample clipping
         'correlation_problem_chunks': [],   # Track chunks with correlation issues
         'ms_ratio_problem_chunks': [],      # Track chunks with M/S ratio issues
-        'lr_balance_problem_chunks': []     # Track chunks with L/R balance issues
+        'lr_balance_problem_chunks': [],    # Track chunks with L/R balance issues
+        'is_true_mono': is_true_mono        # v7.4.0: Track mono status
     }
     
     # 3. Process each chunk
@@ -4821,21 +4895,41 @@ def analyze_file_chunked(
     # LUFS: weighted average using ENERGY (not dB arithmetic)
     # EBU R128 specifies loudness is summed in linear domain, not dB
     # Formula: LUFS_total = 10 * log10(sum(10^(LUFS_i/10) * duration_i) / total_duration)
+    # v7.4.0 FIX: Handle edge case where ALL chunks are below -70dB
+    lufs_reliable = True
     if total_duration > 0 and results['lufs_values']:
-        lufs_energy_sum = sum(
-            (10 ** (lufs / 10)) * dur 
+        # Filter valid LUFS values (not None and above -70dB threshold)
+        valid_lufs_data = [
+            (lufs, dur)
             for lufs, dur in zip(results['lufs_values'], results['chunk_durations'])
-            if lufs is not None and lufs > -70  # Ignore very quiet chunks
-        )
-        if lufs_energy_sum > 0:
-            weighted_lufs = 10 * math.log10(lufs_energy_sum / total_duration)
+            if lufs is not None and lufs > -70
+        ]
+
+        if valid_lufs_data:
+            lufs_energy_sum = sum((10 ** (lufs / 10)) * dur for lufs, dur in valid_lufs_data)
+            if lufs_energy_sum > 0:
+                weighted_lufs = 10 * math.log10(lufs_energy_sum / total_duration)
+            else:
+                weighted_lufs = -70.0
+                lufs_reliable = False
         else:
-            weighted_lufs = -70.0  # Fallback for silence
+            # v7.4.0: All chunks below -70dB - file is essentially silent
+            weighted_lufs = -70.0
+            lufs_reliable = False
+            print("⚠️  All chunks below -70 LUFS - file is very quiet or silent", file=sys.stderr)
     else:
         weighted_lufs = -23.0
+        lufs_reliable = False
     
     # PLR: difference between peak and LUFS
-    final_plr = final_peak - weighted_lufs
+    # v7.4.0 FIX: Only calculate PLR if LUFS is reliable
+    if lufs_reliable:
+        final_plr = final_peak - weighted_lufs
+        plr_reliable = True
+    else:
+        final_plr = None
+        plr_reliable = False
+        print("⚠️  PLR not calculated - LUFS measurement unreliable", file=sys.stderr)
     
     # Stereo metrics: weighted averages
     final_correlation = sum(
@@ -4852,15 +4946,16 @@ def analyze_file_chunked(
     
     print(f"✅ Peak: {final_peak:.2f} dBFS")
     print(f"✅ True Peak: {final_tp:.2f} dBTP")
-    print(f"✅ LUFS: {weighted_lufs:.2f}")
-    print(f"✅ PLR: {final_plr:.2f} dB")
+    print(f"✅ LUFS: {weighted_lufs:.2f}" + (" (unreliable)" if not lufs_reliable else ""))
+    print(f"✅ PLR: {final_plr:.2f} dB" if plr_reliable else "⚠️  PLR: N/A (LUFS unreliable)")
     print(f"✅ Correlation: {final_correlation:.3f}")
     print(f"✅ L/R Balance: {final_lr_balance:+.2f} dB")
     print(f"✅ M/S Ratio: {final_ms_ratio:.2f}")
-    
+
     # 5. Detect territory and mastered status
-    territory = detect_territory(weighted_lufs, final_peak, final_tp, final_plr)
-    is_mastered = detect_mastered_file(weighted_lufs, final_peak, final_tp, final_plr, 0.0)
+    # v7.4.0: Pass None for PLR if unreliable
+    territory = detect_territory(weighted_lufs if lufs_reliable else None, final_peak, final_tp, final_plr)
+    is_mastered = detect_mastered_file(weighted_lufs if lufs_reliable else None, final_peak, final_tp, final_plr, 0.0)
     
     print(f"📍 Territory: {territory}")
     print(f"🎛️  {'Mastered' if is_mastered else 'Mix (not mastered)'}")
@@ -5124,21 +5219,46 @@ def analyze_file_chunked(
     })
     
     # 5. PLR
-    has_real_lufs = True  # chunked uses pyloudnorm
-    st_p, msg_p, _ = status_plr(final_plr, has_real_lufs, strict, lang)
-    
-    metrics.append({
-        "name": "PLR",
-        "internal_key": "PLR",
-        "value": f"{final_plr:.1f} dB",
-        "status": st_p,
-        "message": msg_p
-    })
+    # v7.4.0 FIX: Only include PLR if LUFS is reliable
+    if plr_reliable and final_plr is not None:
+        st_p, msg_p, _ = status_plr(final_plr, True, strict, lang)
+        metrics.append({
+            "name": "PLR",
+            "internal_key": "PLR",
+            "value": f"{final_plr:.1f} dB",
+            "status": st_p,
+            "message": msg_p,
+            "reliable": True
+        })
+    else:
+        # PLR not available - LUFS unreliable
+        plr_msg = "PLR no disponible (archivo muy corto o silencioso para medición confiable)" if lang == "es" else "PLR not available (file too short or silent for reliable measurement)"
+        metrics.append({
+            "name": "PLR",
+            "internal_key": "PLR",
+            "value": "N/A",
+            "status": "info",
+            "message": plr_msg,
+            "reliable": False
+        })
     
     # 6. Crest Factor (proper calculation with RMS)
-    # Calculate weighted RMS across all chunks
-    weighted_rms = np.average(results['rms_values'], weights=results['chunk_durations'])
-    
+    # v7.4.0 FIX: RMS values are in dB - must convert to linear, average, then back to dB
+    # Arithmetic averaging of dB values is mathematically incorrect
+    if results['rms_values'] and results['chunk_durations']:
+        # Convert dB to linear: linear = 10^(dB/20)
+        linear_rms_values = [10 ** (db / 20) for db in results['rms_values'] if db > -120]
+        if linear_rms_values:
+            # Weighted average in linear domain
+            weights_for_rms = results['chunk_durations'][:len(linear_rms_values)]
+            weighted_linear_rms = np.average(linear_rms_values, weights=weights_for_rms)
+            # Convert back to dB: dB = 20 * log10(linear)
+            weighted_rms = 20 * np.log10(weighted_linear_rms) if weighted_linear_rms > 0 else -120.0
+        else:
+            weighted_rms = -120.0
+    else:
+        weighted_rms = -120.0
+
     # Crest Factor = Peak - RMS (NOT Peak - LUFS like PLR)
     crest = final_peak - weighted_rms
     st_cf, msg_cf, _ = status_crest_factor(crest, lang)
@@ -5244,20 +5364,38 @@ def analyze_file_chunked(
                 ]
             }
     
-    stereo_metric = {
-        "name": "Stereo Width",
-        "internal_key": "Stereo Width",
-        "value": f"{final_correlation*100:.0f}% corr | M/S: {final_ms_ratio:.2f} | L/R: {final_lr_balance:+.1f} dB",
-        "correlation": final_correlation,
-        "ms_ratio": round(final_ms_ratio, 2),
-        "lr_balance_db": round(final_lr_balance, 1),
-        "status": st_s,
-        "message": msg_s
-    }
-    
-    if stereo_temporal:
-        stereo_metric["temporal_analysis"] = stereo_temporal
-    
+    # v7.4.0 FIX: Handle mono files properly
+    if results.get('is_true_mono', False):
+        # Mono file - stereo analysis does not apply
+        mono_msg_es = "Archivo mono detectado. El análisis estéreo no aplica."
+        mono_msg_en = "Mono file detected. Stereo analysis does not apply."
+        stereo_metric = {
+            "name": "Stereo Width",
+            "internal_key": "Stereo Width",
+            "value": "Mono" if lang != "es" else "Mono",
+            "correlation": None,
+            "ms_ratio": None,
+            "lr_balance_db": None,
+            "status": "info",
+            "message": mono_msg_es if lang == "es" else mono_msg_en,
+            "is_mono": True
+        }
+    else:
+        stereo_metric = {
+            "name": "Stereo Width",
+            "internal_key": "Stereo Width",
+            "value": f"{final_correlation*100:.0f}% corr | M/S: {final_ms_ratio:.2f} | L/R: {final_lr_balance:+.1f} dB",
+            "correlation": final_correlation,
+            "ms_ratio": round(final_ms_ratio, 2),
+            "lr_balance_db": round(final_lr_balance, 1),
+            "status": st_s,
+            "message": msg_s,
+            "is_mono": False
+        }
+
+        if stereo_temporal:
+            stereo_metric["temporal_analysis"] = stereo_temporal
+
     metrics.append(stereo_metric)
     
     # 8. Frequency Balance (calculated from chunks with weighted average)
