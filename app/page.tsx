@@ -4,7 +4,6 @@ import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { Download, Check, Upload, Zap, Shield, TrendingUp, Play, Music, Crown, X, AlertTriangle, Globe, Headphones, Menu } from 'lucide-react'
 import { UserMenu, useAuth, AuthModal } from '@/components/auth'
-import PrivacyBadge from '@/components/PrivacyBadge'
 import { analyzeFile, checkIpLimit, IpCheckResult } from '@/lib/api'
 import { startAnalysisPolling, getAnalysisStatus } from '@/lib/api'
 import { compressAudioFile } from '@/lib/audio-compression'
@@ -1772,7 +1771,6 @@ by Matías Carvajal
                   <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.5rem' }}>
                     {lang === 'es' ? 'WAV, MP3 o AIFF (máx 500MB)' : 'WAV, MP3 or AIFF (max 500MB)'}
                   </p>
-                  <PrivacyBadge lang={lang} variant="inline" />
                 </div>
               </div>
 
