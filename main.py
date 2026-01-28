@@ -49,6 +49,9 @@ from typing import Optional, Dict, Any
 from datetime import datetime, timedelta
 import soundfile as sf
 
+# Analyzer version - used in API responses for tracking
+ANALYZER_VERSION = "7.4.0"
+
 # Setup logging
 logging.basicConfig(
     level=logging.INFO,
@@ -323,6 +326,10 @@ async def analyze_mix_endpoint(
                 "mode": mode,
                 "lang": lang,
                 "strict": strict,
+                # NEW v7.4.0: Analysis metadata for database tracking
+                "analysis_version": ANALYZER_VERSION,
+                "is_chunked_analysis": False,  # Sync endpoint always uses normal mode
+                "chunk_count": result.get("num_chunks", 1),
                 "privacy_note": "🔒 Audio analizado en memoria y eliminado inmediatamente.",
                 "methodology": "Basado en la metodología 'Mastering Ready' de Matías Carvajal"
             }
@@ -702,10 +709,14 @@ async def start_analysis(
                         # NEW v7.3.50: Add analysis time and metrics bars
                         "analysis_time_seconds": result.get("analysis_time_seconds", 0),
                         "metrics_bars": result.get("metrics_bars", {}),
+                        # NEW v7.4.0: Analysis metadata for database tracking
+                        "analysis_version": ANALYZER_VERSION,
+                        "is_chunked_analysis": use_chunked,
+                        "chunk_count": result.get("num_chunks", 1),
                         "privacy_note": "🔒 Audio analizado en memoria y eliminado inmediatamente.",
                         "methodology": "Basado en la metodología 'Mastering Ready' de Matías Carvajal"
                     }
-                
+
                 logger.info(f"✅ [{job_id}] Job complete")
                 
                 # 🔔 TELEGRAM ALERT: Análisis completado
