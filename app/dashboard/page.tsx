@@ -280,7 +280,13 @@ export default function DashboardPage() {
   const router = useRouter()
   const { user, loading: authLoading } = useAuth()
 
-  const [lang, setLang] = useState<'es' | 'en'>('es')
+  const [lang, setLang] = useState<'es' | 'en'>(() => {
+    if (typeof document !== 'undefined') {
+      const cookie = getLanguageCookie()
+      if (cookie) return cookie
+    }
+    return 'es'
+  })
   const [analyses, setAnalyses] = useState<Analysis[]>([])
   const [profile, setProfile] = useState<Profile | null>(null)
   const [subscription, setSubscription] = useState<Subscription | null>(null)
@@ -496,6 +502,16 @@ export default function DashboardPage() {
     }
   }
 
+  // Safety timeout — if loading hangs for more than 10s, force stop
+  useEffect(() => {
+    if (!loading) return
+    const timeout = setTimeout(() => {
+      console.warn('[Dashboard] Loading safety timeout reached (10s)')
+      setLoading(false)
+    }, 10000)
+    return () => clearTimeout(timeout)
+  }, [loading])
+
   // Loading state
   if (authLoading || loading) {
     return (
@@ -503,9 +519,12 @@ export default function DashboardPage() {
         minHeight: '100vh',
         background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
         display: 'flex',
+        flexDirection: 'column',
         alignItems: 'center',
-        justifyContent: 'center'
+        justifyContent: 'center',
+        gap: '1rem'
       }}>
+        <span style={{ fontSize: '2rem' }}>🎧</span>
         <div style={{ color: 'white', fontSize: '1.25rem' }}>{t.loading}</div>
       </div>
     )

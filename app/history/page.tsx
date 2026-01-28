@@ -198,7 +198,13 @@ export default function HistoryPage() {
   const router = useRouter()
   const { user, loading: authLoading } = useAuth()
 
-  const [lang, setLang] = useState<'es' | 'en'>('es')
+  const [lang, setLang] = useState<'es' | 'en'>(() => {
+    if (typeof document !== 'undefined') {
+      const cookie = getLanguageCookie()
+      if (cookie) return cookie
+    }
+    return 'es'
+  })
   const [analyses, setAnalyses] = useState<Analysis[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedAnalysis, setSelectedAnalysis] = useState<Analysis | null>(null)
@@ -339,6 +345,16 @@ export default function HistoryPage() {
     setReportTab(tab)
   }
 
+  // Safety timeout — if loading hangs for more than 10s, force stop
+  useEffect(() => {
+    if (!loading) return
+    const timeout = setTimeout(() => {
+      console.warn('[History] Loading safety timeout reached (10s)')
+      setLoading(false)
+    }, 10000)
+    return () => clearTimeout(timeout)
+  }, [loading])
+
   // Loading state
   if (authLoading || loading) {
     return (
@@ -346,9 +362,12 @@ export default function HistoryPage() {
         minHeight: '100vh',
         background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
         display: 'flex',
+        flexDirection: 'column',
         alignItems: 'center',
-        justifyContent: 'center'
+        justifyContent: 'center',
+        gap: '1rem'
       }}>
+        <span style={{ fontSize: '2rem' }}>🎧</span>
         <div style={{ color: 'white', fontSize: '1.25rem' }}>{t.loading}</div>
       </div>
     )

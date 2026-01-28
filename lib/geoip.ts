@@ -157,7 +157,10 @@ export async function detectCountry(forceRefresh = false): Promise<GeoData> {
   // Check cache first (unless forcing refresh)
   if (!forceRefresh) {
     const cached = getCachedGeo()
-    if (cached) return cached
+    if (cached) {
+      console.log('[Geo] Using cached:', cached.countryCode, cached.currency)
+      return cached
+    }
   }
 
   // Try to detect country
@@ -165,14 +168,17 @@ export async function detectCountry(forceRefresh = false): Promise<GeoData> {
 
   // Method 1: ipinfo.io
   countryCode = await fetchFromIpInfo()
+  console.log('[Geo] ipinfo.io detected country:', countryCode)
 
   // Fallback to US if detection fails
   if (!countryCode) {
+    console.warn('[Geo] Country detection failed, falling back to US')
     countryCode = 'US'
   }
 
   // Get pricing data for this country
   const pricing = await getRegionalPricing(countryCode)
+  console.log('[Geo] Regional pricing for', countryCode, ':', pricing)
 
   const geoData: GeoData = {
     countryCode,
@@ -185,6 +191,7 @@ export async function detectCountry(forceRefresh = false): Promise<GeoData> {
 
   // Cache the result
   setCachedGeo(geoData)
+  console.log('[Geo] Final geo data:', geoData)
 
   return geoData
 }
@@ -227,7 +234,10 @@ export function calculateLocalPrice(baseUsdPrice: number, geo: GeoData): number 
  * @param locale - Locale for formatting (optional, defaults based on currency)
  */
 export function formatPrice(price: number, currency: string, locale?: string): string {
-  // Map currency to typical locale if not provided
+  // Format: "9.99 USD", "25,200 COP" — number + currency code, no $ symbol
+  const noDecimalCurrencies = ['COP', 'CLP', 'PYG']
+  const decimals = noDecimalCurrencies.includes(currency) ? 0 : 2
+
   const localeMap: Record<string, string> = {
     'USD': 'en-US',
     'EUR': 'de-DE',
@@ -243,15 +253,14 @@ export function formatPrice(price: number, currency: string, locale?: string): s
   const displayLocale = locale || localeMap[currency] || 'en-US'
 
   try {
-    return new Intl.NumberFormat(displayLocale, {
-      style: 'currency',
-      currency: currency,
-      minimumFractionDigits: currency === 'COP' || currency === 'CLP' || currency === 'PYG' ? 0 : 2,
-      maximumFractionDigits: currency === 'COP' || currency === 'CLP' || currency === 'PYG' ? 0 : 2
+    const formatted = new Intl.NumberFormat(displayLocale, {
+      style: 'decimal',
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals
     }).format(price)
+    return `${formatted} ${currency}`
   } catch {
-    // Fallback to simple format
-    return `${currency} ${price.toFixed(2)}`
+    return `${price.toFixed(decimals)} ${currency}`
   }
 }
 
@@ -394,7 +403,7 @@ export function formatLocalCurrencyPrice(usdPrice: number, currency: string): st
     displayPrice = Math.round(localPrice * 100) / 100
   }
 
-  // Format with locale
+  // Format: "25,200 COP" — number + currency code, no $ symbol
   const localeMap: Record<string, string> = {
     'USD': 'en-US',
     'EUR': 'de-DE',
@@ -412,15 +421,13 @@ export function formatLocalCurrencyPrice(usdPrice: number, currency: string): st
   const locale = localeMap[currency] || 'en-US'
 
   try {
-    return new Intl.NumberFormat(locale, {
-      style: 'currency',
-      currency: currency,
+    const formatted = new Intl.NumberFormat(locale, {
+      style: 'decimal',
       minimumFractionDigits: decimals,
       maximumFractionDigits: decimals
     }).format(displayPrice)
+    return `${formatted} ${currency}`
   } catch {
-    // Fallback
-    const symbol = CURRENCY_SYMBOLS[currency] || '$'
-    return `${symbol}${displayPrice.toLocaleString()}`
+    return `${displayPrice.toLocaleString()} ${currency}`
   }
 }
