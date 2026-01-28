@@ -3449,7 +3449,7 @@ by Matías Carvajal
                   onMouseEnter={(e) => e.currentTarget.style.color = '#ffffff'}
                   onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)'}
                 >
-                  <span>🔒</span>
+                  <span>🛡️</span>
                   <span>{lang === 'es' ? 'Política de Privacidad' : 'Privacy Policy'}</span>
                 </Link>
               </div>
