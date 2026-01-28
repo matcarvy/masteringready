@@ -1,8 +1,15 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Mix Analyzer v7.3.36 - Parity Audit & Improved Messages
-=======================================================
+Mix Analyzer v7.3.51 - Stereo Bar Percentage Fix
+================================================
+
+v7.3.51 FIX:
+- Fixed stereo image bar showing 50% despite healthy correlation (0.86)
+- Bug: Initial value parsing failed on "86% corr..." → float("86%") threw exception → value became 0
+- Fix 1: Strip % suffix before float conversion in initial parsing
+- Fix 2: Convert percentage values > 1 to decimal (86 → 0.86) in stereo section
+- Now correlation 0.86 correctly shows 100% green bar
 
 v7.3.36 IMPROVEMENTS:
 - FULL PARITY between normal and chunked modes:
@@ -1306,7 +1313,9 @@ def calculate_metrics_bars_percentages(metrics: List[Dict[str, Any]]) -> Dict[st
         # Parse numeric value if it's a string
         if isinstance(value, str):
             try:
-                value = float(value.split()[0])
+                # Strip % suffix before converting (e.g., "86% corr..." → 86.0)
+                first_part = value.split()[0].rstrip('%')
+                value = float(first_part)
             except:
                 value = 0
         
@@ -1484,15 +1493,19 @@ def calculate_metrics_bars_percentages(metrics: List[Dict[str, Any]]) -> Dict[st
             # 🔵 Azul: 0.5-0.7 (Estable)
             # 🟡 Amarillo: 0.3-0.5 (Revisar mono)
             # 🔴 Rojo: < 0.3 (Riesgo de cancelación) - only if persistent
-            
-            # Parse correlation from stereo width value if needed
+
+            # Parse correlation from stereo width value
             corr_value = value
             if isinstance(value, str) and "corr" in str(value):
                 try:
                     corr_value = float(str(value).split("%")[0]) / 100
                 except:
                     corr_value = 0.5
-            
+            # v7.3.51 FIX: If value > 1, it's a percentage (e.g., 86 from "86% corr")
+            # Convert to decimal correlation coefficient (86 → 0.86)
+            elif isinstance(corr_value, (int, float)) and corr_value > 1:
+                corr_value = corr_value / 100
+
             if corr_value >= 0.7:
                 percentage = 100
                 bar_status = "excellent"
