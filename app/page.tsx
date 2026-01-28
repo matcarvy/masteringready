@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { Download, Check, Upload, Zap, Shield, TrendingUp, Play, Music, Crown, X, AlertTriangle, Globe, Headphones, Menu } from 'lucide-react'
 import { UserMenu, useAuth, AuthModal } from '@/components/auth'
+import PrivacyBadge from '@/components/PrivacyBadge'
 import { analyzeFile, checkIpLimit, IpCheckResult } from '@/lib/api'
 import { startAnalysisPolling, getAnalysisStatus } from '@/lib/api'
 import { compressAudioFile } from '@/lib/audio-compression'
@@ -226,7 +227,13 @@ function Home() {
   const isLoggedIn = !!user
 
   const [file, setFile] = useState<File | null>(null)
-  const [lang, setLang] = useState<'es' | 'en'>('es')
+  const [lang, setLang] = useState<'es' | 'en'>(() => {
+    if (typeof document !== 'undefined') {
+      const cookie = getLanguageCookie()
+      if (cookie) return cookie
+    }
+    return 'es'
+  })
   const [mode, setMode] = useState<'short' | 'write'>('write')
   const [strict, setStrict] = useState(false)
   const [langDetected, setLangDetected] = useState(false)
@@ -254,6 +261,8 @@ function Home() {
   const [showFreeLimitModal, setShowFreeLimitModal] = useState(false)
   const [userAnalysisStatus, setUserAnalysisStatus] = useState<AnalysisStatus | null>(null)
   const [reportView, setReportView] = useState<'visual' | 'short' | 'write'>('visual')
+  const [isPro, setIsPro] = useState(false)
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false)
   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false)
   const [feedback, setFeedback] = useState({ rating: 0, liked: '', change: '', add: '' })
 
@@ -264,6 +273,21 @@ function Home() {
 
   // Store request ID for PDF download
   const requestIdRef = useRef<string>('')
+
+  // Check Pro subscription status
+  useEffect(() => {
+    if (!user) { setIsPro(false); return }
+    const checkPro = async () => {
+      const { data: subData } = await supabase
+        .from('subscriptions')
+        .select('*, plan:plans(type)')
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+        .single()
+      setIsPro(subData?.plan?.type === 'pro' || subData?.plan?.type === 'studio')
+    }
+    checkPro()
+  }, [user])
 
   // Mobile detection
   useEffect(() => {
@@ -1748,24 +1772,7 @@ by Matías Carvajal
                   <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.5rem' }}>
                     {lang === 'es' ? 'WAV, MP3 o AIFF (máx 500MB)' : 'WAV, MP3 or AIFF (max 500MB)'}
                   </p>
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '0.5rem',
-                    marginTop: '1rem',
-                    padding: '0.75rem',
-                    background: '#f0fdf4',
-                    borderRadius: '0.5rem',
-                    border: '1px solid #86efac'
-                  }}>
-                    <span style={{ fontSize: '1rem' }}>🛡️</span>
-                    <p style={{ fontSize: '0.75rem', color: '#166534', margin: 0 }}>
-                      {lang === 'es'
-                        ? 'Tus archivos se borran automáticamente de nuestros servidores después del análisis'
-                        : 'Your files are automatically deleted from our servers after analysis'}
-                    </p>
-                  </div>
+                  <PrivacyBadge lang={lang} variant="inline" />
                 </div>
               </div>
 
@@ -2209,6 +2216,11 @@ by Matías Carvajal
                           setShowAuthModal(true)
                           return
                         }
+                        // Completo requires Pro subscription
+                        if (view === 'write' && isLoggedIn && !isPro) {
+                          setShowUpgradeModal(true)
+                          return
+                        }
                         setReportView(view)
                       }}
                       style={{
@@ -2227,8 +2239,8 @@ by Matías Carvajal
                         position: 'relative'
                       }}
                     >
-                      {/* Crown icon for non-logged users on Resumen/Completo */}
-                      {(view === 'short' || view === 'write') && !isLoggedIn && (
+                      {/* Crown icon for non-logged users on Resumen, non-Pro on Completo */}
+                      {((view === 'short' && !isLoggedIn) || (view === 'write' && (!isLoggedIn || !isPro))) && (
                         <Crown size={12} style={{
                           position: 'absolute',
                           top: '4px',
@@ -2672,11 +2684,15 @@ by Matías Carvajal
                       : `Download ${reportView === 'visual' ? 'Quick' : reportView === 'short' ? 'Summary' : 'Complete'}`}
                   </button>
 
-                  {/* Download Full Report */}
+                  {/* Download Full Report — Pro only */}
                   <button
                     onClick={() => {
                       if (!isLoggedIn) {
                         setShowAuthModal(true)
+                        return
+                      }
+                      if (!isPro) {
+                        setShowUpgradeModal(true)
                         return
                       }
                       handleDownloadFull()
@@ -2689,30 +2705,30 @@ by Matías Carvajal
                       justifyContent: 'center',
                       gap: '0.5rem',
                       padding: '0.875rem 1.25rem',
-                      background: !isLoggedIn ? '#e5e7eb' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                      color: !isLoggedIn ? '#6b7280' : 'white',
+                      background: (!isLoggedIn || !isPro) ? '#e5e7eb' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      color: (!isLoggedIn || !isPro) ? '#6b7280' : 'white',
                       border: 'none',
                       borderRadius: '0.75rem',
                       fontWeight: '600',
                       fontSize: 'clamp(0.8rem, 2vw, 0.9rem)',
                       cursor: 'pointer',
                       transition: 'all 0.2s',
-                      boxShadow: !isLoggedIn ? 'none' : '0 4px 12px rgba(102, 126, 234, 0.3)'
+                      boxShadow: (!isLoggedIn || !isPro) ? 'none' : '0 4px 12px rgba(102, 126, 234, 0.3)'
                     }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.transform = 'translateY(-2px)'
-                      if (isLoggedIn) {
+                      if (isLoggedIn && isPro) {
                         e.currentTarget.style.boxShadow = '0 6px 20px rgba(102, 126, 234, 0.4)'
                       }
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.transform = 'translateY(0)'
-                      if (isLoggedIn) {
+                      if (isLoggedIn && isPro) {
                         e.currentTarget.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.3)'
                       }
                     }}
                   >
-                    {!isLoggedIn ? <Crown size={18} style={{ color: '#d97706' }} /> : <Download size={18} />}
+                    {(!isLoggedIn || !isPro) ? <Crown size={18} style={{ color: '#d97706' }} /> : <Download size={18} />}
                     {lang === 'es' ? 'Análisis Detallado' : 'Detailed Analysis'}
                   </button>
                 </div>
@@ -3376,12 +3392,12 @@ by Matías Carvajal
                   <span>📖</span>
                   <span>{lang === 'es' ? 'Profundiza en el eBook' : 'Learn more in the eBook'}</span>
                 </a>
-                <a 
+                <a
                   href="https://www.masteringready.com"
                   target="_blank"
                   rel="noopener noreferrer"
-                  style={{ 
-                    color: 'rgba(255, 255, 255, 0.7)', 
+                  style={{
+                    color: 'rgba(255, 255, 255, 0.7)',
                     textDecoration: 'none',
                     fontSize: '0.875rem',
                     transition: 'color 0.2s',
@@ -3394,8 +3410,54 @@ by Matías Carvajal
                 </a>
               </div>
             </div>
+
+            {/* Legal */}
+            <div>
+              <h4 className="footer-heading" style={{
+                fontWeight: '600',
+                color: '#ffffff'
+              }}>
+                {lang === 'es' ? 'Legal' : 'Legal'}
+              </h4>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <Link
+                  href="/terms"
+                  style={{
+                    color: 'rgba(255, 255, 255, 0.7)',
+                    textDecoration: 'none',
+                    fontSize: '0.875rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    transition: 'color 0.2s'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.color = '#ffffff'}
+                  onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)'}
+                >
+                  <span>📄</span>
+                  <span>{lang === 'es' ? 'Términos de Servicio' : 'Terms of Service'}</span>
+                </Link>
+                <Link
+                  href="/privacy"
+                  style={{
+                    color: 'rgba(255, 255, 255, 0.7)',
+                    textDecoration: 'none',
+                    fontSize: '0.875rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    transition: 'color 0.2s'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.color = '#ffffff'}
+                  onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)'}
+                >
+                  <span>🔒</span>
+                  <span>{lang === 'es' ? 'Política de Privacidad' : 'Privacy Policy'}</span>
+                </Link>
+              </div>
+            </div>
           </div>
-          
+
           <div className="footer-copyright" style={{ 
             borderTop: '1px solid rgba(255, 255, 255, 0.1)', 
             textAlign: 'center' 
@@ -4470,6 +4532,154 @@ by Matías Carvajal
                 {lang === 'es' ? 'Crear cuenta gratis' : 'Create free account'}
               </a>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Upgrade to Pro Modal */}
+      {showUpgradeModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 100,
+          padding: '1rem'
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '1rem',
+            padding: '2rem',
+            maxWidth: '420px',
+            width: '100%',
+            position: 'relative',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+          }}>
+            <button
+              onClick={() => setShowUpgradeModal(false)}
+              style={{
+                position: 'absolute',
+                top: '1rem',
+                right: '1rem',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                color: '#6b7280',
+                padding: '0.25rem'
+              }}
+            >
+              <X size={20} />
+            </button>
+
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
+              <div style={{
+                width: '56px',
+                height: '56px',
+                background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <Crown size={28} style={{ color: '#d97706' }} />
+              </div>
+            </div>
+
+            <h3 style={{
+              fontSize: '1.375rem',
+              fontWeight: '700',
+              textAlign: 'center',
+              marginBottom: '0.5rem',
+              color: '#111827'
+            }}>
+              {lang === 'es' ? 'Desbloquea el Análisis Completo' : 'Unlock Complete Analysis'}
+            </h3>
+
+            <p style={{
+              textAlign: 'center',
+              color: '#6b7280',
+              fontSize: '0.875rem',
+              marginBottom: '1.5rem'
+            }}>
+              {lang === 'es'
+                ? 'Accede al análisis completo, descarga de PDFs y más con MasteringReady Pro'
+                : 'Access complete analysis, PDF downloads and more with MasteringReady Pro'}
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.5rem' }}>
+              {[
+                lang === 'es' ? '30 análisis al mes' : '30 analyses per month',
+                lang === 'es' ? 'Análisis Completo y Detallado' : 'Complete & Detailed Analysis',
+                lang === 'es' ? 'Descarga de PDFs profesionales' : 'Professional PDF downloads',
+                lang === 'es' ? 'Procesamiento prioritario' : 'Priority processing'
+              ].map((benefit, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <div style={{
+                    width: '20px',
+                    height: '20px',
+                    borderRadius: '50%',
+                    background: '#dcfce7',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0
+                  }}>
+                    <TrendingUp size={12} style={{ color: '#16a34a' }} />
+                  </div>
+                  <span style={{ fontSize: '0.9rem', color: '#374151' }}>{benefit}</span>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
+              {proPrice.showLocal ? (
+                <>
+                  <span style={{ fontSize: '1.75rem', fontWeight: '700', color: '#111827' }}>
+                    ~{proPrice.formattedLocal}
+                  </span>
+                  <span style={{ fontSize: '1rem', color: '#6b7280', display: 'block', marginTop: '0.25rem' }}>
+                    ({proPrice.formatted}/{lang === 'es' ? 'mes' : 'month'})
+                  </span>
+                  <span style={{ fontSize: '0.7rem', color: '#9ca3af', display: 'block', marginTop: '0.25rem' }}>
+                    {lang === 'es' ? 'Cobro en USD' : 'Charged in USD'}
+                  </span>
+                </>
+              ) : (
+                <span style={{ fontSize: '2rem', fontWeight: '700', color: '#111827' }}>
+                  {proPrice.formatted}/{lang === 'es' ? 'mes' : 'month'}
+                </span>
+              )}
+            </div>
+
+            <a
+              href={`/subscription?lang=${lang}`}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.5rem',
+                width: '100%',
+                padding: '1rem',
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '0.5rem',
+                fontSize: '1rem',
+                fontWeight: '600',
+                cursor: 'pointer',
+                textDecoration: 'none',
+                boxSizing: 'border-box'
+              }}
+            >
+              <Crown size={18} />
+              {lang === 'es' ? 'Obtener Pro' : 'Get Pro'}
+            </a>
           </div>
         </div>
       )}

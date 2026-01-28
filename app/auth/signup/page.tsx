@@ -43,7 +43,12 @@ const translations = {
     success: '¡Cuenta creada! Revisa tu correo para confirmar.',
     freeAnalyses: '2 análisis gratis',
     noCard: 'Sin tarjeta de crédito',
-    cancelAnytime: 'Cancela cuando quieras'
+    cancelAnytime: 'Cancela cuando quieras',
+    termsLabel: 'Acepto los',
+    termsLink: 'Términos de Servicio',
+    andThe: 'y la',
+    privacyLink: 'Política de Privacidad',
+    termsRequired: 'Debes aceptar los Términos de Servicio y la Política de Privacidad'
   },
   en: {
     title: 'Create Account',
@@ -69,7 +74,12 @@ const translations = {
     success: 'Account created! Check your email to confirm.',
     freeAnalyses: '2 free analyses',
     noCard: 'No credit card required',
-    cancelAnytime: 'Cancel anytime'
+    cancelAnytime: 'Cancel anytime',
+    termsLabel: 'I accept the',
+    termsLink: 'Terms of Service',
+    andThe: 'and the',
+    privacyLink: 'Privacy Policy',
+    termsRequired: 'You must accept the Terms of Service and Privacy Policy'
   }
 }
 
@@ -89,6 +99,7 @@ function SignupContent() {
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [termsAccepted, setTermsAccepted] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
@@ -142,6 +153,10 @@ function SignupContent() {
     }
     if (password !== confirmPassword) {
       setError(t.passwordsDoNotMatch)
+      return
+    }
+    if (!termsAccepted) {
+      setError(t.termsRequired)
       return
     }
 
@@ -589,14 +604,63 @@ function SignupContent() {
             </div>
           </div>
 
+          {/* Terms Acceptance Checkbox */}
+          <div style={{ marginBottom: '1.5rem' }}>
+            <label
+              style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '0.75rem',
+                cursor: 'pointer',
+                fontSize: '0.875rem',
+                color: '#374151',
+                lineHeight: '1.4'
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={termsAccepted}
+                onChange={(e) => setTermsAccepted(e.target.checked)}
+                style={{
+                  width: '18px',
+                  height: '18px',
+                  marginTop: '2px',
+                  accentColor: '#667eea',
+                  cursor: 'pointer',
+                  flexShrink: 0
+                }}
+              />
+              <span>
+                {t.termsLabel}{' '}
+                <Link
+                  href="/terms"
+                  target="_blank"
+                  style={{ color: '#667eea', textDecoration: 'underline' }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {t.termsLink}
+                </Link>
+                {' '}{t.andThe}{' '}
+                <Link
+                  href="/privacy"
+                  target="_blank"
+                  style={{ color: '#667eea', textDecoration: 'underline' }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {t.privacyLink}
+                </Link>
+              </span>
+            </label>
+          </div>
+
           {/* Submit Button */}
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || !termsAccepted}
             style={{
               width: '100%',
               padding: '0.875rem',
-              background: loading
+              background: loading || !termsAccepted
                 ? '#9ca3af'
                 : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
               color: 'white',
@@ -604,7 +668,7 @@ function SignupContent() {
               borderRadius: '0.5rem',
               fontSize: '1rem',
               fontWeight: '600',
-              cursor: loading ? 'not-allowed' : 'pointer',
+              cursor: loading || !termsAccepted ? 'not-allowed' : 'pointer',
               transition: 'opacity 0.2s'
             }}
           >
