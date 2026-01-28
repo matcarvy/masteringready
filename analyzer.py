@@ -6408,7 +6408,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                         # metric_value already includes unit (e.g., "-2.5 dBFS")
                         peak_val = str(metric_value) if not isinstance(metric_value, (int, float)) else f"{metric_value:.1f} dBFS"
                         issues_details.append(
-                            f"• **Headroom general**: los picos están alrededor de {peak_val}. "
+                            f"• Headroom general: los picos están alrededor de {peak_val}. "
                             f"Para un margen óptimo en mastering, ideal entre -6 y -4 dBFS."
                         )
                     
@@ -6417,7 +6417,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                         # metric_value already includes unit (e.g., "-2.3 dBTP")
                         tp_val = str(metric_value) if not isinstance(metric_value, (int, float)) else f"{metric_value:.1f} dBTP"
                         issues_details.append(
-                            f"• **True Peak**: está en {tp_val}. Para máxima seguridad en "
+                            f"• True Peak: está en {tp_val}. Para máxima seguridad en "
                             f"conversiones de formato, se recomienda ≤-3.0 dBTP."
                         )
                     
@@ -6425,7 +6425,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                     elif "PLR" in internal_key:
                         plr_val = f"{metric_value:.1f}" if isinstance(metric_value, (int, float)) else str(metric_value)
                         issues_details.append(
-                            f"• **Rango Dinámico (PLR)**: está en {plr_val} dB. "
+                            f"• Rango Dinámico (PLR): está en {plr_val} dB. "
                             f"Para máxima flexibilidad en mastering, ideal 12-14 dB en modo strict."
                         )
                     
@@ -6433,21 +6433,21 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                     elif "Stereo" in internal_key or "Ancho" in internal_key:
                         corr_val = f"{metric_value:.2f}" if isinstance(metric_value, (int, float)) else str(metric_value)
                         issues_details.append(
-                            f"• **Campo Estéreo**: correlación {corr_val}. "
+                            f"• Campo Estéreo: correlación {corr_val}. "
                             f"Revisar compatibilidad mono y balance L/R."
                         )
                     
                     # Frequency Balance warning
                     elif "Frequency" in internal_key or "Balance" in internal_key:
                         issues_details.append(
-                            f"• **Balance Tonal**: revisar distribución de frecuencias "
+                            f"• Balance Tonal: revisar distribución de frecuencias "
                             f"(graves, medios, agudos)."
                         )
             
             if issues_details:
                 issues_list_formatted = "\n".join(issues_details)
-                scope_note = "\n\n📍 **Alcance**: Estos puntos afectan a todo el track, no a secciones específicas." if strict else ""
-                issues_sentence = f"\n\n📋 **Puntos a revisar** (no críticos):\n{issues_list_formatted}{scope_note}"
+                scope_note = "\n\n📍 Alcance: Estos puntos afectan a todo el track, no a secciones específicas." if strict else ""
+                issues_sentence = f"\n\n📋 Puntos a revisar (no críticos):\n{issues_list_formatted}{scope_note}"
             else:
                 issues_sentence = f"\n\n📋 Hay {len(warnings)} punto(s) que podrías revisar, aunque no son críticos para el mastering."
         else:
@@ -6642,7 +6642,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                         # metric_value already includes unit (e.g., "-2.5 dBFS")
                         peak_val = str(metric_value) if not isinstance(metric_value, (int, float)) else f"{metric_value:.1f} dBFS"
                         issues_details.append(
-                            f"• **Overall headroom**: peak levels sit around {peak_val}. "
+                            f"• Overall headroom: peak levels sit around {peak_val}. "
                             f"For optimal mastering flexibility, peaks closer to -6 to -4 dBFS are recommended."
                         )
                     
@@ -6651,7 +6651,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                         # metric_value already includes unit (e.g., "-2.3 dBTP")
                         tp_val = str(metric_value) if not isinstance(metric_value, (int, float)) else f"{metric_value:.1f} dBTP"
                         issues_details.append(
-                            f"• **True Peak**: currently at {tp_val}. For maximum safety in "
+                            f"• True Peak: currently at {tp_val}. For maximum safety in "
                             f"format conversions, ≤-3.0 dBTP is recommended."
                         )
                     
@@ -6659,7 +6659,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                     elif "PLR" in internal_key:
                         plr_val = f"{metric_value:.1f}" if isinstance(metric_value, (int, float)) else str(metric_value)
                         issues_details.append(
-                            f"• **Dynamic Range (PLR)**: currently at {plr_val} dB. "
+                            f"• Dynamic Range (PLR): currently at {plr_val} dB. "
                             f"For maximum mastering flexibility, 12-14 dB is ideal in strict mode."
                         )
                     
@@ -6667,21 +6667,21 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                     elif "Stereo" in internal_key or "Width" in internal_key:
                         corr_val = f"{metric_value:.2f}" if isinstance(metric_value, (int, float)) else str(metric_value)
                         issues_details.append(
-                            f"• **Stereo Field**: correlation {corr_val}. "
+                            f"• Stereo Field: correlation {corr_val}. "
                             f"Review mono compatibility and L/R balance."
                         )
                     
                     # Frequency Balance warning
                     elif "Frequency" in internal_key or "Balance" in internal_key:
                         issues_details.append(
-                            f"• **Tonal Balance**: review frequency distribution "
+                            f"• Tonal Balance: review frequency distribution "
                             f"(lows, mids, highs)."
                         )
             
             if issues_details:
                 issues_list_formatted = "\n".join(issues_details)
-                scope_note = "\n\n📍 **Scope**: These points apply to the entire track, not specific sections." if strict else ""
-                issues_sentence = f"\n\n📋 **Points to review** (non-critical):\n{issues_list_formatted}{scope_note}"
+                scope_note = "\n\n📍 Scope: These points apply to the entire track, not specific sections." if strict else ""
+                issues_sentence = f"\n\n📋 Points to review (non-critical):\n{issues_list_formatted}{scope_note}"
             else:
                 issues_sentence = f"\n\n📋 There are {len(warnings)} point(s) you could review, though they're not critical for mastering."
         else:
