@@ -11,7 +11,7 @@
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { useAuth } from './AuthProvider'
-import { User, LogOut, ChevronDown } from 'lucide-react'
+import { User, LogOut, ChevronDown, History, CreditCard, Settings } from 'lucide-react'
 
 // ============================================================================
 // TYPES / TIPOS
@@ -31,6 +31,9 @@ const translations = {
     login: 'Iniciar Sesión',
     signUp: 'Registrarse',
     myAccount: 'Mis Análisis',
+    history: 'Historial',
+    subscription: 'Suscripción',
+    settings: 'Configuración',
     logout: 'Cerrar Sesión',
     loading: 'Cargando...'
   },
@@ -38,7 +41,10 @@ const translations = {
     login: 'Sign In',
     signUp: 'Sign Up',
     myAccount: 'My Analyses',
-    logout: 'Sign Out',
+    history: 'History',
+    subscription: 'Subscription',
+    settings: 'Settings',
+    logout: 'Log out',
     loading: 'Loading...'
   }
 }
@@ -260,25 +266,33 @@ export function UserMenu({ lang = 'es', isMobile = false }: UserMenuProps) {
 
           {/* Menu Items */}
           <div style={{ padding: '0.5rem 0' }}>
-            <Link
-              href="/dashboard"
-              onClick={() => setIsOpen(false)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem',
-                padding: '0.75rem 1rem',
-                color: '#374151',
-                textDecoration: 'none',
-                fontSize: '0.95rem',
-                transition: 'background 0.2s'
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.background = '#f3f4f6'}
-              onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-            >
-              <User size={18} color="#6b7280" />
-              {t.myAccount}
-            </Link>
+            {([
+              { href: '/dashboard', icon: User, label: t.myAccount },
+              { href: '/history', icon: History, label: t.history },
+              { href: '/subscription', icon: CreditCard, label: t.subscription },
+              { href: '/settings', icon: Settings, label: t.settings },
+            ] as const).map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={() => setIsOpen(false)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.75rem',
+                  padding: '0.75rem 1rem',
+                  color: '#374151',
+                  textDecoration: 'none',
+                  fontSize: '0.95rem',
+                  transition: 'background 0.2s'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = '#f3f4f6'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+              >
+                <item.icon size={18} color="#6b7280" />
+                {item.label}
+              </Link>
+            ))}
           </div>
 
           {/* Logout */}

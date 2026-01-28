@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { Download, Check, Upload, Zap, Shield, TrendingUp, Play, Music, Lock, X, AlertTriangle, Globe, Unlock, Menu } from 'lucide-react'
+import { Download, Check, Upload, Zap, Shield, TrendingUp, Play, Music, Crown, X, AlertTriangle, Globe, Unlock, Menu } from 'lucide-react'
 import { UserMenu, useAuth, AuthModal } from '@/components/auth'
 import { analyzeFile, checkIpLimit, IpCheckResult } from '@/lib/api'
 import { startAnalysisPolling, getAnalysisStatus } from '@/lib/api'
@@ -1572,7 +1572,7 @@ by Matías Carvajal
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
                   <Shield size={20} color="#059669" />
                   <span style={{ fontWeight: '600', color: '#064e3b' }}>
-                    {lang === 'es' ? '🔒 Analizador con Privacidad' : '🔒 Privacy-First Analyzer'}
+                    {lang === 'es' ? '🛡️ Analizador con Privacidad' : '🛡️ Privacy-First Analyzer'}
                   </span>
                 </div>
                 <p style={{ fontSize: '0.875rem', color: '#065f46' }}>
@@ -1715,7 +1715,7 @@ by Matías Carvajal
                     borderRadius: '0.5rem',
                     border: '1px solid #86efac'
                   }}>
-                    <span style={{ fontSize: '1rem' }}>🔒</span>
+                    <span style={{ fontSize: '1rem' }}>🛡️</span>
                     <p style={{ fontSize: '0.75rem', color: '#166534', margin: 0 }}>
                       {lang === 'es'
                         ? 'Tus archivos se borran automáticamente de nuestros servidores después del análisis'
@@ -2183,13 +2183,13 @@ by Matías Carvajal
                         position: 'relative'
                       }}
                     >
-                      {/* Lock icon for non-logged users on Resumen/Completo */}
+                      {/* Crown icon for non-logged users on Resumen/Completo */}
                       {(view === 'short' || view === 'write') && !isLoggedIn && (
-                        <Lock size={12} style={{
+                        <Crown size={12} style={{
                           position: 'absolute',
                           top: '4px',
                           right: '4px',
-                          color: '#9ca3af'
+                          color: '#d97706'
                         }} />
                       )}
                       {view === 'visual' ? (lang === 'es' ? '⚡ Rápido' : '⚡ Quick') :
@@ -2440,8 +2440,8 @@ by Matías Carvajal
                             fontSize: '0.875rem',
                             transition: 'color 0.3s ease'
                           }}>
-                            {isUnlocking ? <Unlock size={16} /> : <Lock size={16} />}
-                            {lang === 'es' ? 'Desbloquear análisis' : 'Unlock analysis'}
+                            {isUnlocking ? <Unlock size={16} /> : <Crown size={16} />}
+                            {lang === 'es' ? 'Obtener análisis completo' : 'Get complete analysis'}
                           </div>
                         </div>
                       )}
@@ -2622,7 +2622,7 @@ by Matías Carvajal
                       e.currentTarget.style.transform = 'translateY(0)'
                     }}
                   >
-                    {!isLoggedIn ? <Lock size={18} /> : <Download size={18} />}
+                    {!isLoggedIn ? <Crown size={18} style={{ color: '#d97706' }} /> : <Download size={18} />}
                     {lang === 'es'
                       ? `Descargar ${reportView === 'visual' ? 'Rápido' : reportView === 'short' ? 'Resumen' : 'Completo'}`
                       : `Download ${reportView === 'visual' ? 'Quick' : reportView === 'short' ? 'Summary' : 'Complete'}`}
@@ -2668,7 +2668,7 @@ by Matías Carvajal
                       }
                     }}
                   >
-                    {!isLoggedIn ? <Lock size={18} /> : <Download size={18} />}
+                    {!isLoggedIn ? <Crown size={18} style={{ color: '#d97706' }} /> : <Download size={18} />}
                     {lang === 'es' ? 'Análisis Detallado' : 'Detailed Analysis'}
                   </button>
                 </div>
@@ -4138,7 +4138,7 @@ by Matías Carvajal
               <X size={20} />
             </button>
 
-            {/* Lock Icon */}
+            {/* Crown Icon */}
             <div style={{
               display: 'flex',
               justifyContent: 'center',
@@ -4153,7 +4153,7 @@ by Matías Carvajal
                 alignItems: 'center',
                 justifyContent: 'center'
               }}>
-                <Lock size={24} style={{ color: '#d97706' }} />
+                <Crown size={24} style={{ color: '#d97706' }} />
               </div>
             </div>
 

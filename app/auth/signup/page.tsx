@@ -12,7 +12,7 @@ import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { getLanguageCookie, setLanguageCookie } from '@/lib/language'
 import { SocialLoginButtons } from '@/components/auth/SocialLoginButtons'
-import { Music, Mail, Lock, User, ArrowLeft, Eye, EyeOff, Check } from 'lucide-react'
+import { Headphones, Mail, Lock, User, ArrowLeft, Eye, EyeOff, Check } from 'lucide-react'
 
 // ============================================================================
 // TRANSLATIONS / TRADUCCIONES
@@ -319,7 +319,7 @@ function SignupContent() {
             justifyContent: 'center',
             margin: '0 auto 1rem'
           }}>
-            <Music size={32} color="white" />
+            <Headphones size={32} color="white" />
           </div>
           <h1 style={{
             fontSize: '1.75rem',

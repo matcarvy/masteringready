@@ -19,7 +19,6 @@ import {
   FileAudio,
   Calendar,
   TrendingUp,
-  Lock,
   Crown,
   ChevronRight,
   ArrowLeft,
@@ -840,15 +839,15 @@ export default function DashboardPage() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.925rem', color: '#374151' }}>
                   <span>✅</span>
-                  <span><strong>{ready}</strong> {lang === 'es' ? 'listas para mastering' : 'ready for mastering'}</span>
+                  <span><strong>{ready}</strong> {lang === 'es' ? (ready === 1 ? 'lista para mastering' : 'listas para mastering') : 'ready for mastering'}</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.925rem', color: '#374151' }}>
                   <span>🔧</span>
-                  <span><strong>{adjustments}</strong> {lang === 'es' ? 'necesitan ajustes' : 'need adjustments'}</span>
+                  <span><strong>{adjustments}</strong> {lang === 'es' ? (adjustments === 1 ? 'necesita ajustes' : 'necesitan ajustes') : (adjustments === 1 ? 'needs adjustments' : 'need adjustments')}</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.925rem', color: '#374151' }}>
                   <span>⚠️</span>
-                  <span><strong>{review}</strong> {lang === 'es' ? 'requieren revisión' : 'require review'}</span>
+                  <span><strong>{review}</strong> {lang === 'es' ? (review === 1 ? 'requiere revisión' : 'requieren revisión') : (review === 1 ? 'requires review' : 'require review')}</span>
                 </div>
               </div>
             </div>
@@ -1130,7 +1129,7 @@ export default function DashboardPage() {
                   {tab === 'rapid' && <Zap size={16} />}
                   {tab === 'summary' && <FileText size={16} />}
                   {tab === 'complete' && (
-                    !isPro ? <Lock size={16} /> : <TrendingUp size={16} />
+                    !isPro ? <Crown size={16} style={{ color: '#d97706' }} /> : <TrendingUp size={16} />
                   )}
                   {t.tabs[tab]}
                   {tab === 'complete' && !isPro && (
@@ -1557,8 +1556,8 @@ export default function DashboardPage() {
                       gap: '0.5rem'
                     }}
                   >
-                    <Lock size={16} />
-                    {lang === 'es' ? 'Desbloquear Completo' : 'Unlock Complete'}
+                    <Crown size={16} />
+                    {lang === 'es' ? 'Ver con Pro' : 'View with Pro'}
                   </button>
                 )}
               </div>
