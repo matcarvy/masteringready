@@ -1769,8 +1769,8 @@ by Matías Carvajal
                       </p>
                       <p style={{ fontSize: '0.75rem', color: '#92400e' }}>
                         {lang === 'es'
-                          ? `Tu archivo será comprimido automáticamente de ${(file.size / 1024 / 1024).toFixed(1)}MB a ~${Math.min(35, (file.size / 1024 / 1024) * 0.3).toFixed(1)}MB antes del análisis. Esto toma ~10-15 segundos.`
-                          : `Your file will be automatically compressed from ${(file.size / 1024 / 1024).toFixed(1)}MB to ~${Math.min(35, (file.size / 1024 / 1024) * 0.3).toFixed(1)}MB before analysis. Takes ~10-15 seconds.`}
+                          ? `Tu archivo será comprimido automáticamente de ${(file.size / 1024 / 1024).toFixed(1)}MB a ~${Math.min(35, (file.size / 1024 / 1024) * 0.3).toFixed(1)}MB antes del análisis. Esto no afecta la fidelidad del análisis. Toma ~10-15 segundos.`
+                          : `Your file will be automatically compressed from ${(file.size / 1024 / 1024).toFixed(1)}MB to ~${Math.min(35, (file.size / 1024 / 1024) * 0.3).toFixed(1)}MB before analysis. This does not affect analysis fidelity. Takes ~10-15 seconds.`}
                       </p>
                     </div>
                   )}
