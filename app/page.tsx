@@ -284,16 +284,51 @@ function Home() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  // Rotate loading methodology messages every 2.5s
+  // Rotate loading messages: anchor first (6-8s), then random non-repeating
+  const shownIndicesRef = useRef<Set<number>>(new Set())
   useEffect(() => {
     if (!loading) {
       setLoadingMsgIndex(0)
+      shownIndicesRef.current = new Set()
       return
     }
-    const interval = setInterval(() => {
-      setLoadingMsgIndex(prev => (prev + 1) % 4)
-    }, 2500)
-    return () => clearInterval(interval)
+
+    // Start with anchor message (index 0)
+    setLoadingMsgIndex(0)
+    shownIndicesRef.current = new Set([0])
+    let loopCount = 0
+
+    const pickNext = () => {
+      const rotatingIndices = [1, 2, 3, 4, 5]
+      // Filter out already shown in this loop
+      let available = rotatingIndices.filter(i => !shownIndicesRef.current.has(i))
+
+      if (available.length === 0) {
+        loopCount++
+        if (loopCount >= 1) return // Max 1 full loop (stop after all shown once)
+        shownIndicesRef.current = new Set([0]) // Reset for next loop, keep anchor excluded
+        available = rotatingIndices
+      }
+
+      const nextIndex = available[Math.floor(Math.random() * available.length)]
+      shownIndicesRef.current.add(nextIndex)
+      setLoadingMsgIndex(nextIndex)
+    }
+
+    // Random interval between 6-8 seconds per message
+    let timeoutId: NodeJS.Timeout
+    const scheduleNext = () => {
+      const delay = 6000 + Math.random() * 2000
+      timeoutId = setTimeout(() => {
+        pickNext()
+        scheduleNext()
+      }, delay)
+    }
+
+    // First rotation after anchor shows for 6-8s
+    scheduleNext()
+
+    return () => clearTimeout(timeoutId)
   }, [loading])
 
   // Auto-detect language based on user's location
@@ -452,12 +487,14 @@ function Home() {
     }
   }, [isLoggedIn, authLoading])
 
-  // Rotating methodology loading messages (per spec Section 9)
+  // Loading messages: anchor (index 0) always first, then 1-5 rotate randomly
   const loadingMessages = [
     { es: '🎧 Aplicando la metodología Mastering Ready…', en: '🎧 Applying Mastering Ready methodology…' },
     { es: '🎧 Evaluando headroom y dinámica…', en: '🎧 Evaluating headroom and dynamics…' },
-    { es: '🎧 Analizando balance tonal y estéreo…', en: '🎧 Analyzing tonal and stereo balance…' },
-    { es: '🎧 Preparando métricas técnicas para el mastering…', en: '🎧 Preparing technical metrics for mastering…' }
+    { es: '🎧 Analizando balance tonal y frecuencias…', en: '🎧 Analyzing tonal and frequency balance…' },
+    { es: '🎧 Revisando picos reales y margen técnico…', en: '🎧 Reviewing true peaks and technical margin…' },
+    { es: '🎧 Evaluando imagen estéreo y coherencia mono…', en: '🎧 Evaluating stereo image and mono coherence…' },
+    { es: '🎧 Preparando métricas para el mastering…', en: '🎧 Preparing metrics for mastering…' }
   ]
 
   // File validation helper
@@ -4444,8 +4481,8 @@ by Matías Carvajal
         }
 
         @keyframes fadeInMsg {
-          0% { opacity: 0; }
-          100% { opacity: 1; }
+          0% { opacity: 0; transform: translateY(4px); }
+          100% { opacity: 1; transform: translateY(0); }
         }
 
         /* ============================================
