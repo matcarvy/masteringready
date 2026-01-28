@@ -1639,7 +1639,7 @@ by Matías Carvajal
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
                   <Shield size={20} color="#059669" />
                   <span style={{ fontWeight: '600', color: '#064e3b' }}>
-                    {lang === 'es' ? '🛡️ Analizador con Privacidad' : '🛡️ Privacy-First Analyzer'}
+                    {lang === 'es' ? 'Analizador con Privacidad' : 'Privacy-First Analyzer'}
                   </span>
                 </div>
                 <p style={{ fontSize: '0.875rem', color: '#065f46' }}>
