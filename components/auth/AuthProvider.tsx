@@ -248,9 +248,43 @@ export function AuthProvider({ children }: AuthProviderProps) {
         setUser(session?.user ?? null)
         setLoading(false)
 
-        // Check for pending analysis after login/signup
+        // Ensure profile + subscription exist on sign in (handles trigger bypass)
         if ((event === 'SIGNED_IN' || event === 'USER_UPDATED') && session?.user) {
-          savePendingAnalysisForUser(session.user.id)
+          const u = session.user
+          // Check if profile exists
+          const { data: existingProfile } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('id', u.id)
+            .single()
+
+          if (!existingProfile) {
+            // Create profile
+            await supabase.from('profiles').insert({
+              id: u.id,
+              email: u.email || '',
+              full_name: u.user_metadata?.full_name || u.user_metadata?.name || null,
+              avatar_url: u.user_metadata?.avatar_url || null
+            })
+
+            // Create free subscription
+            const { data: freePlan } = await supabase
+              .from('plans')
+              .select('id')
+              .eq('type', 'free')
+              .single()
+
+            if (freePlan) {
+              await supabase.from('subscriptions').insert({
+                user_id: u.id,
+                plan_id: freePlan.id,
+                current_period_end: new Date(Date.now() + 100 * 365.25 * 24 * 60 * 60 * 1000).toISOString()
+              })
+            }
+          }
+
+          // Check for pending analysis after login/signup
+          savePendingAnalysisForUser(u.id)
         }
       }
     )
