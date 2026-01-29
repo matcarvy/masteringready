@@ -22,7 +22,7 @@ const translations = {
     sections: {
       intro: {
         title: 'Resumen',
-        content: `En MasteringReady, tu privacidad es nuestra prioridad. Este documento explica qué datos recopilamos, cómo los usamos y tus derechos sobre ellos.
+        content: `En Mastering Ready, tu privacidad es nuestra prioridad. Este documento explica qué datos recopilamos, cómo los usamos y tus derechos sobre ellos.
 
 Lo más importante que debes saber: nunca almacenamos tus archivos de audio. Se procesan en memoria y se eliminan inmediatamente después del análisis.`
       },
@@ -135,14 +135,8 @@ Puedes solicitar la eliminación de tu cuenta y datos en cualquier momento.`
       },
       contact: {
         title: 'Contacto',
-        content: `Si tienes preguntas sobre esta Política de Privacidad:
-
-• Email: mat@matcarvy.com
-• WhatsApp: +57 315 557 6115
-
-Responsable del tratamiento de datos:
-Matías Carvajal
-mat@matcarvy.com`
+        content: null,
+        contactLinks: true
       }
     }
   },
@@ -153,7 +147,7 @@ mat@matcarvy.com`
     sections: {
       intro: {
         title: 'Summary',
-        content: `At MasteringReady, your privacy is our priority. This document explains what data we collect, how we use it, and your rights regarding it.
+        content: `At Mastering Ready, your privacy is our priority. This document explains what data we collect, how we use it, and your rights regarding it.
 
 The most important thing to know: we never store your audio files. They are processed in memory and deleted immediately after analysis.`
       },
@@ -266,14 +260,8 @@ You can request deletion of your account and data at any time.`
       },
       contact: {
         title: 'Contact',
-        content: `If you have questions about this Privacy Policy:
-
-• Email: mat@matcarvy.com
-• WhatsApp: +57 315 557 6115
-
-Data controller:
-Matías Carvajal
-mat@matcarvy.com`
+        content: null,
+        contactLinks: true
       }
     }
   }
@@ -432,7 +420,7 @@ export default function PrivacyPage() {
           padding: isMobile ? '1.25rem' : '2rem',
           boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
         }}>
-          {Object.values(t.sections).map((section, index) => (
+          {Object.values(t.sections).map((section: any, index) => (
             <section
               key={index}
               style={{
@@ -455,7 +443,26 @@ export default function PrivacyPage() {
                 lineHeight: '1.75',
                 whiteSpace: 'pre-line'
               }}>
-                {section.content}
+                {section.contactLinks ? (
+                  <>
+                    <p>{lang === 'es' ? 'Si tienes preguntas sobre esta Política de Privacidad:' : 'If you have questions about this Privacy Policy:'}</p>
+                    <p style={{ marginTop: '0.75rem' }}>
+                      {'• Email: '}
+                      <a href="mailto:mat@matcarvy.com" style={{ color: '#667eea', textDecoration: 'underline' }}>mat@matcarvy.com</a>
+                    </p>
+                    <p>
+                      {'• WhatsApp: '}
+                      <a href="https://wa.me/573155576115" target="_blank" rel="noopener noreferrer" style={{ color: '#667eea', textDecoration: 'underline' }}>+57 315 557 6115</a>
+                    </p>
+                    <p style={{ marginTop: '1rem' }}>
+                      {lang === 'es' ? 'Responsable del tratamiento de datos:' : 'Data controller:'}
+                      <br />
+                      {'Matías Carvajal'}
+                      <br />
+                      <a href="mailto:mat@matcarvy.com" style={{ color: '#667eea', textDecoration: 'underline' }}>mat@matcarvy.com</a>
+                    </p>
+                  </>
+                ) : section.content}
               </div>
             </section>
           ))}
