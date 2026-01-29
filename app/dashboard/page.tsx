@@ -685,7 +685,7 @@ export default function DashboardPage() {
 
             {/* Analyze Button */}
             <Link
-              href="/"
+              href="/#analyze"
               style={{
                 display: 'flex',
                 alignItems: 'center',
