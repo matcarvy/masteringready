@@ -43,7 +43,7 @@ export async function compressAudioFile(
   // ============================================================
   const originalMetadata = {
     sampleRate: audioBuffer.sampleRate,
-    bitDepth: getBitDepthFromFile(file), // Estimate from file (16, 24, or 32)
+    bitDepth: getBitDepthFromHeader(arrayBuffer, file.name), // Read from WAV/AIFF header
     numberOfChannels: audioBuffer.numberOfChannels,
     duration: audioBuffer.duration
   }
@@ -122,31 +122,68 @@ export async function compressAudioFile(
   }
 }
 
-// Helper: Estimate bit depth from file size and duration
-function getBitDepthFromFile(file: File): number {
-  // This is an approximation based on file extension and size
-  // For WAV files, we can make educated guesses
-  
-  const fileName = file.name.toLowerCase()
-  
-  // If filename contains bit depth hint
-  if (fileName.includes('24bit') || fileName.includes('24-bit')) return 24
-  if (fileName.includes('32bit') || fileName.includes('32-bit')) return 32
-  if (fileName.includes('16bit') || fileName.includes('16-bit')) return 16
-  
-  // Default assumptions based on file type
-  if (fileName.endsWith('.wav')) {
-    // For WAV: Estimate from file size
-    // Rough estimate: size per second for stereo
-    // 16-bit stereo 44.1kHz: ~176KB/s
-    // 24-bit stereo 48kHz: ~288KB/s
-    // 32-bit stereo 48kHz: ~384KB/s
-    
-    // This is a rough heuristic - not perfect but better than nothing
-    return 24 // Default to 24-bit for professional audio
+// Parse bit depth from WAV/AIFF file header
+function getBitDepthFromHeader(arrayBuffer: ArrayBuffer, fileName: string): number {
+  const name = fileName.toLowerCase()
+
+  // WAV: RIFF header has bitsPerSample at byte 34 (fmt chunk)
+  if (name.endsWith('.wav') && arrayBuffer.byteLength >= 44) {
+    const view = new DataView(arrayBuffer)
+    // Verify RIFF/WAVE signature
+    const riff = String.fromCharCode(view.getUint8(0), view.getUint8(1), view.getUint8(2), view.getUint8(3))
+    const wave = String.fromCharCode(view.getUint8(8), view.getUint8(9), view.getUint8(10), view.getUint8(11))
+    if (riff === 'RIFF' && wave === 'WAVE') {
+      // Find fmt chunk (usually at offset 12, but search to be safe)
+      let offset = 12
+      while (offset + 8 < arrayBuffer.byteLength && offset < 1024) {
+        const chunkId = String.fromCharCode(
+          view.getUint8(offset), view.getUint8(offset + 1),
+          view.getUint8(offset + 2), view.getUint8(offset + 3)
+        )
+        const chunkSize = view.getUint32(offset + 4, true) // little-endian
+        if (chunkId === 'fmt ') {
+          const audioFormat = view.getUint16(offset + 8, true) // 1=PCM, 3=IEEE float
+          const bitsPerSample = view.getUint16(offset + 22, true)
+          // audioFormat 3 = IEEE float (32-bit or 64-bit float)
+          // audioFormat 1 = PCM integer
+          if (bitsPerSample > 0 && bitsPerSample <= 64) {
+            return bitsPerSample
+          }
+          break
+        }
+        offset += 8 + chunkSize
+        if (chunkSize % 2 !== 0) offset++ // RIFF chunks are word-aligned
+      }
+    }
   }
-  
-  // Default to 16-bit for unknown formats
+
+  // AIFF: FORM/AIFF header, COMM chunk contains sampleSize
+  if ((name.endsWith('.aiff') || name.endsWith('.aif')) && arrayBuffer.byteLength >= 30) {
+    const view = new DataView(arrayBuffer)
+    const form = String.fromCharCode(view.getUint8(0), view.getUint8(1), view.getUint8(2), view.getUint8(3))
+    const aiff = String.fromCharCode(view.getUint8(8), view.getUint8(9), view.getUint8(10), view.getUint8(11))
+    if (form === 'FORM' && (aiff === 'AIFF' || aiff === 'AIFC')) {
+      let offset = 12
+      while (offset + 8 < arrayBuffer.byteLength && offset < 1024) {
+        const chunkId = String.fromCharCode(
+          view.getUint8(offset), view.getUint8(offset + 1),
+          view.getUint8(offset + 2), view.getUint8(offset + 3)
+        )
+        const chunkSize = view.getUint32(offset + 4, false) // big-endian
+        if (chunkId === 'COMM') {
+          const sampleSize = view.getInt16(offset + 14, false) // big-endian
+          if (sampleSize > 0 && sampleSize <= 64) {
+            return sampleSize
+          }
+          break
+        }
+        offset += 8 + chunkSize
+        if (chunkSize % 2 !== 0) offset++ // AIFF chunks are word-aligned
+      }
+    }
+  }
+
+  // Lossy formats (MP3, AAC) — no meaningful bit depth in header
   return 16
 }
 

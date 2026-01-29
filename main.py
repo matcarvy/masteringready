@@ -188,7 +188,7 @@ app.add_middleware(
 
 # Constants
 MAX_FILE_SIZE = 200 * 1024 * 1024  # 200MB
-ALLOWED_EXTENSIONS = {'.wav', '.mp3', '.aiff'}
+ALLOWED_EXTENSIONS = {'.wav', '.mp3', '.aiff', '.aac', '.m4a'}
 
 # Initialize IP rate limiter and VPN detector
 if IP_LIMITER_AVAILABLE:
@@ -707,8 +707,22 @@ async def start_analysis(
                     estimated_duration_min = file_size_mb * 1.5  # Rough estimate: ~0.7 MB/min for MP3
                     logger.info(f"🔄 [{job_id}] Compressed format ({file_ext}) - forcing CHUNKED analysis")
                 else:
-                    # WAV/AIFF - estimate from file size (~10 MB per minute for 16-bit stereo 44.1kHz)
-                    estimated_duration_min = file_size_mb / 10.0
+                    # WAV/AIFF without known duration - try reading header directly
+                    try:
+                        fallback_info = sf.info(temp_file.name)
+                        estimated_duration_min = fallback_info.duration / 60.0
+                        logger.info(f"📊 [{job_id}] Duration from sf.info fallback: {estimated_duration_min:.1f} min")
+                    except Exception:
+                        # Last resort: estimate based on file size
+                        # Use sample rate and bit depth from metadata if available, else assume 24-bit 48kHz stereo (~17 MB/min)
+                        if original_metadata and original_metadata.get('sample_rate') and original_metadata.get('bit_depth'):
+                            sr_est = original_metadata['sample_rate']
+                            bd_est = original_metadata['bit_depth']
+                            mb_per_min = (sr_est * 2 * (bd_est / 8) * 60) / (1024 * 1024)
+                        else:
+                            mb_per_min = 17.0  # Conservative: 24-bit 48kHz stereo
+                        estimated_duration_min = file_size_mb / mb_per_min
+                        logger.info(f"📊 [{job_id}] Duration estimated from file size: {estimated_duration_min:.1f} min ({mb_per_min:.1f} MB/min)")
                     use_chunked = estimated_duration_min > 4.0
                 
                 loop = asyncio.get_event_loop()
