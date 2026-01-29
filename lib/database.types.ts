@@ -141,6 +141,7 @@ export interface Database {
           country_code: string | null
           detected_country_code: string | null
           country_detected_at: string | null
+          is_admin: boolean
           created_at: string
           updated_at: string
         }
@@ -160,6 +161,7 @@ export interface Database {
           country_code?: string | null
           detected_country_code?: string | null
           country_detected_at?: string | null
+          is_admin?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -179,6 +181,7 @@ export interface Database {
           country_code?: string | null
           detected_country_code?: string | null
           country_detected_at?: string | null
+          is_admin?: boolean
           created_at?: string
           updated_at?: string
         }
