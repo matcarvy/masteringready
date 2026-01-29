@@ -153,8 +153,9 @@ export function UserMenu({ lang = 'es', isMobile = false }: UserMenuProps) {
 
   const handleLogout = async () => {
     setIsOpen(false)
-    await signOut()
-    // Redirect to home preserving current language (cookie persists, URL param as safety net)
+    // Redirect immediately, don't wait for signOut to resolve (can hang during maintenance)
+    // signOut runs in background; page reload clears auth state anyway
+    signOut().catch(() => {})
     window.location.href = `/?lang=${lang}`
   }
 
