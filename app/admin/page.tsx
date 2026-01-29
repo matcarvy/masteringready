@@ -384,11 +384,22 @@ export default function AdminPage() {
 
     const checkAdmin = async () => {
       try {
-        const res = await fetch('/api/admin/stats')
-        const body = await res.text()
-        setDebugInfo(`Status: ${res.status} | User: ${user.email} | Response: ${body.slice(0, 200)}`)
-        if (res.ok) {
-          setIsAdmin(true)
+        // Query own profile directly via browser client (RLS allows reading own row)
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single()
+
+        if (error) {
+          setDebugInfo(`Query error: ${error.message}`)
+        } else if (profile) {
+          const row = profile as Record<string, unknown>
+          if (row.is_admin === true) {
+            setIsAdmin(true)
+          } else {
+            setDebugInfo(`is_admin=${row.is_admin} | email=${row.email}`)
+          }
         }
       } catch (err) {
         setDebugInfo(`Error: ${err}`)
