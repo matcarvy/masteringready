@@ -3213,9 +3213,11 @@ def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, s
                 bit_depth = int(subtype.split('_')[1])
             except:
                 bit_depth = 16
+        elif subtype == 'DOUBLE':
+            bit_depth = 64
         elif 'FLOAT' in subtype:
             bit_depth = 32
-    
+
     # Validar duración mínima
     if duration < 0.5:
         raise RuntimeError(f"Archivo demasiado corto ({duration:.2f}s). Mínimo 0.5s.")
@@ -4569,6 +4571,8 @@ def analyze_file_chunked(
                 bit_depth = int(subtype.split('_')[1])
             except:
                 bit_depth = 16
+        elif subtype == 'DOUBLE':
+            bit_depth = 64
         elif 'FLOAT' in subtype:
             bit_depth = 32
     

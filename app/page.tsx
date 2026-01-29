@@ -277,8 +277,8 @@ function Home() {
   // File validation helper
   const validateFile = (file: File): { valid: boolean; error?: string } => {
     const maxSize = 500 * 1024 * 1024 // 500MB
-    const allowedTypes = ['audio/wav', 'audio/mpeg', 'audio/mp3', 'audio/aiff', 'audio/x-aiff']
-    const allowedExtensions = ['.wav', '.mp3', '.aiff']
+    const allowedTypes = ['audio/wav', 'audio/mpeg', 'audio/mp3', 'audio/aiff', 'audio/x-aiff', 'audio/aac', 'audio/mp4', 'audio/x-m4a']
+    const allowedExtensions = ['.wav', '.mp3', '.aiff', '.aac', '.m4a']
     
     const fileName = file.name.toLowerCase()
     const hasValidExtension = allowedExtensions.some(ext => fileName.endsWith(ext))
@@ -1292,7 +1292,7 @@ by Matías Carvajal
                   <input
                     id="file-input"
                     type="file"
-                    accept=".wav,.mp3,.aiff"
+                    accept=".wav,.mp3,.aiff,.aac,.m4a"
                     onChange={(e) => {
                       const selectedFile = e.target.files?.[0] || null
                       
