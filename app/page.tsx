@@ -88,7 +88,11 @@ async function saveAnalysisToDatabase(userId: string, analysis: any, fileObj?: F
       processing_time_seconds: analysis.analysis_time_seconds || null,
       analysis_version: analysis.analysis_version || null,
       is_chunked_analysis: analysis.is_chunked_analysis || false,
-      chunk_count: analysis.chunk_count || null
+      chunk_count: analysis.chunk_count || null,
+      // v1.5: New data capture fields
+      spectral_6band: analysis.spectral_6band || null,
+      energy_analysis: analysis.energy_analysis || null,
+      categorical_flags: analysis.categorical_flags || null
     })
     .select()
 

@@ -452,6 +452,10 @@ async def analyze_mix_endpoint(
                 "analysis_version": ANALYZER_VERSION,
                 "is_chunked_analysis": False,  # Sync endpoint always uses normal mode
                 "chunk_count": result.get("num_chunks", 1),
+                # v1.5: New data capture fields
+                "spectral_6band": result.get("spectral_6band", {}),
+                "energy_analysis": result.get("energy_analysis", {}),
+                "categorical_flags": result.get("categorical_flags", {}),
                 "privacy_note": "🔒 Audio analizado en memoria y eliminado inmediatamente.",
                 "methodology": "Basado en la metodología 'Mastering Ready' de Matías Carvajal"
             }
@@ -860,6 +864,10 @@ async def start_analysis(
                         "analysis_version": ANALYZER_VERSION,
                         "is_chunked_analysis": use_chunked,
                         "chunk_count": result.get("num_chunks", 1),
+                        # v1.5: New data capture fields
+                        "spectral_6band": result.get("spectral_6band", {}),
+                        "energy_analysis": result.get("energy_analysis", {}),
+                        "categorical_flags": result.get("categorical_flags", {}),
                         "privacy_note": "🔒 Audio analizado en memoria y eliminado inmediatamente.",
                         "methodology": "Basado en la metodología 'Mastering Ready' de Matías Carvajal"
                     }

@@ -2502,6 +2502,14 @@ def band_balance_db(y: np.ndarray, sr: int) -> Dict[str, float]:
     mid_p = band_power(250.0, 4000.0)
     high_p = band_power(4000.0, hi_max)
 
+    # 6-band spectral breakdown for v1.5/v2 data capture
+    sub_p = band_power(20.0, 60.0)
+    low6_p = band_power(60.0, 250.0)
+    low_mid_p = band_power(250.0, 500.0)
+    mid6_p = band_power(500.0, 2000.0)
+    high_mid_p = band_power(2000.0, 6000.0)
+    high6_p = band_power(6000.0, hi_max)
+
     # Calcular dB con floor de -120 dB (silence digital standard)
     def power_to_db(power: float) -> float:
         if power <= 0 or power < 1e-12:
@@ -2545,10 +2553,28 @@ def band_balance_db(y: np.ndarray, sr: int) -> Dict[str, float]:
             "low_percent": 0.0,
             "mid_percent": 0.0,
             "high_percent": 0.0,
+            "spectral_6band": {
+                "sub": 0.0, "low": 0.0, "low_mid": 0.0,
+                "mid": 0.0, "high_mid": 0.0, "high": 0.0
+            },
             "is_silent": True,
             "message_es": "Archivo silencioso o con nivel muy bajo para analizar",
             "message_en": "Silent file or level too low to analyze"
         }
+
+    # 6-band spectral percentages
+    total_6 = sub_p + low6_p + low_mid_p + mid6_p + high_mid_p + high6_p
+    if total_6 > 1e-12:
+        s6 = {
+            "sub": round((sub_p / total_6) * 100.0, 2),
+            "low": round((low6_p / total_6) * 100.0, 2),
+            "low_mid": round((low_mid_p / total_6) * 100.0, 2),
+            "mid": round((mid6_p / total_6) * 100.0, 2),
+            "high_mid": round((high_mid_p / total_6) * 100.0, 2),
+            "high": round((high6_p / total_6) * 100.0, 2)
+        }
+    else:
+        s6 = {"sub": 0.0, "low": 0.0, "low_mid": 0.0, "mid": 0.0, "high_mid": 0.0, "high": 0.0}
 
     return {
         "low_db": low_db,
@@ -2559,7 +2585,91 @@ def band_balance_db(y: np.ndarray, sr: int) -> Dict[str, float]:
         "low_percent": low_percent,
         "mid_percent": mid_percent,
         "high_percent": high_percent,
+        "spectral_6band": s6,
         "is_silent": False
+    }
+
+
+def calculate_energy_curve(y: np.ndarray, sr: int, window_ms: int = 500) -> Dict[str, Any]:
+    """
+    Calculate normalized energy curve for the entire track.
+    Returns one RMS value per window_ms segment, normalized 0-1.
+    Also returns peak energy position as percentage of track length.
+    """
+    audio = y.mean(axis=0) if y.ndim > 1 and y.shape[0] > 1 else (y[0] if y.ndim > 1 else y)
+    audio = audio.astype(np.float64)
+
+    window_samples = int(sr * window_ms / 1000)
+    if window_samples < 1:
+        window_samples = 1
+
+    num_windows = max(1, len(audio) // window_samples)
+    rms_values = []
+
+    for i in range(num_windows):
+        start = i * window_samples
+        end = min(start + window_samples, len(audio))
+        segment = audio[start:end]
+        rms = float(np.sqrt(np.mean(segment ** 2)))
+        rms_values.append(rms)
+
+    if not rms_values:
+        return {"energy_curve": [], "peak_energy_time_pct": 0.0, "energy_distribution": {"low": 0.0, "mid": 0.0, "high": 0.0}}
+
+    max_rms = max(rms_values)
+    if max_rms > 0:
+        normalized = [round(v / max_rms, 4) for v in rms_values]
+    else:
+        normalized = [0.0] * len(rms_values)
+
+    # Peak energy position as % of track
+    peak_idx = rms_values.index(max_rms)
+    peak_energy_time_pct = round((peak_idx / len(rms_values)) * 100.0, 1) if len(rms_values) > 0 else 0.0
+
+    # Energy distribution: split track into 3 equal parts
+    third = max(1, len(rms_values) // 3)
+    low_energy = sum(rms_values[:third])
+    mid_energy = sum(rms_values[third:2*third])
+    high_energy = sum(rms_values[2*third:])
+    total_e = low_energy + mid_energy + high_energy
+    if total_e > 0:
+        energy_dist = {
+            "low": round((low_energy / total_e) * 100.0, 1),
+            "mid": round((mid_energy / total_e) * 100.0, 1),
+            "high": round((high_energy / total_e) * 100.0, 1)
+        }
+    else:
+        energy_dist = {"low": 0.0, "mid": 0.0, "high": 0.0}
+
+    return {
+        "energy_curve": normalized,
+        "peak_energy_time_pct": peak_energy_time_pct,
+        "energy_distribution": energy_dist
+    }
+
+
+def calculate_categorical_flags(peak: float, tp: float, plr, corr: float, ms_ratio: float) -> Dict[str, Any]:
+    """
+    Derive categorical boolean/text flags from existing metrics.
+    These are for analytics and quick filtering, not for display.
+    """
+    headroom_ok = peak <= -3.0
+    true_peak_safe = tp <= -1.0
+    dynamic_ok = plr is not None and plr >= 8.0
+
+    # Stereo risk assessment
+    if ms_ratio < 0.05 and corr > 0.95:
+        stereo_risk = "high"
+    elif ms_ratio < 0.15 or corr > 0.90 or corr < 0.1:
+        stereo_risk = "mild"
+    else:
+        stereo_risk = "none"
+
+    return {
+        "headroom_ok": headroom_ok,
+        "true_peak_safe": true_peak_safe,
+        "dynamic_ok": dynamic_ok,
+        "stereo_risk": stereo_risk
     }
 
 
@@ -3601,7 +3711,13 @@ def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, s
         tp_clipping_pct = tp_temporal.get("affected_percentage", 0.0)
     
     is_mastered = detect_mastered_file(lufs, peak, tp, plr, tp_clipping_pct)
-    
+
+    # v1.5: Energy curve analysis
+    energy_data = calculate_energy_curve(y, sr)
+
+    # v1.5: Categorical flags for analytics
+    cat_flags = calculate_categorical_flags(peak, tp, plr, corr, ms_ratio)
+
     # Build full result
     result = {
         "file": {
@@ -3638,12 +3754,16 @@ def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, s
             "clipping_detected": clipping
         },
         "metrics_bars": calculate_metrics_bars_percentages(metrics),  # NEW v7.3.50: Quick view bars
-        "analysis_time_seconds": round(time.time() - start_time, 1)  # Time elapsed
+        "analysis_time_seconds": round(time.time() - start_time, 1),  # Time elapsed
+        # v1.5: New data capture fields
+        "spectral_6band": fb.get("spectral_6band", {}),
+        "energy_analysis": energy_data,
+        "categorical_flags": cat_flags
     }
-    
+
     # CRITICAL: Sanitize all float values to ensure JSON compliance
     result = sanitize_dict(result)
-    
+
     return result
 
 def generate_recommendations(metrics: List[Dict[str, Any]], score: int, genre: Optional[str], lang: str = 'en') -> List[str]:
@@ -4619,7 +4739,8 @@ def analyze_file_chunked(
         'correlation_problem_chunks': [],   # Track chunks with correlation issues
         'ms_ratio_problem_chunks': [],      # Track chunks with M/S ratio issues
         'lr_balance_problem_chunks': [],    # Track chunks with L/R balance issues
-        'is_true_mono': is_true_mono        # v7.4.0: Track mono status
+        'is_true_mono': is_true_mono,       # v7.4.0: Track mono status
+        'energy_rms_per_chunk': []          # v1.5: Raw RMS per 500ms window per chunk
     }
     
     # 3. Process each chunk
@@ -4722,9 +4843,24 @@ def analyze_file_chunked(
                 'mid_db': chunk_fb['mid_db'],
                 'high_db': chunk_fb['high_db'],
                 'd_low_mid_db': chunk_fb['d_low_mid_db'],
-                'd_high_mid_db': chunk_fb['d_high_mid_db']
+                'd_high_mid_db': chunk_fb['d_high_mid_db'],
+                'spectral_6band': chunk_fb.get('spectral_6band', {})
             })
-            
+
+            # v1.5: Store raw RMS per 500ms window for energy curve aggregation
+            _e_audio = y.mean(axis=0) if y.ndim > 1 and y.shape[0] > 1 else (y[0] if y.ndim > 1 else y)
+            _e_audio = _e_audio.astype(np.float64)
+            _e_win = int(sr * 500 / 1000)
+            if _e_win < 1:
+                _e_win = 1
+            _e_n = max(1, len(_e_audio) // _e_win)
+            _e_rms_list = []
+            for _e_i in range(_e_n):
+                _e_s = _e_i * _e_win
+                _e_e = min(_e_s + _e_win, len(_e_audio))
+                _e_rms_list.append(float(np.sqrt(np.mean(_e_audio[_e_s:_e_e] ** 2))))
+            results['energy_rms_per_chunk'].append(_e_rms_list)
+
             # ═══════════════════════════════════════════════════════════
             # SUB-CHUNK TEMPORAL ANALYSIS (5-second windows with 50% overlap)
             # Provides terminal-level precision (±2-3s) for problem detection
@@ -5433,6 +5569,15 @@ def analyze_file_chunked(
         final_d_low_mid_db = final_low_db - final_mid_db
         final_d_high_mid_db = final_high_db - final_mid_db
         
+        # Aggregate spectral 6-band from chunks (weighted average)
+        spectral_6band_agg = {"sub": 0.0, "low": 0.0, "low_mid": 0.0, "mid": 0.0, "high_mid": 0.0, "high": 0.0}
+        for chunk_data in results['freq_balance_data']:
+            s6 = chunk_data.get('spectral_6band', {})
+            for band in spectral_6band_agg:
+                spectral_6band_agg[band] += s6.get(band, 0.0) * chunk_data['duration']
+        for band in spectral_6band_agg:
+            spectral_6band_agg[band] = round(spectral_6band_agg[band] / total_duration, 2)
+
         fb = {
             "low_percent": final_low_percent,
             "mid_percent": final_mid_percent,
@@ -5441,9 +5586,10 @@ def analyze_file_chunked(
             "mid_db": final_mid_db,
             "high_db": final_high_db,
             "d_low_mid_db": final_d_low_mid_db,
-            "d_high_mid_db": final_d_high_mid_db
+            "d_high_mid_db": final_d_high_mid_db,
+            "spectral_6band": spectral_6band_agg
         }
-        
+
         print(f"\n✅ Frequency Balance calculated from {len(results['freq_balance_data'])} chunks")
         print(f"   Low (20-250Hz): {final_low_percent:.1f}% | Mid (250Hz-4kHz): {final_mid_percent:.1f}% | High (4kHz-20kHz): {final_high_percent:.1f}%")
     else:
@@ -5456,7 +5602,8 @@ def analyze_file_chunked(
             "mid_db": 0.0,
             "high_db": 0.0,
             "d_low_mid_db": 0.0,
-            "d_high_mid_db": 0.0
+            "d_high_mid_db": 0.0,
+            "spectral_6band": {"sub": 0.0, "low": 0.0, "low_mid": 0.0, "mid": 0.0, "high_mid": 0.0, "high": 0.0}
         }
         print("\n⚠️  No frequency balance data available (using fallback)")
     
@@ -5570,7 +5717,47 @@ def analyze_file_chunked(
             traceback.print_exc()
             interpretations = None
     # ========== END: Interpretative texts generation ==========
-    
+
+    # v1.5: Aggregate energy curve from per-chunk raw RMS values
+    _all_rms = []
+    for _chunk_rms_list in results.get('energy_rms_per_chunk', []):
+        _all_rms.extend(_chunk_rms_list)
+    if _all_rms:
+        _max_rms_val = max(_all_rms)
+        if _max_rms_val > 0:
+            _energy_norm = [round(v / _max_rms_val, 4) for v in _all_rms]
+        else:
+            _energy_norm = [0.0] * len(_all_rms)
+        _peak_e_idx = _all_rms.index(_max_rms_val)
+        _peak_e_pct = round((_peak_e_idx / len(_all_rms)) * 100.0, 1)
+        _e_third = max(1, len(_all_rms) // 3)
+        _e_low = sum(_all_rms[:_e_third])
+        _e_mid = sum(_all_rms[_e_third:2*_e_third])
+        _e_high = sum(_all_rms[2*_e_third:])
+        _e_total = _e_low + _e_mid + _e_high
+        if _e_total > 0:
+            _e_dist = {
+                "low": round((_e_low / _e_total) * 100.0, 1),
+                "mid": round((_e_mid / _e_total) * 100.0, 1),
+                "high": round((_e_high / _e_total) * 100.0, 1)
+            }
+        else:
+            _e_dist = {"low": 0.0, "mid": 0.0, "high": 0.0}
+        energy_data = {
+            "energy_curve": _energy_norm,
+            "peak_energy_time_pct": _peak_e_pct,
+            "energy_distribution": _e_dist
+        }
+    else:
+        energy_data = {
+            "energy_curve": [],
+            "peak_energy_time_pct": 0.0,
+            "energy_distribution": {"low": 0.0, "mid": 0.0, "high": 0.0}
+        }
+
+    # v1.5: Categorical flags for analytics
+    cat_flags = calculate_categorical_flags(final_peak, final_tp, final_plr, final_correlation, final_ms_ratio)
+
     # Build full result using the same structure as analyze_file
     result = {
         "file": {
@@ -5607,13 +5794,18 @@ def analyze_file_chunked(
             "clipping_detected": bool(results['clipping_chunks'])
         },
         "metrics_bars": calculate_metrics_bars_percentages(metrics),  # NEW v7.3.50: Quick view bars
-        "analysis_time_seconds": round(time.time() - analysis_start_time, 1)  # Time elapsed (uses renamed variable)
+        "analysis_time_seconds": round(time.time() - analysis_start_time, 1),  # Time elapsed (uses renamed variable)
+        # v1.5: New data capture fields
+        "spectral_6band": fb.get("spectral_6band", {}),
+        "energy_analysis": energy_data,
+        "categorical_flags": cat_flags
     }
-    
+
     # CRITICAL: Sanitize all float values to ensure JSON compliance
     result = sanitize_dict(result)
-    
+
     return result
+
 def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en', filename: str = "mix") -> str:
     """
     Generate narrative engineer-style feedback from analysis report.
