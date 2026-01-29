@@ -346,6 +346,7 @@ export default function DashboardPage() {
   const [userStatus, setUserStatus] = useState<UserDashboardStatus | null>(null)
   const [dashboardState, setDashboardState] = useState<DashboardState>('new_user')
   const [canBuyAddon, setCanBuyAddon] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
 
   const { geo } = useGeo()
   const t = translations[lang]
@@ -359,6 +360,14 @@ export default function DashboardPage() {
   // Detect language: cookie > timezone > browser
   useEffect(() => {
     setLang(detectLanguage())
+  }, [])
+
+  // Mobile detection
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
   }, [])
 
   // Redirect if not logged in
@@ -593,7 +602,7 @@ export default function DashboardPage() {
       <header style={{
         background: 'white',
         borderBottom: '1px solid #e5e7eb',
-        padding: '1rem 1.5rem',
+        padding: isMobile ? '0.75rem 1rem' : '1rem 1.5rem',
         position: 'sticky',
         top: 0,
         zIndex: 50
@@ -638,7 +647,7 @@ export default function DashboardPage() {
           </Link>
 
           {/* Right side: Actions */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '0.5rem' : '0.75rem' }}>
             {/* Language Toggle */}
             <button
               onClick={() => {
@@ -676,17 +685,17 @@ export default function DashboardPage() {
 
             {/* Analyze Button */}
             <Link
-              href="/#analyze"
+              href="/"
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '0.5rem',
+                gap: '0.375rem',
                 background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                 color: 'white',
-                padding: '0.5rem 1rem',
+                padding: isMobile ? '0.4rem 0.75rem' : '0.5rem 1rem',
                 borderRadius: '9999px',
                 fontWeight: '600',
-                fontSize: '0.875rem',
+                fontSize: isMobile ? '0.8rem' : '0.875rem',
                 textDecoration: 'none',
                 transition: 'transform 0.2s, box-shadow 0.2s'
               }}
@@ -709,7 +718,7 @@ export default function DashboardPage() {
       <main style={{
         maxWidth: '1200px',
         margin: '0 auto',
-        padding: '2rem 1.5rem'
+        padding: isMobile ? '1rem' : '2rem 1.5rem'
       }}>
         {/* Welcome & Stats */}
         <div style={{
@@ -722,9 +731,9 @@ export default function DashboardPage() {
           <div style={{
             background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
             borderRadius: '1rem',
-            padding: '1.5rem',
+            padding: isMobile ? '1.25rem' : '1.5rem',
             color: 'white',
-            gridColumn: 'span 2'
+            gridColumn: isMobile ? 'span 1' : 'span 2'
           }}>
             <h1 style={{ fontSize: '1.5rem', fontWeight: '700', marginBottom: '0.5rem' }}>
               {t.welcome}, {(user.user_metadata?.full_name || profile?.full_name || user.email?.split('@')[0])?.split(' ')[0]}!
@@ -1086,24 +1095,33 @@ export default function DashboardPage() {
         }}>
           <div style={{
             background: 'white',
-            borderRadius: '1rem',
+            borderRadius: isMobile ? '0.75rem' : '1rem',
             maxWidth: '600px',
             width: '100%',
-            maxHeight: '90vh',
+            maxHeight: isMobile ? '95vh' : '90vh',
             overflow: 'hidden',
             display: 'flex',
             flexDirection: 'column'
           }}>
             {/* Modal Header */}
             <div style={{
-              padding: '1.25rem 1.5rem',
+              padding: isMobile ? '1rem' : '1.25rem 1.5rem',
               borderBottom: '1px solid #e5e7eb',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'space-between'
+              justifyContent: 'space-between',
+              gap: '0.5rem'
             }}>
-              <div>
-                <h3 style={{ fontWeight: '700', color: '#111827', marginBottom: '0.25rem' }}>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <h3 style={{
+                  fontWeight: '700',
+                  color: '#111827',
+                  marginBottom: '0.25rem',
+                  fontSize: isMobile ? '0.9rem' : '1rem',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap'
+                }}>
                   {selectedAnalysis.filename}
                 </h3>
                 <p style={{ fontSize: '0.75rem', color: '#6b7280' }}>
@@ -1185,7 +1203,7 @@ export default function DashboardPage() {
               if (items.length === 0) return null
               return (
                 <div style={{
-                  margin: '0 1.5rem',
+                  margin: isMobile ? '0 1rem' : '0 1.5rem',
                   padding: '0.75rem 1rem',
                   background: '#f9fafb',
                   borderRadius: '0.5rem',
@@ -1226,7 +1244,7 @@ export default function DashboardPage() {
             <div style={{
               display: 'flex',
               borderBottom: '1px solid #e5e7eb',
-              padding: '0 1.5rem'
+              padding: isMobile ? '0 1rem' : '0 1.5rem'
             }}>
               {(['rapid', 'summary', 'complete'] as const).map((tab) => (
                 <button
@@ -1234,7 +1252,7 @@ export default function DashboardPage() {
                   onClick={() => handleTabClick(tab)}
                   style={{
                     flex: 1,
-                    padding: '1rem',
+                    padding: isMobile ? '0.75rem 0.5rem' : '1rem',
                     background: 'none',
                     border: 'none',
                     borderBottom: reportTab === tab ? '2px solid #667eea' : '2px solid transparent',
@@ -1244,8 +1262,8 @@ export default function DashboardPage() {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    gap: '0.5rem',
-                    fontSize: '0.875rem',
+                    gap: isMobile ? '0.25rem' : '0.5rem',
+                    fontSize: isMobile ? '0.75rem' : '0.875rem',
                     position: 'relative'
                   }}
                 >

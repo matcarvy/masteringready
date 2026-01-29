@@ -281,10 +281,18 @@ mat@matcarvy.com`
 
 export default function PrivacyPage() {
   const [lang, setLang] = useState<'es' | 'en'>('es')
+  const [isMobile, setIsMobile] = useState(false)
   const t = translations[lang]
 
   useEffect(() => {
     setLang(detectLanguage())
+  }, [])
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
   }, [])
 
   return (
@@ -351,27 +359,27 @@ export default function PrivacyPage() {
       <main style={{
         maxWidth: '800px',
         margin: '0 auto',
-        padding: '2rem 1.5rem 4rem'
+        padding: isMobile ? '1.5rem 1rem 3rem' : '2rem 1.5rem 4rem'
       }}>
         {/* Title */}
         <div style={{
           textAlign: 'center',
-          marginBottom: '3rem'
+          marginBottom: isMobile ? '2rem' : '3rem'
         }}>
           <div style={{
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
-            width: '64px',
-            height: '64px',
+            width: isMobile ? '48px' : '64px',
+            height: isMobile ? '48px' : '64px',
             background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
             borderRadius: '1rem',
             marginBottom: '1rem'
           }}>
-            <Shield size={32} color="white" />
+            <Shield size={isMobile ? 24 : 32} color="white" />
           </div>
           <h1 style={{
-            fontSize: '2rem',
+            fontSize: isMobile ? '1.5rem' : '2rem',
             fontWeight: 'bold',
             color: '#111827',
             marginBottom: '0.5rem'
@@ -390,9 +398,9 @@ export default function PrivacyPage() {
         <div style={{
           background: 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)',
           border: '1px solid #86efac',
-          borderRadius: '1rem',
-          padding: '1.5rem',
-          marginBottom: '2rem',
+          borderRadius: isMobile ? '0.75rem' : '1rem',
+          padding: isMobile ? '1rem' : '1.5rem',
+          marginBottom: isMobile ? '1.5rem' : '2rem',
           textAlign: 'center'
         }}>
           <p style={{
@@ -416,8 +424,8 @@ export default function PrivacyPage() {
         {/* Sections */}
         <div style={{
           background: 'white',
-          borderRadius: '1rem',
-          padding: '2rem',
+          borderRadius: isMobile ? '0.75rem' : '1rem',
+          padding: isMobile ? '1.25rem' : '2rem',
           boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
         }}>
           {Object.values(t.sections).map((section, index) => (

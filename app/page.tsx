@@ -36,7 +36,7 @@ function mapVerdictToEnum(verdict: string): 'ready' | 'almost_ready' | 'needs_wo
 // ============================================================================
 // Helper: Save analysis directly to database for logged-in users
 // ============================================================================
-async function saveAnalysisToDatabase(userId: string, analysis: any) {
+async function saveAnalysisToDatabase(userId: string, analysis: any, fileObj?: File) {
   console.log('[SaveAnalysis] Saving for logged-in user:', userId, 'file:', analysis.filename)
   console.log('[SaveAnalysis] API response keys:', Object.keys(analysis).join(', '))
   console.log('[SaveAnalysis] Report fields:', {
@@ -57,6 +57,10 @@ async function saveAnalysisToDatabase(userId: string, analysis: any) {
     metrics_bars: analysis.metrics_bars || null
   }
 
+  // Extract file metadata from API response
+  const fileInfo = analysis.file || {}
+  const fileExtension = (analysis.filename || '').split('.').pop()?.toLowerCase() || null
+
   // Insert to analyses table
   const { data: insertedData, error } = await supabase
     .from('analyses')
@@ -73,7 +77,18 @@ async function saveAnalysisToDatabase(userId: string, analysis: any) {
       report_short: reportShort,
       report_write: reportWrite,
       report_visual: reportVisual,
-      created_at: analysis.created_at || new Date().toISOString()
+      created_at: analysis.created_at || new Date().toISOString(),
+      // File metadata
+      file_size_bytes: fileObj?.size || fileInfo.size || null,
+      file_format: fileExtension,
+      duration_seconds: fileInfo.duration || null,
+      sample_rate: fileInfo.sample_rate || null,
+      bit_depth: fileInfo.bit_depth || null,
+      // Analysis metadata
+      processing_time_seconds: analysis.analysis_time_seconds || null,
+      analysis_version: analysis.analysis_version || null,
+      is_chunked_analysis: analysis.is_chunked_analysis || false,
+      chunk_count: analysis.chunk_count || null
     })
     .select()
 
@@ -633,7 +648,7 @@ const handleAnalyze = async () => {
             created_at: new Date().toISOString(),
             lang,
             strict
-          })
+          }, file)
         } catch (saveErr) {
           console.error('[Analysis] Failed to save to database:', saveErr)
         }
