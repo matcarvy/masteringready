@@ -13,7 +13,7 @@ import { useAuth, UserMenu } from '@/components/auth'
 import { supabase, getUserAnalysisStatus, checkCanBuyAddon, UserDashboardStatus } from '@/lib/supabase'
 import { useGeo } from '@/lib/useGeo'
 import { getPlanDisplayPrice, PRICING } from '@/lib/geoip'
-import { getLanguageCookie, setLanguageCookie } from '@/lib/language'
+import { detectLanguage, setLanguageCookie } from '@/lib/language'
 import {
   Music,
   Zap,
@@ -139,13 +139,7 @@ export default function SubscriptionPage() {
   const router = useRouter()
   const { user, loading: authLoading } = useAuth()
 
-  const [lang, setLang] = useState<'es' | 'en'>(() => {
-    if (typeof document !== 'undefined') {
-      const cookie = getLanguageCookie()
-      if (cookie) return cookie
-    }
-    return 'es'
-  })
+  const [lang, setLang] = useState<'es' | 'en'>('es')
   const [loading, setLoading] = useState(true)
   const [userStatus, setUserStatus] = useState<UserDashboardStatus | null>(null)
   const [isPro, setIsPro] = useState(false)
@@ -160,15 +154,9 @@ export default function SubscriptionPage() {
   const singlePrice = getPlanDisplayPrice(PRICING.SINGLE, geo)
   const addonPrice = getPlanDisplayPrice(PRICING.ADDON_PACK, geo)
 
-  // Detect language
+  // Detect language: cookie > timezone > browser
   useEffect(() => {
-    const cookieLang = getLanguageCookie()
-    if (cookieLang) {
-      setLang(cookieLang)
-    } else if (typeof navigator !== 'undefined') {
-      const browserLang = navigator.language.split('-')[0]
-      setLang(browserLang === 'es' ? 'es' : 'en')
-    }
+    setLang(detectLanguage())
   }, [])
 
   // Redirect if not logged in

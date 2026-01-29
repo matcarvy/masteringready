@@ -10,7 +10,7 @@ import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
-import { getLanguageCookie, setLanguageCookie } from '@/lib/language'
+import { detectLanguage, setLanguageCookie } from '@/lib/language'
 import { SocialLoginButtons } from '@/components/auth/SocialLoginButtons'
 import { Headphones, Mail, Lock, ArrowLeft, Eye, EyeOff } from 'lucide-react'
 
@@ -77,14 +77,9 @@ function LoginContent() {
     const urlLang = searchParams.get('lang')
     if (urlLang === 'en' || urlLang === 'es') {
       setLang(urlLang)
+      setLanguageCookie(urlLang)
     } else {
-      const cookieLang = getLanguageCookie()
-      if (cookieLang) {
-        setLang(cookieLang)
-      } else if (typeof navigator !== 'undefined') {
-        const browserLang = navigator.language.split('-')[0]
-        setLang(browserLang === 'es' ? 'es' : 'en')
-      }
+      setLang(detectLanguage())
     }
   }, [searchParams])
 

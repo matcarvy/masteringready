@@ -7,7 +7,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { getLanguageCookie, setLanguageCookie } from '@/lib/language'
+import { detectLanguage, setLanguageCookie } from '@/lib/language'
 import { ArrowLeft, Shield } from 'lucide-react'
 
 // ============================================================================
@@ -284,13 +284,7 @@ export default function PrivacyPage() {
   const t = translations[lang]
 
   useEffect(() => {
-    const cookieLang = getLanguageCookie()
-    if (cookieLang) {
-      setLang(cookieLang)
-    } else if (typeof navigator !== 'undefined') {
-      const browserLang = navigator.language.split('-')[0]
-      setLang(browserLang === 'es' ? 'es' : 'en')
-    }
+    setLang(detectLanguage())
   }, [])
 
   return (

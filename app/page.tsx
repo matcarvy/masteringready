@@ -10,7 +10,7 @@ import { compressAudioFile } from '@/lib/audio-compression'
 import { supabase, checkCanAnalyze, AnalysisStatus } from '@/lib/supabase'
 import { useGeo } from '@/lib/useGeo'
 import { getPlanDisplayPrice, PRICING } from '@/lib/geoip'
-import { getLanguageCookie, setLanguageCookie } from '@/lib/language'
+import { detectLanguage, setLanguageCookie } from '@/lib/language'
 
 // ============================================================================
 // Helper: Map verdict string to database enum
@@ -226,13 +226,7 @@ function Home() {
   const isLoggedIn = !!user
 
   const [file, setFile] = useState<File | null>(null)
-  const [lang, setLang] = useState<'es' | 'en'>(() => {
-    if (typeof document !== 'undefined') {
-      const cookie = getLanguageCookie()
-      if (cookie) return cookie
-    }
-    return 'es'
-  })
+  const [lang, setLang] = useState<'es' | 'en'>('es')
   const [mode, setMode] = useState<'short' | 'write'>('write')
   const [strict, setStrict] = useState(false)
   const [langDetected, setLangDetected] = useState(false)
@@ -358,104 +352,17 @@ function Home() {
   // Priority: URL param > cookie > timezone/browser detection
   useEffect(() => {
     if (!langDetected) {
-      const detectLanguage = async () => {
-        try {
-          // 1. Check URL param (e.g., after logout redirect)
-          const urlParams = new URLSearchParams(window.location.search)
-          const urlLang = urlParams.get('lang')
-          if (urlLang === 'es' || urlLang === 'en') {
-            setLang(urlLang)
-            setLanguageCookie(urlLang)
-            setLangDetected(true)
-            return
-          }
-
-          // 2. Check cookie (user's previous explicit choice)
-          const cookieLang = getLanguageCookie()
-          if (cookieLang) {
-            setLang(cookieLang)
-            setLangDetected(true)
-            return
-          }
-
-          // 3. Fall back to timezone/browser detection
-          const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone
-
-          // English-speaking regions in Americas (exclude these first)
-          const englishRegions = [
-            'America/New_York',
-            'America/Chicago',
-            'America/Denver',
-            'America/Los_Angeles',
-            'America/Phoenix',
-            'America/Anchorage',
-            'America/Honolulu',
-            'America/Toronto',
-            'America/Vancouver',
-            'America/Montreal',
-            'America/Halifax',
-            'America/Winnipeg',
-            'America/Edmonton'
-          ]
-
-          // Portuguese-speaking (Brazil)
-          const portugueseRegions = [
-            'America/Sao_Paulo',
-            'America/Rio_Branco',
-            'America/Manaus',
-            'America/Belem',
-            'America/Fortaleza',
-            'America/Recife',
-            'America/Bahia',
-            'America/Cuiaba',
-            'America/Campo_Grande',
-            'America/Porto_Velho',
-            'America/Boa_Vista',
-            'America/Santarem',
-            'America/Araguaina',
-            'America/Maceio',
-            'America/Noronha'
-          ]
-
-          // Check if it's an English or Portuguese region first
-          const isEnglishRegion = englishRegions.some(region => timezone === region)
-          const isPortugueseRegion = portugueseRegions.some(region => timezone === region)
-
-          if (isEnglishRegion || isPortugueseRegion) {
-            setLang('en')
-          } else {
-            // Spanish-speaking regions
-            const spanishRegions = [
-              'America/', // Rest of Americas (Latin America)
-              'Europe/Madrid', // Spain
-              'Atlantic/Canary', // Canary Islands
-              'Africa/Ceuta' // Spanish territories
-            ]
-
-            // Check if timezone matches Spanish-speaking regions
-            const isSpanishRegion = spanishRegions.some(region => timezone.startsWith(region))
-
-            // Also check browser language as fallback
-            const browserLang = navigator.language || navigator.languages?.[0] || ''
-            const isSpanishLang = browserLang.toLowerCase().startsWith('es')
-
-            // Set Spanish if either timezone or browser language indicates Spanish
-            if (isSpanishRegion || isSpanishLang) {
-              setLang('es')
-            } else {
-              // Default to English for rest of the world
-              setLang('en')
-            }
-          }
-
-          setLangDetected(true)
-        } catch (error) {
-          // If detection fails, keep default (Spanish)
-          setLangDetected(true)
-        }
+      // 1. Check URL param (e.g., after logout redirect)
+      const urlParams = new URLSearchParams(window.location.search)
+      const urlLang = urlParams.get('lang')
+      if (urlLang === 'es' || urlLang === 'en') {
+        setLang(urlLang)
+        setLanguageCookie(urlLang)
+      } else {
+        // 2. Cookie > timezone > browser (centralized in lib/language.ts)
+        setLang(detectLanguage())
       }
-
-      detectLanguage()
+      setLangDetected(true)
     }
   }, [langDetected])
 

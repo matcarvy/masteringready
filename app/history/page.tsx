@@ -11,7 +11,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth, UserMenu } from '@/components/auth'
 import { supabase } from '@/lib/supabase'
-import { getLanguageCookie, setLanguageCookie } from '@/lib/language'
+import { detectLanguage, setLanguageCookie } from '@/lib/language'
 import {
   Music,
   FileAudio,
@@ -198,13 +198,7 @@ export default function HistoryPage() {
   const router = useRouter()
   const { user, loading: authLoading } = useAuth()
 
-  const [lang, setLang] = useState<'es' | 'en'>(() => {
-    if (typeof document !== 'undefined') {
-      const cookie = getLanguageCookie()
-      if (cookie) return cookie
-    }
-    return 'es'
-  })
+  const [lang, setLang] = useState<'es' | 'en'>('es')
   const [analyses, setAnalyses] = useState<Analysis[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedAnalysis, setSelectedAnalysis] = useState<Analysis | null>(null)
@@ -222,13 +216,7 @@ export default function HistoryPage() {
 
   // Detect language
   useEffect(() => {
-    const cookieLang = getLanguageCookie()
-    if (cookieLang) {
-      setLang(cookieLang)
-    } else if (typeof navigator !== 'undefined') {
-      const browserLang = navigator.language.split('-')[0]
-      setLang(browserLang === 'es' ? 'es' : 'en')
-    }
+    setLang(detectLanguage())
   }, [])
 
   // Redirect if not logged in

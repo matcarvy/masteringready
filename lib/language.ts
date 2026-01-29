@@ -34,6 +34,68 @@ export function setLanguageCookie(lang: Lang): void {
 }
 
 /**
+ * Detect language from timezone and browser settings (client-side).
+ * Returns the cookie value if one exists; otherwise detects via
+ * timezone → browser language → default English, and persists to cookie.
+ */
+export function detectLanguage(): Lang {
+  // 1. Cookie (user's previous choice or previous detection)
+  const cookie = getLanguageCookie()
+  if (cookie) return cookie
+
+  // 2. Timezone-based detection
+  try {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
+
+    const englishRegions = [
+      'America/New_York', 'America/Chicago', 'America/Denver',
+      'America/Los_Angeles', 'America/Phoenix', 'America/Anchorage',
+      'America/Honolulu', 'America/Toronto', 'America/Vancouver',
+      'America/Montreal', 'America/Halifax', 'America/Winnipeg',
+      'America/Edmonton'
+    ]
+
+    const portugueseRegions = [
+      'America/Sao_Paulo', 'America/Rio_Branco', 'America/Manaus',
+      'America/Belem', 'America/Fortaleza', 'America/Recife',
+      'America/Bahia', 'America/Cuiaba', 'America/Campo_Grande',
+      'America/Porto_Velho', 'America/Boa_Vista', 'America/Santarem',
+      'America/Araguaina', 'America/Maceio', 'America/Noronha'
+    ]
+
+    const isEnglish = englishRegions.some(r => tz === r)
+    const isPortuguese = portugueseRegions.some(r => tz === r)
+
+    let detected: Lang = 'en'
+
+    if (isEnglish || isPortuguese) {
+      detected = 'en'
+    } else {
+      const spanishRegions = ['America/', 'Europe/Madrid', 'Atlantic/Canary', 'Africa/Ceuta']
+      const isSpanish = spanishRegions.some(r => tz.startsWith(r))
+      const browserLang = (typeof navigator !== 'undefined')
+        ? (navigator.language || navigator.languages?.[0] || '')
+        : ''
+      const isSpanishLang = browserLang.toLowerCase().startsWith('es')
+
+      detected = (isSpanish || isSpanishLang) ? 'es' : 'en'
+    }
+
+    setLanguageCookie(detected)
+    return detected
+  } catch {
+    // If detection fails, fall back to browser language
+    if (typeof navigator !== 'undefined') {
+      const browserLang = navigator.language.split('-')[0]
+      const detected: Lang = browserLang === 'es' ? 'es' : 'en'
+      setLanguageCookie(detected)
+      return detected
+    }
+    return 'es'
+  }
+}
+
+/**
  * Read language from cookie header string (server-side, for route handlers)
  */
 export function getLanguageFromCookieHeader(cookieHeader: string | null): Lang | null {

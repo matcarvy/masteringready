@@ -10,7 +10,7 @@ import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { useAuth } from '@/components/auth/AuthProvider'
 import { supabase } from '@/lib/supabase'
-import { getLanguageCookie, setLanguageCookie } from '@/lib/language'
+import { detectLanguage, setLanguageCookie } from '@/lib/language'
 import {
   Users, BarChart3, DollarSign, MessageSquare, Activity,
   Search, ChevronDown, ChevronUp, ArrowLeft, RefreshCw,
@@ -332,13 +332,11 @@ export default function AdminPage() {
   const { user, loading: authLoading } = useAuth()
 
   // UI state
-  const [lang, setLang] = useState<'es' | 'en'>(() => {
-    if (typeof document !== 'undefined') {
-      const cookie = getLanguageCookie()
-      if (cookie) return cookie
-    }
-    return 'es'
-  })
+  const [lang, setLang] = useState<'es' | 'en'>('es')
+
+  useEffect(() => {
+    setLang(detectLanguage())
+  }, [])
   const [isAdmin, setIsAdmin] = useState(false)
   const [adminChecked, setAdminChecked] = useState(false)
   const [activeTab, setActiveTab] = useState<AdminTab>('overview')
