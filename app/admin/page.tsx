@@ -7,7 +7,6 @@
  */
 
 import { useState, useEffect, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/components/auth/AuthProvider'
 import { supabase } from '@/lib/supabase'
@@ -184,7 +183,10 @@ const translations = {
     loading: 'Cargando...',
     refresh: 'Actualizar',
     accessDenied: 'Acceso restringido',
-    accessDeniedMsg: 'No tienes permisos de administrador.'
+    accessDeniedMsg: 'No tienes permisos de administrador.',
+    loginRequired: 'Iniciar sesion',
+    loginRequiredMsg: 'Inicia sesion para acceder al panel de administracion.',
+    loginButton: 'Iniciar sesion'
   },
   en: {
     adminPanel: 'Admin Panel',
@@ -276,7 +278,10 @@ const translations = {
     loading: 'Loading...',
     refresh: 'Refresh',
     accessDenied: 'Access Denied',
-    accessDeniedMsg: 'You do not have admin permissions.'
+    accessDeniedMsg: 'You do not have admin permissions.',
+    loginRequired: 'Log in',
+    loginRequiredMsg: 'Log in to access the admin panel.',
+    loginButton: 'Log in'
   }
 }
 
@@ -324,7 +329,6 @@ function getCategoryColor(category: string): string {
 // ============================================================================
 
 export default function AdminPage() {
-  const router = useRouter()
   const { user, loading: authLoading } = useAuth()
 
   // UI state
@@ -373,13 +377,12 @@ export default function AdminPage() {
     if (authLoading) return
 
     if (!user) {
-      router.push('/auth/login')
+      setAdminChecked(true)
       return
     }
 
     const checkAdmin = async () => {
       try {
-        // Use the stats API route which already verifies admin server-side
         const res = await fetch('/api/admin/stats')
         if (res.ok) {
           setIsAdmin(true)
@@ -391,7 +394,7 @@ export default function AdminPage() {
     }
 
     checkAdmin()
-  }, [user, authLoading, router])
+  }, [user, authLoading])
 
   // Fetch stats
   const fetchStats = useCallback(async () => {
@@ -626,7 +629,48 @@ export default function AdminPage() {
     )
   }
 
-  // Access denied
+  // Not logged in - show login prompt
+  if (adminChecked && !user) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: '#f3f4f6',
+        fontFamily: 'Inter, system-ui, sans-serif'
+      }}>
+        <div style={{
+          textAlign: 'center',
+          background: 'white',
+          borderRadius: '1rem',
+          padding: '3rem',
+          boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
+          maxWidth: '400px'
+        }}>
+          <Shield size={48} style={{ color: '#667eea', marginBottom: '1rem' }} />
+          <h1 style={{ fontSize: '1.5rem', fontWeight: '700', color: '#111827', marginBottom: '0.5rem' }}>
+            {t.loginRequired}
+          </h1>
+          <p style={{ color: '#6b7280', marginBottom: '1.5rem' }}>{t.loginRequiredMsg}</p>
+          <Link href="/auth/login" style={{
+            display: 'inline-block',
+            padding: '0.75rem 2rem',
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            color: 'white',
+            borderRadius: '0.75rem',
+            textDecoration: 'none',
+            fontWeight: '600',
+            fontSize: '0.95rem'
+          }}>
+            {t.loginButton}
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
+  // Access denied (logged in but not admin)
   if (adminChecked && !isAdmin) {
     return (
       <div style={{
