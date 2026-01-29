@@ -423,16 +423,22 @@ export default function AdminPage() {
   }, [])
 
   // Fetch stats
+  const [statsError, setStatsError] = useState('')
   const fetchStats = useCallback(async () => {
     setStatsLoading(true)
+    setStatsError('')
     try {
       const headers = await getAuthHeaders()
       const res = await fetch('/api/admin/stats', { headers })
       if (res.ok) {
         const data = await res.json()
         setStatsData(data)
+      } else {
+        const body = await res.text()
+        setStatsError(`Stats API: ${res.status} - ${body.slice(0, 200)}`)
       }
     } catch (err) {
+      setStatsError(`Stats fetch error: ${err}`)
       console.error('Failed to fetch stats:', err)
     }
     setStatsLoading(false)
@@ -769,6 +775,13 @@ export default function AdminPage() {
 
     return (
       <div>
+        {/* Debug: stats error */}
+        {statsError && (
+          <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '0.5rem', padding: '0.75rem', marginBottom: '1rem', fontSize: '0.75rem', color: '#991b1b', wordBreak: 'break-all' }}>
+            {statsError}
+          </div>
+        )}
+
         {/* Refresh button */}
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem' }}>
           <button
