@@ -2535,16 +2535,16 @@ def band_balance_db(y: np.ndarray, sr: int) -> Dict[str, float]:
         mid_percent = max(0.0, min(100.0, mid_percent))
         high_percent = max(0.0, min(100.0, high_percent))
     else:
-        # v7.4.0 FIX: Return None values for silent files instead of misleading 33.33%
+        # v7.4.0 FIX: Return 0.0 for silent files (not 33.33%) with is_silent flag
         return {
             "low_db": -120.0,
             "mid_db": -120.0,
             "high_db": -120.0,
             "d_low_mid_db": 0.0,
             "d_high_mid_db": 0.0,
-            "low_percent": None,
-            "mid_percent": None,
-            "high_percent": None,
+            "low_percent": 0.0,
+            "mid_percent": 0.0,
+            "high_percent": 0.0,
             "is_silent": True,
             "message_es": "Archivo silencioso o con nivel muy bajo para analizar",
             "message_en": "Silent file or level too low to analyze"
@@ -5389,9 +5389,9 @@ def analyze_file_chunked(
             "name": "Stereo Width",
             "internal_key": "Stereo Width",
             "value": "Mono" if lang != "es" else "Mono",
-            "correlation": None,
-            "ms_ratio": None,
-            "lr_balance_db": None,
+            "correlation": 1.0,
+            "ms_ratio": 0.0,
+            "lr_balance_db": 0.0,
             "status": "info",
             "message": mono_msg_es if lang == "es" else mono_msg_en,
             "is_mono": True
@@ -5529,7 +5529,7 @@ def analyze_file_chunked(
             interpretation_metrics['true_peak'] = float(final_tp)
             
             # Extract dynamic range (PLR)
-            interpretation_metrics['dynamic_range'] = float(final_plr) if final_plr > 0 else 0.0
+            interpretation_metrics['dynamic_range'] = float(final_plr) if final_plr is not None and final_plr > 0 else 0.0
             
             # Extract LUFS
             interpretation_metrics['lufs'] = float(weighted_lufs) if weighted_lufs != 0 else -14.0
