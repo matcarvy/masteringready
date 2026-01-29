@@ -153,9 +153,14 @@ export function UserMenu({ lang = 'es', isMobile = false }: UserMenuProps) {
 
   const handleLogout = async () => {
     setIsOpen(false)
-    // Redirect immediately, don't wait for signOut to resolve (can hang during maintenance)
-    // signOut runs in background; page reload clears auth state anyway
+    // Fire signOut in background (cleans server-side session)
     signOut().catch(() => {})
+    // Clear local Supabase session immediately so redirected page sees no session
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith('sb-') && key.includes('auth')) {
+        localStorage.removeItem(key)
+      }
+    })
     window.location.href = `/?lang=${lang}`
   }
 
