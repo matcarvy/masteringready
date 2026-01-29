@@ -341,6 +341,7 @@ export default function AdminPage() {
   })
   const [isAdmin, setIsAdmin] = useState(false)
   const [adminChecked, setAdminChecked] = useState(false)
+  const [debugInfo, setDebugInfo] = useState('')
   const [activeTab, setActiveTab] = useState<AdminTab>('overview')
   const [isMobile, setIsMobile] = useState(false)
 
@@ -384,11 +385,13 @@ export default function AdminPage() {
     const checkAdmin = async () => {
       try {
         const res = await fetch('/api/admin/stats')
+        const body = await res.text()
+        setDebugInfo(`Status: ${res.status} | User: ${user.email} | Response: ${body.slice(0, 200)}`)
         if (res.ok) {
           setIsAdmin(true)
         }
-      } catch {
-        // Not admin or network error
+      } catch (err) {
+        setDebugInfo(`Error: ${err}`)
       }
       setAdminChecked(true)
     }
@@ -694,6 +697,11 @@ export default function AdminPage() {
             {t.accessDenied}
           </h1>
           <p style={{ color: '#6b7280', marginBottom: '1.5rem' }}>{t.accessDeniedMsg}</p>
+          {debugInfo && (
+            <p style={{ color: '#9ca3af', fontSize: '0.7rem', marginBottom: '1rem', wordBreak: 'break-all', textAlign: 'left', background: '#f3f4f6', padding: '0.75rem', borderRadius: '0.5rem' }}>
+              {debugInfo}
+            </p>
+          )}
           <Link href="/" style={{
             color: '#667eea',
             textDecoration: 'none',
