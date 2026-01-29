@@ -62,8 +62,11 @@ export async function PATCH(request: NextRequest) {
       )
     }
 
-    // Check admin status
-    const { data: profile } = await supabase
+    // Use service role client (bypasses RLS) for admin operations
+    const adminClient = createAdminSupabaseClient()
+
+    // Check admin status using service role client
+    const { data: profile } = await adminClient
       .from('profiles')
       .select('is_admin')
       .eq('id', user.id)
@@ -90,9 +93,6 @@ export async function PATCH(request: NextRequest) {
       updateData.responded_at = new Date().toISOString()
       updateData.responded_by = user.id
     }
-
-    // Use service role client for the update
-    const adminClient = createAdminSupabaseClient()
 
     const { data, error } = await adminClient
       .from('user_feedback')

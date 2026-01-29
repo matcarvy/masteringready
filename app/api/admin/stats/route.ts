@@ -45,8 +45,11 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Check admin status
-    const { data: profile } = await supabase
+    // Use service role client (bypasses RLS) for all admin operations
+    const adminClient = createAdminSupabaseClient()
+
+    // Check admin status using service role client
+    const { data: profile } = await adminClient
       .from('profiles')
       .select('is_admin')
       .eq('id', user.id)
@@ -58,9 +61,6 @@ export async function GET(request: NextRequest) {
         { status: 403 }
       )
     }
-
-    // Use service role client for aggregation queries
-    const adminClient = createAdminSupabaseClient()
 
     // Run all queries in parallel
     const today = new Date().toISOString().split('T')[0]

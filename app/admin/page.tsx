@@ -378,16 +378,16 @@ export default function AdminPage() {
     }
 
     const checkAdmin = async () => {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('is_admin')
-        .eq('id', user.id)
-        .single()
-
-      setAdminChecked(true)
-      if (profile?.is_admin) {
-        setIsAdmin(true)
+      try {
+        // Use the stats API route which already verifies admin server-side
+        const res = await fetch('/api/admin/stats')
+        if (res.ok) {
+          setIsAdmin(true)
+        }
+      } catch {
+        // Not admin or network error
       }
+      setAdminChecked(true)
     }
 
     checkAdmin()
