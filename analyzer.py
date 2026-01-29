@@ -3343,6 +3343,20 @@ def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, s
     if y.ndim == 1:
         y = y[np.newaxis, :]
 
+    # v7.4.1 FIX: Detect mono/pseudo-stereo (parity with chunked mode)
+    # Check a middle segment — skip first/last 5s per temporal analysis rules
+    is_true_mono = False
+    if y.shape[0] < 2:
+        is_true_mono = True
+        print("ℹ️  Mono file detected - stereo analysis will not apply")
+    elif y.shape[0] >= 2:
+        skip_samples = min(int(5 * sr), y.shape[1] // 10)  # 5s or 10% of file
+        end_samples = max(y.shape[1] - skip_samples, skip_samples + int(sr))  # At least 1s of data
+        if skip_samples < end_samples:
+            if np.allclose(y[0, skip_samples:end_samples], y[1, skip_samples:end_samples], rtol=1e-5, atol=1e-8):
+                is_true_mono = True
+                print(f"ℹ️  Pseudo-stereo (identical channels) detected in body ({skip_samples/sr:.1f}s-{end_samples/sr:.1f}s) - treating as mono")
+
     # Auto-ajustar oversample si es necesario
     if oversample == 0:  # "auto" mode
         oversample = auto_oversample_factor(sr)
@@ -3589,7 +3603,25 @@ def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, s
     
     if stereo_temporal:
         stereo_metric["temporal_analysis"] = stereo_temporal
-    
+
+    # v7.4.1 FIX: Override stereo metric for mono/pseudo-stereo files (parity with chunked mode)
+    if is_true_mono:
+        mono_msg_es = "Archivo mono detectado. El análisis estéreo no aplica."
+        mono_msg_en = "Mono file detected. Stereo analysis does not apply."
+        stereo_metric = {
+            "name": METRIC_NAMES[_pick_lang(lang)]["Stereo Width"],
+            "internal_key": "Stereo Width",
+            "value": "Mono",
+            "correlation": 1.0,
+            "ms_ratio": 0.0,
+            "lr_balance_db": 0.0,
+            "status": "info",
+            "message": mono_msg_es if lang == "es" else mono_msg_en,
+            "is_mono": True
+        }
+    else:
+        stereo_metric["is_mono"] = False
+
     metrics.append(stereo_metric)
 
     # 8. Frequency Balance
@@ -4706,9 +4738,17 @@ def analyze_file_chunked(
     num_chunks = int(np.ceil(duration / chunk_duration))
     print(f"📦 Processing in {num_chunks} chunks")
 
-    # v7.4.0 FIX: Detect mono file BEFORE processing
-    # Load a small sample to check channel configuration
-    y_check, _ = librosa.load(str(path), sr=sr, duration=0.5, mono=False, res_type='kaiser_fast')
+    # v7.4.1 FIX: Detect mono file BEFORE processing
+    # Check a representative MIDDLE segment (skip intro/outro per temporal analysis rules)
+    # Old v7.4.0 checked only 0.5s from the start — too aggressive, intros are often mono/centered
+    check_offset = min(5.0, duration * 0.1)   # Skip first 5s (or 10% for short files)
+    check_duration = min(10.0, duration * 0.3)  # Check 10s (or 30% for short files)
+    # Ensure we don't exceed file duration
+    if check_offset + check_duration > duration:
+        check_offset = 0.0
+        check_duration = min(duration, 10.0)
+
+    y_check, _ = librosa.load(str(path), sr=sr, offset=check_offset, duration=check_duration, mono=False, res_type='kaiser_fast')
     is_true_mono = False
     if y_check.ndim == 1:
         # File is natively mono
@@ -4720,7 +4760,7 @@ def analyze_file_chunked(
             y_check = y_check.T
         if np.allclose(y_check[0], y_check[1], rtol=1e-5, atol=1e-8):
             is_true_mono = True
-            print("ℹ️  Pseudo-stereo (identical channels) detected - treating as mono")
+            print(f"ℹ️  Pseudo-stereo (identical channels) detected at {check_offset:.1f}s-{check_offset+check_duration:.1f}s - treating as mono")
     del y_check  # Free memory
 
     # 2. Initialize accumulators
