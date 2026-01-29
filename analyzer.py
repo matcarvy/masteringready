@@ -1341,8 +1341,10 @@ def calculate_metrics_bars_percentages(metrics: List[Dict[str, Any]]) -> Dict[st
     for m in metrics:
         key = m.get("internal_key", "").lower().replace(" ", "_")
         value = m.get("value", 0)
+        if value is None:
+            value = 0
         status = m.get("status", "")
-        
+
         # Parse numeric value if it's a string
         if isinstance(value, str):
             try:
@@ -1354,12 +1356,22 @@ def calculate_metrics_bars_percentages(metrics: List[Dict[str, Any]]) -> Dict[st
         
         values[key] = {"value": value, "status": status}
     
-    # Get key values for combined logic
+    # Get key values for combined logic (guard against None — 32-bit floats may yield N/A metrics)
     headroom_val = values.get("headroom", {}).get("value", -6)
+    if headroom_val is None:
+        headroom_val = -6
     true_peak_val = values.get("true_peak", {}).get("value", -1.5)
+    if true_peak_val is None:
+        true_peak_val = -1.5
     lufs_val = values.get("lufs_(integrated)", {}).get("value", -14)
+    if lufs_val is None:
+        lufs_val = -14
     plr_val = values.get("plr", {}).get("value", 10)
+    if plr_val is None:
+        plr_val = 10
     correlation_val = values.get("stereo_width", {}).get("value", 0.7)
+    if correlation_val is None:
+        correlation_val = 0.7
     
     # Count warnings for combined logic
     warnings_count = 0
