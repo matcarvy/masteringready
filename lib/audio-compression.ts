@@ -45,12 +45,28 @@ export async function compressAudioFile(
   const originalMetadata = {
     sampleRate: headerInfo.sampleRate || audioBuffer.sampleRate, // Prefer header (true rate), fallback to AudioContext
     bitDepth: headerInfo.bitDepth,
-    numberOfChannels: audioBuffer.numberOfChannels,
+    numberOfChannels: headerInfo.numberOfChannels || audioBuffer.numberOfChannels,
     duration: audioBuffer.duration
   }
-  
+
   // ============================================================
-  
+
+  // STEREO SAFETY: If the browser decoder collapsed channels, skip compression
+  // Web Audio API may decode some formats (e.g. 32-bit float WAV) as mono
+  if (headerInfo.numberOfChannels && headerInfo.numberOfChannels > audioBuffer.numberOfChannels) {
+    console.warn(
+      `[Compression] Browser decoded ${headerInfo.numberOfChannels}ch file as ${audioBuffer.numberOfChannels}ch — skipping compression to preserve stereo`
+    )
+    audioContext.close()
+    return {
+      file,
+      compressed: false,
+      originalSize: file.size,
+      newSize: file.size,
+      originalMetadata
+    }
+  }
+
   // If file is already under limit, return as-is with original metadata
   if (file.size <= maxBytes) {
     audioContext.close()
@@ -59,7 +75,7 @@ export async function compressAudioFile(
       compressed: false,
       originalSize: file.size,
       newSize: file.size,
-      originalMetadata // ← NUEVO: Always return original metadata
+      originalMetadata
     }
   }
 
@@ -123,11 +139,11 @@ export async function compressAudioFile(
   }
 }
 
-// Parse bit depth AND sample rate from WAV/AIFF file header
-function parseFileHeader(arrayBuffer: ArrayBuffer, fileName: string): { bitDepth: number; sampleRate: number | null } {
+// Parse bit depth, sample rate, and channel count from WAV/AIFF file header
+function parseFileHeader(arrayBuffer: ArrayBuffer, fileName: string): { bitDepth: number; sampleRate: number | null; numberOfChannels: number | null } {
   const name = fileName.toLowerCase()
 
-  // WAV: RIFF header — fmt chunk contains sampleRate + bitsPerSample
+  // WAV: RIFF header — fmt chunk contains sampleRate + bitsPerSample + numChannels
   if (name.endsWith('.wav') && arrayBuffer.byteLength >= 44) {
     const view = new DataView(arrayBuffer)
     const riff = String.fromCharCode(view.getUint8(0), view.getUint8(1), view.getUint8(2), view.getUint8(3))
@@ -148,11 +164,13 @@ function parseFileHeader(arrayBuffer: ArrayBuffer, fileName: string): { bitDepth
           //   +16: byteRate    (uint32)
           //   +20: blockAlign  (uint16)
           //   +22: bitsPerSample (uint16)
+          const numChannels = view.getUint16(offset + 10, true)
           const sampleRate = view.getUint32(offset + 12, true)
           const bitsPerSample = view.getUint16(offset + 22, true)
           return {
             bitDepth: (bitsPerSample > 0 && bitsPerSample <= 64) ? bitsPerSample : 16,
-            sampleRate: sampleRate > 0 ? sampleRate : null
+            sampleRate: sampleRate > 0 ? sampleRate : null,
+            numberOfChannels: numChannels > 0 ? numChannels : null
           }
         }
         offset += 8 + chunkSize
@@ -161,7 +179,7 @@ function parseFileHeader(arrayBuffer: ArrayBuffer, fileName: string): { bitDepth
     }
   }
 
-  // AIFF: FORM/AIFF header — COMM chunk contains sampleSize + sampleRate (80-bit float)
+  // AIFF: FORM/AIFF header — COMM chunk contains numChannels + sampleSize + sampleRate
   if ((name.endsWith('.aiff') || name.endsWith('.aif')) && arrayBuffer.byteLength >= 30) {
     const view = new DataView(arrayBuffer)
     const form = String.fromCharCode(view.getUint8(0), view.getUint8(1), view.getUint8(2), view.getUint8(3))
@@ -180,11 +198,13 @@ function parseFileHeader(arrayBuffer: ArrayBuffer, fileName: string): { bitDepth
           //   +10: numSampleFrames (uint32)
           //   +14: sampleSize      (int16) — bits per sample
           //   +16: sampleRate      (80-bit IEEE 754 extended, 10 bytes)
+          const numChannels = view.getInt16(offset + 8, false)
           const sampleSize = view.getInt16(offset + 14, false)
           const sampleRate = parseIeee80(view, offset + 16)
           return {
             bitDepth: (sampleSize > 0 && sampleSize <= 64) ? sampleSize : 16,
-            sampleRate: sampleRate > 0 ? sampleRate : null
+            sampleRate: sampleRate > 0 ? sampleRate : null,
+            numberOfChannels: numChannels > 0 ? numChannels : null
           }
         }
         offset += 8 + chunkSize
@@ -194,7 +214,7 @@ function parseFileHeader(arrayBuffer: ArrayBuffer, fileName: string): { bitDepth
   }
 
   // Lossy formats (MP3, AAC) — no reliable header parsing
-  return { bitDepth: 16, sampleRate: null }
+  return { bitDepth: 16, sampleRate: null, numberOfChannels: null }
 }
 
 // Parse 80-bit IEEE 754 extended float (used in AIFF COMM chunk for sample rate)

@@ -535,7 +535,9 @@ const handleAnalyze = async () => {
     let originalMetadata = undefined
 
     // Check if file needs compression
-    const maxSize = 30 * 1024 * 1024  // 30MB threshold
+    // API accepts up to 200MB — only compress very large files to avoid
+    // losing stereo info or bit depth through Web Audio API re-encoding
+    const maxSize = 100 * 1024 * 1024  // 100MB threshold
     if (file.size > maxSize) {
       setCompressing(true)
       setCompressionProgress(0)
