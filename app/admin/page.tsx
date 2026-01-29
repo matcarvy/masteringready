@@ -410,11 +410,24 @@ export default function AdminPage() {
     checkAdmin()
   }, [user, authLoading])
 
+  // Helper: get auth headers for API calls
+  const getAuthHeaders = useCallback(async (): Promise<Record<string, string>> => {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (session?.access_token) {
+      return {
+        'Authorization': `Bearer ${session.access_token}`,
+        'Content-Type': 'application/json'
+      }
+    }
+    return { 'Content-Type': 'application/json' }
+  }, [])
+
   // Fetch stats
   const fetchStats = useCallback(async () => {
     setStatsLoading(true)
     try {
-      const res = await fetch('/api/admin/stats')
+      const headers = await getAuthHeaders()
+      const res = await fetch('/api/admin/stats', { headers })
       if (res.ok) {
         const data = await res.json()
         setStatsData(data)
@@ -423,7 +436,7 @@ export default function AdminPage() {
       console.error('Failed to fetch stats:', err)
     }
     setStatsLoading(false)
-  }, [])
+  }, [getAuthHeaders])
 
   // Fetch users
   const fetchUsers = useCallback(async () => {
@@ -599,9 +612,10 @@ export default function AdminPage() {
   // Handle feedback update
   const handleFeedbackUpdate = async (feedbackId: string, updates: Record<string, unknown>) => {
     try {
+      const headers = await getAuthHeaders()
       const res = await fetch('/api/admin/feedback', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ feedbackId, ...updates })
       })
       if (res.ok) {
