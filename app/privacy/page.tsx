@@ -104,7 +104,9 @@ Cada uno de estos servicios tiene sus propias políticas de privacidad y cumple 
 • Exportar tus datos en formato legible
 • Retirar tu consentimiento en cualquier momento
 
-Para ejercer estos derechos, contáctanos a mat@matcarvy.com`
+Para ejercer estos derechos, contáctanos a mat@matcarvy.com
+
+Si te encuentras en el Espacio Económico Europeo, tienes derechos adicionales bajo las leyes de protección de datos aplicables.`
       },
       security: {
         title: 'Seguridad',
@@ -233,7 +235,9 @@ Each of these services has its own privacy policies and complies with industry s
 • Export your data in a readable format
 • Withdraw your consent at any time
 
-To exercise these rights, contact us at mat@matcarvy.com`
+To exercise these rights, contact us at mat@matcarvy.com
+
+If you are located in the European Economic Area, you have additional rights under applicable data protection laws.`
       },
       security: {
         title: 'Security',

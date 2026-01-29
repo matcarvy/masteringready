@@ -46,7 +46,9 @@ El servicio está diseñado como herramienta educativa y de referencia. Los resu
 • Pro: $9.99/mes USD, 30 análisis mensuales con todas las funciones
 • Pack Adicional (solo Pro): $3.99 USD por 10 análisis extra
 
-Los precios pueden variar según tu ubicación geográfica (precios regionales). Los pagos se procesan a través de Stripe. Las suscripciones se renuevan automáticamente hasta que las canceles.`
+Los precios pueden variar según tu ubicación geográfica (precios regionales). Los pagos se procesan a través de Stripe. Las suscripciones se renuevan automáticamente hasta que las canceles.
+
+Debido a la naturaleza digital e inmediata del servicio, todos los pagos son finales salvo que la ley aplicable requiera lo contrario.`
       },
       usage: {
         title: 'Uso Aceptable',
@@ -58,7 +60,9 @@ Los precios pueden variar según tu ubicación geográfica (precios regionales).
 • No revender o redistribuir el servicio sin autorización
 • Proporcionar información veraz al registrarte
 
-Nos reservamos el derecho de suspender o cancelar cuentas que violen estos términos.`
+Nos reservamos el derecho de suspender o cancelar cuentas que violen estos términos.
+
+Podemos limitar o suspender temporalmente el acceso en casos de uso excesivo, mantenimiento del sistema, o comportamiento que pueda afectar la estabilidad de la plataforma.`
       },
       privacy: {
         title: 'Privacidad y Datos',
@@ -76,7 +80,9 @@ Consulta nuestra Política de Privacidad para más detalles.`
         content: `• Tú conservas todos los derechos sobre tus archivos de audio
 • MasteringReady conserva los derechos sobre su metodología, algoritmos, código y diseño
 • Los reportes generados son para tu uso personal o profesional
-• La marca "MasteringReady" y el logo son propiedad de Matías Carvajal`
+• La marca "MasteringReady" y el logo son propiedad de Matías Carvajal
+
+La lógica de análisis, el sistema de puntuación y las recomendaciones se basan en know-how propietario desarrollado por MasteringReady y no se derivan de ningún archivo de audio individual de los usuarios.`
       },
       liability: {
         title: 'Limitación de Responsabilidad',
@@ -91,6 +97,10 @@ En ningún caso seremos responsables por daños indirectos, incidentales o conse
       changes: {
         title: 'Cambios en los Términos',
         content: `Podemos actualizar estos Términos de Servicio ocasionalmente. Te notificaremos sobre cambios significativos por correo electrónico o mediante un aviso en la plataforma. El uso continuado del servicio después de dichos cambios constituye tu aceptación de los nuevos términos.`
+      },
+      governing: {
+        title: 'Ley Aplicable',
+        content: `Estos términos se rigen por las leyes de la República de Colombia. Cualquier disputa estará sujeta a la jurisdicción exclusiva de los tribunales de Colombia.`
       },
       contact: {
         title: 'Contacto',
@@ -132,7 +142,9 @@ The service is designed as an educational and reference tool. Results are indica
 • Pro: $9.99/month USD, 30 monthly analyses with all features
 • Add-on Pack (Pro only): $3.99 USD for 10 extra analyses
 
-Prices may vary based on your geographic location (regional pricing). Payments are processed through Stripe. Subscriptions renew automatically until you cancel.`
+Prices may vary based on your geographic location (regional pricing). Payments are processed through Stripe. Subscriptions renew automatically until you cancel.
+
+Due to the digital and immediate nature of the service, all payments are final unless required otherwise by applicable law.`
       },
       usage: {
         title: 'Acceptable Use',
@@ -144,7 +156,9 @@ Prices may vary based on your geographic location (regional pricing). Payments a
 • Not resell or redistribute the service without authorization
 • Provide truthful information when registering
 
-We reserve the right to suspend or cancel accounts that violate these terms.`
+We reserve the right to suspend or cancel accounts that violate these terms.
+
+We may temporarily limit or suspend access in cases of excessive usage, system maintenance, or behavior that may affect platform stability.`
       },
       privacy: {
         title: 'Privacy and Data',
@@ -162,7 +176,9 @@ Please refer to our Privacy Policy for more details.`
         content: `• You retain all rights to your audio files
 • MasteringReady retains rights to its methodology, algorithms, code, and design
 • Generated reports are for your personal or professional use
-• The "MasteringReady" brand and logo are property of Matías Carvajal`
+• The "MasteringReady" brand and logo are property of Matías Carvajal
+
+The analysis logic, scoring system, and recommendations are based on proprietary know-how developed by MasteringReady and are not derived from any single user's audio file.`
       },
       liability: {
         title: 'Limitation of Liability',
@@ -177,6 +193,10 @@ In no event shall we be liable for indirect, incidental, or consequential damage
       changes: {
         title: 'Changes to Terms',
         content: `We may update these Terms of Service from time to time. We will notify you of significant changes via email or through a notice on the platform. Continued use of the service after such changes constitutes your acceptance of the new terms.`
+      },
+      governing: {
+        title: 'Governing Law',
+        content: `These Terms shall be governed by the laws of the Republic of Colombia. Any disputes shall be subject to the exclusive jurisdiction of Colombian courts.`
       },
       contact: {
         title: 'Contact',
