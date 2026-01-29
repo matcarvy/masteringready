@@ -28,7 +28,9 @@ import {
   Clock,
   Star,
   X,
-  Download
+  Download,
+  Info,
+  HardDrive
 } from 'lucide-react'
 
 // ============================================================================
@@ -90,7 +92,19 @@ const translations = {
     buyAddon: 'Comprar 10 análisis ($3.99)',
     singlePurchase: 'Comprar 1 análisis ($5.99)',
     limitReached: 'Límite alcanzado',
-    upgradeNow: 'Actualizar ahora'
+    upgradeNow: 'Actualizar ahora',
+    fileInfo: {
+      title: 'Info del archivo',
+      duration: 'Duración',
+      sampleRate: 'Sample Rate',
+      bitDepth: 'Bit Depth',
+      fileSize: 'Tamaño',
+      processingTime: 'Tiempo de análisis',
+      format: 'Formato',
+      channels: 'Canales',
+      stereo: 'Estéreo',
+      mono: 'Mono'
+    }
   },
   en: {
     dashboard: 'Dashboard',
@@ -146,7 +160,19 @@ const translations = {
     buyAddon: 'Buy 10 analyses ($3.99)',
     singlePurchase: 'Buy 1 analysis ($5.99)',
     limitReached: 'Limit reached',
-    upgradeNow: 'Upgrade now'
+    upgradeNow: 'Upgrade now',
+    fileInfo: {
+      title: 'File info',
+      duration: 'Duration',
+      sampleRate: 'Sample Rate',
+      bitDepth: 'Bit Depth',
+      fileSize: 'Size',
+      processingTime: 'Analysis time',
+      format: 'Format',
+      channels: 'Channels',
+      stereo: 'Stereo',
+      mono: 'Mono'
+    }
   }
 }
 
@@ -171,6 +197,27 @@ function getCtaForScore(score: number, lang: 'es' | 'en'): { title: string; subt
 }
 
 // ============================================================================
+// FILE INFO HELPERS
+// ============================================================================
+
+function formatDuration(seconds: number): string {
+  const m = Math.floor(seconds / 60)
+  const s = Math.floor(seconds % 60)
+  return `${m}:${s.toString().padStart(2, '0')}`
+}
+
+function formatFileSize(bytes: number): string {
+  if (bytes >= 1073741824) return `${(bytes / 1073741824).toFixed(1)} GB`
+  if (bytes >= 1048576) return `${(bytes / 1048576).toFixed(1)} MB`
+  if (bytes >= 1024) return `${(bytes / 1024).toFixed(0)} KB`
+  return `${bytes} B`
+}
+
+function formatSampleRate(rate: number): string {
+  return rate >= 1000 ? `${(rate / 1000).toFixed(rate % 1000 === 0 ? 0 : 1)} kHz` : `${rate} Hz`
+}
+
+// ============================================================================
 // TYPES
 // ============================================================================
 
@@ -185,6 +232,13 @@ interface Analysis {
   metrics: any
   created_at: string
   lang: string
+  duration_seconds: number | null
+  sample_rate: number | null
+  bit_depth: number | null
+  file_size_bytes: number | null
+  processing_time_seconds: number | null
+  file_format: string | null
+  channels: number | null
 }
 
 interface Profile {
@@ -1002,6 +1056,12 @@ export default function DashboardPage() {
                         <Calendar size={12} />
                         {formatDate(analysis.created_at)}
                       </span>
+                      {analysis.duration_seconds != null && (
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                          <Clock size={12} />
+                          {formatDuration(analysis.duration_seconds)}
+                        </span>
+                      )}
                     </div>
                   </div>
 
@@ -1117,6 +1177,56 @@ export default function DashboardPage() {
                 </p>
               </div>
             </div>
+
+            {/* File Info */}
+            {(() => {
+              const items: { label: string; value: string }[] = []
+              if (selectedAnalysis.duration_seconds != null) items.push({ label: t.fileInfo.duration, value: formatDuration(selectedAnalysis.duration_seconds) })
+              if (selectedAnalysis.sample_rate != null) items.push({ label: t.fileInfo.sampleRate, value: formatSampleRate(selectedAnalysis.sample_rate) })
+              if (selectedAnalysis.bit_depth != null) items.push({ label: t.fileInfo.bitDepth, value: `${selectedAnalysis.bit_depth} bit` })
+              if (selectedAnalysis.file_size_bytes != null) items.push({ label: t.fileInfo.fileSize, value: formatFileSize(selectedAnalysis.file_size_bytes) })
+              if (selectedAnalysis.file_format != null) items.push({ label: t.fileInfo.format, value: selectedAnalysis.file_format.toUpperCase() })
+              if (selectedAnalysis.channels != null) items.push({ label: t.fileInfo.channels, value: selectedAnalysis.channels === 2 ? t.fileInfo.stereo : selectedAnalysis.channels === 1 ? t.fileInfo.mono : `${selectedAnalysis.channels}` })
+              if (selectedAnalysis.processing_time_seconds != null) items.push({ label: t.fileInfo.processingTime, value: `${selectedAnalysis.processing_time_seconds.toFixed(1)}s` })
+              if (items.length === 0) return null
+              return (
+                <div style={{
+                  margin: '0 1.5rem',
+                  padding: '0.75rem 1rem',
+                  background: '#f9fafb',
+                  borderRadius: '0.5rem',
+                  border: '1px solid #f3f4f6'
+                }}>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.375rem',
+                    marginBottom: '0.5rem',
+                    color: '#6b7280',
+                    fontSize: '0.75rem',
+                    fontWeight: '600',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.025em'
+                  }}>
+                    <Info size={12} />
+                    {t.fileInfo.title}
+                  </div>
+                  <div style={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: '0.5rem 1.5rem',
+                    fontSize: '0.8125rem'
+                  }}>
+                    {items.map(item => (
+                      <div key={item.label} style={{ display: 'flex', gap: '0.375rem' }}>
+                        <span style={{ color: '#9ca3af' }}>{item.label}:</span>
+                        <span style={{ color: '#374151', fontWeight: '500' }}>{item.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )
+            })()}
 
             {/* Tabs */}
             <div style={{
