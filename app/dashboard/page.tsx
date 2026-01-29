@@ -377,11 +377,13 @@ export default function DashboardPage() {
 
       try {
         // Fetch profile
-        const { data: profileData } = await supabase
+        const { data: profileData, error: profileError } = await supabase
           .from('profiles')
           .select('*')
           .eq('id', user.id)
           .single()
+
+        if (profileError) console.error('[Dashboard] Profile error:', profileError.message)
 
         if (profileData) {
           setProfile(profileData)
@@ -391,7 +393,7 @@ export default function DashboardPage() {
         }
 
         // Fetch subscription
-        const { data: subData } = await supabase
+        const { data: subData, error: subError } = await supabase
           .from('subscriptions')
           .select(`
             *,
@@ -401,18 +403,22 @@ export default function DashboardPage() {
           .eq('status', 'active')
           .single()
 
+        if (subError && subError.code !== 'PGRST116') console.error('[Dashboard] Subscription error:', subError.message)
+
         if (subData) {
           setSubscription(subData)
         }
 
         // Fetch analyses
-        const { data: analysesData } = await supabase
+        const { data: analysesData, error: analysesError } = await supabase
           .from('analyses')
           .select('*')
           .eq('user_id', user.id)
           .is('deleted_at', null)
           .order('created_at', { ascending: false })
           .limit(50)
+
+        if (analysesError) console.error('[Dashboard] Analyses error:', analysesError.message)
 
         if (analysesData) {
           setAnalyses(analysesData)
