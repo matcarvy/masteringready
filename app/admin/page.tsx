@@ -341,6 +341,7 @@ export default function AdminPage() {
   const [adminChecked, setAdminChecked] = useState(false)
   const [activeTab, setActiveTab] = useState<AdminTab>('overview')
   const [isMobile, setIsMobile] = useState(false)
+  const [chartTooltip, setChartTooltip] = useState<{ x: number; y: number; content: string } | null>(null)
 
   // Data state
   const [statsData, setStatsData] = useState<StatsData | null>(null)
@@ -870,55 +871,72 @@ export default function AdminPage() {
 
   const renderBarChart = (items: { label: string; value: number; color: string }[]) => {
     const maxValue = Math.max(...items.map(i => i.value), 1)
+    const totalValue = items.reduce((sum, i) => sum + i.value, 0)
 
     return (
       <div>
-        {items.map((item, i) => (
-          <div key={i} style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.75rem',
-            marginBottom: '0.625rem'
-          }}>
-            <span style={{
-              width: isMobile ? '60px' : '100px',
-              fontSize: '0.8rem',
-              color: '#374151',
-              flexShrink: 0,
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap'
+        {items.map((item, i) => {
+          const pct = totalValue > 0 ? ((item.value / totalValue) * 100).toFixed(1) : '0.0'
+          return (
+            <div key={i} style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem',
+              marginBottom: '0.625rem'
             }}>
-              {item.label}
-            </span>
-            <div style={{
-              flex: 1,
-              height: '22px',
-              background: '#f3f4f6',
-              borderRadius: '4px',
-              overflow: 'hidden'
-            }}>
-              <div style={{
-                width: `${(item.value / maxValue) * 100}%`,
-                height: '100%',
-                background: item.color,
-                borderRadius: '4px',
-                transition: 'width 0.5s ease',
-                minWidth: item.value > 0 ? '4px' : '0'
-              }} />
+              <span style={{
+                width: isMobile ? '60px' : '100px',
+                fontSize: '0.8rem',
+                color: '#374151',
+                flexShrink: 0,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap'
+              }}>
+                {item.label}
+              </span>
+              <div
+                style={{
+                  flex: 1,
+                  height: '22px',
+                  background: '#f3f4f6',
+                  borderRadius: '4px',
+                  overflow: 'hidden',
+                  cursor: 'pointer',
+                  position: 'relative'
+                }}
+                onMouseEnter={(e) => {
+                  const rect = e.currentTarget.getBoundingClientRect()
+                  setChartTooltip({
+                    x: rect.left + rect.width / 2,
+                    y: rect.top - 8,
+                    content: `${item.label}: ${item.value} (${pct}%)`
+                  })
+                }}
+                onMouseLeave={() => setChartTooltip(null)}
+              >
+                <div style={{
+                  width: `${(item.value / maxValue) * 100}%`,
+                  height: '100%',
+                  background: item.color,
+                  borderRadius: '4px',
+                  transition: 'width 0.5s ease',
+                  minWidth: item.value > 0 ? '4px' : '0'
+                }} />
+              </div>
+              <span style={{
+                width: '40px',
+                textAlign: 'right',
+                fontSize: '0.8rem',
+                fontWeight: '600',
+                color: '#111827',
+                flexShrink: 0
+              }}>
+                {item.value}
+              </span>
             </div>
-            <span style={{
-              width: '40px',
-              textAlign: 'right',
-              fontSize: '0.8rem',
-              fontWeight: '600',
-              color: '#111827',
-              flexShrink: 0
-            }}>
-              {item.value}
-            </span>
-          </div>
-        ))}
+          )
+        })}
       </div>
     )
   }
@@ -1206,7 +1224,6 @@ export default function AdminPage() {
             {statsData.analysesPerDay.map((day, i) => (
               <div
                 key={i}
-                title={`${day.date}: ${day.count}`}
                 style={{
                   flex: 1,
                   height: `${Math.max((day.count / maxDaily) * 100, 2)}%`,
@@ -1214,9 +1231,22 @@ export default function AdminPage() {
                     ? 'linear-gradient(180deg, #667eea 0%, #764ba2 100%)'
                     : '#e5e7eb',
                   borderRadius: '2px 2px 0 0',
-                  transition: 'height 0.3s ease',
+                  transition: 'height 0.3s ease, opacity 0.15s ease',
                   cursor: 'pointer',
                   minWidth: '4px'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.opacity = '0.8'
+                  const rect = e.currentTarget.getBoundingClientRect()
+                  setChartTooltip({
+                    x: rect.left + rect.width / 2,
+                    y: rect.top - 8,
+                    content: `${day.date}: ${day.count} ${day.count === 1 ? 'analysis' : 'analyses'}`
+                  })
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.opacity = '1'
+                  setChartTooltip(null)
                 }}
               />
             ))}
@@ -1873,6 +1903,28 @@ export default function AdminPage() {
           to { transform: rotate(360deg); }
         }
       `}</style>
+
+      {/* Chart tooltip */}
+      {chartTooltip && (
+        <div style={{
+          position: 'fixed',
+          left: chartTooltip.x,
+          top: chartTooltip.y,
+          transform: 'translate(-50%, -100%)',
+          background: '#1f2937',
+          color: 'white',
+          padding: '6px 12px',
+          borderRadius: '6px',
+          fontSize: '0.8rem',
+          fontWeight: '500',
+          whiteSpace: 'nowrap',
+          pointerEvents: 'none',
+          zIndex: 9999,
+          boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+        }}>
+          {chartTooltip.content}
+        </div>
+      )}
 
       {/* Header */}
       <header style={{
