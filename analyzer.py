@@ -1466,48 +1466,45 @@ def calculate_metrics_bars_percentages(metrics: List[Dict[str, Any]]) -> Dict[st
         
         # ============================================
         # PLR (Peak-to-Loudness Ratio) - Mastering Ready ranges
+        # v7.4.1: Aligned with ScoringThresholds.PLR (no upper-limit penalty)
+        # For mastering, more dynamics = more room to work = better
         # ============================================
         elif "plr" in key or ("dynamic" in key and "range" in key):
-            # 🟢 Verde: 8-12 dB (Óptimo)
-            # 🔵 Azul: 6-8 dB o 12-14 dB (Funcional)
-            # 🟡 Amarillo: 4-6 dB o 14-16 dB (Extremo)
-            # 🔴 Rojo: < 4 dB o > 16 dB (Comprometido) - rare
+            # 🟢 Verde: ≥ 12 dB (Excelente — dinámica preservada)
+            # 🔵 Azul: 8-12 dB (Funcional)
+            # 🟡 Amarillo: 6-8 dB (Margen reducido)
+            # 🔴 Rojo: < 6 dB (Sobre-comprimida)
             plr_tooltip_override = None  # For specific PLR messages
-            
-            if 8 <= value <= 12:
+
+            if value >= 12:
                 percentage = 100
                 bar_status = "excellent"
-            elif (6 <= value < 8) or (12 < value <= 14):
+            elif 8 <= value < 12:
                 percentage = 85
                 bar_status = "good"
-            elif (4 <= value < 6) or (14 < value <= 16):
+            elif 6 <= value < 8:
                 percentage = 65
                 bar_status = "warning"
                 warnings_count += 1
-            else:  # < 4 or > 16
+            else:  # < 6
                 percentage = 45
                 bar_status = "critical"
-                # Micro-ajuste 2: Specific tooltips for extreme PLR values
-                if value > 16:
-                    plr_tooltip_override = {
-                        "es": "Rango dinámico muy amplio. Puede dificultar consistencia de nivel en algunos sistemas.",
-                        "en": "Very wide dynamic range. May cause level inconsistency on some systems."
-                    }
-                elif value < 4:
-                    plr_tooltip_override = {
-                        "es": "Rango dinámico muy comprimido. El máster tiene poco margen para ajustes de dinámica.",
-                        "en": "Very compressed dynamic range. Little margin for dynamics adjustments in mastering."
-                    }
+                plr_tooltip_override = {
+                    "es": "Rango dinámico muy comprimido. El máster tiene poco margen para ajustes de dinámica.",
+                    "en": "Very compressed dynamic range. Little margin for dynamics adjustments in mastering."
+                }
         
         # ============================================
         # LUFS (Integrated) - Mastering Ready ranges
+        # v7.4.1: Widened green range for pre-mastering mixes
+        # Quiet mixes = more headroom for mastering = excellent
         # ============================================
         elif "lufs" in key or "loudness" in key:
-            # 🟢 Verde: -18 a -14 LUFS (Ideal)
-            # 🔵 Azul: -14 a -12 LUFS (Funcional)
+            # 🟢 Verde: -24 a -14 LUFS (Excelente para mastering)
+            # 🔵 Azul: -14 a -12 LUFS (Funcional, un poco alto para mezcla)
             # 🟡 Amarillo: -12 a -10 LUFS (Muy alto)
             # 🔴 Rojo: > -10 LUFS (Limita decisiones) - CAN be red alone
-            if -18 <= value <= -14:
+            if -24 <= value <= -14:
                 percentage = 100
                 bar_status = "excellent"
             elif -14 < value <= -12:
@@ -1521,13 +1518,9 @@ def calculate_metrics_bars_percentages(metrics: List[Dict[str, Any]]) -> Dict[st
                 # LUFS can go red alone - it conditions the entire flow
                 percentage = 40
                 bar_status = "critical"
-            else:  # < -18 (very quiet, also not ideal)
-                if value >= -22:
-                    percentage = 80
-                    bar_status = "good"
-                else:
-                    percentage = 60
-                    bar_status = "warning"
+            else:  # < -24 (extremely quiet)
+                percentage = 80
+                bar_status = "good"
         
         # ============================================
         # STEREO CORRELATION - Mastering Ready ranges
