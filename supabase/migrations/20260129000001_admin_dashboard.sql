@@ -9,15 +9,25 @@ UPDATE profiles SET is_admin = TRUE WHERE email = 'matcarvy@gmail.com';
 -- Index for admin lookups (partial index, only true values)
 CREATE INDEX IF NOT EXISTS idx_profiles_is_admin ON profiles(is_admin) WHERE is_admin = TRUE;
 
+-- SECURITY DEFINER function to check admin status without RLS recursion
+-- (profiles policy cannot subquery profiles without infinite recursion)
+CREATE OR REPLACE FUNCTION is_admin()
+RETURNS BOOLEAN AS $$
+  SELECT COALESCE(
+    (SELECT is_admin FROM profiles WHERE id = auth.uid()),
+    FALSE
+  );
+$$ LANGUAGE sql SECURITY DEFINER STABLE;
+
 -- RLS Policies: Allow admins to read all data across tables
 -- Postgres ORs multiple SELECT policies, so these coexist with existing user-scoped policies
 
+-- profiles uses is_admin() function to avoid infinite recursion
 CREATE POLICY "Admins can view all profiles"
     ON profiles FOR SELECT
-    USING (
-        EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND is_admin = TRUE)
-    );
+    USING (is_admin());
 
+-- Other tables use subquery (no recursion since they query a different table)
 CREATE POLICY "Admins can view all analyses"
     ON analyses FOR SELECT
     USING (

@@ -341,7 +341,6 @@ export default function AdminPage() {
   })
   const [isAdmin, setIsAdmin] = useState(false)
   const [adminChecked, setAdminChecked] = useState(false)
-  const [debugInfo, setDebugInfo] = useState('')
   const [activeTab, setActiveTab] = useState<AdminTab>('overview')
   const [isMobile, setIsMobile] = useState(false)
 
@@ -391,18 +390,14 @@ export default function AdminPage() {
           .eq('id', user.id)
           .single()
 
-        if (error) {
-          setDebugInfo(`Query error: ${error.message}`)
-        } else if (profile) {
+        if (profile) {
           const row = profile as Record<string, unknown>
           if (row.is_admin === true) {
             setIsAdmin(true)
-          } else {
-            setDebugInfo(`is_admin=${row.is_admin} | email=${row.email}`)
           }
         }
-      } catch (err) {
-        setDebugInfo(`Error: ${err}`)
+      } catch {
+        // Not admin or error
       }
       setAdminChecked(true)
     }
@@ -423,22 +418,16 @@ export default function AdminPage() {
   }, [])
 
   // Fetch stats
-  const [statsError, setStatsError] = useState('')
   const fetchStats = useCallback(async () => {
     setStatsLoading(true)
-    setStatsError('')
     try {
       const headers = await getAuthHeaders()
       const res = await fetch('/api/admin/stats', { headers })
       if (res.ok) {
         const data = await res.json()
         setStatsData(data)
-      } else {
-        const body = await res.text()
-        setStatsError(`Stats API: ${res.status} - ${body.slice(0, 200)}`)
       }
     } catch (err) {
-      setStatsError(`Stats fetch error: ${err}`)
       console.error('Failed to fetch stats:', err)
     }
     setStatsLoading(false)
@@ -728,11 +717,6 @@ export default function AdminPage() {
             {t.accessDenied}
           </h1>
           <p style={{ color: '#6b7280', marginBottom: '1.5rem' }}>{t.accessDeniedMsg}</p>
-          {debugInfo && (
-            <p style={{ color: '#9ca3af', fontSize: '0.7rem', marginBottom: '1rem', wordBreak: 'break-all', textAlign: 'left', background: '#f3f4f6', padding: '0.75rem', borderRadius: '0.5rem' }}>
-              {debugInfo}
-            </p>
-          )}
           <Link href="/" style={{
             color: '#667eea',
             textDecoration: 'none',
@@ -775,13 +759,6 @@ export default function AdminPage() {
 
     return (
       <div>
-        {/* Debug: stats error */}
-        {statsError && (
-          <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '0.5rem', padding: '0.75rem', marginBottom: '1rem', fontSize: '0.75rem', color: '#991b1b', wordBreak: 'break-all' }}>
-            {statsError}
-          </div>
-        )}
-
         {/* Refresh button */}
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem' }}>
           <button
