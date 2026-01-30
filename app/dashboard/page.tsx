@@ -6,7 +6,7 @@
  * Muestra historial de análisis e información de cuenta
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth, UserMenu } from '@/components/auth'
@@ -342,7 +342,7 @@ const cleanReportText = (text: string): string => {
 // COMPONENT
 // ============================================================================
 
-export default function DashboardPage() {
+function DashboardContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { user, loading: authLoading } = useAuth()
@@ -2168,5 +2168,13 @@ export default function DashboardPage() {
         }
       `}</style>
     </div>
+  )
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense>
+      <DashboardContent />
+    </Suspense>
   )
 }
