@@ -81,7 +81,8 @@ export async function GET(request: NextRequest) {
       ctaClicksResult,
       contactRequestsResult,
       spectralResult,
-      categoricalResult
+      categoricalResult,
+      energyResult
     ] = await Promise.all([
       // Total users
       adminClient.from('profiles').select('id', { count: 'exact', head: true }),
@@ -179,7 +180,13 @@ export async function GET(request: NextRequest) {
       adminClient.from('analyses')
         .select('categorical_flags')
         .is('deleted_at', null)
-        .not('categorical_flags', 'is', null)
+        .not('categorical_flags', 'is', null),
+
+      // Energy analysis (peak position + temporal distribution)
+      adminClient.from('analyses')
+        .select('energy_analysis')
+        .is('deleted_at', null)
+        .not('energy_analysis', 'is', null)
     ])
 
     // Calculate KPIs
@@ -328,6 +335,27 @@ export async function GET(request: NextRequest) {
     const stereoRiskMild = catRows.filter((r: any) => r.categorical_flags.stereo_risk === 'mild').length
     const pct = (n: number) => catTotal > 0 ? Math.round((n / catTotal) * 1000) / 10 : 0
 
+    // Technical Insights: Energy patterns
+    const energyRows = (energyResult.data || []).filter((r: any) => r.energy_analysis)
+    const energyTotal = energyRows.length
+    let peakPosSum = 0
+    const distSums = { low: 0, mid: 0, high: 0 }
+    energyRows.forEach((r: any) => {
+      const ea = r.energy_analysis
+      peakPosSum += ea.peak_energy_time_pct || 0
+      if (ea.energy_distribution) {
+        distSums.low += ea.energy_distribution.low || 0
+        distSums.mid += ea.energy_distribution.mid || 0
+        distSums.high += ea.energy_distribution.high || 0
+      }
+    })
+    const avgPeakPos = energyTotal > 0 ? Math.round((peakPosSum / energyTotal) * 10) / 10 : 0
+    const avgDist = {
+      low: energyTotal > 0 ? Math.round((distSums.low / energyTotal) * 10) / 10 : 0,
+      mid: energyTotal > 0 ? Math.round((distSums.mid / energyTotal) * 10) / 10 : 0,
+      high: energyTotal > 0 ? Math.round((distSums.high / energyTotal) * 10) / 10 : 0
+    }
+
     return NextResponse.json({
       kpi: {
         totalUsers,
@@ -379,6 +407,11 @@ export async function GET(request: NextRequest) {
           stereoRiskNone: { count: catTotal - stereoRiskHigh - stereoRiskMild, pct: pct(catTotal - stereoRiskHigh - stereoRiskMild) },
           stereoRiskMild: { count: stereoRiskMild, pct: pct(stereoRiskMild) },
           stereoRiskHigh: { count: stereoRiskHigh, pct: pct(stereoRiskHigh) }
+        },
+        energy: {
+          totalAnalyzed: energyTotal,
+          avgPeakPositionPct: avgPeakPos,
+          avgDistribution: avgDist
         }
       }
     })

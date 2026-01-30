@@ -60,6 +60,11 @@ interface StatsData {
       stereoRiskMild: { count: number; pct: number }
       stereoRiskHigh: { count: number; pct: number }
     }
+    energy: {
+      totalAnalyzed: number
+      avgPeakPositionPct: number
+      avgDistribution: { low: number; mid: number; high: number }
+    }
   }
 }
 
@@ -173,7 +178,14 @@ const translations = {
       stereoOk: 'Estéreo sin riesgo',
       stereoMild: 'Riesgo estéreo leve',
       stereoHigh: 'Riesgo estéreo alto',
-      ofAnalyses: 'de los análisis'
+      ofAnalyses: 'de los análisis',
+      energyPatterns: 'Patrones de energía',
+      avgPeakPosition: 'Posición promedio del pico de energía',
+      energyDistribution: 'Distribución temporal de energía',
+      beginning: 'Inicio',
+      middle: 'Medio',
+      end: 'Final',
+      ofTrack: 'del track'
     },
     verdicts: {
       ready: 'Listo para mastering',
@@ -286,7 +298,14 @@ const translations = {
       stereoOk: 'Stereo No Risk',
       stereoMild: 'Stereo Mild Risk',
       stereoHigh: 'Stereo High Risk',
-      ofAnalyses: 'of analyses'
+      ofAnalyses: 'of analyses',
+      energyPatterns: 'Energy Patterns',
+      avgPeakPosition: 'Average Peak Energy Position',
+      energyDistribution: 'Temporal Energy Distribution',
+      beginning: 'Beginning',
+      middle: 'Middle',
+      end: 'End',
+      ofTrack: 'of track'
     },
     verdicts: {
       ready: 'Ready for mastering',
@@ -1817,6 +1836,76 @@ export default function AdminPage() {
                 </div>
               </div>
             ) : (
+              <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>{t.analytics.noData}</p>
+            )}
+          </div>
+        </div>
+
+        {/* Energy Patterns */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem' }}>
+          {/* Peak Energy Position */}
+          <div style={{
+            background: 'white',
+            borderRadius: '1rem',
+            padding: '1.5rem',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+          }}>
+            <h3 style={{ fontSize: '1rem', fontWeight: '600', color: '#111827', marginBottom: '1rem' }}>
+              {t.analytics.avgPeakPosition}
+              {statsData.technicalInsights?.energy.totalAnalyzed ? (
+                <span style={{ fontSize: '0.75rem', color: '#9ca3af', fontWeight: '400', marginLeft: '0.5rem' }}>
+                  ({statsData.technicalInsights.energy.totalAnalyzed})
+                </span>
+              ) : null}
+            </h3>
+            {statsData.technicalInsights?.energy.totalAnalyzed ? (
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '2rem', fontWeight: '700', color: '#6366f1' }}>
+                  {statsData.technicalInsights.energy.avgPeakPositionPct}%
+                </div>
+                <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem' }}>
+                  {t.analytics.ofTrack}
+                </div>
+                {/* Visual position indicator */}
+                <div style={{ position: 'relative', height: '0.5rem', background: '#e5e7eb', borderRadius: '9999px', marginTop: '0.75rem' }}>
+                  <div style={{
+                    position: 'absolute',
+                    left: `${statsData.technicalInsights.energy.avgPeakPositionPct}%`,
+                    top: '-3px',
+                    width: '14px',
+                    height: '14px',
+                    borderRadius: '50%',
+                    background: '#6366f1',
+                    transform: 'translateX(-50%)',
+                    boxShadow: '0 2px 4px rgba(99,102,241,0.3)'
+                  }} />
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.375rem', fontSize: '0.65rem', color: '#9ca3af' }}>
+                  <span>{t.analytics.beginning}</span>
+                  <span>{t.analytics.middle}</span>
+                  <span>{t.analytics.end}</span>
+                </div>
+              </div>
+            ) : (
+              <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>{t.analytics.noData}</p>
+            )}
+          </div>
+
+          {/* Temporal Energy Distribution */}
+          <div style={{
+            background: 'white',
+            borderRadius: '1rem',
+            padding: '1.5rem',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+          }}>
+            <h3 style={{ fontSize: '1rem', fontWeight: '600', color: '#111827', marginBottom: '1rem' }}>
+              {t.analytics.energyDistribution}
+            </h3>
+            {statsData.technicalInsights?.energy.totalAnalyzed ? renderBarChart([
+              { label: lang === 'es' ? '1er tercio' : '1st third', value: statsData.technicalInsights.energy.avgDistribution.low, color: '#3b82f6' },
+              { label: lang === 'es' ? '2do tercio' : '2nd third', value: statsData.technicalInsights.energy.avgDistribution.mid, color: '#8b5cf6' },
+              { label: lang === 'es' ? '3er tercio' : '3rd third', value: statsData.technicalInsights.energy.avgDistribution.high, color: '#6366f1' }
+            ]) : (
               <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>{t.analytics.noData}</p>
             )}
           </div>
