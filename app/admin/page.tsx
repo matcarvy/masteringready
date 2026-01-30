@@ -45,6 +45,22 @@ interface StatsData {
   satisfaction?: { thumbsUp: number; thumbsDown: number; total: number; rate: number }
   ctaStats?: { totalClicks: number; clickRate: number; byType: { type: string; count: number }[]; byScore: { range: string; count: number }[]; topCountries: { country: string; count: number }[] }
   contactStats?: { totalContacts: number; conversionRate: number; byMethod: { method: string; count: number }[] }
+  technicalInsights?: {
+    spectral: {
+      overall: Record<string, number>
+      byScore: Record<string, { avg: Record<string, number>; count: number }>
+      totalAnalyzed: number
+    }
+    categoricalFlags: {
+      total: number
+      headroomOk: { count: number; pct: number }
+      truePeakSafe: { count: number; pct: number }
+      dynamicOk: { count: number; pct: number }
+      stereoRiskNone: { count: number; pct: number }
+      stereoRiskMild: { count: number; pct: number }
+      stereoRiskHigh: { count: number; pct: number }
+    }
+  }
 }
 
 interface UserRow {
@@ -146,7 +162,18 @@ const translations = {
       contactConversion: 'Conversión a contacto',
       ctaByType: 'CTA por tipo',
       ctaByScore: 'CTA por rango de puntuación',
-      contactByMethod: 'Contactos por método'
+      contactByMethod: 'Contactos por método',
+      techInsightsTitle: 'Insights técnicos',
+      spectralProfile: 'Perfil espectral promedio',
+      spectralByScore: 'Perfil espectral por rango de puntuación',
+      categoricalFlags: 'Estado técnico de las mezclas',
+      headroomOk: 'Headroom correcto',
+      truePeakSafe: 'True Peak seguro',
+      dynamicOk: 'Dinámica aceptable',
+      stereoOk: 'Estéreo sin riesgo',
+      stereoMild: 'Riesgo estéreo leve',
+      stereoHigh: 'Riesgo estéreo alto',
+      ofAnalyses: 'de los análisis'
     },
     verdicts: {
       ready: 'Listo para mastering',
@@ -248,7 +275,18 @@ const translations = {
       contactConversion: 'Contact Conversion',
       ctaByType: 'CTA by Type',
       ctaByScore: 'CTA by Score Range',
-      contactByMethod: 'Contacts by Method'
+      contactByMethod: 'Contacts by Method',
+      techInsightsTitle: 'Technical Insights',
+      spectralProfile: 'Average Spectral Profile',
+      spectralByScore: 'Spectral Profile by Score Range',
+      categoricalFlags: 'Mix Technical Status',
+      headroomOk: 'Headroom OK',
+      truePeakSafe: 'True Peak Safe',
+      dynamicOk: 'Dynamics OK',
+      stereoOk: 'Stereo No Risk',
+      stereoMild: 'Stereo Mild Risk',
+      stereoHigh: 'Stereo High Risk',
+      ofAnalyses: 'of analyses'
     },
     verdicts: {
       ready: 'Ready for mastering',
@@ -371,6 +409,8 @@ export default function AdminPage() {
   const [userSearch, setUserSearch] = useState('')
   const [userSort, setUserSort] = useState<{ field: string; asc: boolean }>({ field: 'created_at', asc: false })
   const [expandedUser, setExpandedUser] = useState<string | null>(null)
+  const [userAnalyses, setUserAnalyses] = useState<any[]>([])
+  const [userAnalysesLoading, setUserAnalysesLoading] = useState(false)
   const [payments, setPayments] = useState<PaymentRow[]>([])
   const [paymentsLoading, setPaymentsLoading] = useState(false)
   const [feedbackList, setFeedbackList] = useState<FeedbackRow[]>([])
@@ -504,6 +544,24 @@ export default function AdminPage() {
     }
     setUsersLoading(false)
   }, [userSearch, userSort])
+
+  // Fetch analyses for a specific user
+  const fetchUserAnalyses = useCallback(async (userId: string) => {
+    setUserAnalysesLoading(true)
+    try {
+      const { data } = await supabase
+        .from('analyses')
+        .select('id, filename, score, verdict, file_format, sample_rate, bit_depth, duration_seconds, file_size_bytes, spectral_6band, categorical_flags, created_at, analysis_version')
+        .eq('user_id', userId)
+        .is('deleted_at', null)
+        .order('created_at', { ascending: false })
+        .limit(20)
+      setUserAnalyses(data || [])
+    } catch (err) {
+      console.error('Failed to fetch user analyses:', err)
+    }
+    setUserAnalysesLoading(false)
+  }, [])
 
   // Fetch payments
   const fetchPayments = useCallback(async () => {
@@ -1078,7 +1136,13 @@ export default function AdminPage() {
             users.map(u => (
               <div key={u.id}>
                 <div
-                  onClick={() => setExpandedUser(expandedUser === u.id ? null : u.id)}
+                  onClick={() => {
+                    const next = expandedUser === u.id ? null : u.id
+                    setExpandedUser(next)
+                    if (next) {
+                      setUserAnalyses([])
+                    }
+                  }}
                   style={{
                     display: isMobile ? 'block' : 'grid',
                     gridTemplateColumns: isMobile ? undefined : '2fr 1.5fr 1fr 0.75fr 0.75fr 1fr',
@@ -1199,6 +1263,130 @@ export default function AdminPage() {
                           </p>
                         </div>
                       </>
+                    )}
+
+                    {/* View Analyses Button */}
+                    <div style={{ gridColumn: '1 / -1', marginTop: '0.5rem' }}>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          fetchUserAnalyses(u.id)
+                        }}
+                        style={{
+                          background: '#667eea',
+                          color: 'white',
+                          padding: '0.5rem 1rem',
+                          borderRadius: '0.5rem',
+                          border: 'none',
+                          cursor: 'pointer',
+                          fontSize: '0.8rem',
+                          fontWeight: '500'
+                        }}
+                      >
+                        {lang === 'es' ? 'Ver análisis' : 'View analyses'} ({u.total_analyses})
+                      </button>
+                    </div>
+
+                    {/* User Analyses List */}
+                    {userAnalysesLoading && (
+                      <div style={{ gridColumn: '1 / -1', color: '#6b7280', fontSize: '0.8rem' }}>
+                        {t.loading}
+                      </div>
+                    )}
+                    {userAnalyses.length > 0 && (
+                      <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                        {userAnalyses.map((a: any) => (
+                          <div key={a.id} style={{
+                            background: 'white',
+                            borderRadius: '0.5rem',
+                            padding: '0.75rem 1rem',
+                            border: '1px solid #e5e7eb',
+                            fontSize: '0.8rem'
+                          }}>
+                            {/* Row 1: Filename, Score, Date */}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.375rem' }}>
+                              <span style={{ fontWeight: '600', color: '#111827' }}>
+                                {a.filename || 'Unknown'}
+                              </span>
+                              <span style={{
+                                fontWeight: '700',
+                                color: a.score >= 85 ? '#10b981' : a.score >= 60 ? '#f59e0b' : '#ef4444'
+                              }}>
+                                {a.score}/100
+                              </span>
+                            </div>
+                            {/* Row 2: File metadata */}
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', color: '#6b7280', fontSize: '0.75rem', marginBottom: '0.375rem' }}>
+                              {a.file_format && <span>{a.file_format.toUpperCase()}</span>}
+                              {a.sample_rate && <span>{(a.sample_rate / 1000).toFixed(a.sample_rate % 1000 === 0 ? 0 : 1)} kHz</span>}
+                              {a.bit_depth && <span>{a.bit_depth}-bit</span>}
+                              {a.duration_seconds && <span>{Math.floor(a.duration_seconds / 60)}:{String(Math.round(a.duration_seconds % 60)).padStart(2, '0')}</span>}
+                              {a.file_size_bytes && <span>{(a.file_size_bytes / 1048576).toFixed(1)} MB</span>}
+                              <span style={{ color: '#9ca3af' }}>{formatDate(a.created_at, lang)}</span>
+                              {a.analysis_version && <span style={{ color: '#9ca3af' }}>v{a.analysis_version}</span>}
+                            </div>
+                            {/* Row 3: Spectral 6-band */}
+                            {a.spectral_6band && (
+                              <div style={{ marginBottom: '0.25rem' }}>
+                                <div style={{ display: 'flex', gap: '1px', height: '0.75rem', borderRadius: '0.25rem', overflow: 'hidden' }}>
+                                  {['sub', 'low', 'low_mid', 'mid', 'high_mid', 'high'].map((band, i) => {
+                                    const val = a.spectral_6band[band] || 0
+                                    const colors = ['#ef4444', '#f97316', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6']
+                                    return (
+                                      <div
+                                        key={band}
+                                        title={`${band}: ${val}%`}
+                                        style={{ width: `${val}%`, background: colors[i], minWidth: val > 0 ? '1px' : '0' }}
+                                      />
+                                    )
+                                  })}
+                                </div>
+                              </div>
+                            )}
+                            {/* Row 4: Categorical flags */}
+                            {a.categorical_flags && (
+                              <div style={{ display: 'flex', gap: '0.375rem', flexWrap: 'wrap' }}>
+                                <span style={{
+                                  fontSize: '0.65rem',
+                                  padding: '0.1rem 0.35rem',
+                                  borderRadius: '0.25rem',
+                                  background: a.categorical_flags.headroom_ok ? '#ecfdf5' : '#fef2f2',
+                                  color: a.categorical_flags.headroom_ok ? '#059669' : '#dc2626'
+                                }}>
+                                  Headroom {a.categorical_flags.headroom_ok ? 'OK' : 'X'}
+                                </span>
+                                <span style={{
+                                  fontSize: '0.65rem',
+                                  padding: '0.1rem 0.35rem',
+                                  borderRadius: '0.25rem',
+                                  background: a.categorical_flags.true_peak_safe ? '#ecfdf5' : '#fef2f2',
+                                  color: a.categorical_flags.true_peak_safe ? '#059669' : '#dc2626'
+                                }}>
+                                  TP {a.categorical_flags.true_peak_safe ? 'OK' : 'X'}
+                                </span>
+                                <span style={{
+                                  fontSize: '0.65rem',
+                                  padding: '0.1rem 0.35rem',
+                                  borderRadius: '0.25rem',
+                                  background: a.categorical_flags.dynamic_ok ? '#ecfdf5' : '#fef2f2',
+                                  color: a.categorical_flags.dynamic_ok ? '#059669' : '#dc2626'
+                                }}>
+                                  {lang === 'es' ? 'Dinámica' : 'Dynamics'} {a.categorical_flags.dynamic_ok ? 'OK' : 'X'}
+                                </span>
+                                <span style={{
+                                  fontSize: '0.65rem',
+                                  padding: '0.1rem 0.35rem',
+                                  borderRadius: '0.25rem',
+                                  background: a.categorical_flags.stereo_risk === 'none' ? '#ecfdf5' : a.categorical_flags.stereo_risk === 'mild' ? '#fef9c3' : '#fef2f2',
+                                  color: a.categorical_flags.stereo_risk === 'none' ? '#059669' : a.categorical_flags.stereo_risk === 'mild' ? '#92400e' : '#dc2626'
+                                }}>
+                                  Stereo {a.categorical_flags.stereo_risk === 'none' ? 'OK' : a.categorical_flags.stereo_risk}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
                     )}
                   </div>
                 )}
@@ -1493,6 +1681,145 @@ export default function AdminPage() {
           ) : (
             <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>{t.analytics.noData}</p>
           )}
+        </div>
+
+        {/* Technical Insights Section */}
+        <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#111827', marginTop: '1rem' }}>
+          {t.analytics.techInsightsTitle}
+        </h3>
+
+        {/* Categorical Flags — Mix Health Status */}
+        <div style={{
+          background: 'white',
+          borderRadius: '1rem',
+          padding: '1.5rem',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+        }}>
+          <h3 style={{ fontSize: '1rem', fontWeight: '600', color: '#111827', marginBottom: '1rem' }}>
+            {t.analytics.categoricalFlags}
+            {statsData.technicalInsights?.categoricalFlags.total ? (
+              <span style={{ fontSize: '0.75rem', color: '#9ca3af', fontWeight: '400', marginLeft: '0.5rem' }}>
+                ({statsData.technicalInsights.categoricalFlags.total} {t.analytics.ofAnalyses})
+              </span>
+            ) : null}
+          </h3>
+          {statsData.technicalInsights?.categoricalFlags.total ? (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '0.75rem' }}>
+              {[
+                { label: t.analytics.headroomOk, data: statsData.technicalInsights.categoricalFlags.headroomOk, color: '#10b981' },
+                { label: t.analytics.truePeakSafe, data: statsData.technicalInsights.categoricalFlags.truePeakSafe, color: '#3b82f6' },
+                { label: t.analytics.dynamicOk, data: statsData.technicalInsights.categoricalFlags.dynamicOk, color: '#8b5cf6' },
+                { label: t.analytics.stereoOk, data: statsData.technicalInsights.categoricalFlags.stereoRiskNone, color: '#059669' },
+                { label: t.analytics.stereoMild, data: statsData.technicalInsights.categoricalFlags.stereoRiskMild, color: '#f59e0b' },
+                { label: t.analytics.stereoHigh, data: statsData.technicalInsights.categoricalFlags.stereoRiskHigh, color: '#ef4444' }
+              ].map(item => (
+                <div key={item.label} style={{
+                  background: '#f9fafb',
+                  borderRadius: '0.75rem',
+                  padding: '1rem',
+                  textAlign: 'center',
+                  border: '1px solid #f3f4f6'
+                }}>
+                  <div style={{ fontSize: '1.5rem', fontWeight: '700', color: item.color }}>
+                    {item.data.pct}%
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem' }}>
+                    {item.label}
+                  </div>
+                  <div style={{ fontSize: '0.65rem', color: '#9ca3af' }}>
+                    ({item.data.count})
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>{t.analytics.noData}</p>
+          )}
+        </div>
+
+        {/* Spectral Profile — Overall Average */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1rem' }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '1rem',
+            padding: '1.5rem',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+          }}>
+            <h3 style={{ fontSize: '1rem', fontWeight: '600', color: '#111827', marginBottom: '1rem' }}>
+              {t.analytics.spectralProfile}
+              {statsData.technicalInsights?.spectral.totalAnalyzed ? (
+                <span style={{ fontSize: '0.75rem', color: '#9ca3af', fontWeight: '400', marginLeft: '0.5rem' }}>
+                  ({statsData.technicalInsights.spectral.totalAnalyzed})
+                </span>
+              ) : null}
+            </h3>
+            {statsData.technicalInsights?.spectral.totalAnalyzed ? renderBarChart(
+              ['sub', 'low', 'low_mid', 'mid', 'high_mid', 'high'].map((band, i) => ({
+                label: band === 'low_mid' ? 'Low Mid' : band === 'high_mid' ? 'High Mid' : band.charAt(0).toUpperCase() + band.slice(1),
+                value: statsData.technicalInsights!.spectral.overall[band] || 0,
+                color: ['#ef4444', '#f97316', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6'][i]
+              }))
+            ) : (
+              <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>{t.analytics.noData}</p>
+            )}
+          </div>
+
+          {/* Spectral by Score Range */}
+          <div style={{
+            background: 'white',
+            borderRadius: '1rem',
+            padding: '1.5rem',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+          }}>
+            <h3 style={{ fontSize: '1rem', fontWeight: '600', color: '#111827', marginBottom: '1rem' }}>
+              {t.analytics.spectralByScore}
+            </h3>
+            {statsData.technicalInsights?.spectral.totalAnalyzed ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                {['90-100', '70-89', '50-69', '0-49'].map(range => {
+                  const data = statsData.technicalInsights!.spectral.byScore[range]
+                  if (!data || data.count === 0) return null
+                  const rangeColor = range === '90-100' ? '#10b981' : range === '70-89' ? '#3b82f6' : range === '50-69' ? '#f59e0b' : '#ef4444'
+                  return (
+                    <div key={range}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.375rem' }}>
+                        <span style={{ fontSize: '0.75rem', fontWeight: '600', color: rangeColor }}>{range}</span>
+                        <span style={{ fontSize: '0.65rem', color: '#9ca3af' }}>({data.count})</span>
+                      </div>
+                      <div style={{ display: 'flex', gap: '2px', height: '1.25rem', borderRadius: '0.25rem', overflow: 'hidden' }}>
+                        {['sub', 'low', 'low_mid', 'mid', 'high_mid', 'high'].map((band, i) => {
+                          const val = data.avg[band] || 0
+                          const colors = ['#ef4444', '#f97316', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6']
+                          return (
+                            <div
+                              key={band}
+                              title={`${band === 'low_mid' ? 'Low Mid' : band === 'high_mid' ? 'High Mid' : band}: ${val}%`}
+                              style={{
+                                width: `${val}%`,
+                                background: colors[i],
+                                minWidth: val > 0 ? '2px' : '0'
+                              }}
+                            />
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )
+                })}
+                {/* Legend */}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.25rem' }}>
+                  {['Sub', 'Low', 'Low Mid', 'Mid', 'High Mid', 'High'].map((label, i) => (
+                    <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                      <div style={{ width: '8px', height: '8px', borderRadius: '2px', background: ['#ef4444', '#f97316', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6'][i] }} />
+                      <span style={{ fontSize: '0.65rem', color: '#6b7280' }}>{label}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>{t.analytics.noData}</p>
+            )}
+          </div>
         </div>
       </div>
     )

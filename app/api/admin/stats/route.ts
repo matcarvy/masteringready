@@ -79,7 +79,9 @@ export async function GET(request: NextRequest) {
       revAddonResult,
       feedbackRatingsResult,
       ctaClicksResult,
-      contactRequestsResult
+      contactRequestsResult,
+      spectralResult,
+      categoricalResult
     ] = await Promise.all([
       // Total users
       adminClient.from('profiles').select('id', { count: 'exact', head: true }),
@@ -165,7 +167,19 @@ export async function GET(request: NextRequest) {
 
       // Contact requests
       adminClient.from('contact_requests')
-        .select('contact_method, cta_source, client_country, created_at')
+        .select('contact_method, cta_source, client_country, created_at'),
+
+      // Spectral profiles with scores (for aggregate by score range)
+      adminClient.from('analyses')
+        .select('score, spectral_6band')
+        .is('deleted_at', null)
+        .not('spectral_6band', 'is', null),
+
+      // Categorical flags (for % with issues)
+      adminClient.from('analyses')
+        .select('categorical_flags')
+        .is('deleted_at', null)
+        .not('categorical_flags', 'is', null)
     ])
 
     // Calculate KPIs
@@ -270,6 +284,50 @@ export async function GET(request: NextRequest) {
     const contactByMethod: Record<string, number> = {}
     contacts.forEach(c => { contactByMethod[c.contact_method] = (contactByMethod[c.contact_method] || 0) + 1 })
 
+    // Technical Insights: Aggregate spectral profiles by score range
+    const bands = ['sub', 'low', 'low_mid', 'mid', 'high_mid', 'high'] as const
+    const spectralRows = (spectralResult.data || []).filter((r: any) => r.spectral_6band && r.score != null)
+    const spectralByScore: Record<string, { avg: Record<string, number>; count: number }> = {}
+    const scoreRanges = [
+      { key: '90-100', min: 90, max: 101 },
+      { key: '70-89', min: 70, max: 90 },
+      { key: '50-69', min: 50, max: 70 },
+      { key: '0-49', min: 0, max: 50 }
+    ]
+    for (const range of scoreRanges) {
+      const inRange = spectralRows.filter((r: any) => r.score >= range.min && r.score < range.max)
+      const sums: Record<string, number> = {}
+      bands.forEach(b => { sums[b] = 0 })
+      inRange.forEach((r: any) => {
+        const s6 = r.spectral_6band
+        bands.forEach(b => { sums[b] += (s6[b] || 0) })
+      })
+      const count = inRange.length
+      const avg: Record<string, number> = {}
+      bands.forEach(b => { avg[b] = count > 0 ? Math.round((sums[b] / count) * 10) / 10 : 0 })
+      spectralByScore[range.key] = { avg, count }
+    }
+    // Overall average spectral
+    const overallSums: Record<string, number> = {}
+    bands.forEach(b => { overallSums[b] = 0 })
+    spectralRows.forEach((r: any) => {
+      const s6 = r.spectral_6band
+      bands.forEach(b => { overallSums[b] += (s6[b] || 0) })
+    })
+    const spectralTotal = spectralRows.length
+    const overallAvg: Record<string, number> = {}
+    bands.forEach(b => { overallAvg[b] = spectralTotal > 0 ? Math.round((overallSums[b] / spectralTotal) * 10) / 10 : 0 })
+
+    // Technical Insights: Categorical flags percentages
+    const catRows = (categoricalResult.data || []).filter((r: any) => r.categorical_flags)
+    const catTotal = catRows.length
+    const headroomOk = catRows.filter((r: any) => r.categorical_flags.headroom_ok === true).length
+    const truePeakSafe = catRows.filter((r: any) => r.categorical_flags.true_peak_safe === true).length
+    const dynamicOk = catRows.filter((r: any) => r.categorical_flags.dynamic_ok === true).length
+    const stereoRiskHigh = catRows.filter((r: any) => r.categorical_flags.stereo_risk === 'high').length
+    const stereoRiskMild = catRows.filter((r: any) => r.categorical_flags.stereo_risk === 'mild').length
+    const pct = (n: number) => catTotal > 0 ? Math.round((n / catTotal) * 1000) / 10 : 0
+
     return NextResponse.json({
       kpi: {
         totalUsers,
@@ -306,6 +364,22 @@ export async function GET(request: NextRequest) {
         totalContacts,
         conversionRate: contactConversionRate,
         byMethod: Object.entries(contactByMethod).map(([method, count]) => ({ method, count }))
+      },
+      technicalInsights: {
+        spectral: {
+          overall: overallAvg,
+          byScore: spectralByScore,
+          totalAnalyzed: spectralTotal
+        },
+        categoricalFlags: {
+          total: catTotal,
+          headroomOk: { count: headroomOk, pct: pct(headroomOk) },
+          truePeakSafe: { count: truePeakSafe, pct: pct(truePeakSafe) },
+          dynamicOk: { count: dynamicOk, pct: pct(dynamicOk) },
+          stereoRiskNone: { count: catTotal - stereoRiskHigh - stereoRiskMild, pct: pct(catTotal - stereoRiskHigh - stereoRiskMild) },
+          stereoRiskMild: { count: stereoRiskMild, pct: pct(stereoRiskMild) },
+          stereoRiskHigh: { count: stereoRiskHigh, pct: pct(stereoRiskHigh) }
+        }
       }
     })
   } catch (error) {

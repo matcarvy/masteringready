@@ -2175,6 +2175,39 @@ by Matías Carvajal
                   </p>
                 </div>
 
+                {/* File Technical Info Strip */}
+                {(result as any).file && (
+                  <div style={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: isMobile ? '0.5rem' : '1.25rem',
+                    background: '#f8fafc',
+                    borderRadius: '0.75rem',
+                    padding: '0.75rem 1rem',
+                    marginBottom: '1.5rem',
+                    border: '1px solid #e2e8f0',
+                    fontSize: '0.8rem',
+                    color: '#475569'
+                  }}>
+                    {(result as any).file.duration != null && (
+                      <span>{lang === 'es' ? 'Duración' : 'Duration'}: <strong>{Math.floor((result as any).file.duration / 60)}:{String(Math.round((result as any).file.duration % 60)).padStart(2, '0')}</strong></span>
+                    )}
+                    {(result as any).file.sample_rate != null && (
+                      <span>Sample Rate: <strong>{((result as any).file.sample_rate / 1000).toFixed((result as any).file.sample_rate % 1000 === 0 ? 0 : 1)} kHz</strong></span>
+                    )}
+                    {(result as any).file.bit_depth != null && (
+                      <span>Bit Depth: <strong>{(result as any).file.bit_depth}-bit</strong></span>
+                    )}
+                    {(result as any).file.channels != null && (
+                      <span>{(result as any).file.channels === 2 ? (lang === 'es' ? 'Estéreo' : 'Stereo') : (result as any).file.channels === 1 ? 'Mono' : `${(result as any).file.channels}ch`}</span>
+                    )}
+                    {file && (
+                      <span>{lang === 'es' ? 'Tamaño' : 'Size'}: <strong>{file.size >= 1048576 ? `${(file.size / 1048576).toFixed(1)} MB` : `${(file.size / 1024).toFixed(0)} KB`}</strong></span>
+                    )}
+                    <span>{lang === 'es' ? 'Formato' : 'Format'}: <strong>{(result.filename || '').split('.').pop()?.toUpperCase() || 'N/A'}</strong></span>
+                  </div>
+                )}
+
                 {/* Report View Toggle */}
                 <div style={{
                   display: 'flex',
