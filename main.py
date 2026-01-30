@@ -444,6 +444,7 @@ async def analyze_mix_endpoint(
                 "report_write": report_write,  # NUEVO: Always included
                 "metrics": result.get("metrics", []),
                 "interpretations": result.get("interpretations"),
+                "file": result.get("file", {}),
                 "filename": file.filename,
                 "mode": mode,
                 "lang": lang,

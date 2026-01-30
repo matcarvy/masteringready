@@ -132,7 +132,11 @@ async function savePendingAnalysisForUser(userId: string): Promise<SaveAnalysisR
     const reportWrite = analysis.report_write || analysis.report || null
     const reportVisual = analysis.report_visual || analysis.report_short || analysis.report || null
 
-    const insertData = {
+    // Extract file info from API response (stored in localStorage as part of analysis data)
+    const fileInfo = analysis.file || {}
+    const fileExtension = (analysis.filename || '').split('.').pop()?.toLowerCase() || null
+
+    const insertData: Record<string, any> = {
       user_id: userId,
       filename: analysis.filename || 'Unknown',
       score: analysis.score,
@@ -148,7 +152,25 @@ async function savePendingAnalysisForUser(userId: string): Promise<SaveAnalysisR
       report_short: reportShort,
       report_write: reportWrite,
       report_visual: reportVisual,
-      created_at: analysis.created_at || new Date().toISOString()
+      created_at: analysis.created_at || new Date().toISOString(),
+      // File metadata (from API response file object)
+      file_size_bytes: fileInfo.size || null,
+      file_format: fileExtension,
+      duration_seconds: fileInfo.duration || null,
+      sample_rate: fileInfo.sample_rate || null,
+      bit_depth: fileInfo.bit_depth || null,
+      channels: fileInfo.channels || null,
+      // Analysis metadata
+      processing_time_seconds: analysis.analysis_time_seconds || null,
+      analysis_version: analysis.analysis_version || null,
+      is_chunked_analysis: analysis.is_chunked_analysis || false,
+      chunk_count: analysis.chunk_count || null,
+      // Data capture fields
+      spectral_6band: analysis.spectral_6band || null,
+      energy_analysis: analysis.energy_analysis || null,
+      categorical_flags: analysis.categorical_flags || null,
+      // Client context
+      client_timezone: typeof Intl !== 'undefined' ? Intl.DateTimeFormat().resolvedOptions().timeZone : null
     }
 
     console.log('[SaveAnalysis] Report fields:', {

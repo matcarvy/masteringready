@@ -2028,7 +2028,7 @@ def analyze_correlation_temporal(y: np.ndarray, sr: int, threshold: float = 0.5)
                 if band_corrs:
                     avg_band_corr = {}
                     for band in ['sub_bass', 'bass_mid', 'mid', 'mid_high', 'high']:
-                        values = [bc[band] for bc in band_corrs if band in bc]
+                        values = [bc[band] for bc in band_corrs if band in bc and bc[band] is not None]
                         if values:
                             avg_band_corr[band] = sum(values) / len(values)
                 
@@ -2067,7 +2067,7 @@ def analyze_correlation_temporal(y: np.ndarray, sr: int, threshold: float = 0.5)
         if band_corrs:
             avg_band_corr = {}
             for band in ['sub_bass', 'bass_mid', 'mid', 'mid_high', 'high']:
-                values = [bc[band] for bc in band_corrs if band in bc]
+                values = [bc[band] for bc in band_corrs if band in bc and bc[band] is not None]
                 if values:
                     avg_band_corr[band] = sum(values) / len(values)
         
@@ -3467,7 +3467,7 @@ def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, s
     # 5. PLR
     plr = None
     has_real_lufs = HAS_PYLOUDNORM and lufs_method.startswith("pyloudnorm")
-    if has_real_lufs and lufs is not None:
+    if has_real_lufs and lufs is not None and tp is not None:
         plr = tp - lufs
     
     st_p, msg_p, _ = status_plr(plr, has_real_lufs, strict, lang)
@@ -5118,18 +5118,18 @@ def analyze_file_chunked(
         plr_reliable = False
         print("⚠️  PLR not calculated - LUFS measurement unreliable", file=sys.stderr)
     
-    # Stereo metrics: weighted averages
-    final_correlation = sum(
-        corr * dur for corr, dur in zip(results['correlations'], results['chunk_durations'])
-    ) / total_duration if total_duration > 0 else 0.5
-    
-    final_lr_balance = sum(
-        lr * dur for lr, dur in zip(results['lr_balances'], results['chunk_durations'])
-    ) / total_duration if total_duration > 0 else 0.0
-    
-    final_ms_ratio = sum(
-        ms * dur for ms, dur in zip(results['ms_ratios'], results['chunk_durations'])
-    ) / total_duration if total_duration > 0 else 0.3
+    # Stereo metrics: weighted averages (filter None as defensive measure)
+    valid_corr = [(c, d) for c, d in zip(results['correlations'], results['chunk_durations']) if c is not None]
+    valid_corr_dur = sum(d for _, d in valid_corr)
+    final_correlation = sum(c * d for c, d in valid_corr) / valid_corr_dur if valid_corr_dur > 0 else 0.5
+
+    valid_lr = [(v, d) for v, d in zip(results['lr_balances'], results['chunk_durations']) if v is not None]
+    valid_lr_dur = sum(d for _, d in valid_lr)
+    final_lr_balance = sum(v * d for v, d in valid_lr) / valid_lr_dur if valid_lr_dur > 0 else 0.0
+
+    valid_ms = [(v, d) for v, d in zip(results['ms_ratios'], results['chunk_durations']) if v is not None]
+    valid_ms_dur = sum(d for _, d in valid_ms)
+    final_ms_ratio = sum(v * d for v, d in valid_ms) / valid_ms_dur if valid_ms_dur > 0 else 0.3
     
     print(f"✅ Peak: {final_peak:.2f} dBFS")
     print(f"✅ True Peak: {final_tp:.2f} dBTP")

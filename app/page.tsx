@@ -84,6 +84,7 @@ async function saveAnalysisToDatabase(userId: string, analysis: any, fileObj?: F
       duration_seconds: fileInfo.duration || null,
       sample_rate: fileInfo.sample_rate || null,
       bit_depth: fileInfo.bit_depth || null,
+      channels: fileInfo.channels || null,
       // Analysis metadata
       processing_time_seconds: analysis.analysis_time_seconds || null,
       analysis_version: analysis.analysis_version || null,
@@ -709,17 +710,26 @@ const handleAnalyze = async () => {
     // Save analysis
     if (data) {
       if (isLoggedIn && user) {
-        // Save directly to database for logged-in users
-        console.log('[Analysis] Saving to database for logged-in user:', user.id)
+        // Re-check quota before saving — prevents bypass when user logs in during analysis
+        // (user may have started as anonymous but logged in while polling)
         try {
-          const savedData = await saveAnalysisToDatabase(user.id, {
-            ...data,
-            filename: file.name,
-            created_at: new Date().toISOString(),
-            lang,
-            strict
-          }, file, geo?.countryCode)
-          setSavedAnalysisId(savedData?.[0]?.id || null)
+          const quotaCheck = await checkCanAnalyze()
+          if (!quotaCheck.can_analyze) {
+            console.log('[Analysis] User quota exhausted at save time, blocking save:', quotaCheck.reason)
+            setUserAnalysisStatus(quotaCheck)
+            setShowFreeLimitModal(true)
+            // Analysis result is visible on screen but NOT saved to account
+          } else {
+            console.log('[Analysis] Saving to database for logged-in user:', user.id)
+            const savedData = await saveAnalysisToDatabase(user.id, {
+              ...data,
+              filename: file.name,
+              created_at: new Date().toISOString(),
+              lang,
+              strict
+            }, file, geo?.countryCode)
+            setSavedAnalysisId(savedData?.[0]?.id || null)
+          }
         } catch (saveErr) {
           console.error('[Analysis] Failed to save to database:', saveErr)
         }
