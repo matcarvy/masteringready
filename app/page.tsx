@@ -244,7 +244,7 @@ function InterpretativeSection({ title, interpretation, recommendation, metrics,
 
 function Home() {
   // Auth state - check if user is logged in
-  const { user, loading: authLoading, savePendingAnalysis } = useAuth()
+  const { user, loading: authLoading, savePendingAnalysis, pendingAnalysisQuotaExceeded, clearPendingAnalysisQuotaExceeded } = useAuth()
   const isLoggedIn = !!user
 
   const [file, setFile] = useState<File | null>(null)
@@ -484,6 +484,14 @@ function Home() {
     }
   }, [isLoggedIn, authLoading])
 
+  // React to pending analysis quota exceeded (from AuthProvider after login)
+  useEffect(() => {
+    if (pendingAnalysisQuotaExceeded) {
+      setShowFreeLimitModal(true)
+      clearPendingAnalysisQuotaExceeded()
+    }
+  }, [pendingAnalysisQuotaExceeded, clearPendingAnalysisQuotaExceeded])
+
   // Loading messages: anchor (index 0) always first, then 1-5 rotate randomly
   const loadingMessages = [
     { es: '🎧 Aplicando la metodología Mastering Ready…', en: '🎧 Applying Mastering Ready methodology…' },
@@ -554,8 +562,12 @@ const handleAnalyze = async () => {
           }
         }
       } catch (ipError) {
-        // If IP check fails, allow analysis (feature may not be deployed)
-        console.warn('IP check failed, allowing analysis:', ipError)
+        console.warn('IP check failed, DENYING analysis:', ipError)
+        setLoading(false)
+        setError(lang === 'es'
+          ? 'No se pudo verificar el acceso. Intenta de nuevo en unos segundos.'
+          : 'Could not verify access. Please try again in a few seconds.')
+        return
       }
     } else {
       // ============================================================
@@ -573,8 +585,12 @@ const handleAnalyze = async () => {
           return
         }
       } catch (statusError) {
-        // If status check fails, allow analysis (graceful degradation)
-        console.warn('User status check failed, allowing analysis:', statusError)
+        console.warn('User status check failed, DENYING analysis:', statusError)
+        setLoading(false)
+        setError(lang === 'es'
+          ? 'No se pudo verificar tu plan. Intenta de nuevo en unos segundos.'
+          : 'Could not verify your plan. Please try again in a few seconds.')
+        return
       }
     }
     // ============================================================

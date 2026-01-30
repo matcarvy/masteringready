@@ -13,12 +13,16 @@ import { supabase } from '@/lib/supabase'
 // TYPES / TIPOS
 // ============================================================================
 
+type SaveAnalysisResult = 'saved' | 'quota_exceeded' | 'no_pending' | 'error'
+
 interface AuthContextType {
   user: User | null
   session: Session | null
   loading: boolean
   signOut: () => Promise<void>
-  savePendingAnalysis: () => Promise<void>
+  savePendingAnalysis: () => Promise<SaveAnalysisResult>
+  pendingAnalysisQuotaExceeded: boolean
+  clearPendingAnalysisQuotaExceeded: () => void
 }
 
 interface AuthProviderProps {
@@ -34,7 +38,9 @@ const AuthContext = createContext<AuthContextType>({
   session: null,
   loading: true,
   signOut: async () => {},
-  savePendingAnalysis: async () => {}
+  savePendingAnalysis: async () => 'no_pending',
+  pendingAnalysisQuotaExceeded: false,
+  clearPendingAnalysisQuotaExceeded: () => {}
 })
 
 // ============================================================================
@@ -70,12 +76,12 @@ function mapVerdictToEnum(verdict: string): 'ready' | 'almost_ready' | 'needs_wo
 }
 
 // Save pending analysis from localStorage to database
-async function savePendingAnalysisForUser(userId: string) {
+async function savePendingAnalysisForUser(userId: string): Promise<SaveAnalysisResult> {
   try {
     const pendingData = localStorage.getItem('pendingAnalysis')
     if (!pendingData) {
       console.log('[SaveAnalysis] No pending analysis in localStorage')
-      return false
+      return 'no_pending'
     }
 
     // IMPORTANT: Remove from localStorage IMMEDIATELY to prevent race condition.
@@ -97,6 +103,25 @@ async function savePendingAnalysisForUser(userId: string) {
       hasReport: !!analysis.report,
       allKeys: Object.keys(analysis).join(', ')
     })
+
+    // QUOTA CHECK: Verify user has remaining analyses before saving
+    console.log('[SaveAnalysis] Checking user quota before saving...')
+    const { data: quotaData, error: quotaError } = await supabase.rpc('can_user_analyze', {
+      p_user_id: userId
+    })
+
+    if (quotaError) {
+      console.error('[SaveAnalysis] Quota check failed, DENYING save:', quotaError.message)
+      return 'error'
+    }
+
+    const quotaResult = Array.isArray(quotaData) ? quotaData[0] : quotaData
+    if (!quotaResult || !quotaResult.can_analyze) {
+      console.log('[SaveAnalysis] User has no quota remaining:', quotaResult?.reason)
+      return 'quota_exceeded'
+    }
+
+    console.log('[SaveAnalysis] Quota check passed:', quotaResult.reason)
 
     // Prepare the insert data
     const mappedVerdict = mapVerdictToEnum(analysis.verdict)
@@ -142,7 +167,7 @@ async function savePendingAnalysisForUser(userId: string) {
 
     if (error) {
       console.error('[SaveAnalysis] INSERT ERROR:', error.message, error.details, error.hint)
-      return false
+      return 'error'
     }
 
     console.log('[SaveAnalysis] Insert successful:', insertedData)
@@ -188,11 +213,11 @@ async function savePendingAnalysisForUser(userId: string) {
     }
 
     console.log('[SaveAnalysis] Complete!')
-    return true
+    return 'saved'
 
   } catch (err) {
     console.error('[SaveAnalysis] EXCEPTION:', err)
-    return false
+    return 'error'
   }
 }
 
@@ -200,9 +225,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
+  const [pendingAnalysisQuotaExceeded, setPendingAnalysisQuotaExceeded] = useState(false)
+
+  const clearPendingAnalysisQuotaExceeded = () => setPendingAnalysisQuotaExceeded(false)
 
   // Exposed function to save pending analysis (can be called from components)
-  const savePendingAnalysis = async () => {
+  const savePendingAnalysis = async (): Promise<SaveAnalysisResult> => {
     console.log('savePendingAnalysis called, current user state:', user?.id)
 
     // Small delay to ensure auth state is settled after login
@@ -213,15 +241,22 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     if (userError) {
       console.error('Error getting user for save:', userError)
-      return
+      return 'error'
     }
 
     if (freshUser) {
       console.log('Saving analysis for fresh user:', freshUser.id)
-      const saved = await savePendingAnalysisForUser(freshUser.id)
-      console.log('Analysis save result:', saved)
+      const result = await savePendingAnalysisForUser(freshUser.id)
+      console.log('Analysis save result:', result)
+
+      if (result === 'quota_exceeded') {
+        setPendingAnalysisQuotaExceeded(true)
+      }
+
+      return result
     } else {
       console.error('No user available to save pending analysis')
+      return 'error'
     }
   }
 
@@ -310,7 +345,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
           }
 
           // Check for pending analysis after login/signup
-          savePendingAnalysisForUser(u.id)
+          const saveResult = await savePendingAnalysisForUser(u.id)
+          if (saveResult === 'quota_exceeded') {
+            setPendingAnalysisQuotaExceeded(true)
+          }
         }
       }
     )
@@ -332,7 +370,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, signOut, savePendingAnalysis }}>
+    <AuthContext.Provider value={{ user, session, loading, signOut, savePendingAnalysis, pendingAnalysisQuotaExceeded, clearPendingAnalysisQuotaExceeded }}>
       {children}
     </AuthContext.Provider>
   )
