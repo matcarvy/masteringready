@@ -5496,7 +5496,7 @@ def analyze_file_chunked(
                     # Average the band correlations across chunks
                     avg_band_corr = {}
                     for band in ['sub_bass', 'bass_mid', 'mid', 'mid_high', 'high']:
-                        values = [bc[band] for bc in band_corrs if band in bc]
+                        values = [bc[band] for bc in band_corrs if band in bc and bc[band] is not None]
                         if values:
                             avg_band_corr[band] = sum(values) / len(values)
                 
