@@ -138,6 +138,17 @@ async function handleCheckoutCompleted(
       return
     }
 
+    // Check free analyses used for welcome bonus
+    const { data: profileData } = await supabase
+      .from('profiles')
+      .select('analyses_lifetime_used')
+      .eq('id', userId)
+      .single()
+    const welcomeBonus = Math.min(profileData?.analyses_lifetime_used || 0, 2)
+    if (welcomeBonus > 0) {
+      console.log(`Welcome bonus for user ${userId}: ${welcomeBonus} analyses restored`)
+    }
+
     // Get subscription period from Stripe - cast through unknown to access properties
     const subData = subscription as unknown as { current_period_start: number; current_period_end: number }
     const periodStart = subData.current_period_start
@@ -155,7 +166,7 @@ async function handleCheckoutCompleted(
         current_period_start: new Date(periodStart * 1000).toISOString(),
         current_period_end: new Date(periodEnd * 1000).toISOString(),
         analyses_used_this_cycle: 0,
-        addon_analyses_remaining: 0,
+        addon_analyses_remaining: welcomeBonus,
         addon_packs_this_cycle: 0
       }, {
         onConflict: 'user_id'

@@ -256,6 +256,7 @@ function Home() {
   const [loading, setLoading] = useState(false)
   const [progress, setProgress] = useState(0)
   const [result, setResult] = useState<any>(null)
+  const [displayScore, setDisplayScore] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const [compressing, setCompressing] = useState(false)
   const [compressionProgress, setCompressionProgress] = useState(0)
@@ -267,6 +268,7 @@ function Home() {
   const mobileMenuRef = useRef<HTMLDivElement>(null)
   const [loadingMsgIndex, setLoadingMsgIndex] = useState(0)
   const [glossaryOpen, setGlossaryOpen] = useState(false)
+  const [tabTransition, setTabTransition] = useState(false)
   const [showFeedbackModal, setShowFeedbackModal] = useState(false)
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [isUnlocking, setIsUnlocking] = useState(false)
@@ -338,6 +340,32 @@ function Home() {
     }
     const timer = setTimeout(() => setShowRatingWidget(true), 4000)
     return () => clearTimeout(timer)
+  }, [result])
+
+  // Score count-up animation
+  useEffect(() => {
+    if (!result) {
+      setDisplayScore(0)
+      return
+    }
+    // Respect reduced motion preference
+    if (typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      setDisplayScore(result.score)
+      return
+    }
+    const target = result.score
+    const duration = 1200
+    const start = performance.now()
+    const easeOut = (t: number) => 1 - Math.pow(1 - t, 3)
+    let raf: number
+    const animate = (now: number) => {
+      const elapsed = now - start
+      const progress = Math.min(elapsed / duration, 1)
+      setDisplayScore(Math.round(easeOut(progress) * target))
+      if (progress < 1) raf = requestAnimationFrame(animate)
+    }
+    raf = requestAnimationFrame(animate)
+    return () => cancelAnimationFrame(raf)
   }, [result])
 
   // Rotate loading messages: anchor first (6-8s), then random non-repeating
@@ -2074,7 +2102,8 @@ by Matías Carvajal
                   border: '1px solid #fca5a5',
                   borderRadius: '0.5rem',
                   padding: '1rem',
-                  marginTop: '1rem'
+                  marginTop: '1rem',
+                  animation: 'errorSlideIn 0.35s ease-out'
                 }}>
                   <p style={{ color: '#7f1d1d', fontWeight: '500' }}>Error:</p>
                   <p style={{ color: '#991b1b' }}>{error}</p>
@@ -2140,7 +2169,7 @@ by Matías Carvajal
                         fontWeight: 'bold',
                         color: getScoreColor(result.score)
                       }}>
-                        {result.score}/100
+                        {displayScore}/100
                       </span>
                     </div>
                   </div>
@@ -2155,8 +2184,8 @@ by Matías Carvajal
                       background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                       height: '0.75rem',
                       borderRadius: '9999px',
-                      width: `${result.score}%`,
-                      transition: 'width 0.5s'
+                      width: `${displayScore}%`,
+                      transition: 'width 0.08s linear'
                     }} />
                   </div>
                   <p style={{ fontSize: '1.125rem', fontWeight: '600' }}>{result.verdict}</p>
@@ -2232,7 +2261,12 @@ by Matías Carvajal
                           setShowUpgradeModal(true)
                           return
                         }
-                        setReportView(view)
+                        if (view === reportView) return
+                        setTabTransition(true)
+                        setTimeout(() => {
+                          setReportView(view)
+                          setTabTransition(false)
+                        }, 150)
                       }}
                       style={{
                         flex: '1 1 calc(33.333% - 0.5rem)',
@@ -2265,6 +2299,13 @@ by Matías Carvajal
                     </button>
                   ))}
                 </div>
+
+                {/* Tab Content Wrapper with cross-fade */}
+                <div style={{
+                  opacity: tabTransition ? 0 : 1,
+                  transform: tabTransition ? 'translateY(4px)' : 'translateY(0)',
+                  transition: 'opacity 0.15s ease, transform 0.15s ease'
+                }}>
 
                 {/* Visual Mode */}
                 {reportView === 'visual' && (
@@ -2652,6 +2693,8 @@ by Matías Carvajal
                   </>
                 )}
 
+                </div>{/* End tab content cross-fade wrapper */}
+
                 {/* Download Buttons */}
                 <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
                   {/* Download Current View */}
@@ -3011,7 +3054,12 @@ by Matías Carvajal
                   </span>
                 </button>
 
-                {glossaryOpen && (
+                <div style={{
+                  maxHeight: glossaryOpen ? '600px' : '0',
+                  opacity: glossaryOpen ? 1 : 0,
+                  overflow: 'hidden',
+                  transition: 'max-height 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease'
+                }}>
                   <div style={{ padding: '0 1.25rem 1.25rem' }}>
                     <p style={{ fontSize: '0.875rem', color: '#64748b', marginBottom: '1rem' }}>
                       {lang === 'es'
@@ -3124,7 +3172,7 @@ by Matías Carvajal
                       </a>
                     </div>
                   </div>
-                )}
+                </div>
               </div>
 
             </div>
@@ -3557,7 +3605,7 @@ by Matías Carvajal
 
       {/* Contact Modal */}
       {showContactModal && (
-        <div 
+        <div
           onClick={() => setShowContactModal(false)}
           style={{
             position: 'fixed',
@@ -3570,10 +3618,11 @@ by Matías Carvajal
             alignItems: 'center',
             justifyContent: 'center',
             zIndex: 100,
-            padding: '1.5rem'
+            padding: '1.5rem',
+            animation: 'modalBackdropIn 0.25s ease-out'
           }}
         >
-          <div 
+          <div
             onClick={(e) => e.stopPropagation()}
             style={{
               background: 'white',
@@ -3582,7 +3631,8 @@ by Matías Carvajal
               maxWidth: '500px',
               width: '100%',
               boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
-              position: 'relative'
+              position: 'relative',
+              animation: 'modalContentIn 0.25s cubic-bezier(0.16, 1, 0.3, 1)'
             }}
           >
             {/* Close button */}
@@ -3761,7 +3811,7 @@ by Matías Carvajal
 
       {/* Feedback Modal */}
       {showFeedbackModal && (
-        <div 
+        <div
           onClick={() => {
             setShowFeedbackModal(false)
             setFeedback({ rating: 0, liked: '', change: '', add: '' })
@@ -3777,10 +3827,11 @@ by Matías Carvajal
             alignItems: 'center',
             justifyContent: 'center',
             zIndex: 100,
-            padding: '1.5rem'
+            padding: '1.5rem',
+            animation: 'modalBackdropIn 0.25s ease-out'
           }}
         >
-          <div 
+          <div
             onClick={(e) => e.stopPropagation()}
             style={{
               background: 'white',
@@ -3791,7 +3842,8 @@ by Matías Carvajal
               boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
               position: 'relative',
               maxHeight: '90vh',
-              overflowY: 'auto'
+              overflowY: 'auto',
+              animation: 'modalContentIn 0.25s cubic-bezier(0.16, 1, 0.3, 1)'
             }}
           >
             {/* Close button */}
@@ -4142,7 +4194,8 @@ by Matías Carvajal
           alignItems: 'center',
           justifyContent: 'center',
           zIndex: 100,
-          padding: '1rem'
+          padding: '1rem',
+          animation: 'modalBackdropIn 0.25s ease-out'
         }}>
           <div style={{
             background: 'white',
@@ -4151,7 +4204,8 @@ by Matías Carvajal
             maxWidth: '420px',
             width: '100%',
             position: 'relative',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            animation: 'modalContentIn 0.25s cubic-bezier(0.16, 1, 0.3, 1)'
           }}>
             {/* Close button */}
             <button
@@ -4300,7 +4354,8 @@ by Matías Carvajal
           alignItems: 'center',
           justifyContent: 'center',
           zIndex: 100,
-          padding: '1rem'
+          padding: '1rem',
+          animation: 'modalBackdropIn 0.25s ease-out'
         }}>
           <div style={{
             background: 'white',
@@ -4309,7 +4364,8 @@ by Matías Carvajal
             maxWidth: '420px',
             width: '100%',
             position: 'relative',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            animation: 'modalContentIn 0.25s cubic-bezier(0.16, 1, 0.3, 1)'
           }}>
             {/* Close button */}
             <button
@@ -4473,7 +4529,8 @@ by Matías Carvajal
           alignItems: 'center',
           justifyContent: 'center',
           zIndex: 100,
-          padding: '1rem'
+          padding: '1rem',
+          animation: 'modalBackdropIn 0.25s ease-out'
         }}>
           <div style={{
             background: 'white',
@@ -4482,7 +4539,8 @@ by Matías Carvajal
             maxWidth: '420px',
             width: '100%',
             position: 'relative',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            animation: 'modalContentIn 0.25s cubic-bezier(0.16, 1, 0.3, 1)'
           }}>
             {/* Close button */}
             <button
@@ -4634,7 +4692,8 @@ by Matías Carvajal
           alignItems: 'center',
           justifyContent: 'center',
           zIndex: 100,
-          padding: '1rem'
+          padding: '1rem',
+          animation: 'modalBackdropIn 0.25s ease-out'
         }}>
           <div style={{
             background: 'white',
@@ -4643,7 +4702,8 @@ by Matías Carvajal
             maxWidth: '420px',
             width: '100%',
             position: 'relative',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            animation: 'modalContentIn 0.25s cubic-bezier(0.16, 1, 0.3, 1)'
           }}>
             <button
               onClick={() => setShowUpgradeModal(false)}
@@ -4777,6 +4837,30 @@ by Matías Carvajal
         @keyframes fadeInMsg {
           0% { opacity: 0; transform: translateY(4px); }
           100% { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes modalBackdropIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+
+        @keyframes modalContentIn {
+          from { opacity: 0; transform: scale(0.96) translateY(10px); }
+          to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        @keyframes errorSlideIn {
+          0% { opacity: 0; transform: translateY(-10px); }
+          60% { opacity: 1; transform: translateY(2px); }
+          100% { opacity: 1; transform: translateY(0); }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          *, *::before, *::after {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
+          }
         }
 
         /* ============================================

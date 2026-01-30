@@ -16,14 +16,14 @@ import {
   Search, ChevronDown, ChevronUp, ArrowLeft, RefreshCw,
   Filter, CheckCircle, Clock, AlertCircle, Crown,
   TrendingUp, FileAudio, Globe, Eye, X, ArrowUpDown,
-  Music, Shield
+  Music, Shield, Target
 } from 'lucide-react'
 
 // ============================================================================
 // TYPES
 // ============================================================================
 
-type AdminTab = 'overview' | 'users' | 'analytics' | 'revenue' | 'feedback'
+type AdminTab = 'overview' | 'users' | 'analytics' | 'revenue' | 'leads' | 'feedback'
 
 interface KpiData {
   totalUsers: number
@@ -45,6 +45,26 @@ interface StatsData {
   satisfaction?: { thumbsUp: number; thumbsDown: number; total: number; rate: number }
   ctaStats?: { totalClicks: number; clickRate: number; byType: { type: string; count: number }[]; byScore: { range: string; count: number }[]; topCountries: { country: string; count: number }[] }
   contactStats?: { totalContacts: number; conversionRate: number; byMethod: { method: string; count: number }[] }
+  performance?: {
+    avgProcessingTime: number
+    fastestAnalysis: number
+    longestAnalysis: number
+    chunkedPct: number
+    totalMeasured: number
+  }
+  fileStats?: {
+    avgDuration: number
+    avgFileSize: number
+    totalWithDuration: number
+    totalWithSize: number
+  }
+  engagement?: {
+    activeUsers7d: number
+    activeUsers30d: number
+    usersWithMultiple: number
+    usersWithMultiplePct: number
+    totalProfiles: number
+  }
   technicalInsights?: {
     spectral: {
       overall: Record<string, number>
@@ -115,6 +135,30 @@ interface FeedbackRow {
   client_country?: string | null
 }
 
+interface LeadRow {
+  id: string
+  user_id: string | null
+  analysis_id: string | null
+  name: string | null
+  email: string | null
+  message: string | null
+  cta_source: string | null
+  contact_method: string
+  client_country: string | null
+  created_at: string
+  profile?: { email: string; full_name: string | null }
+  analysis?: { filename: string; score: number; verdict: string }
+}
+
+interface LeadsKpi {
+  total: number
+  thisMonth: number
+  byMethod: { method: string; count: number }[]
+  bySource: { source: string; count: number }[]
+  conversionRate: number
+  totalAnalyses: number
+}
+
 // ============================================================================
 // TRANSLATIONS
 // ============================================================================
@@ -128,6 +172,7 @@ const translations = {
       users: 'Usuarios',
       analytics: 'Analíticas',
       revenue: 'Ingresos',
+      leads: 'Leads',
       feedback: 'Retroalimentación'
     },
     kpi: {
@@ -185,7 +230,20 @@ const translations = {
       beginning: 'Inicio',
       middle: 'Medio',
       end: 'Final',
-      ofTrack: 'del track'
+      ofTrack: 'del track',
+      performanceTitle: 'Rendimiento',
+      avgProcessingTime: 'Tiempo promedio de análisis',
+      fastestAnalysis: 'Análisis más rápido',
+      longestAnalysis: 'Análisis más largo',
+      chunkedPct: 'Análisis fragmentados',
+      filesTitle: 'Archivos',
+      avgDuration: 'Duración promedio',
+      avgFileSize: 'Tamaño promedio',
+      engagementTitle: 'Engagement',
+      activeUsers7d: 'Usuarios activos (7d)',
+      activeUsers30d: 'Usuarios activos (30d)',
+      usersWithMultiple: 'Usuarios con >1 análisis',
+      seconds: 'segundos'
     },
     verdicts: {
       ready: 'Listo para mastering',
@@ -205,6 +263,30 @@ const translations = {
       date: 'Fecha',
       user: 'Usuario',
       noPayments: 'No hay pagos registrados'
+    },
+    leads: {
+      title: 'Solicitudes de contacto',
+      totalLeads: 'Leads totales',
+      thisMonth: 'Este mes',
+      conversionRate: 'Tasa de conversión',
+      byMethod: 'Por método',
+      allMethods: 'Todos',
+      allDates: 'Todo el tiempo',
+      today: 'Hoy',
+      thisWeek: 'Esta semana',
+      thisMonthFilter: 'Este mes',
+      method: 'Método',
+      date: 'Fecha',
+      user: 'Usuario',
+      lastAnalysis: 'Último análisis',
+      score: 'Score',
+      country: 'País',
+      source: 'Origen',
+      noLeads: 'No hay solicitudes de contacto',
+      mastering: 'Masterizar track',
+      mixHelp: 'Ayuda con mezcla',
+      unknown: 'Desconocido',
+      ofAnalyses: 'de los análisis'
     },
     feedback: {
       all: 'Todos',
@@ -248,6 +330,7 @@ const translations = {
       users: 'Users',
       analytics: 'Analytics',
       revenue: 'Revenue',
+      leads: 'Leads',
       feedback: 'Feedback'
     },
     kpi: {
@@ -305,7 +388,20 @@ const translations = {
       beginning: 'Beginning',
       middle: 'Middle',
       end: 'End',
-      ofTrack: 'of track'
+      ofTrack: 'of track',
+      performanceTitle: 'Performance',
+      avgProcessingTime: 'Avg Analysis Time',
+      fastestAnalysis: 'Fastest Analysis',
+      longestAnalysis: 'Longest Analysis',
+      chunkedPct: 'Chunked Analyses',
+      filesTitle: 'Files',
+      avgDuration: 'Avg Duration',
+      avgFileSize: 'Avg Size',
+      engagementTitle: 'Engagement',
+      activeUsers7d: 'Active Users (7d)',
+      activeUsers30d: 'Active Users (30d)',
+      usersWithMultiple: 'Users with >1 analysis',
+      seconds: 'seconds'
     },
     verdicts: {
       ready: 'Ready for mastering',
@@ -325,6 +421,30 @@ const translations = {
       date: 'Date',
       user: 'User',
       noPayments: 'No payments recorded'
+    },
+    leads: {
+      title: 'Contact Requests',
+      totalLeads: 'Total Leads',
+      thisMonth: 'This Month',
+      conversionRate: 'Conversion Rate',
+      byMethod: 'By Method',
+      allMethods: 'All',
+      allDates: 'All time',
+      today: 'Today',
+      thisWeek: 'This week',
+      thisMonthFilter: 'This month',
+      method: 'Method',
+      date: 'Date',
+      user: 'User',
+      lastAnalysis: 'Last Analysis',
+      score: 'Score',
+      country: 'Country',
+      source: 'Source',
+      noLeads: 'No contact requests',
+      mastering: 'Master track',
+      mixHelp: 'Mix help',
+      unknown: 'Unknown',
+      ofAnalyses: 'of analyses'
     },
     feedback: {
       all: 'All',
@@ -377,6 +497,12 @@ function formatDate(dateStr: string, lang: 'es' | 'en'): string {
 
 function formatCurrency(amount: number): string {
   return `$${amount.toFixed(2)}`
+}
+
+function formatDurationMmSs(seconds: number): string {
+  const m = Math.floor(seconds / 60)
+  const s = Math.floor(seconds % 60)
+  return `${m}:${s.toString().padStart(2, '0')}`
 }
 
 function getStatusColor(status: string): string {
@@ -432,6 +558,11 @@ export default function AdminPage() {
   const [userAnalysesLoading, setUserAnalysesLoading] = useState(false)
   const [payments, setPayments] = useState<PaymentRow[]>([])
   const [paymentsLoading, setPaymentsLoading] = useState(false)
+  const [leadsList, setLeadsList] = useState<LeadRow[]>([])
+  const [leadsKpi, setLeadsKpi] = useState<LeadsKpi | null>(null)
+  const [leadsLoading, setLeadsLoading] = useState(false)
+  const [leadsMethodFilter, setLeadsMethodFilter] = useState('all')
+  const [leadsDateFilter, setLeadsDateFilter] = useState('all')
   const [feedbackList, setFeedbackList] = useState<FeedbackRow[]>([])
   const [feedbackLoading, setFeedbackLoading] = useState(false)
   const [feedbackFilter, setFeedbackFilter] = useState('all')
@@ -666,6 +797,23 @@ export default function AdminPage() {
     setFeedbackLoading(false)
   }, [feedbackFilter])
 
+  // Fetch leads
+  const fetchLeads = useCallback(async () => {
+    setLeadsLoading(true)
+    try {
+      const headers = await getAuthHeaders()
+      const res = await fetch('/api/admin/leads', { headers })
+      if (res.ok) {
+        const data = await res.json()
+        setLeadsList(data.leads || [])
+        setLeadsKpi(data.kpi || null)
+      }
+    } catch (err) {
+      console.error('Failed to fetch leads:', err)
+    }
+    setLeadsLoading(false)
+  }, [getAuthHeaders])
+
   // Load data on tab change
   useEffect(() => {
     if (!isAdmin) return
@@ -682,11 +830,14 @@ export default function AdminPage() {
         if (!statsData) fetchStats()
         fetchPayments()
         break
+      case 'leads':
+        fetchLeads()
+        break
       case 'feedback':
         fetchFeedback()
         break
     }
-  }, [activeTab, isAdmin, fetchStats, fetchUsers, fetchPayments, fetchFeedback, statsData])
+  }, [activeTab, isAdmin, fetchStats, fetchUsers, fetchPayments, fetchLeads, fetchFeedback, statsData])
 
   // Refetch users when search/sort changes
   useEffect(() => {
@@ -838,6 +989,7 @@ export default function AdminPage() {
     { key: 'users', icon: Users, label: t.tabs.users },
     { key: 'analytics', icon: BarChart3, label: t.tabs.analytics },
     { key: 'revenue', icon: DollarSign, label: t.tabs.revenue },
+    { key: 'leads', icon: Target, label: t.tabs.leads },
     { key: 'feedback', icon: MessageSquare, label: t.tabs.feedback }
   ]
 
@@ -918,6 +1070,124 @@ export default function AdminPage() {
             </div>
           ))}
         </div>
+
+        {/* Performance + Files + Engagement */}
+        {statsData && (
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr',
+            gap: '1rem',
+            marginBottom: '2rem'
+          }}>
+            {/* Performance */}
+            <div style={{
+              background: 'white',
+              borderRadius: '1rem',
+              padding: '1.5rem',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+            }}>
+              <h3 style={{ fontSize: '1rem', fontWeight: '600', color: '#111827', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Clock size={18} style={{ color: '#3b82f6' }} />
+                {t.analytics.performanceTitle}
+              </h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <div>
+                  <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>{t.analytics.avgProcessingTime}</span>
+                  <p style={{ fontSize: '1.5rem', fontWeight: '700', color: '#111827', margin: '0.125rem 0 0' }}>
+                    {statsData.performance?.avgProcessingTime ?? '-'}
+                    <span style={{ fontSize: '0.875rem', fontWeight: '400', color: '#6b7280' }}> {t.analytics.seconds}</span>
+                  </p>
+                </div>
+                <div style={{ display: 'flex', gap: '1.5rem' }}>
+                  <div>
+                    <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>{t.analytics.fastestAnalysis}</span>
+                    <p style={{ fontSize: '1.125rem', fontWeight: '600', color: '#10b981', margin: '0.125rem 0 0' }}>
+                      {statsData.performance?.fastestAnalysis ?? '-'}s
+                    </p>
+                  </div>
+                  <div>
+                    <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>{t.analytics.longestAnalysis}</span>
+                    <p style={{ fontSize: '1.125rem', fontWeight: '600', color: '#f59e0b', margin: '0.125rem 0 0' }}>
+                      {statsData.performance?.longestAnalysis ?? '-'}s
+                    </p>
+                  </div>
+                </div>
+                <div>
+                  <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>{t.analytics.chunkedPct}</span>
+                  <p style={{ fontSize: '1.125rem', fontWeight: '600', color: '#8b5cf6', margin: '0.125rem 0 0' }}>
+                    {statsData.performance?.chunkedPct ?? 0}%
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Files */}
+            <div style={{
+              background: 'white',
+              borderRadius: '1rem',
+              padding: '1.5rem',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+            }}>
+              <h3 style={{ fontSize: '1rem', fontWeight: '600', color: '#111827', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <FileAudio size={18} style={{ color: '#764ba2' }} />
+                {t.analytics.filesTitle}
+              </h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <div>
+                  <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>{t.analytics.avgDuration}</span>
+                  <p style={{ fontSize: '1.5rem', fontWeight: '700', color: '#111827', margin: '0.125rem 0 0' }}>
+                    {statsData.fileStats?.avgDuration ? formatDurationMmSs(statsData.fileStats.avgDuration) : '-'}
+                  </p>
+                </div>
+                <div>
+                  <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>{t.analytics.avgFileSize}</span>
+                  <p style={{ fontSize: '1.5rem', fontWeight: '700', color: '#111827', margin: '0.125rem 0 0' }}>
+                    {statsData.fileStats?.avgFileSize ?? '-'}
+                    <span style={{ fontSize: '0.875rem', fontWeight: '400', color: '#6b7280' }}> MB</span>
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Engagement */}
+            <div style={{
+              background: 'white',
+              borderRadius: '1rem',
+              padding: '1.5rem',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+            }}>
+              <h3 style={{ fontSize: '1rem', fontWeight: '600', color: '#111827', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Activity size={18} style={{ color: '#10b981' }} />
+                {t.analytics.engagementTitle}
+              </h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <div style={{ display: 'flex', gap: '1.5rem' }}>
+                  <div>
+                    <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>{t.analytics.activeUsers7d}</span>
+                    <p style={{ fontSize: '1.5rem', fontWeight: '700', color: '#10b981', margin: '0.125rem 0 0' }}>
+                      {statsData.engagement?.activeUsers7d ?? '-'}
+                    </p>
+                  </div>
+                  <div>
+                    <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>{t.analytics.activeUsers30d}</span>
+                    <p style={{ fontSize: '1.5rem', fontWeight: '700', color: '#3b82f6', margin: '0.125rem 0 0' }}>
+                      {statsData.engagement?.activeUsers30d ?? '-'}
+                    </p>
+                  </div>
+                </div>
+                <div>
+                  <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>{t.analytics.usersWithMultiple}</span>
+                  <p style={{ fontSize: '1.25rem', fontWeight: '700', color: '#111827', margin: '0.125rem 0 0' }}>
+                    {statsData.engagement?.usersWithMultiple ?? '-'}
+                    <span style={{ fontSize: '0.875rem', fontWeight: '400', color: '#6b7280' }}>
+                      {' '}({statsData.engagement?.usersWithMultiplePct ?? 0}%)
+                    </span>
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Quick stats: Score + Verdict distribution side by side */}
         {statsData && (
@@ -2096,6 +2366,367 @@ export default function AdminPage() {
   }
 
   // ============================================================================
+  // RENDER: LEADS TAB
+  // ============================================================================
+
+  const getMethodColor = (method: string): string => {
+    switch (method) {
+      case 'whatsapp': return '#25d366'
+      case 'email': return '#3b82f6'
+      case 'instagram': return '#e1306c'
+      default: return '#6b7280'
+    }
+  }
+
+  const getMethodLabel = (method: string): string => {
+    switch (method) {
+      case 'whatsapp': return 'WhatsApp'
+      case 'email': return 'Email'
+      case 'instagram': return 'Instagram'
+      default: return method
+    }
+  }
+
+  const getSourceLabel = (source: string | null): string => {
+    if (!source) return t.leads.unknown
+    switch (source) {
+      case 'mastering': return t.leads.mastering
+      case 'mix_help': return t.leads.mixHelp
+      default: return source
+    }
+  }
+
+  const renderLeads = () => {
+    const methodFilters = ['all', 'whatsapp', 'email', 'instagram'] as const
+    const dateFilters = ['all', 'today', 'week', 'month'] as const
+
+    const dateFilterLabels: Record<string, string> = {
+      all: t.leads.allDates,
+      today: t.leads.today,
+      week: t.leads.thisWeek,
+      month: t.leads.thisMonthFilter
+    }
+
+    // Client-side filtering
+    const filteredLeads = leadsList.filter(lead => {
+      // Method filter
+      if (leadsMethodFilter !== 'all' && lead.contact_method !== leadsMethodFilter) return false
+
+      // Date filter
+      if (leadsDateFilter !== 'all') {
+        const leadDate = new Date(lead.created_at)
+        const now = new Date()
+        if (leadsDateFilter === 'today') {
+          const todayStr = now.toISOString().split('T')[0]
+          if (lead.created_at.split('T')[0] !== todayStr) return false
+        } else if (leadsDateFilter === 'week') {
+          const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+          if (leadDate < weekAgo) return false
+        } else if (leadsDateFilter === 'month') {
+          const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+          if (leadDate < monthStart) return false
+        }
+      }
+
+      return true
+    })
+
+    return (
+      <div>
+        {/* KPI Cards */}
+        {leadsKpi && (
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
+            gap: '1rem',
+            marginBottom: '1.5rem'
+          }}>
+            {/* Total Leads */}
+            <div style={{
+              background: 'white',
+              borderRadius: '12px',
+              padding: '1.25rem',
+              border: '1px solid #e5e7eb'
+            }}>
+              <div style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '0.25rem' }}>
+                {t.leads.totalLeads}
+              </div>
+              <div style={{ fontSize: '1.75rem', fontWeight: '700', color: '#111827' }}>
+                {leadsKpi.total}
+              </div>
+            </div>
+
+            {/* This Month */}
+            <div style={{
+              background: 'white',
+              borderRadius: '12px',
+              padding: '1.25rem',
+              border: '1px solid #e5e7eb'
+            }}>
+              <div style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '0.25rem' }}>
+                {t.leads.thisMonth}
+              </div>
+              <div style={{ fontSize: '1.75rem', fontWeight: '700', color: '#111827' }}>
+                {leadsKpi.thisMonth}
+              </div>
+            </div>
+
+            {/* Method Breakdown */}
+            <div style={{
+              background: 'white',
+              borderRadius: '12px',
+              padding: '1.25rem',
+              border: '1px solid #e5e7eb'
+            }}>
+              <div style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '0.5rem' }}>
+                {t.leads.byMethod}
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                {leadsKpi.byMethod.map(({ method, count }) => (
+                  <div key={method} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem' }}>
+                    <span style={{
+                      width: '8px',
+                      height: '8px',
+                      borderRadius: '50%',
+                      background: getMethodColor(method),
+                      flexShrink: 0
+                    }} />
+                    <span style={{ color: '#374151' }}>{getMethodLabel(method)}</span>
+                    <span style={{ color: '#6b7280', marginLeft: 'auto', fontWeight: '600' }}>{count}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Conversion Rate */}
+            <div style={{
+              background: 'white',
+              borderRadius: '12px',
+              padding: '1.25rem',
+              border: '1px solid #e5e7eb'
+            }}>
+              <div style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '0.25rem' }}>
+                {t.leads.conversionRate}
+              </div>
+              <div style={{ fontSize: '1.75rem', fontWeight: '700', color: '#111827' }}>
+                {leadsKpi.conversionRate}%
+              </div>
+              <div style={{ fontSize: '0.7rem', color: '#9ca3af' }}>
+                {leadsKpi.total} / {leadsKpi.totalAnalyses} {t.leads.ofAnalyses}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Filters Row */}
+        <div style={{
+          display: 'flex',
+          gap: '1rem',
+          marginBottom: '1rem',
+          flexWrap: 'wrap',
+          alignItems: 'center'
+        }}>
+          {/* Method filter */}
+          <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
+            <Filter size={14} style={{ color: '#6b7280' }} />
+            {methodFilters.map(method => (
+              <button
+                key={method}
+                onClick={() => setLeadsMethodFilter(method)}
+                style={{
+                  padding: '0.35rem 0.75rem',
+                  borderRadius: '6px',
+                  border: leadsMethodFilter === method ? '1px solid #667eea' : '1px solid #e5e7eb',
+                  background: leadsMethodFilter === method ? '#667eea' : 'white',
+                  color: leadsMethodFilter === method ? 'white' : '#374151',
+                  fontSize: '0.8rem',
+                  cursor: 'pointer',
+                  fontWeight: leadsMethodFilter === method ? '600' : '400',
+                  transition: 'all 0.15s'
+                }}
+              >
+                {method === 'all' ? t.leads.allMethods : getMethodLabel(method)}
+              </button>
+            ))}
+          </div>
+
+          {/* Date filter */}
+          <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
+            <Clock size={14} style={{ color: '#6b7280' }} />
+            {dateFilters.map(period => (
+              <button
+                key={period}
+                onClick={() => setLeadsDateFilter(period)}
+                style={{
+                  padding: '0.35rem 0.75rem',
+                  borderRadius: '6px',
+                  border: leadsDateFilter === period ? '1px solid #667eea' : '1px solid #e5e7eb',
+                  background: leadsDateFilter === period ? '#667eea' : 'white',
+                  color: leadsDateFilter === period ? 'white' : '#374151',
+                  fontSize: '0.8rem',
+                  cursor: 'pointer',
+                  fontWeight: leadsDateFilter === period ? '600' : '400',
+                  transition: 'all 0.15s'
+                }}
+              >
+                {dateFilterLabels[period]}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Leads List */}
+        {leadsLoading ? (
+          <div style={{ textAlign: 'center', padding: '3rem', color: '#6b7280' }}>
+            {t.loading}
+          </div>
+        ) : filteredLeads.length === 0 ? (
+          <div style={{
+            textAlign: 'center',
+            padding: '3rem',
+            color: '#6b7280',
+            background: 'white',
+            borderRadius: '12px',
+            border: '1px solid #e5e7eb'
+          }}>
+            {t.leads.noLeads}
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            {filteredLeads.map(lead => {
+              const userEmail = lead.profile?.email || lead.email || '—'
+              const userName = lead.profile?.full_name || lead.name || null
+
+              return (
+                <div
+                  key={lead.id}
+                  style={{
+                    background: 'white',
+                    borderRadius: '12px',
+                    padding: '1rem 1.25rem',
+                    border: '1px solid #e5e7eb',
+                    display: 'flex',
+                    flexDirection: isMobile ? 'column' : 'row',
+                    gap: isMobile ? '0.75rem' : '1.5rem',
+                    alignItems: isMobile ? 'flex-start' : 'center'
+                  }}
+                >
+                  {/* Method badge */}
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    minWidth: '110px'
+                  }}>
+                    <span style={{
+                      display: 'inline-block',
+                      padding: '0.25rem 0.6rem',
+                      borderRadius: '6px',
+                      fontSize: '0.75rem',
+                      fontWeight: '600',
+                      color: 'white',
+                      background: getMethodColor(lead.contact_method)
+                    }}>
+                      {getMethodLabel(lead.contact_method)}
+                    </span>
+                  </div>
+
+                  {/* User info */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: '0.875rem', fontWeight: '600', color: '#111827' }}>
+                      {userEmail}
+                    </div>
+                    {userName && (
+                      <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                        {userName}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Analysis context */}
+                  {lead.analysis ? (
+                    <div style={{
+                      minWidth: isMobile ? 'auto' : '200px',
+                      padding: '0.4rem 0.75rem',
+                      background: '#f9fafb',
+                      borderRadius: '8px',
+                      border: '1px solid #f3f4f6'
+                    }}>
+                      <div style={{
+                        fontSize: '0.75rem',
+                        color: '#374151',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        maxWidth: '180px'
+                      }}>
+                        {lead.analysis.filename}
+                      </div>
+                      <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.15rem' }}>
+                        <span style={{ fontSize: '0.7rem', color: '#6b7280' }}>
+                          {t.leads.score}: <strong style={{ color: lead.analysis.score >= 70 ? '#10b981' : lead.analysis.score >= 50 ? '#f59e0b' : '#ef4444' }}>
+                            {lead.analysis.score}
+                          </strong>
+                        </span>
+                        <span style={{ fontSize: '0.7rem', color: '#6b7280' }}>
+                          {lead.analysis.verdict}
+                        </span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{
+                      minWidth: isMobile ? 'auto' : '200px',
+                      fontSize: '0.75rem',
+                      color: '#9ca3af',
+                      fontStyle: 'italic'
+                    }}>
+                      {t.leads.lastAnalysis}: —
+                    </div>
+                  )}
+
+                  {/* Source */}
+                  <div style={{
+                    minWidth: '100px',
+                    fontSize: '0.75rem',
+                    color: '#6b7280'
+                  }}>
+                    <span style={{ color: '#9ca3af' }}>{t.leads.source}:</span>{' '}
+                    {getSourceLabel(lead.cta_source)}
+                  </div>
+
+                  {/* Country */}
+                  {lead.client_country && (
+                    <div style={{
+                      fontSize: '0.75rem',
+                      color: '#6b7280',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.25rem'
+                    }}>
+                      <Globe size={12} />
+                      {lead.client_country}
+                    </div>
+                  )}
+
+                  {/* Date */}
+                  <div style={{
+                    minWidth: '90px',
+                    fontSize: '0.75rem',
+                    color: '#9ca3af',
+                    textAlign: isMobile ? 'left' : 'right'
+                  }}>
+                    {formatDate(lead.created_at, lang)}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  // ============================================================================
   // RENDER: FEEDBACK TAB
   // ============================================================================
 
@@ -2653,6 +3284,7 @@ export default function AdminPage() {
         {activeTab === 'users' && renderUsers()}
         {activeTab === 'analytics' && renderAnalytics()}
         {activeTab === 'revenue' && renderRevenue()}
+        {activeTab === 'leads' && renderLeads()}
         {activeTab === 'feedback' && renderFeedback()}
       </main>
     </div>

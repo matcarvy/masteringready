@@ -82,7 +82,11 @@ export async function GET(request: NextRequest) {
       contactRequestsResult,
       spectralResult,
       categoricalResult,
-      energyResult
+      energyResult,
+      performanceResult,
+      filesResult,
+      engagementResult,
+      profileAnalysesResult
     ] = await Promise.all([
       // Total users
       adminClient.from('profiles').select('id', { count: 'exact', head: true }),
@@ -186,7 +190,27 @@ export async function GET(request: NextRequest) {
       adminClient.from('analyses')
         .select('energy_analysis')
         .is('deleted_at', null)
-        .not('energy_analysis', 'is', null)
+        .not('energy_analysis', 'is', null),
+
+      // Performance: processing time + chunked flag
+      adminClient.from('analyses')
+        .select('processing_time_seconds, is_chunked_analysis')
+        .is('deleted_at', null),
+
+      // Files: duration + size
+      adminClient.from('analyses')
+        .select('duration_seconds, file_size_bytes')
+        .is('deleted_at', null),
+
+      // Engagement: analyses with user_id + created_at for active user counts
+      adminClient.from('analyses')
+        .select('user_id, created_at')
+        .is('deleted_at', null)
+        .not('user_id', 'is', null),
+
+      // Engagement: users with >1 analysis
+      adminClient.from('profiles')
+        .select('total_analyses')
     ])
 
     // Calculate KPIs
@@ -356,6 +380,50 @@ export async function GET(request: NextRequest) {
       high: energyTotal > 0 ? Math.round((distSums.high / energyTotal) * 10) / 10 : 0
     }
 
+    // Performance stats
+    const perfRows = (performanceResult.data || []).filter((r: any) => r.processing_time_seconds != null)
+    const processingTimes = perfRows.map((r: any) => r.processing_time_seconds as number)
+    const avgProcessingTime = processingTimes.length > 0
+      ? Math.round((processingTimes.reduce((a, b) => a + b, 0) / processingTimes.length) * 10) / 10
+      : 0
+    const fastestAnalysis = processingTimes.length > 0 ? Math.round(Math.min(...processingTimes) * 10) / 10 : 0
+    const longestAnalysis = processingTimes.length > 0 ? Math.round(Math.max(...processingTimes) * 10) / 10 : 0
+    const chunkedRows = (performanceResult.data || []).filter((r: any) => r.is_chunked_analysis === true)
+    const totalPerfRows = (performanceResult.data || []).length
+    const chunkedPct = totalPerfRows > 0 ? Math.round((chunkedRows.length / totalPerfRows) * 1000) / 10 : 0
+
+    // File stats
+    const fileRows = (filesResult.data || [])
+    const durations = fileRows.map((r: any) => r.duration_seconds).filter((d: any) => d != null) as number[]
+    const avgDuration = durations.length > 0
+      ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length)
+      : 0
+    const fileSizes = fileRows.map((r: any) => r.file_size_bytes).filter((s: any) => s != null) as number[]
+    const avgFileSize = fileSizes.length > 0
+      ? Math.round((fileSizes.reduce((a, b) => a + b, 0) / fileSizes.length) / 1048576 * 10) / 10
+      : 0
+
+    // Engagement stats
+    const now = Date.now()
+    const sevenDaysAgo = now - 7 * 24 * 60 * 60 * 1000
+    const thirtyDaysAgoMs = now - 30 * 24 * 60 * 60 * 1000
+    const engagementRows = (engagementResult.data || []) as { user_id: string; created_at: string }[]
+    const activeUsers7d = new Set(
+      engagementRows
+        .filter(r => new Date(r.created_at).getTime() >= sevenDaysAgo)
+        .map(r => r.user_id)
+    ).size
+    const activeUsers30d = new Set(
+      engagementRows
+        .filter(r => new Date(r.created_at).getTime() >= thirtyDaysAgoMs)
+        .map(r => r.user_id)
+    ).size
+    const profileRows = (profileAnalysesResult.data || []) as { total_analyses: number }[]
+    const usersWithMultiple = profileRows.filter(p => p.total_analyses > 1).length
+    const usersWithMultiplePct = profileRows.length > 0
+      ? Math.round((usersWithMultiple / profileRows.length) * 1000) / 10
+      : 0
+
     return NextResponse.json({
       kpi: {
         totalUsers,
@@ -392,6 +460,26 @@ export async function GET(request: NextRequest) {
         totalContacts,
         conversionRate: contactConversionRate,
         byMethod: Object.entries(contactByMethod).map(([method, count]) => ({ method, count }))
+      },
+      performance: {
+        avgProcessingTime,
+        fastestAnalysis,
+        longestAnalysis,
+        chunkedPct,
+        totalMeasured: processingTimes.length
+      },
+      fileStats: {
+        avgDuration,
+        avgFileSize,
+        totalWithDuration: durations.length,
+        totalWithSize: fileSizes.length
+      },
+      engagement: {
+        activeUsers7d,
+        activeUsers30d,
+        usersWithMultiple,
+        usersWithMultiplePct,
+        totalProfiles: profileRows.length
       },
       technicalInsights: {
         spectral: {

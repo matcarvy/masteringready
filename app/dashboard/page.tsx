@@ -7,7 +7,7 @@
  */
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth, UserMenu } from '@/components/auth'
 import { supabase, getUserAnalysisStatus, checkCanBuyAddon, UserDashboardStatus } from '@/lib/supabase'
@@ -104,6 +104,12 @@ const translations = {
       channels: 'Canales',
       stereo: 'Estéreo',
       mono: 'Mono'
+    },
+    welcomeBanner: {
+      withBonus: (bonus: number, total: number) =>
+        `Tus ${bonus} análisis anteriores han sido restaurados. Este mes tienes ${total} análisis.`,
+      noBonus: 'Tienes 30 análisis este mes.',
+      title: 'Bienvenido a Pro'
     }
   },
   en: {
@@ -172,6 +178,12 @@ const translations = {
       channels: 'Channels',
       stereo: 'Stereo',
       mono: 'Mono'
+    },
+    welcomeBanner: {
+      withBonus: (bonus: number, total: number) =>
+        `Your ${bonus} previous analyses have been restored. This month you have ${total} analyses.`,
+      noBonus: 'You have 30 analyses this month.',
+      title: 'Welcome to Pro'
     }
   }
 }
@@ -332,6 +344,7 @@ const cleanReportText = (text: string): string => {
 
 export default function DashboardPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { user, loading: authLoading } = useAuth()
 
   const [lang, setLang] = useState<'es' | 'en'>('es')
@@ -347,6 +360,8 @@ export default function DashboardPage() {
   const [dashboardState, setDashboardState] = useState<DashboardState>('new_user')
   const [canBuyAddon, setCanBuyAddon] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
+  const [showWelcomeBanner, setShowWelcomeBanner] = useState(false)
+  const [welcomeBonus, setWelcomeBonus] = useState(0)
 
   const { geo } = useGeo()
   const t = translations[lang]
@@ -569,6 +584,17 @@ export default function DashboardPage() {
     return () => clearTimeout(timeout)
   }, [loading])
 
+  // Detect checkout success → show welcome banner
+  useEffect(() => {
+    if (loading || !profile || !subscription) return
+    if (searchParams.get('checkout') !== 'success') return
+    if (subscription.plan?.type !== 'pro' && subscription.plan?.type !== 'studio') return
+
+    const bonus = Math.min(profile.analyses_lifetime_used || 0, 2)
+    setWelcomeBonus(bonus)
+    setShowWelcomeBanner(true)
+  }, [loading, profile, subscription, searchParams])
+
   // Loading state
   if (authLoading || loading) {
     return (
@@ -720,6 +746,55 @@ export default function DashboardPage() {
         margin: '0 auto',
         padding: isMobile ? '1rem' : '2rem 1.5rem'
       }}>
+        {/* Welcome to Pro Banner */}
+        {showWelcomeBanner && (
+          <div style={{
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            borderRadius: '1rem',
+            padding: isMobile ? '1rem 1.25rem' : '1.25rem 1.5rem',
+            marginBottom: '1.5rem',
+            color: 'white',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '1rem',
+            boxShadow: '0 4px 15px rgba(102, 126, 234, 0.3)',
+            animation: 'bannerSlideDown 0.5s cubic-bezier(0.16, 1, 0.3, 1)'
+          }}>
+            <span style={{ fontSize: '1.5rem', flexShrink: 0 }}>🎉</span>
+            <div style={{ flex: 1 }}>
+              <p style={{ fontWeight: '700', fontSize: '1rem', marginBottom: '0.25rem' }}>
+                {t.welcomeBanner.title}
+              </p>
+              <p style={{ fontSize: '0.875rem', opacity: 0.95, margin: 0 }}>
+                {welcomeBonus > 0
+                  ? t.welcomeBanner.withBonus(welcomeBonus, 30 + welcomeBonus)
+                  : t.welcomeBanner.noBonus}
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                setShowWelcomeBanner(false)
+                router.replace('/dashboard')
+              }}
+              style={{
+                background: 'rgba(255,255,255,0.2)',
+                border: 'none',
+                borderRadius: '50%',
+                width: '28px',
+                height: '28px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                flexShrink: 0,
+                color: 'white'
+              }}
+            >
+              <X size={16} />
+            </button>
+          </div>
+        )}
+
         {/* Welcome & Stats */}
         <div style={{
           display: 'grid',
@@ -733,7 +808,9 @@ export default function DashboardPage() {
             borderRadius: '1rem',
             padding: isMobile ? '1.25rem' : '1.5rem',
             color: 'white',
-            gridColumn: isMobile ? 'span 1' : 'span 2'
+            gridColumn: isMobile ? 'span 1' : 'span 2',
+            opacity: 0,
+            animation: 'cardFadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards'
           }}>
             <h1 style={{ fontSize: '1.5rem', fontWeight: '700', marginBottom: '0.5rem' }}>
               {t.welcome}, {(user.user_metadata?.full_name || profile?.full_name || user.email?.split('@')[0])?.split(' ')[0]}!
@@ -748,7 +825,9 @@ export default function DashboardPage() {
             background: 'white',
             borderRadius: '1rem',
             padding: '1.5rem',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+            opacity: 0,
+            animation: 'cardFadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) 75ms forwards'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
               {isPro ? <Crown size={20} style={{ color: '#f59e0b' }} /> : <Star size={20} style={{ color: '#6b7280' }} />}
@@ -805,6 +884,8 @@ export default function DashboardPage() {
             borderRadius: '1rem',
             padding: '1.5rem',
             boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+            opacity: 0,
+            animation: 'cardFadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) 150ms forwards',
             ...(dashboardState === 'free_limit_reached' || dashboardState === 'pro_limit_reached' ? {
               border: '2px solid #f59e0b'
             } : {})
@@ -879,7 +960,9 @@ export default function DashboardPage() {
             background: 'white',
             borderRadius: '1rem',
             padding: '1.5rem',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+            opacity: 0,
+            animation: 'cardFadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) 225ms forwards'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
               <BarChart3 size={20} style={{ color: '#10b981' }} />
@@ -902,7 +985,9 @@ export default function DashboardPage() {
               borderRadius: '1rem',
               padding: '1.25rem 1.5rem',
               boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-              marginBottom: '1.5rem'
+              marginBottom: '1.5rem',
+              opacity: 0,
+              animation: 'cardFadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) 300ms forwards'
             }}>
               <h3 style={{
                 fontSize: '1rem',
@@ -935,6 +1020,8 @@ export default function DashboardPage() {
           background: 'white',
           borderRadius: '1rem',
           padding: '1.5rem',
+          opacity: 0,
+          animation: 'cardFadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) 375ms forwards',
           boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
         }}>
           <h2 style={{
@@ -1091,7 +1178,8 @@ export default function DashboardPage() {
           alignItems: 'center',
           justifyContent: 'center',
           zIndex: 100,
-          padding: '1rem'
+          padding: '1rem',
+          animation: 'modalBackdropIn 0.25s ease-out'
         }}>
           <div style={{
             background: 'white',
@@ -1101,7 +1189,8 @@ export default function DashboardPage() {
             maxHeight: isMobile ? '95vh' : '90vh',
             overflow: 'hidden',
             display: 'flex',
-            flexDirection: 'column'
+            flexDirection: 'column',
+            animation: 'modalContentIn 0.25s cubic-bezier(0.16, 1, 0.3, 1)'
           }}>
             {/* Modal Header */}
             <div style={{
@@ -1721,7 +1810,8 @@ export default function DashboardPage() {
           alignItems: 'center',
           justifyContent: 'center',
           zIndex: 100,
-          padding: '1rem'
+          padding: '1rem',
+          animation: 'modalBackdropIn 0.25s ease-out'
         }}>
           <div style={{
             background: 'white',
@@ -1730,7 +1820,8 @@ export default function DashboardPage() {
             maxWidth: '420px',
             width: '100%',
             position: 'relative',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            animation: 'modalContentIn 0.25s cubic-bezier(0.16, 1, 0.3, 1)'
           }}>
             {/* Close button */}
             <button
@@ -1937,7 +2028,8 @@ export default function DashboardPage() {
             alignItems: 'center',
             justifyContent: 'center',
             zIndex: 110,
-            padding: '1.5rem'
+            padding: '1.5rem',
+            animation: 'modalBackdropIn 0.25s ease-out'
           }}
         >
           <div
@@ -1949,7 +2041,8 @@ export default function DashboardPage() {
               maxWidth: '500px',
               width: '100%',
               boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
-              position: 'relative'
+              position: 'relative',
+              animation: 'modalContentIn 0.25s cubic-bezier(0.16, 1, 0.3, 1)'
             }}
           >
             <button
@@ -2044,6 +2137,36 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
+
+      <style jsx global>{`
+        @keyframes modalBackdropIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+
+        @keyframes modalContentIn {
+          from { opacity: 0; transform: scale(0.96) translateY(10px); }
+          to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        @keyframes cardFadeIn {
+          from { opacity: 0; transform: translateY(15px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes bannerSlideDown {
+          from { opacity: 0; transform: translateY(-20px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          *, *::before, *::after {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
+          }
+        }
+      `}</style>
     </div>
   )
 }
