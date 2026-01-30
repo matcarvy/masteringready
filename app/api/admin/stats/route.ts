@@ -76,7 +76,10 @@ export async function GET(request: NextRequest) {
       dailyResult,
       revSubsResult,
       revSingleResult,
-      revAddonResult
+      revAddonResult,
+      feedbackRatingsResult,
+      ctaClicksResult,
+      contactRequestsResult
     ] = await Promise.all([
       // Total users
       adminClient.from('profiles').select('id', { count: 'exact', head: true }),
@@ -148,7 +151,21 @@ export async function GET(request: NextRequest) {
         .select('amount, plan:plans!inner(type)')
         .eq('status', 'succeeded')
         .eq('plans.type', 'addon')
-        .gte('created_at', monthStart)
+        .gte('created_at', monthStart),
+
+      // Analysis ratings (thumbs up/down feedback)
+      adminClient.from('user_feedback')
+        .select('rating_bool')
+        .eq('feedback_type', 'analysis_rating')
+        .not('rating_bool', 'is', null),
+
+      // CTA clicks
+      adminClient.from('cta_clicks')
+        .select('cta_type, score_at_click, client_country, created_at'),
+
+      // Contact requests
+      adminClient.from('contact_requests')
+        .select('contact_method, cta_source, client_country, created_at')
     ])
 
     // Calculate KPIs
@@ -218,6 +235,41 @@ export async function GET(request: NextRequest) {
     const revenueSingle = (revSingleResult.data || []).reduce((sum, p) => sum + (p.amount || 0), 0)
     const revenueAddon = (revAddonResult.data || []).reduce((sum, p) => sum + (p.amount || 0), 0)
 
+    // Satisfaction (analysis ratings)
+    const ratings = (feedbackRatingsResult.data || [])
+    const thumbsUp = ratings.filter(r => r.rating_bool === true).length
+    const thumbsDown = ratings.filter(r => r.rating_bool === false).length
+    const satisfactionTotal = thumbsUp + thumbsDown
+    const satisfactionRate = satisfactionTotal > 0 ? Math.round((thumbsUp / satisfactionTotal) * 100) : 0
+
+    // CTA stats
+    const ctaClicks = ctaClicksResult.data || []
+    const ctaTotalClicks = ctaClicks.length
+    const ctaClickRate = totalAnalyses > 0 ? Math.round((ctaTotalClicks / totalAnalyses) * 1000) / 10 : 0
+    const ctaByType: Record<string, number> = {}
+    ctaClicks.forEach(c => { ctaByType[c.cta_type] = (ctaByType[c.cta_type] || 0) + 1 })
+    const ctaByScore = [
+      { range: '90-100', count: ctaClicks.filter(c => c.score_at_click != null && c.score_at_click >= 90).length },
+      { range: '70-89', count: ctaClicks.filter(c => c.score_at_click != null && c.score_at_click >= 70 && c.score_at_click < 90).length },
+      { range: '50-69', count: ctaClicks.filter(c => c.score_at_click != null && c.score_at_click >= 50 && c.score_at_click < 70).length },
+      { range: '0-49', count: ctaClicks.filter(c => c.score_at_click != null && c.score_at_click < 50).length }
+    ]
+    const ctaCountryMap: Record<string, number> = {}
+    ctaClicks.forEach(c => {
+      if (c.client_country) ctaCountryMap[c.client_country] = (ctaCountryMap[c.client_country] || 0) + 1
+    })
+    const ctaTopCountries = Object.entries(ctaCountryMap)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([country, count]) => ({ country, count }))
+
+    // Contact stats
+    const contacts = contactRequestsResult.data || []
+    const totalContacts = contacts.length
+    const contactConversionRate = ctaTotalClicks > 0 ? Math.round((totalContacts / ctaTotalClicks) * 1000) / 10 : 0
+    const contactByMethod: Record<string, number> = {}
+    contacts.forEach(c => { contactByMethod[c.contact_method] = (contactByMethod[c.contact_method] || 0) + 1 })
+
     return NextResponse.json({
       kpi: {
         totalUsers,
@@ -236,6 +288,24 @@ export async function GET(request: NextRequest) {
         subscriptions: Math.round(revenueSubscriptions * 100) / 100,
         single: Math.round(revenueSingle * 100) / 100,
         addon: Math.round(revenueAddon * 100) / 100
+      },
+      satisfaction: {
+        thumbsUp,
+        thumbsDown,
+        total: satisfactionTotal,
+        rate: satisfactionRate
+      },
+      ctaStats: {
+        totalClicks: ctaTotalClicks,
+        clickRate: ctaClickRate,
+        byType: Object.entries(ctaByType).map(([type, count]) => ({ type, count })),
+        byScore: ctaByScore,
+        topCountries: ctaTopCountries
+      },
+      contactStats: {
+        totalContacts,
+        conversionRate: contactConversionRate,
+        byMethod: Object.entries(contactByMethod).map(([method, count]) => ({ method, count }))
       }
     })
   } catch (error) {

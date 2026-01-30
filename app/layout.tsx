@@ -148,7 +148,7 @@ const structuredData = {
       price: '0',
       priceCurrency: 'USD',
       availability: 'https://schema.org/InStock',
-      priceValidUntil: '2026-02-01' // Ajustar cuando termine beta
+      priceValidUntil: '2026-12-31'
     },
     aggregateRating: {
       '@type': 'AggregateRating',

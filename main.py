@@ -132,7 +132,7 @@ try:
     logger.info("✅ Analyzer module imported successfully")
 except ImportError as e:
     logger.error(f"❌ Failed to import analyzer: {e}")
-    logger.error("Make sure mix_analyzer_v7.3_BETA.py is renamed to analyzer.py")
+    logger.error("Make sure analyzer module is available as analyzer.py")
     sys.exit(1)
 
 # Import Telegram alerts

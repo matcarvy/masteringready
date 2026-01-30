@@ -42,6 +42,9 @@ interface StatsData {
   topCountries: { country: string; count: number }[]
   analysesPerDay: { date: string; count: number }[]
   revenueBreakdown: { subscriptions: number; single: number; addon: number }
+  satisfaction?: { thumbsUp: number; thumbsDown: number; total: number; rate: number }
+  ctaStats?: { totalClicks: number; clickRate: number; byType: { type: string; count: number }[]; byScore: { range: string; count: number }[]; topCountries: { country: string; count: number }[] }
+  contactStats?: { totalContacts: number; conversionRate: number; byMethod: { method: string; count: number }[] }
 }
 
 interface UserRow {
@@ -86,6 +89,9 @@ interface FeedbackRow {
   is_priority: boolean
   created_at: string
   user?: { email: string; full_name: string | null }
+  rating_bool?: boolean | null
+  feedback_type?: string
+  client_country?: string | null
 }
 
 // ============================================================================
@@ -133,7 +139,14 @@ const translations = {
       verdictDistribution: 'Distribución de veredictos',
       formatBreakdown: 'Formatos de archivo',
       topCountries: 'Principales países',
-      noData: 'Sin datos disponibles'
+      noData: 'Sin datos disponibles',
+      conversionTitle: 'Métricas de conversión',
+      satisfactionRate: 'Tasa de satisfacción',
+      ctaClicks: 'Clics en CTA',
+      contactConversion: 'Conversión a contacto',
+      ctaByType: 'CTA por tipo',
+      ctaByScore: 'CTA por rango de puntuación',
+      contactByMethod: 'Contactos por método'
     },
     verdicts: {
       ready: 'Listo para mastering',
@@ -228,7 +241,14 @@ const translations = {
       verdictDistribution: 'Verdict Distribution',
       formatBreakdown: 'File Formats',
       topCountries: 'Top Countries',
-      noData: 'No data available'
+      noData: 'No data available',
+      conversionTitle: 'Conversion Metrics',
+      satisfactionRate: 'Satisfaction Rate',
+      ctaClicks: 'CTA Clicks',
+      contactConversion: 'Contact Conversion',
+      ctaByType: 'CTA by Type',
+      ctaByScore: 'CTA by Score Range',
+      contactByMethod: 'Contacts by Method'
     },
     verdicts: {
       ready: 'Ready for mastering',
@@ -527,7 +547,7 @@ export default function AdminPage() {
         .select(`
           id, category, subject, message, lang, satisfaction, status,
           admin_notes, response_es, response_en, responded_at,
-          is_priority, created_at,
+          is_priority, created_at, rating_bool, feedback_type, client_country,
           user:profiles(email, full_name)
         `)
         .order('created_at', { ascending: false })
@@ -556,7 +576,10 @@ export default function AdminPage() {
             responded_at: f.responded_at as string | null,
             is_priority: f.is_priority as boolean,
             created_at: f.created_at as string,
-            user: fbUser || undefined
+            user: fbUser || undefined,
+            rating_bool: f.rating_bool as boolean | null | undefined,
+            feedback_type: f.feedback_type as string | undefined,
+            client_country: f.client_country as string | null | undefined
           }
         }))
       }
@@ -1339,6 +1362,138 @@ export default function AdminPage() {
             )}
           </div>
         </div>
+
+        {/* Conversion Metrics Section */}
+        <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#111827', marginTop: '1rem' }}>
+          {t.analytics.conversionTitle}
+        </h3>
+
+        {/* KPI Row: Satisfaction, CTA Clicks, Contact Conversion */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+          {/* Satisfaction Rate */}
+          <div style={{
+            background: 'white',
+            borderRadius: '1rem',
+            padding: '1.5rem',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+            textAlign: 'center'
+          }}>
+            <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.5rem' }}>
+              {t.analytics.satisfactionRate}
+            </div>
+            <div style={{ fontSize: '2rem', fontWeight: '700', color: (statsData.satisfaction?.rate || 0) >= 70 ? '#10b981' : (statsData.satisfaction?.rate || 0) >= 40 ? '#f59e0b' : '#ef4444' }}>
+              {statsData.satisfaction?.rate || 0}%
+            </div>
+            <div style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.25rem' }}>
+              👍 {statsData.satisfaction?.thumbsUp || 0} / 👎 {statsData.satisfaction?.thumbsDown || 0}
+            </div>
+          </div>
+
+          {/* CTA Clicks */}
+          <div style={{
+            background: 'white',
+            borderRadius: '1rem',
+            padding: '1.5rem',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+            textAlign: 'center'
+          }}>
+            <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.5rem' }}>
+              {t.analytics.ctaClicks}
+            </div>
+            <div style={{ fontSize: '2rem', fontWeight: '700', color: '#6366f1' }}>
+              {statsData.ctaStats?.totalClicks || 0}
+            </div>
+            <div style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.25rem' }}>
+              {statsData.ctaStats?.clickRate || 0}% {lang === 'es' ? 'de análisis' : 'of analyses'}
+            </div>
+          </div>
+
+          {/* Contact Conversion */}
+          <div style={{
+            background: 'white',
+            borderRadius: '1rem',
+            padding: '1.5rem',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+            textAlign: 'center'
+          }}>
+            <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.5rem' }}>
+              {t.analytics.contactConversion}
+            </div>
+            <div style={{ fontSize: '2rem', fontWeight: '700', color: '#059669' }}>
+              {statsData.contactStats?.conversionRate || 0}%
+            </div>
+            <div style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.25rem' }}>
+              {statsData.contactStats?.totalContacts || 0} {lang === 'es' ? 'contactos' : 'contacts'}
+            </div>
+          </div>
+        </div>
+
+        {/* Charts Row: CTA by Type + CTA by Score */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1rem' }}>
+          {/* CTA by Type */}
+          <div style={{
+            background: 'white',
+            borderRadius: '1rem',
+            padding: '1.5rem',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+          }}>
+            <h3 style={{ fontSize: '1rem', fontWeight: '600', color: '#111827', marginBottom: '1rem' }}>
+              {t.analytics.ctaByType}
+            </h3>
+            {(statsData.ctaStats?.byType || []).length > 0 ? renderBarChart(
+              (statsData.ctaStats?.byType || []).map(c => ({
+                label: c.type,
+                value: c.count,
+                color: c.type === 'mastering' ? '#6366f1' : c.type === 'mix_help' ? '#8b5cf6' : '#a855f7'
+              }))
+            ) : (
+              <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>{t.analytics.noData}</p>
+            )}
+          </div>
+
+          {/* CTA by Score Range */}
+          <div style={{
+            background: 'white',
+            borderRadius: '1rem',
+            padding: '1.5rem',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+          }}>
+            <h3 style={{ fontSize: '1rem', fontWeight: '600', color: '#111827', marginBottom: '1rem' }}>
+              {t.analytics.ctaByScore}
+            </h3>
+            {(statsData.ctaStats?.byScore || []).some(s => s.count > 0) ? renderBarChart(
+              (statsData.ctaStats?.byScore || []).map(s => ({
+                label: s.range,
+                value: s.count,
+                color: s.range === '90-100' ? '#10b981' : s.range === '70-89' ? '#3b82f6' : s.range === '50-69' ? '#f59e0b' : '#ef4444'
+              }))
+            ) : (
+              <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>{t.analytics.noData}</p>
+            )}
+          </div>
+        </div>
+
+        {/* Contacts by Method */}
+        <div style={{
+          background: 'white',
+          borderRadius: '1rem',
+          padding: '1.5rem',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+          maxWidth: '400px'
+        }}>
+          <h3 style={{ fontSize: '1rem', fontWeight: '600', color: '#111827', marginBottom: '1rem' }}>
+            {t.analytics.contactByMethod}
+          </h3>
+          {(statsData.contactStats?.byMethod || []).length > 0 ? renderBarChart(
+            (statsData.contactStats?.byMethod || []).map(m => ({
+              label: m.method === 'whatsapp' ? 'WhatsApp' : m.method === 'email' ? 'Email' : 'Instagram',
+              value: m.count,
+              color: m.method === 'whatsapp' ? '#25d366' : m.method === 'email' ? '#3b82f6' : '#e1306c'
+            }))
+          ) : (
+            <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>{t.analytics.noData}</p>
+          )}
+        </div>
       </div>
     )
   }
@@ -1633,6 +1788,31 @@ export default function AdminPage() {
                   {fb.satisfaction && (
                     <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>
                       {'*'.repeat(parseInt(fb.satisfaction))}
+                    </span>
+                  )}
+
+                  {fb.rating_bool !== null && fb.rating_bool !== undefined && (
+                    <span style={{ fontSize: '1rem' }}>
+                      {fb.rating_bool ? '👍' : '👎'}
+                    </span>
+                  )}
+
+                  {fb.feedback_type === 'analysis_rating' && (
+                    <span style={{
+                      fontSize: '0.65rem',
+                      padding: '0.1rem 0.4rem',
+                      borderRadius: '9999px',
+                      fontWeight: '500',
+                      background: '#ede9fe',
+                      color: '#7c3aed'
+                    }}>
+                      {lang === 'es' ? 'Valoración' : 'Rating'}
+                    </span>
+                  )}
+
+                  {fb.client_country && (
+                    <span style={{ fontSize: '0.75rem', color: '#9ca3af' }}>
+                      {fb.client_country}
                     </span>
                   )}
 

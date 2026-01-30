@@ -280,6 +280,13 @@ function Home() {
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false)
   const [feedback, setFeedback] = useState({ rating: 0, liked: '', change: '', add: '' })
+  // Feedback widget + CTA tracking state
+  const [savedAnalysisId, setSavedAnalysisId] = useState<string | null>(null)
+  const [analysisRating, setAnalysisRating] = useState<boolean | null>(null)
+  const [analysisComment, setAnalysisComment] = useState('')
+  const [ratingSubmitted, setRatingSubmitted] = useState(false)
+  const [showRatingWidget, setShowRatingWidget] = useState(false)
+  const [ctaSource, setCtaSource] = useState<string | null>(null)
 
   // Geo detection for regional pricing
   const { geo } = useGeo()
@@ -322,6 +329,16 @@ function Home() {
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
+
+  // Delayed rating widget appearance (4s after results load)
+  useEffect(() => {
+    if (!result) {
+      setShowRatingWidget(false)
+      return
+    }
+    const timer = setTimeout(() => setShowRatingWidget(true), 4000)
+    return () => clearTimeout(timer)
+  }, [result])
 
   // Rotate loading messages: anchor first (6-8s), then random non-repeating
   const shownIndicesRef = useRef<Set<number>>(new Set())
@@ -651,13 +668,14 @@ const handleAnalyze = async () => {
         // Save directly to database for logged-in users
         console.log('[Analysis] Saving to database for logged-in user:', user.id)
         try {
-          await saveAnalysisToDatabase(user.id, {
+          const savedData = await saveAnalysisToDatabase(user.id, {
             ...data,
             filename: file.name,
             created_at: new Date().toISOString(),
             lang,
             strict
           }, file, geo?.countryCode)
+          setSavedAnalysisId(savedData?.[0]?.id || null)
         } catch (saveErr) {
           console.error('[Analysis] Failed to save to database:', saveErr)
         }
@@ -699,6 +717,51 @@ const handleAnalyze = async () => {
     setError(null)
     setLoading(false)
     setProgress(0)
+    setSavedAnalysisId(null)
+    setAnalysisRating(null)
+    setAnalysisComment('')
+    setRatingSubmitted(false)
+    setShowRatingWidget(false)
+    setCtaSource(null)
+  }
+
+  // CTA click tracking (fire-and-forget)
+  const trackCtaClick = (ctaType: string) => {
+    supabase.from('cta_clicks').insert({
+      analysis_id: savedAnalysisId,
+      user_id: user?.id || null,
+      cta_type: ctaType,
+      score_at_click: result?.score || null,
+      client_country: geo?.countryCode || null
+    }).then(() => {})
+  }
+
+  // Contact request logging (fire-and-forget)
+  const logContactRequest = (contactMethod: string) => {
+    supabase.from('contact_requests').insert({
+      analysis_id: savedAnalysisId,
+      user_id: user?.id || null,
+      cta_source: ctaSource,
+      contact_method: contactMethod,
+      client_country: geo?.countryCode || null
+    }).then(() => {})
+  }
+
+  // Analysis rating submission
+  const submitAnalysisRating = async () => {
+    if (analysisRating === null) return
+    await supabase.from('user_feedback').insert({
+      user_id: user?.id || null,
+      analysis_id: savedAnalysisId,
+      feedback_type: 'analysis_rating',
+      rating_bool: analysisRating,
+      message: analysisComment || '',
+      subject: analysisRating ? 'Thumbs up' : 'Thumbs down',
+      category: 'other',
+      lang: lang,
+      client_country: geo?.countryCode || null
+    })
+    setRatingSubmitted(true)
   }
 
   const handleDownload = () => {
@@ -1116,20 +1179,6 @@ by Matías Carvajal
                 gap: '0.5rem'
               }}>
                 <Music size={24} style={{ color: '#667eea', flexShrink: 0 }} /> Mastering Ready
-                <span style={{
-                  fontSize: '0.5em',
-                  fontWeight: '700',
-                  color: '#ffffff',
-                  WebkitTextFillColor: '#ffffff',
-                  backgroundColor: '#667eea',
-                  padding: '0.2em 0.5em',
-                  borderRadius: '0.3em',
-                  verticalAlign: 'middle',
-                  letterSpacing: '0.05em',
-                  textTransform: 'uppercase'
-                }}>
-                  BETA
-                </span>
               </span>
             </div>
             <div style={{ display: 'flex', gap: 'clamp(0.5rem, 2vw, 1rem)', alignItems: 'center' }}>
@@ -2736,7 +2785,11 @@ by Matías Carvajal
                   {/* CTA Button */}
                   <div style={{ paddingLeft: isMobile ? '0' : '5rem' }}>
                     <button
-                      onClick={() => setShowContactModal(true)}
+                      onClick={() => {
+                        trackCtaClick('mastering')
+                        setCtaSource('mastering')
+                        setShowContactModal(true)
+                      }}
                       style={{
                         background: 'white',
                         color: '#6366f1',
@@ -2765,46 +2818,110 @@ by Matías Carvajal
                 </div>
               )}
 
-              {/* Feedback Button - SECOND */}
-              {!feedbackSubmitted && (
+              {/* Analysis Rating Widget — appears with fade-in after 4s */}
+              {!ratingSubmitted && (
                 <div style={{
                   textAlign: 'center',
-                  marginBottom: '1.5rem'
+                  marginBottom: '1.5rem',
+                  opacity: showRatingWidget ? 1 : 0,
+                  transform: showRatingWidget ? 'translateY(0)' : 'translateY(10px)',
+                  transition: 'opacity 0.6s ease, transform 0.6s ease',
+                  pointerEvents: showRatingWidget ? 'auto' : 'none'
                 }}>
                   <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.75rem' }}>
                     {lang === 'es'
-                      ? 'Estamos en beta. ¿Cómo te fue con el análisis?'
-                      : 'We\'re in beta. How was your analysis experience?'}
+                      ? '¿Cómo te fue con el análisis?'
+                      : 'How was your analysis experience?'}
                   </p>
-                  <button
-                    onClick={() => setShowFeedbackModal(true)}
-                    style={{
-                      background: 'white',
-                      color: '#667eea',
-                      padding: '0.75rem 2rem',
-                      borderRadius: '9999px',
-                      fontWeight: '600',
-                      border: '2px solid #667eea',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s',
-                      fontSize: '0.95rem'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = '#f3f4f6'
-                      e.currentTarget.style.transform = 'translateY(-2px)'
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = 'white'
-                      e.currentTarget.style.transform = 'translateY(0)'
-                    }}
-                  >
-                    💬 {lang === 'es' ? 'Dejarnos Feedback' : 'Give Feedback'}
-                  </button>
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', marginBottom: analysisRating !== null ? '0.75rem' : '0' }}>
+                    <button
+                      onClick={() => setAnalysisRating(true)}
+                      style={{
+                        width: '3rem',
+                        height: '3rem',
+                        borderRadius: '50%',
+                        border: analysisRating === true ? '2px solid #10b981' : '2px solid #e5e7eb',
+                        background: analysisRating === true ? '#ecfdf5' : 'white',
+                        cursor: 'pointer',
+                        fontSize: '1.25rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        transition: 'all 0.2s'
+                      }}
+                      title={lang === 'es' ? 'Me fue bien' : 'Good experience'}
+                    >
+                      👍
+                    </button>
+                    <button
+                      onClick={() => setAnalysisRating(false)}
+                      style={{
+                        width: '3rem',
+                        height: '3rem',
+                        borderRadius: '50%',
+                        border: analysisRating === false ? '2px solid #ef4444' : '2px solid #e5e7eb',
+                        background: analysisRating === false ? '#fef2f2' : 'white',
+                        cursor: 'pointer',
+                        fontSize: '1.25rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        transition: 'all 0.2s'
+                      }}
+                      title={lang === 'es' ? 'Podría mejorar' : 'Could be better'}
+                    >
+                      👎
+                    </button>
+                  </div>
+                  {analysisRating !== null && (
+                    <div style={{
+                      opacity: 1,
+                      transition: 'opacity 0.3s ease'
+                    }}>
+                      <input
+                        type="text"
+                        placeholder={lang === 'es' ? 'Comentario opcional...' : 'Optional comment...'}
+                        value={analysisComment}
+                        onChange={(e) => setAnalysisComment(e.target.value)}
+                        style={{
+                          width: '100%',
+                          maxWidth: '320px',
+                          padding: '0.5rem 0.75rem',
+                          borderRadius: '0.5rem',
+                          border: '1px solid #e5e7eb',
+                          fontSize: '0.875rem',
+                          marginBottom: '0.5rem',
+                          outline: 'none'
+                        }}
+                        onFocus={(e) => e.currentTarget.style.borderColor = '#667eea'}
+                        onBlur={(e) => e.currentTarget.style.borderColor = '#e5e7eb'}
+                      />
+                      <br />
+                      <button
+                        onClick={submitAnalysisRating}
+                        style={{
+                          background: '#667eea',
+                          color: 'white',
+                          padding: '0.5rem 1.5rem',
+                          borderRadius: '9999px',
+                          border: 'none',
+                          fontWeight: '600',
+                          cursor: 'pointer',
+                          fontSize: '0.875rem',
+                          transition: 'all 0.2s'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.background = '#5a6fd6'}
+                        onMouseLeave={(e) => e.currentTarget.style.background = '#667eea'}
+                      >
+                        {lang === 'es' ? 'Enviar' : 'Submit'}
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
 
-              {/* Thank you message after feedback */}
-              {feedbackSubmitted && (
+              {/* Thank you message after rating */}
+              {ratingSubmitted && (
                 <div style={{
                   background: '#f0fdf4',
                   borderRadius: '1rem',
@@ -2813,14 +2930,16 @@ by Matías Carvajal
                   border: '1px solid #86efac',
                   textAlign: 'center'
                 }}>
-                  <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>🙏</div>
-                  <h3 style={{ fontSize: '1.25rem', fontWeight: '600', color: '#166534', marginBottom: '0.5rem' }}>
+                  <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>
+                    {analysisRating ? '👍' : '👎'}
+                  </div>
+                  <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#166534', marginBottom: '0.25rem' }}>
                     {lang === 'es' ? '¡Gracias por tu feedback!' : 'Thank you for your feedback!'}
                   </h3>
-                  <p style={{ fontSize: '0.875rem', color: '#15803d' }}>
+                  <p style={{ fontSize: '0.8125rem', color: '#15803d' }}>
                     {lang === 'es'
-                      ? 'Tu opinión nos ayuda a mejorar Mastering Ready para todos.'
-                      : 'Your input helps us improve Mastering Ready for everyone.'}
+                      ? 'Tu opinión nos ayuda a mejorar Mastering Ready.'
+                      : 'Your input helps us improve Mastering Ready.'}
                   </p>
                 </div>
               )}
@@ -3489,6 +3608,7 @@ by Matías Carvajal
                 )}`}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={() => logContactRequest('whatsapp')}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -3525,7 +3645,7 @@ by Matías Carvajal
               {/* Email */}
               <a
                 href={`mailto:mat@matcarvy.com?subject=${encodeURIComponent(
-                  lang === 'es' 
+                  lang === 'es'
                     ? 'Solicitud de Mastering - Mastering Ready'
                     : 'Mastering Request - Mastering Ready'
                 )}&body=${encodeURIComponent(
@@ -3533,6 +3653,7 @@ by Matías Carvajal
                     ? `Hola Matías,\n\nAcabo de analizar mi mezcla en Mastering Ready y me gustaría hablar sobre el proceso de mastering.\n\nPuntuación obtenida: ${result?.score || 'N/A'}/100\nArchivo: ${result?.filename || 'N/A'}\n\nGracias!`
                     : `Hi Matías,\n\nI just analyzed my mix on Mastering Ready and would like to discuss the mastering process.\n\nScore obtained: ${result?.score || 'N/A'}/100\nFile: ${result?.filename || 'N/A'}\n\nThanks!`
                 )}`}
+                onClick={() => logContactRequest('email')}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -3569,6 +3690,7 @@ by Matías Carvajal
                 href="https://instagram.com/matcarvy"
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={() => logContactRequest('instagram')}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -3817,7 +3939,7 @@ by Matías Carvajal
 
               <button
                 onClick={() => {
-                  const feedbackText = `FEEDBACK BETA - Mastering Ready\n\n⭐ Utilidad: ${feedback.rating}/10\n\n✅ Qué gustó:\n${feedback.liked}\n\n🔄 Qué cambiaría:\n${feedback.change || 'N/A'}\n\n➕ Qué agregaría:\n${feedback.add || 'N/A'}\n\nScore obtenido: ${result?.score || 'N/A'}/100`
+                  const feedbackText = `FEEDBACK - Mastering Ready\n\n⭐ Utilidad: ${feedback.rating}/10\n\n✅ Qué gustó:\n${feedback.liked}\n\n🔄 Qué cambiaría:\n${feedback.change || 'N/A'}\n\n➕ Qué agregaría:\n${feedback.add || 'N/A'}\n\nScore obtenido: ${result?.score || 'N/A'}/100`
                   window.open(`https://wa.me/573155576115?text=${encodeURIComponent(feedbackText)}`, '_blank')
                   setFeedbackSubmitted(true)
                   setShowFeedbackModal(false)
