@@ -56,7 +56,7 @@ from datetime import datetime, timedelta
 import soundfile as sf
 
 # Analyzer version - used in API responses for tracking
-ANALYZER_VERSION = "7.4.0"
+ANALYZER_VERSION = "7.4.1"
 
 # Import IP rate limiting and VPN detection
 try:

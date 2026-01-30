@@ -36,7 +36,7 @@ function mapVerdictToEnum(verdict: string): 'ready' | 'almost_ready' | 'needs_wo
 // ============================================================================
 // Helper: Save analysis directly to database for logged-in users
 // ============================================================================
-async function saveAnalysisToDatabase(userId: string, analysis: any, fileObj?: File) {
+async function saveAnalysisToDatabase(userId: string, analysis: any, fileObj?: File, countryCode?: string) {
   console.log('[SaveAnalysis] Saving for logged-in user:', userId, 'file:', analysis.filename)
   console.log('[SaveAnalysis] API response keys:', Object.keys(analysis).join(', '))
   console.log('[SaveAnalysis] Report fields:', {
@@ -92,7 +92,10 @@ async function saveAnalysisToDatabase(userId: string, analysis: any, fileObj?: F
       // v1.5: New data capture fields
       spectral_6band: analysis.spectral_6band || null,
       energy_analysis: analysis.energy_analysis || null,
-      categorical_flags: analysis.categorical_flags || null
+      categorical_flags: analysis.categorical_flags || null,
+      // v1.6: Country + timezone for admin analytics
+      client_country: countryCode || null,
+      client_timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || null
     })
     .select()
 
@@ -654,7 +657,7 @@ const handleAnalyze = async () => {
             created_at: new Date().toISOString(),
             lang,
             strict
-          }, file)
+          }, file, geo?.countryCode)
         } catch (saveErr) {
           console.error('[Analysis] Failed to save to database:', saveErr)
         }
