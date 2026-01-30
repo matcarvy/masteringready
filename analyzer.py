@@ -524,24 +524,25 @@ class ScoringThresholds:
         }
     }
     
-    # v7.4.0 FIX: Aligned thresholds with bar display - gradual transitions
-    # ≥0.7 excellent, 0.5-0.7 good, 0.3-0.5 warning, 0.1-0.3 poor, <0.1 critical
+    # v7.4.1 FIX: Restored strict mode differentiation for stereo
+    # Strict shifts each boundary +0.05 (same pattern as headroom/PLR strict offsets)
+    # Bars remain mode-independent; text evaluation is stricter
     STEREO_WIDTH = {
         "strict": {
-            "perfect": lambda corr: corr >= 0.7,  # ≥0.7 excellent
-            "pass": lambda corr: 0.5 <= corr < 0.7,  # 0.5-0.7 good
-            "warning": lambda corr: 0.3 <= corr < 0.5,  # 0.3-0.5 warning
-            "poor": lambda corr: 0.1 <= corr < 0.3,  # 0.1-0.3 poor (new)
-            "critical": lambda corr: 0 <= corr < 0.1,  # 0-0.1 critical
-            "catastrophic": lambda corr: corr < 0,  # Negative = phase issues
+            "perfect": lambda corr: corr >= 0.75,       # Strict demands higher correlation
+            "pass": lambda corr: 0.55 <= corr < 0.75,
+            "warning": lambda corr: 0.35 <= corr < 0.55,
+            "poor": lambda corr: 0.15 <= corr < 0.35,
+            "critical": lambda corr: 0 <= corr < 0.15,
+            "catastrophic": lambda corr: corr < 0,
         },
         "normal": {
-            "perfect": lambda corr: corr >= 0.7,  # ≥0.7 excellent
-            "pass": lambda corr: 0.5 <= corr < 0.7,  # 0.5-0.7 good
+            "perfect": lambda corr: corr >= 0.7,        # ≥0.7 excellent
+            "pass": lambda corr: 0.5 <= corr < 0.7,     # 0.5-0.7 good
             "warning": lambda corr: 0.3 <= corr < 0.5,  # 0.3-0.5 warning
-            "poor": lambda corr: 0.1 <= corr < 0.3,  # 0.1-0.3 poor (new)
-            "critical": lambda corr: 0 <= corr < 0.1,  # 0-0.1 critical
-            "catastrophic": lambda corr: corr < 0,  # Negative = phase issues
+            "poor": lambda corr: 0.1 <= corr < 0.3,     # 0.1-0.3 poor
+            "critical": lambda corr: 0 <= corr < 0.1,   # 0-0.1 critical
+            "catastrophic": lambda corr: corr < 0,      # Negative = phase issues
         }
     }
 
@@ -630,8 +631,9 @@ def calculate_stereo_score(correlation: float, strict: bool) -> Tuple[str, float
     Calculate stereo width score WITHOUT language dependency.
     Returns: (status, score_delta)
 
-    v7.4.0: Aligned thresholds with bar display - gradual transitions
-    ≥0.7 excellent, 0.5-0.7 good, 0.3-0.5 warning, 0.1-0.3 poor, <0.1 critical
+    v7.4.1: Strict mode demands +0.05 higher correlation at each threshold.
+    Normal: ≥0.7 excellent, 0.5-0.7 good, 0.3-0.5 warning, 0.1-0.3 poor, <0.1 critical
+    Strict: ≥0.75 excellent, 0.55-0.75 good, 0.35-0.55 warning, 0.15-0.35 poor, <0.15 critical
     """
     mode = "strict" if strict else "normal"
     thresholds = ScoringThresholds.STEREO_WIDTH[mode]
