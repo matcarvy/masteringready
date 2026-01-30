@@ -853,10 +853,10 @@ by Matías Carvajal
         zIndex: 50
       }}>
         <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 1rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: '64px', gap: '0.5rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', minHeight: '64px', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0, flex: '1 1 auto', overflow: 'hidden' }}>
               <span style={{
-                fontSize: 'clamp(1.25rem, 4vw, 1.5rem)',
+                fontSize: 'clamp(1rem, 4vw, 1.5rem)',
                 fontWeight: 'bold',
                 background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                 WebkitBackgroundClip: 'text',
@@ -865,7 +865,9 @@ by Matías Carvajal
                 whiteSpace: 'nowrap',
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '0.5rem'
+                gap: '0.5rem',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis'
               }}>
                 <Music size={24} style={{ color: '#667eea', flexShrink: 0 }} /> Mastering Ready
                 <span style={{
@@ -884,7 +886,7 @@ by Matías Carvajal
                 </span>
               </span>
             </div>
-            <div style={{ display: 'flex', gap: 'clamp(0.5rem, 2vw, 1rem)', alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: 'clamp(0.25rem, 1.5vw, 1rem)', alignItems: 'center', flexShrink: 0 }}>
               <button
                 onClick={() => setLang(lang === 'es' ? 'en' : 'es')}
                 style={{
@@ -950,9 +952,9 @@ by Matías Carvajal
                 background: 'rgba(255, 255, 255, 0.2)',
                 backdropFilter: 'blur(10px)',
                 borderRadius: '9999px',
-                padding: '0.5rem 1rem'
+                padding: 'clamp(0.375rem, 1vw, 0.5rem) clamp(0.75rem, 2vw, 1rem)'
               }}>
-                <span style={{ fontSize: '1rem', fontWeight: '500' }}>
+                <span style={{ fontSize: 'clamp(0.8rem, 1.8vw, 1rem)', fontWeight: '500' }}>
                   ✨ {lang === 'es' 
                     ? 'Metodología probada en más de 300 producciones profesionales'
                     : 'Methodology proven in over 300 professional productions'}
@@ -960,7 +962,7 @@ by Matías Carvajal
               </div>
               
               <h1 className="hero-main-title" style={{
-                fontSize: 'clamp(2.5rem, 5vw, 3.75rem)',
+                fontSize: 'clamp(1.75rem, 5vw, 3.75rem)',
                 fontWeight: 'bold',
                 marginBottom: '1.5rem',
                 lineHeight: '1.2'
@@ -971,8 +973,8 @@ by Matías Carvajal
               </h1>
               
               <p className="hero-subtitle" style={{
-                fontSize: 'clamp(1.125rem, 2vw, 1.5rem)',
-                marginBottom: '2rem',
+                fontSize: 'clamp(0.95rem, 2vw, 1.5rem)',
+                marginBottom: '1.5rem',
                 color: '#e9d5ff'
               }}>
                 {lang === 'es'
@@ -986,13 +988,13 @@ by Matías Carvajal
                 style={{
                   background: 'white',
                   color: '#667eea',
-                  padding: '1rem 2rem',
+                  padding: 'clamp(0.75rem, 1.5vw, 1rem) clamp(1.5rem, 3vw, 2rem)',
                   borderRadius: '9999px',
                   fontWeight: 'bold',
-                  fontSize: '1.125rem',
+                  fontSize: 'clamp(0.875rem, 2vw, 1.125rem)',
                   border: 'none',
                   cursor: 'pointer',
-                  marginBottom: '2rem',
+                  marginBottom: '1.5rem',
                   transition: 'all 0.3s',
                   boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
                 }}

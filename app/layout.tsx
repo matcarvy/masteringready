@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 
 // =============================================================================
 // SEO METADATA - MasteringReady
@@ -13,6 +13,12 @@ const siteConfig = {
     default: 'es_CO',
     alternate: 'en_US'
   }
+}
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
 }
 
 export const metadata: Metadata = {
@@ -267,6 +273,11 @@ export default function RootLayout({
   return (
     <html lang="es">
       <head>
+        {/* Prevent Safari text inflation on iOS accessibility text scaling */}
+        <style dangerouslySetInnerHTML={{ __html: `
+          html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+        `}} />
+
         {/* Structured Data */}
         <script
           type="application/ld+json"
