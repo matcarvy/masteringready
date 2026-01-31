@@ -55,7 +55,13 @@ export async function GET(request: NextRequest) {
         )
       }
 
-      // Success - redirect to home with language
+      // Recovery flow → redirect to reset-password page so user can set new password
+      if (type === 'recovery') {
+        const params = langParam ? `?${langParam}` : ''
+        return NextResponse.redirect(new URL(`/auth/reset-password${params}`, origin))
+      }
+
+      // Other flows (signup confirmation) → redirect to home
       const params = langParam ? `verified=true&${langParam}` : 'verified=true'
       return NextResponse.redirect(new URL(`/?${params}`, origin))
     } catch (err) {

@@ -172,7 +172,7 @@ async def cleanup_old_jobs():
 app = FastAPI(
     title="MasteringReady API",
     description="Audio analysis API based on Matías Carvajal's Mastering Ready methodology",
-    version="7.3.9",
+    version=ANALYZER_VERSION,
     docs_url="/docs",
     redoc_url="/redoc"
 )
@@ -303,7 +303,7 @@ async def root():
     """Health check endpoint."""
     return {
         "name": "MasteringReady API",
-        "version": "7.3.9",
+        "version": ANALYZER_VERSION,
         "status": "healthy",
         "methodology": "Basado en 'Mastering Ready' de Matías Carvajal",
         "endpoints": {
@@ -320,7 +320,7 @@ async def health_check():
     """Detailed health check."""
     return {
         "status": "healthy",
-        "version": "7.3.9",
+        "version": ANALYZER_VERSION,
         "analyzer_loaded": True,
         "privacy": "In-memory processing, auto-delete guaranteed",
         "timestamp": datetime.utcnow().isoformat()
