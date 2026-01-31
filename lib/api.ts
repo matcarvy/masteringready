@@ -16,6 +16,7 @@ export async function analyzeFile(
       bitDepth: number
       numberOfChannels: number
       duration: number
+      fileSize: number
     }
   }
 ) {
@@ -72,6 +73,7 @@ export async function startAnalysisPolling(
       bitDepth: number
       numberOfChannels: number
       duration: number
+      fileSize: number
     }
     isAuthenticated?: boolean  // NEW: Whether user is logged in
   }
@@ -150,7 +152,7 @@ export async function checkIpLimit(isAuthenticated: boolean = false): Promise<Ip
         can_analyze: true,
         reason: 'DISABLED',
         analyses_used: 0,
-        max_analyses: 1,
+        max_analyses: 2,
         is_vpn: false,
         ip_limit_enabled: false
       }
@@ -164,7 +166,7 @@ export async function checkIpLimit(isAuthenticated: boolean = false): Promise<Ip
       can_analyze: true,
       reason: 'DISABLED',
       analyses_used: 0,
-      max_analyses: 1,
+      max_analyses: 2,
       is_vpn: false,
       ip_limit_enabled: false
     }

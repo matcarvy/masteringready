@@ -18,6 +18,7 @@ export interface CompressionResult {
     bitDepth: number;
     numberOfChannels: number;
     duration: number;
+    fileSize: number;
   };
 }
 
@@ -46,7 +47,8 @@ export async function compressAudioFile(
     sampleRate: headerInfo.sampleRate || audioBuffer.sampleRate, // Prefer header (true rate), fallback to AudioContext
     bitDepth: headerInfo.bitDepth,
     numberOfChannels: headerInfo.numberOfChannels || audioBuffer.numberOfChannels,
-    duration: audioBuffer.duration
+    duration: audioBuffer.duration,
+    fileSize: file.size  // Original file size before compression
   }
 
   // ============================================================

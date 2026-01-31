@@ -3324,11 +3324,14 @@ def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, s
     channels = int(info.channels)
     duration = float(info.duration)
     
-    # Extract file size
-    file_size = path.stat().st_size
-    
+    # Extract file size — prefer original file size if compression happened
+    disk_file_size = path.stat().st_size
+    file_size = disk_file_size
+    if original_metadata and original_metadata.get('original_file_size', 0) > 0:
+        file_size = original_metadata['original_file_size']
+
     # Extract bit depth - USE ORIGINAL METADATA if provided
-    if original_metadata and original_metadata.get('bit_depth'):
+    if original_metadata and original_metadata.get('bit_depth', 0) > 0:
         bit_depth = original_metadata['bit_depth']
         sr = original_metadata.get('sample_rate', sr)  # Also use original sample rate
     else:
@@ -4723,11 +4726,15 @@ def analyze_file_chunked(
     sr = file_info.samplerate
     channels = file_info.channels
     duration = file_info.duration
-    file_size = path.stat().st_size
-    
-    
+
+    # Extract file size — prefer original file size if compression happened
+    disk_file_size = path.stat().st_size
+    file_size = disk_file_size
+    if original_metadata and original_metadata.get('original_file_size', 0) > 0:
+        file_size = original_metadata['original_file_size']
+
     # Extract bit depth - USE ORIGINAL METADATA if provided
-    if original_metadata and original_metadata.get('bit_depth'):
+    if original_metadata and original_metadata.get('bit_depth', 0) > 0:
         bit_depth = original_metadata['bit_depth']
         sr = original_metadata.get('sample_rate', sr)  # Also use original sample rate
         print(f"✅ Using ORIGINAL metadata: {sr} Hz, {bit_depth}-bit")

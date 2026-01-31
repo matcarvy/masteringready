@@ -4279,7 +4279,7 @@ by Matías Carvajal
               marginBottom: '0.75rem',
               color: '#111827'
             }}>
-              {lang === 'es' ? 'Ya usaste tu análisis gratis' : 'You already used your free analysis'}
+              {lang === 'es' ? 'Ya usaste tus análisis gratis' : 'You already used your free analyses'}
             </h3>
 
             {/* Description */}
@@ -4291,8 +4291,8 @@ by Matías Carvajal
               lineHeight: '1.5'
             }}>
               {lang === 'es'
-                ? 'Cada dispositivo tiene 1 análisis gratis. Crea una cuenta para continuar analizando tus mixes.'
-                : 'Each device gets 1 free analysis. Create an account to continue analyzing your mixes.'}
+                ? 'Cada dispositivo tiene 2 análisis gratis. Crea una cuenta para continuar analizando tus mixes.'
+                : 'Each device gets 2 free analyses. Create an account to continue analyzing your mixes.'}
             </p>
 
             {/* Benefits reminder */}
@@ -4317,7 +4317,7 @@ by Matías Carvajal
                 color: '#6b7280',
                 lineHeight: '1.6'
               }}>
-                <li>{lang === 'es' ? '1 análisis adicional gratis' : '1 additional free analysis'}</li>
+                <li>{lang === 'es' ? '2 análisis adicionales gratis' : '2 additional free analyses'}</li>
                 <li>{lang === 'es' ? 'Historial de análisis' : 'Analysis history'}</li>
                 <li>{lang === 'es' ? 'Descargas en .txt' : '.txt downloads'}</li>
               </ul>

@@ -242,7 +242,7 @@ async def check_ip_limit(request: Request, is_authenticated: bool = False):
             "can_analyze": True,
             "reason": "DISABLED",
             "analyses_used": 0,
-            "max_analyses": 1,
+            "max_analyses": 2,
             "is_vpn": False,
             "ip_limit_enabled": False
         }
@@ -253,7 +253,7 @@ async def check_ip_limit(request: Request, is_authenticated: bool = False):
             "can_analyze": True,
             "reason": "DISABLED",
             "analyses_used": 0,
-            "max_analyses": 1,
+            "max_analyses": 2,
             "is_vpn": False,
             "ip_limit_enabled": False
         }
@@ -276,7 +276,7 @@ async def check_ip_limit(request: Request, is_authenticated: bool = False):
                     "can_analyze": False,
                     "reason": "VPN_DETECTED",
                     "analyses_used": 0,
-                    "max_analyses": 1,
+                    "max_analyses": 2,
                     "is_vpn": True,
                     "vpn_service": vpn_info.get('service_name'),
                     "ip_limit_enabled": True
@@ -291,7 +291,7 @@ async def check_ip_limit(request: Request, is_authenticated: bool = False):
         "can_analyze": can_analyze,
         "reason": message,
         "analyses_used": details.get('analyses_used', 0),
-        "max_analyses": 1,
+        "max_analyses": 2,
         "is_vpn": details.get('is_vpn', False),
         "ip_limit_enabled": True
     }
@@ -369,7 +369,8 @@ async def analyze_mix_endpoint(
                 'sample_rate': int(metadata.get('sampleRate', 0)),
                 'bit_depth': int(metadata.get('bitDepth', 0)),
                 'duration': float(metadata.get('duration', 0)),
-                'channels': int(metadata.get('numberOfChannels', 0))
+                'channels': int(metadata.get('numberOfChannels', 0)),
+                'original_file_size': int(metadata.get('fileSize', 0))
             }
             logger.info(f"📊 Received original metadata from frontend: {original_metadata_from_frontend}")
         except Exception as e:
@@ -582,7 +583,8 @@ async def start_analysis(
                 'sample_rate': int(metadata.get('sampleRate', 0)),
                 'bit_depth': int(metadata.get('bitDepth', 0)),
                 'duration': float(metadata.get('duration', 0)),
-                'channels': int(metadata.get('numberOfChannels', 0))
+                'channels': int(metadata.get('numberOfChannels', 0)),
+                'original_file_size': int(metadata.get('fileSize', 0))
             }
             logger.info(f"📊 Received original metadata from frontend: {original_metadata_from_frontend}")
         except Exception as e:

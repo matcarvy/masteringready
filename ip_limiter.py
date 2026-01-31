@@ -2,7 +2,7 @@
 IP Rate Limiter for Anonymous Users
 ====================================
 
-Limits anonymous users to 1 free analysis per IP address.
+Limits anonymous users to 2 free analyses per IP address.
 Integrates with Supabase for persistent storage.
 
 Author: MasteringReady
@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 ENABLE_IP_RATE_LIMIT = os.getenv('ENABLE_IP_RATE_LIMIT', 'false').lower() == 'true'
 
 # Maximum free analyses per IP
-MAX_FREE_ANALYSES_PER_IP = 1
+MAX_FREE_ANALYSES_PER_IP = 2
 
 
 def hash_ip(ip_address: str) -> str:
