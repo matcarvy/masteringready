@@ -493,6 +493,21 @@ function Home() {
     }
   }, [pendingAnalysisQuotaExceeded, clearPendingAnalysisQuotaExceeded])
 
+  // Proactive quota check — show free limit modal immediately if user can't analyze
+  // Prevents UX issue where user navigates back from dashboard, uploads a file,
+  // and only finds out they can't analyze after clicking the button
+  useEffect(() => {
+    if (authLoading || !isLoggedIn || result || loading) return
+    checkCanAnalyze().then((status) => {
+      setUserAnalysisStatus(status)
+      if (!status.can_analyze) {
+        setShowFreeLimitModal(true)
+      }
+    }).catch(() => {
+      // Don't block page load on failed quota check
+    })
+  }, [isLoggedIn, authLoading])
+
   // Loading messages: anchor (index 0) always first, then 1-5 rotate randomly
   const loadingMessages = [
     { es: '🎧 Aplicando la metodología Mastering Ready…', en: '🎧 Applying Mastering Ready methodology…' },
@@ -537,6 +552,9 @@ function Home() {
 
 const handleAnalyze = async () => {
   if (!file) return
+  // Wait for auth state to be determined — prevents treating a logged-in user
+  // as anonymous when navigating back (auth re-initializing)
+  if (authLoading) return
   setLoading(true)
   setProgress(0)
   setError(null)
@@ -2890,8 +2908,9 @@ by Matías Carvajal
                   <div style={{ paddingLeft: isMobile ? '0' : '5rem' }}>
                     <button
                       onClick={() => {
-                        trackCtaClick('mastering')
-                        setCtaSource('mastering')
+                        const action = (result as any).cta_action || 'mastering'
+                        trackCtaClick(action)
+                        setCtaSource(action)
                         setShowContactModal(true)
                       }}
                       style={{
@@ -2934,8 +2953,8 @@ by Matías Carvajal
                 }}>
                   <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.75rem' }}>
                     {lang === 'es'
-                      ? '¿Cómo te fue con el análisis?'
-                      : 'How was your analysis experience?'}
+                      ? '¿Te resultó útil el análisis?'
+                      : 'Was the analysis useful?'}
                   </p>
                   <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', marginBottom: analysisRating !== null ? '0.75rem' : '0' }}>
                     <button
@@ -3699,12 +3718,12 @@ by Matías Carvajal
             <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
               <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>🎧</div>
               <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>
-                {lang === 'es' ? '¡Trabajemos juntos!' : 'Let\'s work together!'}
+                {lang === 'es' ? 'Hablemos de tu track' : 'Let\u2019s talk about your track'}
               </h3>
               <p style={{ color: '#6b7280' }}>
-                {lang === 'es' 
-                  ? 'Elige cómo prefieres contactarme:'
-                  : 'Choose how you prefer to contact me:'}
+                {lang === 'es'
+                  ? 'Elige cómo contactarme:'
+                  : 'Choose how to reach me:'}
               </p>
             </div>
 
@@ -3714,8 +3733,8 @@ by Matías Carvajal
               <a
                 href={`https://wa.me/573155576115?text=${encodeURIComponent(
                   lang === 'es'
-                    ? `Hola! Acabo de analizar mi mezcla en Mastering Ready y me gustaría hablar sobre el mastering.\n\nPuntuación obtenida: ${result?.score || 'N/A'}/100`
-                    : `Hi! I just analyzed my mix on Mastering Ready and would like to talk about mastering.\n\nScore obtained: ${result?.score || 'N/A'}/100`
+                    ? `Hola Matías, acabo de analizar "${result?.filename || 'mi mezcla'}" en Mastering Ready (${result?.score || 'N/A'}/100). ${ctaSource === 'mastering' ? 'Me interesa el mastering.' : 'Me gustaría revisar algunos puntos de la mezcla.'}`
+                    : `Hi Matías, I just analyzed "${result?.filename || 'my mix'}" on Mastering Ready (${result?.score || 'N/A'}/100). ${ctaSource === 'mastering' ? 'I\'m interested in mastering.' : 'I\'d like to review some mix points.'}`
                 )}`}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -3757,12 +3776,12 @@ by Matías Carvajal
               <a
                 href={`mailto:mat@matcarvy.com?subject=${encodeURIComponent(
                   lang === 'es'
-                    ? 'Solicitud de Mastering - Mastering Ready'
-                    : 'Mastering Request - Mastering Ready'
+                    ? `${ctaSource === 'mastering' ? 'Mastering' : 'Revisión de mezcla'} — ${result?.filename || 'Mi track'}`
+                    : `${ctaSource === 'mastering' ? 'Mastering' : 'Mix review'} — ${result?.filename || 'My track'}`
                 )}&body=${encodeURIComponent(
                   lang === 'es'
-                    ? `Hola Matías,\n\nAcabo de analizar mi mezcla en Mastering Ready y me gustaría hablar sobre el proceso de mastering.\n\nPuntuación obtenida: ${result?.score || 'N/A'}/100\nArchivo: ${result?.filename || 'N/A'}\n\nGracias!`
-                    : `Hi Matías,\n\nI just analyzed my mix on Mastering Ready and would like to discuss the mastering process.\n\nScore obtained: ${result?.score || 'N/A'}/100\nFile: ${result?.filename || 'N/A'}\n\nThanks!`
+                    ? `Hola Matías,\n\nAnalicé "${result?.filename || 'mi mezcla'}" en Mastering Ready.\nPuntuación: ${result?.score || 'N/A'}/100\n\n${ctaSource === 'mastering' ? 'Me interesa el mastering de este track.' : 'Me gustaría revisar algunos aspectos técnicos de la mezcla.'}\n\nGracias.`
+                    : `Hi Matías,\n\nI analyzed "${result?.filename || 'my mix'}" on Mastering Ready.\nScore: ${result?.score || 'N/A'}/100\n\n${ctaSource === 'mastering' ? 'I\'m interested in mastering this track.' : 'I\'d like to review some technical aspects of the mix.'}\n\nThanks.`
                 )}`}
                 onClick={() => logContactRequest('email')}
                 style={{

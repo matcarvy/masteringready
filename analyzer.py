@@ -3901,172 +3901,172 @@ def generate_cta(score: int, strict: bool, lang: str, mode: str = "write") -> Di
         return {"message": "", "button": "", "action": ""}
     
     if lang == 'es':
-        # Spanish CTAs - Español Colombiano
+        # Spanish CTAs - ES LATAM Neutro (sounds like an engineer, not an app)
         if score >= 95:
-            # Perfect for mastering
+            # Perfect — offer mastering directly
             return {
                 "message": (
-                    "🎧 ¿Quieres darle el toque final?\n"
-                    "Tu mezcla está bien balanceada. Puedo masterizarla para que suene coherente "
-                    "y competitiva en plataformas de streaming."
+                    "🎧 Tu mezcla tiene buen balance técnico.\n"
+                    "Puedo trabajar el mastering con espacio suficiente: loudness competitivo, "
+                    "imagen estéreo definida y translate consistente en cualquier sistema de reproducción."
                 ),
-                "button": "Masterizar mi canción",
+                "button": "Masterizar este track",
                 "action": "mastering"
             }
-        
+
         elif score >= 85:
             # Ready for mastering
             return {
                 "message": (
-                    "🎧 ¿Quieres que masterice tu canción?\n"
-                    "Tu mezcla está bien preparada. Puedo trabajar con libertad para que suene "
-                    "coherente y competitiva en plataformas de streaming."
+                    "🎧 Tu mezcla está técnicamente lista.\n"
+                    "Tienes buen headroom y dinámica para trabajar. Puedo llevarla al nivel "
+                    "de distribución manteniendo la intención de la mezcla."
                 ),
-                "button": "Masterizar mi canción",
+                "button": "Masterizar este track",
                 "action": "mastering"
             }
-        
+
         elif score >= 75:
-            # Acceptable - needs minor tweaks before mastering
+            # Needs some prep before mastering
             return {
                 "message": (
-                    "🔧 ¿Necesitas ajustar algunos detalles antes del mastering?\n"
-                    "Tu mezcla está cerca, pero hay algunos puntos técnicos por revisar. "
-                    "Puedo ayudarte a prepararla correctamente, y luego hablamos del mastering."
+                    "🔧 Hay algunos aspectos técnicos por ajustar antes del mastering.\n"
+                    "Si entro a masterizar así, voy a tener que compensar cosas que se resuelven "
+                    "mejor desde la mezcla. Puedo revisar contigo qué ajustes harían la diferencia."
                 ),
                 "button": "Preparar mi mezcla",
                 "action": "preparation"
             }
-        
+
         elif score >= 60:
-            # Minor adjustments needed
+            # Needs more work
             return {
                 "message": (
-                    "🔧 ¿Te ayudo a preparar tu mezcla?\n"
-                    "Hay varios aspectos técnicos por ajustar antes del mastering. "
-                    "Puedo revisar tu sesión y hacer los cambios necesarios para dejarla lista."
+                    "🔧 Tu mezcla necesita trabajo antes del mastering.\n"
+                    "Hay problemas técnicos que no se corrigen en mastering — se corrigen en la mezcla. "
+                    "Puedo ayudarte a identificar exactamente qué ajustar."
                 ),
-                "button": "Realizar mis ajustes",
+                "button": "Revisar mi mezcla",
                 "action": "preparation"
             }
-        
+
         elif score >= 40:
             # Significant work needed
             return {
                 "message": (
-                    "🔧 ¿Revisamos tu mezcla juntos?\n"
-                    "El mastering no es una varita mágica - tu mezcla necesita trabajo técnico primero. "
-                    "Puedo ayudarte a corregir los problemas desde la sesión."
+                    "🔧 Tu mezcla necesita atención en varios puntos.\n"
+                    "El mastering no corrige problemas de mezcla — los expone. Antes de pensar "
+                    "en mastering, hay que resolver lo que el análisis señala."
                 ),
                 "button": "Revisar mi mezcla",
                 "action": "review"
             }
-        
+
         elif score >= 20:
             # Urgent correction required
             return {
                 "message": (
-                    "🔧 ¿Necesitas ayuda con tu sesión de mezcla?\n"
-                    "Tu mezcla requiere atención en varios aspectos técnicos. "
-                    "Puedo revisar tu proyecto y trabajar contigo para resolver los problemas detectados."
+                    "🔧 Tu mezcla tiene problemas técnicos importantes.\n"
+                    "No te recomiendo masterizar en este estado — el resultado no va a ser competitivo. "
+                    "Puedo ayudarte a trabajar los puntos críticos desde la sesión."
                 ),
-                "button": "Revisar mi mezcla",
+                "button": "Trabajar mi mezcla",
                 "action": "review"
             }
-        
+
         else:
             # Critical - multiple issues
             return {
                 "message": (
-                    "🔧 ¿Hablamos de tu proyecto?\n"
-                    "Detecté varios problemas críticos que necesitan resolverse en la etapa de mezcla. "
-                    "Puedo ayudarte a corregirlos paso a paso."
+                    "🔧 El análisis detectó problemas en varias áreas del mix.\n"
+                    "Antes de cualquier proceso, tu mezcla necesita revisión estructural. "
+                    "Puedo ayudarte a planificar los pasos para llevarla a un nivel profesional."
                 ),
                 "button": "Revisar mi proyecto",
                 "action": "review"
             }
-    
+
     else:
-        # English CTAs - American English
+        # English CTAs - US English (sounds like an engineer, not an app)
         if score >= 95:
-            # Perfect for mastering
+            # Perfect — offer mastering directly
             return {
                 "message": (
-                    "🎧 Ready for the final touch?\n"
-                    "Your mix is well balanced. I can master it to sound coherent and competitive "
-                    "on streaming platforms."
+                    "🎧 Your mix has solid technical balance.\n"
+                    "I can handle the mastering with plenty of headroom: competitive loudness, "
+                    "defined stereo image, and consistent translation across playback systems."
                 ),
-                "button": "Master my song",
+                "button": "Master this track",
                 "action": "mastering"
             }
-        
+
         elif score >= 85:
             # Ready for mastering
             return {
                 "message": (
-                    "🎧 Want me to master your song?\n"
-                    "Your mix is well prepared. I can work freely to make it sound coherent and "
-                    "competitive on streaming platforms."
+                    "🎧 Your mix is technically ready.\n"
+                    "You've got good headroom and dynamics to work with. I can bring it to "
+                    "distribution level while preserving the intent of the mix."
                 ),
-                "button": "Master my song",
+                "button": "Master this track",
                 "action": "mastering"
             }
-        
+
         elif score >= 75:
-            # Acceptable - needs minor tweaks before mastering
+            # Needs some prep before mastering
             return {
                 "message": (
-                    "🔧 Need to adjust some details before mastering?\n"
-                    "Your mix is close, but there are some technical points to review. "
-                    "I can help you prepare it correctly, then we'll talk about mastering."
+                    "🔧 There are some technical aspects to address before mastering.\n"
+                    "If I master it as-is, I'll have to compensate for things that are better "
+                    "resolved in the mix. I can review with you what adjustments would make the difference."
                 ),
                 "button": "Prepare my mix",
                 "action": "preparation"
             }
-        
+
         elif score >= 60:
-            # Minor adjustments needed
+            # Needs more work
             return {
                 "message": (
-                    "🔧 Need help preparing your mix?\n"
-                    "There are several technical aspects to adjust before mastering. "
-                    "I can review your session and make the necessary changes to get it ready."
+                    "🔧 Your mix needs work before mastering.\n"
+                    "There are technical issues that mastering can't fix — they need to be addressed "
+                    "in the mix. I can help you identify exactly what to adjust."
                 ),
-                "button": "Make my adjustments",
+                "button": "Review my mix",
                 "action": "preparation"
             }
-        
+
         elif score >= 40:
             # Significant work needed
             return {
                 "message": (
-                    "🔧 Let's review your mix together?\n"
-                    "Mastering isn't a magic wand - your mix needs technical work first. "
-                    "I can help you fix the issues from the session."
+                    "🔧 Your mix needs attention in several areas.\n"
+                    "Mastering doesn't fix mix problems — it exposes them. Before thinking about "
+                    "mastering, the issues flagged in the analysis need to be resolved."
                 ),
                 "button": "Review my mix",
                 "action": "review"
             }
-        
+
         elif score >= 20:
             # Urgent correction required
             return {
                 "message": (
-                    "🔧 Need help with your mix session?\n"
-                    "Your mix requires attention to several technical aspects. "
-                    "I can review your project and work with you to solve the detected issues."
+                    "🔧 Your mix has significant technical issues.\n"
+                    "I wouldn't recommend mastering in this state — the result won't be competitive. "
+                    "I can help you work through the critical points from the session."
                 ),
-                "button": "Review my mix",
+                "button": "Work on my mix",
                 "action": "review"
             }
-        
+
         else:
             # Critical - multiple issues
             return {
                 "message": (
-                    "🔧 Let's talk about your project?\n"
-                    "I detected several critical issues that need to be resolved in the mixing stage. "
-                    "I can help you fix them step by step."
+                    "🔧 The analysis flagged problems across multiple areas of the mix.\n"
+                    "Before any processing, your mix needs structural review. "
+                    "I can help you plan the steps to bring it to a professional level."
                 ),
                 "button": "Review my project",
                 "action": "review"
