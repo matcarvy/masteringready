@@ -46,7 +46,7 @@ export default function Error({
           color: '#111827',
           marginBottom: '0.5rem'
         }}>
-          Algo no funciono bien
+          Algo salió mal
         </h1>
         <p style={{
           color: '#9ca3af',

@@ -21,7 +21,7 @@ import { Headphones, Mail, Lock, User, ArrowLeft, Eye, EyeOff, Check } from 'luc
 const translations = {
   es: {
     title: 'Crear Cuenta',
-    subtitle: 'Únete a MasteringReady gratis',
+    subtitle: 'Empieza con 2 análisis gratis',
     name: 'Nombre completo',
     email: 'Correo electrónico',
     password: 'Contraseña',
@@ -52,7 +52,7 @@ const translations = {
   },
   en: {
     title: 'Create Account',
-    subtitle: 'Join MasteringReady for free',
+    subtitle: 'Start with 2 free analyses',
     name: 'Full name',
     email: 'Email address',
     password: 'Password',

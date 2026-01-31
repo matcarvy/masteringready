@@ -190,6 +190,44 @@ app.add_middleware(
 MAX_FILE_SIZE = 200 * 1024 * 1024  # 200MB
 ALLOWED_EXTENSIONS = {'.wav', '.mp3', '.aiff', '.aac', '.m4a'}
 
+# Bilingual error messages (matching frontend lib/error-messages.ts)
+ERROR_MSGS = {
+    'file_too_large': {
+        'es': 'El archivo es muy grande. El limite es 500MB. Intenta comprimir el audio o usa un formato mas ligero como MP3.',
+        'en': 'File is too large. The limit is 500MB. Try compressing the audio or use a lighter format like MP3.',
+    },
+    'format_not_supported': {
+        'es': 'Este formato no es compatible. Por favor sube un archivo WAV, MP3 o AIFF.',
+        'en': 'This format is not supported. Please upload a WAV, MP3 or AIFF file.',
+    },
+    'corrupt_file': {
+        'es': 'No pudimos leer este archivo. Puede estar corrupto o danado. Intenta exportarlo de nuevo desde tu DAW.',
+        'en': "We couldn't read this file. It may be corrupt or damaged. Try exporting it again from your DAW.",
+    },
+    'timeout': {
+        'es': 'El analisis esta tardando mas de lo esperado. Esto puede pasar con archivos muy largos. Intenta de nuevo o prueba con un archivo mas corto.',
+        'en': 'The analysis is taking longer than expected. This can happen with very long files. Try again or use a shorter file.',
+    },
+    'server_error': {
+        'es': 'Algo salio mal en nuestro servidor. Por favor intenta de nuevo en unos minutos. Si el problema persiste, escribenos a mat@matcarvy.com',
+        'en': 'Something went wrong on our server. Please try again in a few minutes. If the problem persists, contact us at mat@matcarvy.com',
+    },
+}
+
+def bilingual_error(category: str, lang: str) -> str:
+    """Return the error message for the given category in the requested language."""
+    msgs = ERROR_MSGS.get(category, ERROR_MSGS['server_error'])
+    return msgs.get(lang, msgs['en'])
+
+def classify_analysis_error(error_str: str) -> str:
+    """Classify an analysis exception into a bilingual error category."""
+    lower = error_str.lower()
+    corrupt_keywords = ['corrupt', 'librosa', 'soundfile', 'leyendo', 'cargando audio',
+                        'empty', 'vacío', 'too short', 'demasiado corto', 'no audio']
+    if any(kw in lower for kw in corrupt_keywords):
+        return 'corrupt_file'
+    return 'server_error'
+
 # Initialize IP rate limiter and VPN detector
 if IP_LIMITER_AVAILABLE:
     ip_limiter = init_ip_limiter()
@@ -381,23 +419,23 @@ async def analyze_mix_endpoint(
     if file_ext not in ALLOWED_EXTENSIONS:
         raise HTTPException(
             status_code=400,
-            detail=f"Formato no soportado. Solo se aceptan: {', '.join(ALLOWED_EXTENSIONS)}"
+            detail=bilingual_error('format_not_supported', lang)
         )
-    
+
     # Validate file size
     content = await file.read()
     file_size = len(content)
-    
+
     if file_size > MAX_FILE_SIZE:
         raise HTTPException(
             status_code=400,
-            detail=f"Archivo demasiado grande. Máximo: {MAX_FILE_SIZE / 1024 / 1024}MB"
+            detail=bilingual_error('file_too_large', lang)
         )
-    
+
     if file_size == 0:
         raise HTTPException(
             status_code=400,
-            detail="Archivo vacío"
+            detail=bilingual_error('corrupt_file', lang)
         )
     
     logger.info(f"📊 File size: {file_size / 1024 / 1024:.2f} MB")
@@ -465,9 +503,10 @@ async def analyze_mix_endpoint(
             
         except Exception as e:
             logger.error(f"❌ Analysis error: {str(e)}")
+            category = classify_analysis_error(str(e))
             raise HTTPException(
                 status_code=500,
-                detail=f"Error al analizar el archivo: {str(e)}"
+                detail=bilingual_error(category, lang)
             )
     
     # File automatically deleted here
@@ -593,13 +632,13 @@ async def start_analysis(
     
     # Validate file
     if not file.filename:
-        raise HTTPException(status_code=400, detail="No filename provided")
-    
+        raise HTTPException(status_code=400, detail=bilingual_error('corrupt_file', lang))
+
     file_ext = Path(file.filename).suffix.lower()
     if file_ext not in ALLOWED_EXTENSIONS:
         raise HTTPException(
             status_code=400,
-            detail=f"Invalid file type. Allowed: {', '.join(ALLOWED_EXTENSIONS)}"
+            detail=bilingual_error('format_not_supported', lang)
         )
     
     # Read file content
@@ -612,7 +651,7 @@ async def start_analysis(
     if file_size > MAX_FILE_SIZE:
         raise HTTPException(
             status_code=413,
-            detail=f"File too large. Max: {MAX_FILE_SIZE / 1024 / 1024:.0f}MB"
+            detail=bilingual_error('file_too_large', lang)
         )
     
     # Generate unique job ID
@@ -925,9 +964,10 @@ async def start_analysis(
 
         except Exception as e:
             logger.error(f"❌ [{job_id}] Analysis error: {str(e)}")
+            category = classify_analysis_error(str(e))
             async with jobs_lock:
                 jobs[job_id]['status'] = 'error'
-                jobs[job_id]['error'] = str(e)
+                jobs[job_id]['error'] = bilingual_error(category, lang)
             
             # 🔔 TELEGRAM ALERT: Error en análisis
             if TELEGRAM_ENABLED:
@@ -954,21 +994,21 @@ async def start_analysis(
 
 
 @app.get("/api/analyze/status/{job_id}")
-async def get_analysis_status(job_id: str):
+async def get_analysis_status(job_id: str, lang: str = "es"):
     """
     Poll this endpoint to check analysis progress and retrieve result.
-    
+
     Returns:
     - status: "processing", "complete", or "error"
     - progress: 0-100
     - result: (only when status="complete")
     - error: (only when status="error")
     """
-    
+
     if job_id not in jobs:
         raise HTTPException(
             status_code=404,
-            detail="Job not found or expired (jobs expire after 10 minutes)"
+            detail=bilingual_error('timeout', lang)
         )
     
     async with jobs_lock:

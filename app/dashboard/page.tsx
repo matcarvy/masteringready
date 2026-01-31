@@ -85,7 +85,7 @@ const translations = {
     monthlyPrice: '$9.99/mes',
     getProNow: 'Obtener Pro',
     freeAnalysesLeft: 'análisis gratis restantes',
-    lifetimeLimit: 'de por vida',
+    lifetimeLimit: 'para empezar',
     proAnalysesLeft: 'análisis este mes',
     proLimit: 'de 30',
     addonAvailable: 'Necesitas más? Compra un paquete adicional',
@@ -159,7 +159,7 @@ const translations = {
     monthlyPrice: '$9.99/month',
     getProNow: 'Get Pro',
     freeAnalysesLeft: 'free analyses remaining',
-    lifetimeLimit: 'lifetime',
+    lifetimeLimit: 'to get started',
     proAnalysesLeft: 'analyses this month',
     proLimit: 'of 30',
     addonAvailable: 'Need more? Buy an add-on pack',
@@ -2071,8 +2071,8 @@ function DashboardContent() {
               <a
                 href={`https://wa.me/573155576115?text=${encodeURIComponent(
                   lang === 'es'
-                    ? `Hola! Acabo de analizar mi mezcla en Mastering Ready y me gustaría hablar sobre el mastering.\n\nPuntuación obtenida: ${selectedAnalysis?.score || 'N/A'}/100`
-                    : `Hi! I just analyzed my mix on Mastering Ready and would like to talk about mastering.\n\nScore obtained: ${selectedAnalysis?.score || 'N/A'}/100`
+                    ? `Hola! Acabo de analizar mi mezcla en MasteringReady y me gustaría hablar sobre el mastering.\n\nPuntuación obtenida: ${selectedAnalysis?.score || 'N/A'}/100`
+                    : `Hi! I just analyzed my mix on MasteringReady and would like to talk about mastering.\n\nScore obtained: ${selectedAnalysis?.score || 'N/A'}/100`
                 )}`}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -2095,11 +2095,11 @@ function DashboardContent() {
               {/* Email */}
               <a
                 href={`mailto:mat@matcarvy.com?subject=${encodeURIComponent(
-                  lang === 'es' ? 'Solicitud de Mastering - Mastering Ready' : 'Mastering Request - Mastering Ready'
+                  lang === 'es' ? 'Solicitud de Mastering - MasteringReady' : 'Mastering Request - MasteringReady'
                 )}&body=${encodeURIComponent(
                   lang === 'es'
-                    ? `Hola Matías,\n\nAcabo de analizar mi mezcla en Mastering Ready y me gustaría hablar sobre el proceso de mastering.\n\nPuntuación obtenida: ${selectedAnalysis?.score || 'N/A'}/100\nArchivo: ${selectedAnalysis?.filename || 'N/A'}\n\nGracias!`
-                    : `Hi Matías,\n\nI just analyzed my mix on Mastering Ready and would like to discuss the mastering process.\n\nScore obtained: ${selectedAnalysis?.score || 'N/A'}/100\nFile: ${selectedAnalysis?.filename || 'N/A'}\n\nThanks!`
+                    ? `Hola Matías,\n\nAcabo de analizar mi mezcla en MasteringReady y me gustaría hablar sobre el proceso de mastering.\n\nPuntuación obtenida: ${selectedAnalysis?.score || 'N/A'}/100\nArchivo: ${selectedAnalysis?.filename || 'N/A'}\n\nGracias!`
+                    : `Hi Matías,\n\nI just analyzed my mix on MasteringReady and would like to discuss the mastering process.\n\nScore obtained: ${selectedAnalysis?.score || 'N/A'}/100\nFile: ${selectedAnalysis?.filename || 'N/A'}\n\nThanks!`
                 )}`}
                 style={{
                   display: 'flex', alignItems: 'center', gap: '1rem',

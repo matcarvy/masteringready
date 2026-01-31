@@ -1132,8 +1132,8 @@ export default function HistoryPage() {
                     <a
                       href={`https://wa.me/573155576115?text=${encodeURIComponent(
                         lang === 'es'
-                          ? `Hola! Acabo de analizar mi mezcla "${selectedAnalysis.filename}" en Mastering Ready. Puntuación: ${selectedAnalysis.score}/100`
-                          : `Hi! I just analyzed my mix "${selectedAnalysis.filename}" on Mastering Ready. Score: ${selectedAnalysis.score}/100`
+                          ? `Hola! Acabo de analizar mi mezcla "${selectedAnalysis.filename}" en MasteringReady. Puntuación: ${selectedAnalysis.score}/100`
+                          : `Hi! I just analyzed my mix "${selectedAnalysis.filename}" on MasteringReady. Score: ${selectedAnalysis.score}/100`
                       )}`}
                       target="_blank"
                       rel="noopener noreferrer"

@@ -6,7 +6,7 @@ import { AuthProvider } from '@/components/auth'
 // =============================================================================
 
 const siteConfig = {
-  name: 'Mastering Ready',
+  name: 'MasteringReady',
   url: 'https://masteringready.com',
   author: 'Matías Carvajal',
   twitter: '@matcarvy',
@@ -27,10 +27,10 @@ export const metadata: Metadata = {
   // BASIC META
   // ─────────────────────────────────────────────────────────────────────────────
   title: {
-    default: 'Is your mix ready for mastering? | Mastering Ready',
-    template: '%s | Mastering Ready'
+    default: 'MasteringReady — Analyze your mix before mastering',
+    template: '%s | MasteringReady'
   },
-  description: 'Analyze your mix in 60 seconds. Detect headroom, LUFS, true peak and balance issues before sending to mastering. Methodology proven in 300+ professional productions.',
+  description: "Upload your mix and find out if it's ready for mastering. 0-100 score, professional metrics and specific recommendations in 60 seconds. 2 free analyses.",
   keywords: [
     'mix analysis',
     'prepare mix for mastering',
@@ -70,14 +70,14 @@ export const metadata: Metadata = {
     alternateLocale: siteConfig.locale.alternate,
     url: siteConfig.url,
     siteName: siteConfig.name,
-    title: 'Is your mix ready for mastering?',
-    description: 'Technical analysis in 60 seconds. Headroom, LUFS, True Peak, stereo balance and more. Methodology proven in 300+ productions.',
+    title: 'Is your mix ready for mastering? Find out in 60 seconds',
+    description: 'Professional technical analysis: LUFS, True Peak, headroom, frequency balance. 0-100 score with specific recommendations. 2 free analyses.',
     images: [
       {
         url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'Mastering Ready - Analyze your mix before mastering',
+        alt: 'MasteringReady - Analyze your mix before mastering',
         type: 'image/png'
       }
     ]
@@ -88,8 +88,8 @@ export const metadata: Metadata = {
   // ─────────────────────────────────────────────────────────────────────────────
   twitter: {
     card: 'summary_large_image',
-    title: 'Is your mix ready for mastering?',
-    description: 'Technical analysis in 60 seconds. Headroom, LUFS, True Peak and more. Methodology proven in 300+ productions.',
+    title: 'Is your mix ready for mastering? Find out in 60 seconds',
+    description: 'Professional technical analysis: LUFS, True Peak, headroom, frequency balance. 0-100 score with specific recommendations. 2 free analyses.',
     site: siteConfig.twitter,
     creator: siteConfig.twitter,
     images: ['/og-image.png']
@@ -146,7 +146,7 @@ const structuredData = {
   softwareApplication: {
     '@context': 'https://schema.org',
     '@type': 'SoftwareApplication',
-    name: 'Mastering Ready',
+    name: 'MasteringReady',
     applicationCategory: 'MultimediaApplication',
     operatingSystem: 'Web Browser',
     offers: {
@@ -186,7 +186,7 @@ const structuredData = {
     '@context': 'https://schema.org',
     '@type': 'HowTo',
     name: 'How to analyze your mix before mastering',
-    description: 'Step-by-step guide to verify your mix is ready for professional mastering using Mastering Ready.',
+    description: 'Step-by-step guide to verify your mix is ready for professional mastering using MasteringReady.',
     totalTime: 'PT2M',
     tool: [
       {
@@ -226,7 +226,7 @@ const structuredData = {
   organization: {
     '@context': 'https://schema.org',
     '@type': 'Organization',
-    name: 'Mastering Ready',
+    name: 'MasteringReady',
     url: 'https://masteringready.com',
     logo: 'https://masteringready.com/logo.png',
     contactPoint: {
@@ -245,7 +245,7 @@ const structuredData = {
   product: {
     '@context': 'https://schema.org',
     '@type': 'Book',
-    name: 'Mastering Ready — Ensure mastering success from the mix',
+    name: 'MasteringReady — Ensure mastering success from the mix',
     author: {
       '@type': 'Person',
       name: 'Matías Carvajal'

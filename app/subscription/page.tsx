@@ -41,7 +41,7 @@ const translations = {
     proBadge: 'PRO',
     // Free plan
     analysisUsage: 'Uso de análisis',
-    lifetimeAnalyses: 'análisis de por vida',
+    lifetimeAnalyses: 'para empezar',
     getMoreWithPro: 'Obtén más con Pro',
     benefit1: '30 análisis al mes',
     benefit2: 'Análisis Completo y Detallado',
@@ -90,7 +90,7 @@ const translations = {
     proBadge: 'PRO',
     // Free plan
     analysisUsage: 'Analysis usage',
-    lifetimeAnalyses: 'lifetime analyses',
+    lifetimeAnalyses: 'to get started',
     getMoreWithPro: 'Get more with Pro',
     benefit1: '30 analyses per month',
     benefit2: 'Complete and Detailed analysis',

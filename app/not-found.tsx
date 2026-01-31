@@ -47,14 +47,24 @@ export default function NotFound() {
           fontSize: '1.1rem',
           marginBottom: '0.25rem'
         }}>
-          Esta pagina no existe
+          Página no encontrada
         </p>
         <p style={{
           color: '#9ca3af',
           fontSize: '0.95rem',
+          marginBottom: '0.5rem'
+        }}>
+          Page not found
+        </p>
+        <p style={{
+          color: '#9ca3af',
+          fontSize: '0.85rem',
+          lineHeight: '1.5',
           marginBottom: '2rem'
         }}>
-          This page does not exist
+          La página que buscas no existe o fue movida.
+          <br />
+          The page you&apos;re looking for doesn&apos;t exist or has been moved.
         </p>
 
         <Link
