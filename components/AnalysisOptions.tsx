@@ -19,11 +19,15 @@ export default function AnalysisOptions({
 }: AnalysisOptionsProps) {
   return (
     <div className="bg-white rounded-lg border shadow-sm p-6 space-y-4">
-      <h3 className="font-semibold text-lg mb-4">Opciones de Análisis</h3>
-      
+      <h3 className="font-semibold text-lg mb-4">
+        {lang === 'es' ? 'Opciones de Análisis' : 'Analysis Options'}
+      </h3>
+
       {/* Language */}
       <div>
-        <label className="block text-sm font-medium mb-2">Idioma</label>
+        <label className="block text-sm font-medium mb-2">
+          {lang === 'es' ? 'Idioma' : 'Language'}
+        </label>
         <div className="grid grid-cols-2 gap-2">
           <button
             onClick={() => onLangChange('es')}
@@ -50,7 +54,9 @@ export default function AnalysisOptions({
 
       {/* Mode */}
       <div>
-        <label className="block text-sm font-medium mb-2">Modo de Reporte</label>
+        <label className="block text-sm font-medium mb-2">
+          {lang === 'es' ? 'Modo de Reporte' : 'Report Mode'}
+        </label>
         <div className="grid grid-cols-2 gap-2">
           <button
             onClick={() => onModeChange('short')}
@@ -74,9 +80,9 @@ export default function AnalysisOptions({
           </button>
         </div>
         <p className="text-xs text-gray-500 mt-1">
-          {mode === 'short' 
-            ? 'Resumen ejecutivo (WhatsApp, quick feedback)'
-            : 'Reporte completo narrativo (emails, web)'}
+          {mode === 'short'
+            ? (lang === 'es' ? 'Resumen ejecutivo (WhatsApp, feedback rápido)' : 'Executive summary (WhatsApp, quick feedback)')
+            : (lang === 'es' ? 'Reporte completo narrativo (emails, web)' : 'Full narrative report (emails, web)')}
         </p>
       </div>
 
@@ -89,13 +95,16 @@ export default function AnalysisOptions({
             onChange={(e) => onStrictChange(e.target.checked)}
             className="w-4 h-4 rounded"
           />
-          <span className="text-sm font-medium">Modo Strict</span>
+          <span className="text-sm font-medium">
+            {lang === 'es' ? 'Modo Strict' : 'Strict Mode'}
+          </span>
         </label>
         <p className="text-xs text-gray-500 mt-1 ml-6">
-          Estándares comerciales más exigentes (entrega a sellos)
+          {lang === 'es'
+            ? 'Estándares comerciales más exigentes (entrega a sellos)'
+            : 'More demanding commercial standards (label delivery)'}
         </p>
       </div>
     </div>
   )
 }
-

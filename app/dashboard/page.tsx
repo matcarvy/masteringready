@@ -1092,8 +1092,8 @@ function DashboardContent() {
                 >
                   {/* Score */}
                   <div style={{
-                    width: '60px',
-                    height: '60px',
+                    width: 'clamp(48px, 12vw, 60px)',
+                    height: 'clamp(48px, 12vw, 60px)',
                     borderRadius: '50%',
                     background: `conic-gradient(${getScoreColor(analysis.score)} ${analysis.score * 3.6}deg, #e5e7eb 0deg)`,
                     display: 'flex',

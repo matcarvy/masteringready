@@ -244,7 +244,7 @@ export function UserMenu({ lang = 'es', isMobile = false }: UserMenuProps) {
           background: 'white',
           borderRadius: '0.75rem',
           boxShadow: '0 10px 40px rgba(0,0,0,0.15)',
-          minWidth: '200px',
+          minWidth: 'min(200px, 80vw)',
           overflow: 'hidden',
           zIndex: 50
         }}>

@@ -411,7 +411,7 @@ export default function SubscriptionPage() {
       <main style={{
         maxWidth: '720px',
         margin: '0 auto',
-        padding: '2rem 1.5rem'
+        padding: 'clamp(1.25rem, 4vw, 2rem) clamp(1rem, 3vw, 1.5rem)'
       }}>
         {/* Page Header */}
         <h1 style={{
@@ -611,7 +611,7 @@ export default function SubscriptionPage() {
               <div style={{ textAlign: 'center', marginBottom: '1.25rem' }}>
                 {proPrice.showLocal ? (
                   <>
-                    <span style={{ fontSize: '2rem', fontWeight: '700' }}>
+                    <span style={{ fontSize: 'clamp(1.5rem, 5vw, 2rem)', fontWeight: '700' }}>
                       ~{proPrice.formattedLocal}
                     </span>
                     <span style={{ fontSize: '0.875rem', opacity: 0.9, display: 'block', marginTop: '0.25rem' }}>
@@ -619,7 +619,7 @@ export default function SubscriptionPage() {
                     </span>
                   </>
                 ) : (
-                  <span style={{ fontSize: '2rem', fontWeight: '700' }}>
+                  <span style={{ fontSize: 'clamp(1.5rem, 5vw, 2rem)', fontWeight: '700' }}>
                     {proPrice.formatted}{t.perMonth}
                   </span>
                 )}

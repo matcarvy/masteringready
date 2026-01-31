@@ -100,7 +100,7 @@ export default function PrivacyBadge({ lang = 'es', variant = 'full' }: PrivacyB
               padding: '1rem',
               boxShadow: '0 10px 40px rgba(0,0,0,0.15)',
               border: '1px solid #e5e7eb',
-              width: '280px',
+              width: 'min(280px, 90vw)',
               zIndex: 100,
               textAlign: 'left'
             }}

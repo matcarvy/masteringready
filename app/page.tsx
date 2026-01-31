@@ -1296,7 +1296,8 @@ by Matías Carvajal
                   border: 'none',
                   cursor: 'pointer',
                   transition: 'transform 0.2s, box-shadow 0.2s',
-                  whiteSpace: 'nowrap'
+                  whiteSpace: 'nowrap',
+                  minHeight: '44px'
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.transform = 'translateY(-2px)'
@@ -1319,8 +1320,8 @@ by Matías Carvajal
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      width: '36px',
-                      height: '36px',
+                      width: '44px',
+                      height: '44px',
                       background: 'none',
                       border: '1px solid #d1d5db',
                       borderRadius: '0.5rem',
@@ -1483,7 +1484,8 @@ by Matías Carvajal
                   cursor: 'pointer',
                   marginBottom: '1.5rem',
                   transition: 'all 0.3s',
-                  boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+                  minHeight: '44px'
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.transform = 'scale(1.05)'
@@ -1761,7 +1763,7 @@ by Matías Carvajal
                   style={{
                     border: '2px dashed #d1d5db',
                     borderRadius: '0.75rem',
-                    padding: '3rem',
+                    padding: 'clamp(1.25rem, 4vw, 3rem)',
                     textAlign: 'center',
                     cursor: loading ? 'not-allowed' : 'pointer',
                     opacity: loading ? 0.5 : 1,
@@ -1813,11 +1815,11 @@ by Matías Carvajal
                     disabled={loading}
                   />
                   
-                  <Upload size={64} color="#9ca3af" style={{ margin: '0 auto 1rem' }} />
-                  <p style={{ fontSize: '1.125rem', fontWeight: '500', marginBottom: '0.5rem' }}>
+                  <Upload size={isMobile ? 48 : 64} color="#9ca3af" style={{ margin: '0 auto 1rem' }} />
+                  <p style={{ fontSize: 'clamp(0.9375rem, 2.5vw, 1.125rem)', fontWeight: '500', marginBottom: '0.5rem' }}>
                     {lang === 'es' ? 'Sube tu mezcla' : 'Upload your mix'}
                   </p>
-                  <p style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+                  <p style={{ fontSize: 'clamp(0.8125rem, 2vw, 0.875rem)', color: '#6b7280' }}>
                     {lang === 'es'
                       ? 'Arrastra y suelta o haz click para seleccionar'
                       : 'Drag and drop or click to select'}
@@ -1845,9 +1847,13 @@ by Matías Carvajal
                     {lang === 'es' ? 'Archivo seleccionado:' : 'Selected file:'}
                   </p>
                   <p style={{
-                    fontSize: '1.125rem',
+                    fontSize: 'clamp(0.9375rem, 2.5vw, 1.125rem)',
                     fontWeight: 'bold',
-                    color: isFileTooLarge ? '#7f1d1d' : needsCompression ? '#78350f' : '#1e3a8a'
+                    color: isFileTooLarge ? '#7f1d1d' : needsCompression ? '#78350f' : '#1e3a8a',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    maxWidth: '100%'
                   }}>
                     {file.name}
                   </p>
@@ -1920,7 +1926,7 @@ by Matías Carvajal
                     <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem' }}>
                       {lang === 'es' ? 'Modo de Reporte' : 'Report Mode'}
                     </label>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr', gap: '0.5rem' }}>
                       {['visual', 'short', 'write'].map((m) => (
                         <button
                           key={m}
@@ -1931,14 +1937,15 @@ by Matías Carvajal
                             }
                           }}
                           style={{
-                            padding: '0.5rem 1rem',
+                            padding: 'clamp(0.5rem, 1.5vw, 0.625rem) 1rem',
+                            minHeight: '44px',
                             borderRadius: '0.5rem',
                             border: 'none',
                             background: reportView === m ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : '#f3f4f6',
                             color: reportView === m ? 'white' : '#111827',
                             cursor: 'pointer',
                             transition: 'all 0.2s',
-                            fontSize: '0.875rem'
+                            fontSize: 'clamp(0.8125rem, 2vw, 0.875rem)'
                           }}
                         >
                           {m === 'visual' ? (lang === 'es' ? '⚡ Rápido' : '⚡ Quick') :
@@ -1979,10 +1986,11 @@ by Matías Carvajal
                     width: '100%',
                     background: (loading || compressing) ? '#d1d5db' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                     color: (loading || compressing) ? '#6b7280' : 'white',
-                    padding: '1rem',
+                    padding: 'clamp(0.75rem, 2vw, 1rem)',
                     borderRadius: '0.75rem',
                     fontWeight: '600',
-                    fontSize: '1.125rem',
+                    fontSize: 'clamp(0.9375rem, 2.5vw, 1.125rem)',
+                    minHeight: '48px',
                     border: 'none',
                     cursor: (loading || compressing) ? 'not-allowed' : 'pointer',
                     transition: 'all 0.3s',
@@ -2255,13 +2263,13 @@ by Matías Carvajal
                   <div style={{
                     display: 'flex',
                     flexWrap: 'wrap',
-                    gap: isMobile ? '0.5rem' : '1.25rem',
+                    gap: isMobile ? '0.375rem 0.75rem' : '1.25rem',
                     background: '#f8fafc',
                     borderRadius: '0.75rem',
-                    padding: '0.75rem 1rem',
+                    padding: isMobile ? '0.625rem 0.75rem' : '0.75rem 1rem',
                     marginBottom: '1.5rem',
                     border: '1px solid #e2e8f0',
-                    fontSize: '0.8rem',
+                    fontSize: 'clamp(0.6875rem, 1.8vw, 0.8rem)',
                     color: '#475569'
                   }}>
                     {(result as any).file.duration != null && (
@@ -2453,20 +2461,20 @@ by Matías Carvajal
                                   style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}
                                   title={tooltip}
                                 >
-                                  <div style={{ 
-                                    minWidth: '100px', 
-                                    maxWidth: '120px',
-                                    fontSize: '0.75rem', 
-                                    fontWeight: '500', 
+                                  <div style={{
+                                    minWidth: 'clamp(70px, 18vw, 120px)',
+                                    maxWidth: 'clamp(80px, 20vw, 120px)',
+                                    fontSize: 'clamp(0.6875rem, 1.5vw, 0.75rem)',
+                                    fontWeight: '500',
                                     color: '#4b5563',
                                     textAlign: 'right'
                                   }}>
                                     {lang === 'es' ? label.es : label.en}
                                   </div>
-                                  <div style={{ 
-                                    flex: 1, 
-                                    background: '#e5e7eb', 
-                                    borderRadius: '9999px', 
+                                  <div style={{
+                                    flex: 1,
+                                    background: '#e5e7eb',
+                                    borderRadius: '9999px',
                                     height: '0.5rem',
                                     overflow: 'hidden'
                                   }}>
@@ -2478,9 +2486,9 @@ by Matías Carvajal
                                       transition: 'width 0.5s ease-out'
                                     }} />
                                   </div>
-                                  <div style={{ 
-                                    minWidth: '45px',
-                                    fontSize: '0.75rem', 
+                                  <div style={{
+                                    minWidth: 'clamp(38px, 10vw, 45px)',
+                                    fontSize: 'clamp(0.6875rem, 1.5vw, 0.75rem)', 
                                     fontWeight: '600', 
                                     color: color,
                                     textAlign: 'right'
@@ -3102,7 +3110,7 @@ by Matías Carvajal
                 </button>
 
                 <div style={{
-                  maxHeight: glossaryOpen ? '600px' : '0',
+                  maxHeight: glossaryOpen ? 'min(600px, 70vh)' : '0',
                   opacity: glossaryOpen ? 1 : 0,
                   overflow: 'hidden',
                   transition: 'max-height 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease'
@@ -3665,7 +3673,7 @@ by Matías Carvajal
             alignItems: 'center',
             justifyContent: 'center',
             zIndex: 100,
-            padding: '1.5rem',
+            padding: 'clamp(0.75rem, 3vw, 1.5rem)',
             animation: 'modalBackdropIn 0.25s ease-out'
           }}
         >
@@ -3674,9 +3682,9 @@ by Matías Carvajal
             style={{
               background: 'white',
               borderRadius: '1rem',
-              padding: '2rem',
+              padding: 'clamp(1.25rem, 4vw, 2rem)',
               maxWidth: '500px',
-              width: '100%',
+              width: 'calc(100% - 1rem)',
               boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
               position: 'relative',
               animation: 'modalContentIn 0.25s cubic-bezier(0.16, 1, 0.3, 1)'
@@ -3874,7 +3882,7 @@ by Matías Carvajal
             alignItems: 'center',
             justifyContent: 'center',
             zIndex: 100,
-            padding: '1.5rem',
+            padding: 'clamp(0.75rem, 3vw, 1.5rem)',
             animation: 'modalBackdropIn 0.25s ease-out'
           }}
         >
@@ -3883,9 +3891,9 @@ by Matías Carvajal
             style={{
               background: 'white',
               borderRadius: '1rem',
-              padding: '2rem',
+              padding: 'clamp(1.25rem, 4vw, 2rem)',
               maxWidth: '500px',
-              width: '100%',
+              width: 'calc(100% - 1rem)',
               boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
               position: 'relative',
               maxHeight: '90vh',
@@ -3950,7 +3958,7 @@ by Matías Carvajal
                 </label>
                 <div style={{ 
                   display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(2rem, 1fr))',
+                  gridTemplateColumns: 'repeat(10, 1fr)',
                   gap: 'clamp(0.25rem, 1vw, 0.5rem)', 
                   justifyContent: 'center',
                   marginBottom: '0.5rem',
@@ -3962,8 +3970,8 @@ by Matías Carvajal
                       onClick={() => setFeedback({...feedback, rating: num})}
                       style={{
                         width: '100%',
-                        minWidth: '2rem',
-                        height: 'clamp(2rem, 8vw, 2.5rem)',
+                        minWidth: '1.75rem',
+                        height: 'clamp(2.5rem, 8vw, 2.75rem)',
                         borderRadius: '0.5rem',
                         border: feedback.rating === num ? '2px solid #667eea' : '1px solid #d1d5db',
                         background: feedback.rating === num ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'white',
@@ -4241,15 +4249,15 @@ by Matías Carvajal
           alignItems: 'center',
           justifyContent: 'center',
           zIndex: 100,
-          padding: '1rem',
+          padding: 'clamp(0.75rem, 3vw, 1rem)',
           animation: 'modalBackdropIn 0.25s ease-out'
         }}>
           <div style={{
             background: 'white',
             borderRadius: '1rem',
-            padding: '2rem',
+            padding: 'clamp(1.25rem, 4vw, 2rem)',
             maxWidth: '420px',
-            width: '100%',
+            width: 'calc(100% - 1rem)',
             position: 'relative',
             boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
             animation: 'modalContentIn 0.25s cubic-bezier(0.16, 1, 0.3, 1)'
@@ -4401,15 +4409,15 @@ by Matías Carvajal
           alignItems: 'center',
           justifyContent: 'center',
           zIndex: 100,
-          padding: '1rem',
+          padding: 'clamp(0.75rem, 3vw, 1rem)',
           animation: 'modalBackdropIn 0.25s ease-out'
         }}>
           <div style={{
             background: 'white',
             borderRadius: '1rem',
-            padding: '2rem',
+            padding: 'clamp(1.25rem, 4vw, 2rem)',
             maxWidth: '420px',
-            width: '100%',
+            width: 'calc(100% - 1rem)',
             position: 'relative',
             boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
             animation: 'modalContentIn 0.25s cubic-bezier(0.16, 1, 0.3, 1)'
@@ -4576,15 +4584,15 @@ by Matías Carvajal
           alignItems: 'center',
           justifyContent: 'center',
           zIndex: 100,
-          padding: '1rem',
+          padding: 'clamp(0.75rem, 3vw, 1rem)',
           animation: 'modalBackdropIn 0.25s ease-out'
         }}>
           <div style={{
             background: 'white',
             borderRadius: '1rem',
-            padding: '2rem',
+            padding: 'clamp(1.25rem, 4vw, 2rem)',
             maxWidth: '420px',
-            width: '100%',
+            width: 'calc(100% - 1rem)',
             position: 'relative',
             boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
             animation: 'modalContentIn 0.25s cubic-bezier(0.16, 1, 0.3, 1)'
@@ -4739,15 +4747,15 @@ by Matías Carvajal
           alignItems: 'center',
           justifyContent: 'center',
           zIndex: 100,
-          padding: '1rem',
+          padding: 'clamp(0.75rem, 3vw, 1rem)',
           animation: 'modalBackdropIn 0.25s ease-out'
         }}>
           <div style={{
             background: 'white',
             borderRadius: '1rem',
-            padding: '2rem',
+            padding: 'clamp(1.25rem, 4vw, 2rem)',
             maxWidth: '420px',
-            width: '100%',
+            width: 'calc(100% - 1rem)',
             position: 'relative',
             boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
             animation: 'modalContentIn 0.25s cubic-bezier(0.16, 1, 0.3, 1)'

@@ -420,7 +420,8 @@ async def analyze_mix_endpoint(
             result = analyze_file(
                 Path(temp_file.name),
                 lang=lang,
-                strict=strict
+                strict=strict,
+                original_metadata=original_metadata_from_frontend
             )
             
             logger.info(f"✅ Analysis complete: Score {result['score']}/100")

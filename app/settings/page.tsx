@@ -952,7 +952,7 @@ export default function SettingsPage() {
             alignItems: 'center',
             justifyContent: 'center',
             zIndex: 110,
-            padding: '1.5rem'
+            padding: 'clamp(0.75rem, 3vw, 1.5rem)'
           }}
         >
           <div
@@ -960,9 +960,9 @@ export default function SettingsPage() {
             style={{
               background: 'white',
               borderRadius: '1rem',
-              padding: '2rem',
+              padding: 'clamp(1.25rem, 4vw, 2rem)',
               maxWidth: '440px',
-              width: '100%',
+              width: 'calc(100% - 1rem)',
               boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
               position: 'relative'
             }}

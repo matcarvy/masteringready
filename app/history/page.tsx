@@ -1010,9 +1010,9 @@ export default function HistoryPage() {
                             return (
                               <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                                 <div style={{
-                                  minWidth: '100px',
-                                  maxWidth: '120px',
-                                  fontSize: '0.75rem',
+                                  minWidth: 'clamp(70px, 18vw, 120px)',
+                                  maxWidth: 'clamp(80px, 20vw, 120px)',
+                                  fontSize: 'clamp(0.6875rem, 1.5vw, 0.75rem)',
                                   fontWeight: '500',
                                   color: '#4b5563',
                                   textAlign: 'right'
@@ -1148,7 +1148,7 @@ export default function HistoryPage() {
                         cursor: 'pointer',
                         boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
                         textDecoration: 'none',
-                        marginLeft: '3.5rem',
+                        marginLeft: 'clamp(0rem, 5vw, 3.5rem)',
                         transition: 'all 0.2s'
                       }}
                     >

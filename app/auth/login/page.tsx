@@ -169,8 +169,8 @@ function LoginContent() {
       <div style={{
         background: 'white',
         borderRadius: '1.5rem',
-        padding: '2.5rem',
-        width: '100%',
+        padding: 'clamp(1.5rem, 5vw, 2.5rem)',
+        width: 'calc(100% - 1rem)',
         maxWidth: '420px',
         boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
       }}>

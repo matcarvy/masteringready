@@ -1595,7 +1595,7 @@ export default function AdminPage() {
                             {/* Row 1: Filename, Score, Date */}
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.375rem' }}>
                               <span style={{ fontWeight: '600', color: '#111827' }}>
-                                {a.filename || 'Unknown'}
+                                {a.filename || t.leads.unknown}
                               </span>
                               <span style={{
                                 fontWeight: '700',
