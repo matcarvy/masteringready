@@ -1320,7 +1320,7 @@ def calculate_tonal_balance_percentage(bass_pct: float, mids_pct: float, highs_p
     }
 
 
-def calculate_metrics_bars_percentages(metrics: List[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
+def calculate_metrics_bars_percentages(metrics: List[Dict[str, Any]], strict: bool = False) -> Dict[str, Dict[str, Any]]:
     """
     Calculate percentage bars for quick view tab using Mastering Ready methodology.
     
@@ -1407,32 +1407,54 @@ def calculate_metrics_bars_percentages(metrics: List[Dict[str, Any]]) -> Dict[st
         # HEADROOM (dBFS) - Mastering Ready ranges
         # ============================================
         if "headroom" in key:
-            # 🟢 Verde: ≤ -6 dBFS (Perfecto)
-            # 🔵 Azul: -6 a -4 dBFS (Totalmente funcional)
-            # 🟡 Amarillo: -4 a -2 dBFS (Margen reducido)
-            # 🔴 Rojo: > -2 dBFS (Limita el máster)
             headroom_tooltip_override = None  # For contextual headroom messages
-            
-            if value <= -6.0:
-                percentage = 100
-                bar_status = "excellent"
-            elif -6.0 < value <= -4.0:
-                percentage = 85
-                bar_status = "good"
-            elif -4.0 < value <= -2.0:
-                percentage = 65
-                bar_status = "warning"
-                warnings_count += 1
-            else:  # > -2
-                percentage = 40
-                bar_status = "critical"
-                # Micro-ajuste 1: If Headroom is red but LUFS is green, soften the message
-                # This indicates "compromised margin" not "bad mix"
-                if lufs_val <= -14:  # LUFS is in green/excellent range
-                    headroom_tooltip_override = {
-                        "es": "Headroom comprometido, pero nivel general adecuado. Baja el nivel antes de exportar para dar margen al máster.",
-                        "en": "Compromised headroom, but overall level is adequate. Lower the level before export to give margin for mastering."
-                    }
+
+            if strict:
+                # 🟢 Verde: ≤ -5 dBFS (Perfecto)
+                # 🔵 Azul: -5 a -4 dBFS (Funcional)
+                # 🟡 Amarillo: -4 a -1 dBFS (Margen reducido)
+                # 🔴 Rojo: > -1 dBFS (Limita el máster)
+                if value <= -5.0:
+                    percentage = 100
+                    bar_status = "excellent"
+                elif -5.0 < value <= -4.0:
+                    percentage = 85
+                    bar_status = "good"
+                elif -4.0 < value <= -1.0:
+                    percentage = 65
+                    bar_status = "warning"
+                    warnings_count += 1
+                else:  # > -1.0
+                    percentage = 40
+                    bar_status = "critical"
+                    if lufs_val <= -14:
+                        headroom_tooltip_override = {
+                            "es": "Headroom comprometido, pero nivel general adecuado. Baja el nivel antes de exportar para dar margen al máster.",
+                            "en": "Compromised headroom, but overall level is adequate. Lower the level before export to give margin for mastering."
+                        }
+            else:
+                # 🟢 Verde: ≤ -3 dBFS (Perfecto)
+                # 🔵 Azul: -3 a -2 dBFS (Funcional)
+                # 🟡 Amarillo: -2 a -1 dBFS (Margen reducido)
+                # 🔴 Rojo: > -1 dBFS (Limita el máster)
+                if value <= -3.0:
+                    percentage = 100
+                    bar_status = "excellent"
+                elif -3.0 < value <= -2.0:
+                    percentage = 85
+                    bar_status = "good"
+                elif -2.0 < value <= -1.0:
+                    percentage = 65
+                    bar_status = "warning"
+                    warnings_count += 1
+                else:  # > -1.0
+                    percentage = 40
+                    bar_status = "critical"
+                    if lufs_val <= -14:
+                        headroom_tooltip_override = {
+                            "es": "Headroom comprometido, pero nivel general adecuado. Baja el nivel antes de exportar para dar margen al máster.",
+                            "en": "Compromised headroom, but overall level is adequate. Lower the level before export to give margin for mastering."
+                        }
             
             # Apply headroom-specific tooltip if available
             if headroom_tooltip_override:
@@ -3780,7 +3802,7 @@ def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, s
             "auto_oversample": oversample == 0,
             "clipping_detected": clipping
         },
-        "metrics_bars": calculate_metrics_bars_percentages(metrics),  # NEW v7.3.50: Quick view bars
+        "metrics_bars": calculate_metrics_bars_percentages(metrics, strict=strict),  # NEW v7.3.50: Quick view bars
         "analysis_time_seconds": round(time.time() - start_time, 1),  # Time elapsed
         # v1.5: New data capture fields
         "spectral_6band": fb.get("spectral_6band", {}),
@@ -5828,7 +5850,7 @@ def analyze_file_chunked(
             "auto_oversample": True,
             "clipping_detected": bool(results['clipping_chunks'])
         },
-        "metrics_bars": calculate_metrics_bars_percentages(metrics),  # NEW v7.3.50: Quick view bars
+        "metrics_bars": calculate_metrics_bars_percentages(metrics, strict=strict),  # NEW v7.3.50: Quick view bars
         "analysis_time_seconds": round(time.time() - analysis_start_time, 1),  # Time elapsed (uses renamed variable)
         # v1.5: New data capture fields
         "spectral_6band": fb.get("spectral_6band", {}),

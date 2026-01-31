@@ -74,43 +74,33 @@ def generate_interpretative_texts(
 
 def _get_headroom_status(headroom: float, true_peak: float, strict: bool = False) -> str:
     """
-    Determine headroom status - CORRECTED to match analyzer.py
-    
-    analyzer.py thresholds:
-    - NORMAL: perfect = -6 to -3, pass = -9 to -3, warning = -2 to -1, critical >= -1
-    - STRICT: perfect = -6 to -5, warning = -4 to -1, critical >= -1
-    
+    Determine headroom status - aligned with bar thresholds in analyzer.py
+
+    Headroom-only thresholds (true_peak has its own metric):
+    - NORMAL: excellent ≤ -3, good -3 to -2, warning -2 to -1, error ≥ -1
+    - STRICT: excellent ≤ -5, good -5 to -4, warning -4 to -1, error ≥ -1
+
     Note: In digital audio (dBFS), headroom is NEGATIVE.
     -6 dBFS means 6 dB of space below the 0 dBFS ceiling.
     More negative = more headroom (better).
     """
     if strict:
-        # Strict mode: more conservative requirements
-        # Perfect: headroom -6 to -5 AND true peak <= -3
-        if -6.0 <= headroom <= -5.0 and true_peak <= -3.0:
+        if headroom <= -5.0:
             return "excellent"
-        # Pass: acceptable but not ideal
-        elif headroom <= -4.0 and true_peak <= -2.0:
+        elif -5.0 < headroom <= -4.0:
             return "good"
-        # Warning: hot mix, -4 to -1
-        elif -4.0 <= headroom < -1.0:
+        elif -4.0 < headroom <= -1.0:
             return "warning"
-        # Critical: >= -1 dBFS
-        else:
+        else:  # > -1.0
             return "error"
     else:
-        # Normal mode - CORRECTED thresholds
-        # Perfect: -6 to -3 dBFS (analyzer's perfect range)
-        if -6.0 <= headroom <= -3.0 and true_peak <= -3.0:
+        if headroom <= -3.0:
             return "excellent"
-        # Good/Pass: -9 to -3 OR slightly above -3
-        elif headroom <= -3.0 and true_peak <= -1.0:
+        elif -3.0 < headroom <= -2.0:
             return "good"
-        # Warning: -2 to -1 (hot but not clipping)
-        elif -2.0 < headroom < -1.0:
+        elif -2.0 < headroom <= -1.0:
             return "warning"
-        # Error: >= -1 dBFS (critical/clipping risk)
-        else:
+        else:  # > -1.0
             return "error"
 
 
