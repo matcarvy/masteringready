@@ -277,6 +277,9 @@ export default function RootLayout({
         {/* Prevent Safari text inflation on iOS accessibility text scaling */}
         <style dangerouslySetInnerHTML={{ __html: `
           html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+          @supports (-webkit-touch-callout: none) {
+            input, textarea, select { font-size: 16px !important; }
+          }
         `}} />
 
         {/* Structured Data */}

@@ -212,18 +212,20 @@ export function UserMenu({ lang = 'es', isMobile = false }: UserMenuProps) {
           </div>
         )}
 
-        {/* Name (hidden on mobile) */}
-        <span style={{
-          color: '#374151',
-          fontSize: '0.875rem',
-          fontWeight: '500',
-          maxWidth: '120px',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap'
-        }}>
-          {displayName}
-        </span>
+        {/* Name — hidden on mobile to save header space */}
+        {!isMobile && (
+          <span style={{
+            color: '#374151',
+            fontSize: '0.875rem',
+            fontWeight: '500',
+            maxWidth: '120px',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap'
+          }}>
+            {displayName}
+          </span>
+        )}
 
         <ChevronDown
           size={16}

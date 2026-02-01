@@ -500,8 +500,11 @@ function Home() {
   }, [isLoggedIn, authLoading])
 
   // React to pending analysis quota exceeded (from AuthProvider after login)
+  // Clear results + stop unlock animation so user can't see the analysis for free
   useEffect(() => {
     if (pendingAnalysisQuotaExceeded) {
+      setResult(null)
+      setIsUnlocking(false)
       setShowFreeLimitModal(true)
       clearPendingAnalysisQuotaExceeded()
     }
@@ -641,8 +644,7 @@ const handleAnalyze = async () => {
     // Check if file needs compression
     // API accepts up to 200MB — only compress very large files to avoid
     // losing stereo info or bit depth through Web Audio API re-encoding
-    // Mobile: lower threshold to 30MB to prevent upload timeouts on cellular/weak connections
-    const maxSize = isMobile ? 30 * 1024 * 1024 : 100 * 1024 * 1024
+    const maxSize = 100 * 1024 * 1024  // 100MB threshold
     if (file.size > maxSize) {
       setCompressing(true)
       setCompressionProgress(0)
@@ -1221,8 +1223,7 @@ by Matías Carvajal
   }
 
   const isFileTooLarge = file && file.size > 500 * 1024 * 1024 // 500MB hard limit
-  const compressionThreshold = isMobile ? 30 * 1024 * 1024 : 100 * 1024 * 1024
-  const needsCompression = file && file.size > compressionThreshold && file.size <= 500 * 1024 * 1024
+  const needsCompression = file && file.size > 100 * 1024 * 1024 && file.size <= 500 * 1024 * 1024
 
   const getScoreColor = (score: number) => {
     if (score >= 85) return '#10b981'
