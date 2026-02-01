@@ -246,7 +246,7 @@ function InterpretativeSection({ title, interpretation, recommendation, metrics,
 
 function Home() {
   // Auth state - check if user is logged in
-  const { user, loading: authLoading, savePendingAnalysis, pendingAnalysisQuotaExceeded, clearPendingAnalysisQuotaExceeded } = useAuth()
+  const { user, loading: authLoading, savePendingAnalysis, pendingAnalysisQuotaExceeded, clearPendingAnalysisQuotaExceeded, pendingAnalysisSaved, clearPendingAnalysisSaved } = useAuth()
   const isLoggedIn = !!user
 
   const [file, setFile] = useState<File | null>(null)
@@ -499,8 +499,18 @@ function Home() {
     }
   }, [isLoggedIn, authLoading])
 
+  // React to pending analysis save success (from AuthProvider after login)
+  // Only NOW play the unlock animation — quota was checked before saving
+  useEffect(() => {
+    if (pendingAnalysisSaved) {
+      setIsUnlocking(true)
+      setTimeout(() => setIsUnlocking(false), 1500)
+      clearPendingAnalysisSaved()
+    }
+  }, [pendingAnalysisSaved, clearPendingAnalysisSaved])
+
   // React to pending analysis quota exceeded (from AuthProvider after login)
-  // Clear results + stop unlock animation so user can't see the analysis for free
+  // Clear results so user can't see the analysis for free
   useEffect(() => {
     if (pendingAnalysisQuotaExceeded) {
       setResult(null)
@@ -4151,22 +4161,10 @@ by Matías Carvajal
       <AuthModal
         isOpen={showAuthModal}
         onClose={() => setShowAuthModal(false)}
-        onSuccess={async () => {
+        onSuccess={() => {
           setShowAuthModal(false)
-          // Trigger unlock animation
-          setIsUnlocking(true)
-
-          // Explicitly save the pending analysis
-          try {
-            await savePendingAnalysis()
-            console.log('Analysis save completed from modal')
-          } catch (err) {
-            console.error('Failed to save analysis from modal:', err)
-          }
-
-          setTimeout(() => {
-            setIsUnlocking(false)
-          }, 1500)
+          // Don't trigger unlock animation here — wait for AuthProvider to signal
+          // either pendingAnalysisSaved (→ unlock) or pendingAnalysisQuotaExceeded (→ paywall)
         }}
         lang={lang}
       />

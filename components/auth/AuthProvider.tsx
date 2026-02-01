@@ -23,6 +23,8 @@ interface AuthContextType {
   savePendingAnalysis: () => Promise<SaveAnalysisResult>
   pendingAnalysisQuotaExceeded: boolean
   clearPendingAnalysisQuotaExceeded: () => void
+  pendingAnalysisSaved: boolean
+  clearPendingAnalysisSaved: () => void
 }
 
 interface AuthProviderProps {
@@ -40,7 +42,9 @@ const AuthContext = createContext<AuthContextType>({
   signOut: async () => {},
   savePendingAnalysis: async () => 'no_pending',
   pendingAnalysisQuotaExceeded: false,
-  clearPendingAnalysisQuotaExceeded: () => {}
+  clearPendingAnalysisQuotaExceeded: () => {},
+  pendingAnalysisSaved: false,
+  clearPendingAnalysisSaved: () => {}
 })
 
 // ============================================================================
@@ -248,8 +252,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
   const [pendingAnalysisQuotaExceeded, setPendingAnalysisQuotaExceeded] = useState(false)
+  const [pendingAnalysisSaved, setPendingAnalysisSaved] = useState(false)
 
   const clearPendingAnalysisQuotaExceeded = () => setPendingAnalysisQuotaExceeded(false)
+  const clearPendingAnalysisSaved = () => setPendingAnalysisSaved(false)
 
   // Exposed function to save pending analysis (can be called from components)
   const savePendingAnalysis = async (): Promise<SaveAnalysisResult> => {
@@ -273,6 +279,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       if (result === 'quota_exceeded') {
         setPendingAnalysisQuotaExceeded(true)
+      } else if (result === 'saved') {
+        setPendingAnalysisSaved(true)
       }
 
       return result
@@ -370,6 +378,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
           const saveResult = await savePendingAnalysisForUser(u.id)
           if (saveResult === 'quota_exceeded') {
             setPendingAnalysisQuotaExceeded(true)
+          } else if (saveResult === 'saved') {
+            setPendingAnalysisSaved(true)
           }
         }
       }
@@ -392,7 +402,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, signOut, savePendingAnalysis, pendingAnalysisQuotaExceeded, clearPendingAnalysisQuotaExceeded }}>
+    <AuthContext.Provider value={{ user, session, loading, signOut, savePendingAnalysis, pendingAnalysisQuotaExceeded, clearPendingAnalysisQuotaExceeded, pendingAnalysisSaved, clearPendingAnalysisSaved }}>
       {children}
     </AuthContext.Provider>
   )
