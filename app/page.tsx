@@ -1221,7 +1221,8 @@ by Matías Carvajal
   }
 
   const isFileTooLarge = file && file.size > 500 * 1024 * 1024 // 500MB hard limit
-  const needsCompression = file && file.size > 100 * 1024 * 1024 && file.size <= 500 * 1024 * 1024  // 100MB threshold (matches compressAudioFile)
+  const compressionThreshold = isMobile ? 30 * 1024 * 1024 : 100 * 1024 * 1024
+  const needsCompression = file && file.size > compressionThreshold && file.size <= 500 * 1024 * 1024
 
   const getScoreColor = (score: number) => {
     if (score >= 85) return '#10b981'
