@@ -4531,7 +4531,7 @@ by Matías Carvajal
                 fontWeight: '600',
                 marginBottom: '0.5rem'
               }}>
-                MasteringReady Pro - {proPrice.showLocal ? (
+                MasteringReady Pro · {proPrice.showLocal ? (
                   <>~{proPrice.formattedLocal}/{lang === 'es' ? 'mes' : 'mo'}</>
                 ) : (
                   <>{proPrice.formatted}/{lang === 'es' ? 'mes' : 'mo'}</>
@@ -4544,7 +4544,7 @@ by Matías Carvajal
                   marginBottom: '0.5rem',
                   fontStyle: 'italic'
                 }}>
-                  ({proPrice.formatted} USD)
+                  ({proPrice.formatted})
                 </p>
               )}
               <ul style={{
