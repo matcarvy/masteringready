@@ -428,7 +428,7 @@ export default function HistoryPage() {
             )}
           </Link>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '0.5rem' : '0.75rem' }}>
             <button
               onClick={() => {
                 const newLang = lang === 'es' ? 'en' : 'es'

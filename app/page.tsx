@@ -1264,47 +1264,62 @@ by Matías Carvajal
         <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 1rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', minHeight: '64px', gap: '0.5rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0, flex: '1 1 auto', overflow: 'hidden' }}>
-              <span style={{
-                fontSize: 'clamp(1rem, 4vw, 1.5rem)',
-                fontWeight: 'bold',
+              <div style={{
+                width: '32px',
+                height: '32px',
                 background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text',
-                whiteSpace: 'nowrap',
-                display: 'inline-flex',
+                borderRadius: '0.5rem',
+                display: 'flex',
                 alignItems: 'center',
-                gap: '0.5rem',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis'
+                justifyContent: 'center',
+                flexShrink: 0
               }}>
-                <Music size={24} style={{ color: '#667eea', flexShrink: 0 }} /> MasteringReady
-              </span>
-            </div>
-            <div style={{ display: 'flex', gap: 'clamp(0.25rem, 1.5vw, 1rem)', alignItems: 'center', flexShrink: 0 }}>
-              {/* Language toggle — hidden on mobile (moves to hamburger) */}
+                <Music size={18} color="white" />
+              </div>
               {!isMobile && (
-                <button
-                  onClick={() => {
-                    const newLang = lang === 'es' ? 'en' : 'es'
-                    setLang(newLang)
-                    setLanguageCookie(newLang)
-                  }}
-                  style={{
-                    fontSize: 'clamp(0.75rem, 2vw, 0.875rem)',
-                    fontWeight: '500',
-                    color: '#6b7280',
-                    cursor: 'pointer',
-                    border: 'none',
-                    background: 'none',
-                    padding: 'clamp(0.25rem, 1vw, 0.5rem) clamp(0.5rem, 2vw, 1rem)',
-                    minWidth: '2.5rem',
-                    textAlign: 'center'
-                  }}
-                >
-                  {lang === 'es' ? 'EN' : 'ES'}
-                </button>
+                <span style={{
+                  fontWeight: '700',
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
+                  whiteSpace: 'nowrap'
+                }}>
+                  MasteringReady
+                </span>
               )}
+            </div>
+            <div style={{ display: 'flex', gap: isMobile ? '0.5rem' : '0.75rem', alignItems: 'center', flexShrink: 0 }}>
+              {/* Language Toggle */}
+              <button
+                onClick={() => {
+                  const newLang = lang === 'es' ? 'en' : 'es'
+                  setLang(newLang)
+                  setLanguageCookie(newLang)
+                  if (user) {
+                    supabase
+                      .from('profiles')
+                      .update({ preferred_language: newLang })
+                      .eq('id', user.id)
+                      .then(({ error }) => {
+                        if (error) console.error('Error saving language preference:', error)
+                      })
+                  }
+                }}
+                style={{
+                  padding: '0.375rem 0.75rem',
+                  minWidth: '2.5rem',
+                  textAlign: 'center',
+                  background: 'transparent',
+                  color: '#6b7280',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontWeight: '500',
+                  fontSize: '0.875rem'
+                }}
+              >
+                {lang === 'es' ? 'EN' : 'ES'}
+              </button>
 
               {/* User Menu — hidden on mobile when not logged in (hamburger handles it) */}
               <UserMenu lang={lang} isMobile={isMobile} />
@@ -1370,36 +1385,6 @@ by Matías Carvajal
                       overflow: 'hidden',
                       zIndex: 50
                     }}>
-                      {/* Language toggle */}
-                      <div style={{
-                        padding: '0.75rem 1rem',
-                        borderBottom: '1px solid #e5e7eb'
-                      }}>
-                        <button
-                          onClick={() => {
-                            const newLang = lang === 'es' ? 'en' : 'es'
-                            setLang(newLang)
-                            setLanguageCookie(newLang)
-                          }}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.5rem',
-                            background: 'none',
-                            border: 'none',
-                            cursor: 'pointer',
-                            color: '#374151',
-                            fontSize: '0.95rem',
-                            fontWeight: '500',
-                            width: '100%',
-                            textAlign: 'left'
-                          }}
-                        >
-                          <Globe size={18} color="#6b7280" />
-                          {lang === 'es' ? 'English' : 'Español'}
-                        </button>
-                      </div>
-
                       {/* Auth links */}
                       <div style={{ padding: '0.5rem 0' }}>
                         <Link
