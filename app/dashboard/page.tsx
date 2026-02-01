@@ -681,7 +681,7 @@ function DashboardContent() {
                 WebkitTextFillColor: 'transparent',
                 backgroundClip: 'text'
               }}>
-                MasteringReady
+                Mastering Ready
               </span>
             )}
           </Link>
@@ -1684,7 +1684,7 @@ function DashboardContent() {
                 {reportTab === 'rapid' && selectedAnalysis.report_visual && (
                   <button
                     onClick={() => {
-                      const content = `MasteringReady - Análisis Rápido\n${'='.repeat(40)}\n\nArchivo: ${selectedAnalysis.filename}\nPuntuación: ${selectedAnalysis.score}/100\nFecha: ${new Date(selectedAnalysis.created_at).toLocaleDateString()}\n\n${selectedAnalysis.report_visual}`
+                      const content = `Mastering Ready - Análisis Rápido\n${'='.repeat(40)}\n\nArchivo: ${selectedAnalysis.filename}\nPuntuación: ${selectedAnalysis.score}/100\nFecha: ${new Date(selectedAnalysis.created_at).toLocaleDateString()}\n\n${selectedAnalysis.report_visual}`
                       const blob = new Blob([content], { type: 'text/plain;charset=utf-8' })
                       const url = URL.createObjectURL(blob)
                       const a = document.createElement('a')
@@ -1718,7 +1718,7 @@ function DashboardContent() {
                 {reportTab === 'summary' && selectedAnalysis.report_short && (
                   <button
                     onClick={() => {
-                      const content = `MasteringReady - Resumen\n${'='.repeat(40)}\n\nArchivo: ${selectedAnalysis.filename}\nPuntuación: ${selectedAnalysis.score}/100\nFecha: ${new Date(selectedAnalysis.created_at).toLocaleDateString()}\n\n${selectedAnalysis.report_short}`
+                      const content = `Mastering Ready - Resumen\n${'='.repeat(40)}\n\nArchivo: ${selectedAnalysis.filename}\nPuntuación: ${selectedAnalysis.score}/100\nFecha: ${new Date(selectedAnalysis.created_at).toLocaleDateString()}\n\n${selectedAnalysis.report_short}`
                       const blob = new Blob([content], { type: 'text/plain;charset=utf-8' })
                       const url = URL.createObjectURL(blob)
                       const a = document.createElement('a')
@@ -1752,7 +1752,7 @@ function DashboardContent() {
                 {reportTab === 'complete' && isPro && selectedAnalysis.report_write && (
                   <button
                     onClick={() => {
-                      const content = `MasteringReady - Análisis Completo\n${'='.repeat(40)}\n\nArchivo: ${selectedAnalysis.filename}\nPuntuación: ${selectedAnalysis.score}/100\nFecha: ${new Date(selectedAnalysis.created_at).toLocaleDateString()}\n\n${selectedAnalysis.report_write}`
+                      const content = `Mastering Ready - Análisis Completo\n${'='.repeat(40)}\n\nArchivo: ${selectedAnalysis.filename}\nPuntuación: ${selectedAnalysis.score}/100\nFecha: ${new Date(selectedAnalysis.created_at).toLocaleDateString()}\n\n${selectedAnalysis.report_write}`
                       const blob = new Blob([content], { type: 'text/plain;charset=utf-8' })
                       const url = URL.createObjectURL(blob)
                       const a = document.createElement('a')
@@ -2089,8 +2089,8 @@ function DashboardContent() {
               <a
                 href={`https://wa.me/573155576115?text=${encodeURIComponent(
                   lang === 'es'
-                    ? `Hola! Acabo de analizar mi mezcla en MasteringReady y me gustaría hablar sobre el mastering.\n\nPuntuación obtenida: ${selectedAnalysis?.score || 'N/A'}/100`
-                    : `Hi! I just analyzed my mix on MasteringReady and would like to talk about mastering.\n\nScore obtained: ${selectedAnalysis?.score || 'N/A'}/100`
+                    ? `Hola! Acabo de analizar mi mezcla en Mastering Ready y me gustaría hablar sobre el mastering.\n\nPuntuación obtenida: ${selectedAnalysis?.score || 'N/A'}/100`
+                    : `Hi! I just analyzed my mix on Mastering Ready and would like to talk about mastering.\n\nScore obtained: ${selectedAnalysis?.score || 'N/A'}/100`
                 )}`}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -2113,11 +2113,11 @@ function DashboardContent() {
               {/* Email */}
               <a
                 href={`mailto:mat@matcarvy.com?subject=${encodeURIComponent(
-                  lang === 'es' ? 'Solicitud de Mastering - MasteringReady' : 'Mastering Request - MasteringReady'
+                  lang === 'es' ? 'Solicitud de Mastering - Mastering Ready' : 'Mastering Request - Mastering Ready'
                 )}&body=${encodeURIComponent(
                   lang === 'es'
-                    ? `Hola Matías,\n\nAcabo de analizar mi mezcla en MasteringReady y me gustaría hablar sobre el proceso de mastering.\n\nPuntuación obtenida: ${selectedAnalysis?.score || 'N/A'}/100\nArchivo: ${selectedAnalysis?.filename || 'N/A'}\n\nGracias!`
-                    : `Hi Matías,\n\nI just analyzed my mix on MasteringReady and would like to discuss the mastering process.\n\nScore obtained: ${selectedAnalysis?.score || 'N/A'}/100\nFile: ${selectedAnalysis?.filename || 'N/A'}\n\nThanks!`
+                    ? `Hola Matías,\n\nAcabo de analizar mi mezcla en Mastering Ready y me gustaría hablar sobre el proceso de mastering.\n\nPuntuación obtenida: ${selectedAnalysis?.score || 'N/A'}/100\nArchivo: ${selectedAnalysis?.filename || 'N/A'}\n\nGracias!`
+                    : `Hi Matías,\n\nI just analyzed my mix on Mastering Ready and would like to discuss the mastering process.\n\nScore obtained: ${selectedAnalysis?.score || 'N/A'}/100\nFile: ${selectedAnalysis?.filename || 'N/A'}\n\nThanks!`
                 )}`}
                 style={{
                   display: 'flex', alignItems: 'center', gap: '1rem',

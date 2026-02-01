@@ -316,7 +316,7 @@ function generateCompleteReport(data: any, lang: string): string {
   }
   
   complete += '──────────────────────────────────────────────────\n'
-  complete += (lang === 'es' ? 'Analizado con' : 'Analyzed with') + ' MasteringReady\n'
+  complete += (lang === 'es' ? 'Analizado con' : 'Analyzed with') + ' Mastering Ready\n'
   complete += 'www.masteringready.com\n'
   complete += 'by Matías Carvajal\n'
   

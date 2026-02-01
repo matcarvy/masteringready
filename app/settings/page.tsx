@@ -419,7 +419,7 @@ export default function SettingsPage() {
                 WebkitTextFillColor: 'transparent',
                 backgroundClip: 'text'
               }}>
-                MasteringReady
+                Mastering Ready
               </span>
             )}
           </Link>

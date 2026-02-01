@@ -423,7 +423,7 @@ export default function HistoryPage() {
                 WebkitTextFillColor: 'transparent',
                 backgroundClip: 'text'
               }}>
-                MasteringReady
+                Mastering Ready
               </span>
             )}
           </Link>
@@ -1144,8 +1144,8 @@ export default function HistoryPage() {
                     <a
                       href={`https://wa.me/573155576115?text=${encodeURIComponent(
                         lang === 'es'
-                          ? `Hola! Acabo de analizar mi mezcla "${selectedAnalysis.filename}" en MasteringReady. Puntuación: ${selectedAnalysis.score}/100`
-                          : `Hi! I just analyzed my mix "${selectedAnalysis.filename}" on MasteringReady. Score: ${selectedAnalysis.score}/100`
+                          ? `Hola! Acabo de analizar mi mezcla "${selectedAnalysis.filename}" en Mastering Ready. Puntuación: ${selectedAnalysis.score}/100`
+                          : `Hi! I just analyzed my mix "${selectedAnalysis.filename}" on Mastering Ready. Score: ${selectedAnalysis.score}/100`
                       )}`}
                       target="_blank"
                       rel="noopener noreferrer"
@@ -1181,7 +1181,7 @@ export default function HistoryPage() {
                 {reportTab === 'rapid' && selectedAnalysis.report_visual && (
                   <button
                     onClick={() => {
-                      const content = `MasteringReady - Análisis Rápido\n${'='.repeat(40)}\n\nArchivo: ${selectedAnalysis.filename}\nPuntuación: ${selectedAnalysis.score}/100\nFecha: ${new Date(selectedAnalysis.created_at).toLocaleDateString()}\n\n${selectedAnalysis.report_visual}`
+                      const content = `Mastering Ready - Análisis Rápido\n${'='.repeat(40)}\n\nArchivo: ${selectedAnalysis.filename}\nPuntuación: ${selectedAnalysis.score}/100\nFecha: ${new Date(selectedAnalysis.created_at).toLocaleDateString()}\n\n${selectedAnalysis.report_visual}`
                       const blob = new Blob([content], { type: 'text/plain;charset=utf-8' })
                       const url = URL.createObjectURL(blob)
                       const a = document.createElement('a')
@@ -1213,7 +1213,7 @@ export default function HistoryPage() {
                 {reportTab === 'summary' && selectedAnalysis.report_short && (
                   <button
                     onClick={() => {
-                      const content = `MasteringReady - Resumen\n${'='.repeat(40)}\n\nArchivo: ${selectedAnalysis.filename}\nPuntuación: ${selectedAnalysis.score}/100\nFecha: ${new Date(selectedAnalysis.created_at).toLocaleDateString()}\n\n${selectedAnalysis.report_short}`
+                      const content = `Mastering Ready - Resumen\n${'='.repeat(40)}\n\nArchivo: ${selectedAnalysis.filename}\nPuntuación: ${selectedAnalysis.score}/100\nFecha: ${new Date(selectedAnalysis.created_at).toLocaleDateString()}\n\n${selectedAnalysis.report_short}`
                       const blob = new Blob([content], { type: 'text/plain;charset=utf-8' })
                       const url = URL.createObjectURL(blob)
                       const a = document.createElement('a')
@@ -1245,7 +1245,7 @@ export default function HistoryPage() {
                 {reportTab === 'complete' && isPro && selectedAnalysis.report_write && (
                   <button
                     onClick={() => {
-                      const content = `MasteringReady - Análisis Completo\n${'='.repeat(40)}\n\nArchivo: ${selectedAnalysis.filename}\nPuntuación: ${selectedAnalysis.score}/100\nFecha: ${new Date(selectedAnalysis.created_at).toLocaleDateString()}\n\n${selectedAnalysis.report_write}`
+                      const content = `Mastering Ready - Análisis Completo\n${'='.repeat(40)}\n\nArchivo: ${selectedAnalysis.filename}\nPuntuación: ${selectedAnalysis.score}/100\nFecha: ${new Date(selectedAnalysis.created_at).toLocaleDateString()}\n\n${selectedAnalysis.report_write}`
                       const blob = new Blob([content], { type: 'text/plain;charset=utf-8' })
                       const url = URL.createObjectURL(blob)
                       const a = document.createElement('a')

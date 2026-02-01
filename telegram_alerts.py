@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Telegram Alerts + Stats Tracking for MasteringReady
+Telegram Alerts + Stats Tracking for Mastering Ready
 ====================================================
 
 Sistema completo de:
@@ -15,7 +15,7 @@ Setup:
    - TELEGRAM_BOT_TOKEN
    - TELEGRAM_CHAT_ID
 
-Author: MasteringReady Team
+Author: Mastering Ready Team
 Version: 2.0.0 (Con Stats Tracking)
 """
 
@@ -471,7 +471,7 @@ def alert_milestone(milestone_type: str, value: int):
     """Notifica hitos importantes."""
     milestones = {
         "daily_analyses": f"🎉 <b>¡{value} análisis hoy!</b>\nNuevo récord diario",
-        "total_analyses": f"🏆 <b>¡{value} análisis totales!</b>\nGracias por usar MasteringReady",
+        "total_analyses": f"🏆 <b>¡{value} análisis totales!</b>\nGracias por usar Mastering Ready",
         "perfect_scores": f"⭐ <b>¡{value} scores perfectos!</b>\nMezclas listas para mastering",
     }
     
@@ -482,7 +482,7 @@ def alert_milestone(milestone_type: str, value: int):
 def alert_system_status(status: str, details: str = ""):
     """Notifica estado del sistema."""
     status_messages = {
-        "online": "🟢 <b>Sistema ONLINE</b>\nMasteringReady Analyzer activo",
+        "online": "🟢 <b>Sistema ONLINE</b>\nMastering Ready Analyzer activo",
         "offline": "🔴 <b>Sistema OFFLINE</b>\nServicio detenido",
         "maintenance": "🟡 <b>Mantenimiento</b>\nServicio temporalmente pausado",
         "restart": "🔄 <b>Reinicio completado</b>\nServicio restaurado",

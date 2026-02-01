@@ -21,7 +21,7 @@ import { Headphones, Mail, Lock, ArrowLeft, Eye, EyeOff } from 'lucide-react'
 const translations = {
   es: {
     title: 'Iniciar Sesión',
-    subtitle: 'Bienvenido de vuelta a MasteringReady',
+    subtitle: 'Bienvenido de vuelta a Mastering Ready',
     email: 'Correo electrónico',
     password: 'Contraseña',
     forgotPassword: '¿Olvidaste tu contraseña?',
@@ -38,7 +38,7 @@ const translations = {
   },
   en: {
     title: 'Sign In',
-    subtitle: 'Welcome back to MasteringReady',
+    subtitle: 'Welcome back to Mastering Ready',
     email: 'Email address',
     password: 'Password',
     forgotPassword: 'Forgot your password?',

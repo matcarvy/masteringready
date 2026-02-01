@@ -1,8 +1,8 @@
 """
-MasteringReady API v7.4.0 - IP Rate Limiting
+Mastering Ready API v7.4.0 - IP Rate Limiting
 =====================================================
 
-FastAPI backend for MasteringReady web application.
+FastAPI backend for Mastering Ready web application.
 
 FEATURES in v7.4.0:
 - IP-based rate limiting for anonymous users (1 free analysis per IP)
@@ -170,7 +170,7 @@ async def cleanup_old_jobs():
 
 # Create FastAPI app
 app = FastAPI(
-    title="MasteringReady API",
+    title="Mastering Ready API",
     description="Audio analysis API based on Matías Carvajal's Mastering Ready methodology",
     version=ANALYZER_VERSION,
     docs_url="/docs",
@@ -340,7 +340,7 @@ async def check_ip_limit(request: Request, is_authenticated: bool = False):
 async def root():
     """Health check endpoint."""
     return {
-        "name": "MasteringReady API",
+        "name": "Mastering Ready API",
         "version": ANALYZER_VERSION,
         "status": "healthy",
         "methodology": "Basado en 'Mastering Ready' de Matías Carvajal",

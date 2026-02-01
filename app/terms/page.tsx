@@ -22,13 +22,13 @@ const translations = {
     sections: {
       intro: {
         title: 'Introducción',
-        content: `Bienvenido a MasteringReady. Al acceder o utilizar nuestro servicio de análisis de audio, aceptas estos Términos de Servicio. Lee este documento con atención antes de usar la plataforma.
+        content: `Bienvenido a Mastering Ready. Al acceder o utilizar nuestro servicio de análisis de audio, aceptas estos Términos de Servicio. Lee este documento con atención antes de usar la plataforma.
 
-MasteringReady es un servicio de análisis técnico de mezclas de audio que te ayuda a evaluar si tu mezcla está lista para el proceso de mastering.`
+Mastering Ready es un servicio de análisis técnico de mezclas de audio que te ayuda a evaluar si tu mezcla está lista para el proceso de mastering.`
       },
       service: {
         title: 'Descripción del Servicio',
-        content: `MasteringReady proporciona:
+        content: `Mastering Ready proporciona:
 
 • Análisis técnico de archivos de audio (WAV, MP3, AIFF)
 • Métricas como LUFS, True Peak, Headroom, correlación estéreo y balance frecuencial
@@ -52,7 +52,7 @@ Debido a la naturaleza digital e inmediata del servicio, todos los pagos son fin
       },
       usage: {
         title: 'Uso Aceptable',
-        content: `Al usar MasteringReady, te comprometes a:
+        content: `Al usar Mastering Ready, te comprometes a:
 
 • Subir únicamente archivos de audio de los cuales tienes los derechos necesarios
 • No intentar vulnerar, hackear o sobrecargar nuestros sistemas
@@ -78,15 +78,15 @@ Consulta nuestra Política de Privacidad para más detalles.`
       ip: {
         title: 'Propiedad Intelectual',
         content: `• Tú conservas todos los derechos sobre tus archivos de audio
-• MasteringReady conserva los derechos sobre su metodología, algoritmos, código y diseño
+• Mastering Ready conserva los derechos sobre su metodología, algoritmos, código y diseño
 • Los reportes generados son para tu uso personal o profesional
-• La marca "MasteringReady" y el logo son propiedad de Matías Carvajal
+• La marca "Mastering Ready" y el logo son propiedad de Matías Carvajal
 
-La lógica de análisis, el sistema de puntuación y las recomendaciones se basan en know-how propietario desarrollado por MasteringReady y no se derivan de ningún archivo de audio individual de los usuarios.`
+La lógica de análisis, el sistema de puntuación y las recomendaciones se basan en know-how propietario desarrollado por Mastering Ready y no se derivan de ningún archivo de audio individual de los usuarios.`
       },
       liability: {
         title: 'Limitación de Responsabilidad',
-        content: `MasteringReady se proporciona "tal cual" sin garantías de ningún tipo. No garantizamos:
+        content: `Mastering Ready se proporciona "tal cual" sin garantías de ningún tipo. No garantizamos:
 
 • Que el servicio esté libre de errores o interrupciones
 • Que los resultados del análisis sean 100% precisos en todos los casos
@@ -116,13 +116,13 @@ En ningún caso seremos responsables por daños indirectos, incidentales o conse
     sections: {
       intro: {
         title: 'Introduction',
-        content: `Welcome to MasteringReady. By accessing or using our audio analysis service, you agree to these Terms of Service. Please read this document carefully before using the platform.
+        content: `Welcome to Mastering Ready. By accessing or using our audio analysis service, you agree to these Terms of Service. Please read this document carefully before using the platform.
 
-MasteringReady is a technical mix analysis service that helps you evaluate whether your mix is ready for the mastering process.`
+Mastering Ready is a technical mix analysis service that helps you evaluate whether your mix is ready for the mastering process.`
       },
       service: {
         title: 'Service Description',
-        content: `MasteringReady provides:
+        content: `Mastering Ready provides:
 
 • Technical analysis of audio files (WAV, MP3, AIFF)
 • Metrics such as LUFS, True Peak, Headroom, stereo correlation, and frequency balance
@@ -146,7 +146,7 @@ Due to the digital and immediate nature of the service, all payments are final u
       },
       usage: {
         title: 'Acceptable Use',
-        content: `When using MasteringReady, you agree to:
+        content: `When using Mastering Ready, you agree to:
 
 • Upload only audio files for which you have the necessary rights
 • Not attempt to breach, hack, or overload our systems
@@ -172,15 +172,15 @@ Please refer to our Privacy Policy for more details.`
       ip: {
         title: 'Intellectual Property',
         content: `• You retain all rights to your audio files
-• MasteringReady retains rights to its methodology, algorithms, code, and design
+• Mastering Ready retains rights to its methodology, algorithms, code, and design
 • Generated reports are for your personal or professional use
-• The "MasteringReady" brand and logo are property of Matías Carvajal
+• The "Mastering Ready" brand and logo are property of Matías Carvajal
 
-The analysis logic, scoring system, and recommendations are based on proprietary know-how developed by MasteringReady and are not derived from any single user's audio file.`
+The analysis logic, scoring system, and recommendations are based on proprietary know-how developed by Mastering Ready and are not derived from any single user's audio file.`
       },
       liability: {
         title: 'Limitation of Liability',
-        content: `MasteringReady is provided "as is" without warranties of any kind. We do not guarantee:
+        content: `Mastering Ready is provided "as is" without warranties of any kind. We do not guarantee:
 
 • That the service will be error-free or uninterrupted
 • That analysis results will be 100% accurate in all cases

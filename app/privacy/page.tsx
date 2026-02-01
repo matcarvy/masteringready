@@ -22,7 +22,7 @@ const translations = {
     sections: {
       intro: {
         title: 'Resumen',
-        content: `En MasteringReady, tu privacidad es nuestra prioridad. Este documento explica qué datos recopilamos, cómo los usamos y tus derechos sobre ellos.
+        content: `En Mastering Ready, tu privacidad es nuestra prioridad. Este documento explica qué datos recopilamos, cómo los usamos y tus derechos sobre ellos.
 
 Lo más importante que debes saber: nunca almacenamos tus archivos de audio. Se procesan en memoria y se eliminan inmediatamente después del análisis.`
       },
@@ -147,7 +147,7 @@ Puedes solicitar la eliminación de tu cuenta y datos en cualquier momento.`
     sections: {
       intro: {
         title: 'Summary',
-        content: `At MasteringReady, your privacy is our priority. This document explains what data we collect, how we use it, and your rights regarding it.
+        content: `At Mastering Ready, your privacy is our priority. This document explains what data we collect, how we use it, and your rights regarding it.
 
 The most important thing to know: we never store your audio files. They are processed in memory and deleted immediately after analysis.`
       },

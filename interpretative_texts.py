@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Interpretative Texts Generator for MasteringReady
+Interpretative Texts Generator for Mastering Ready
 =================================================
 
 CORRECTED VERSION - Aligned with analyzer.py v7.3.30 thresholds
@@ -13,7 +13,7 @@ Key fixes:
 4. Added M/S ratio consideration to stereo evaluation
 5. LUFS text adjusted to reflect "informative" nature
 
-Author: MasteringReady Team
+Author: Mastering Ready Team
 Version: 1.1.0 (corrected)
 """
 

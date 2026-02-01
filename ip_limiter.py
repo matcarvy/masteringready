@@ -5,7 +5,7 @@ IP Rate Limiter for Anonymous Users
 Limits anonymous users to 2 free analyses per IP address.
 Integrates with Supabase for persistent storage.
 
-Author: MasteringReady
+Author: Mastering Ready
 Version: 1.0.0
 """
 

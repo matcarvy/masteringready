@@ -5,7 +5,7 @@ VPN/Proxy Detection Module
 Detects VPNs, proxies, and Tor exit nodes using multiple methods.
 Uses free APIs with optional premium service support.
 
-Author: MasteringReady
+Author: Mastering Ready
 Version: 1.0.0
 """
 

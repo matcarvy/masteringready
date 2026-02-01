@@ -42,7 +42,7 @@ export interface StripePriceConfig {
 // Product definitions for setup
 export const PRODUCT_DEFINITIONS = {
   PRO_MONTHLY: {
-    name: 'MasteringReady Pro',
+    name: 'Mastering Ready Pro',
     description: 'Professional audio analysis with 30 analyses per month',
     basePriceUsd: PRICING.PRO_MONTHLY,
     features: [

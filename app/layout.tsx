@@ -2,11 +2,11 @@ import type { Metadata, Viewport } from 'next'
 import { AuthProvider } from '@/components/auth'
 
 // =============================================================================
-// SEO METADATA - MasteringReady
+// SEO METADATA - Mastering Ready
 // =============================================================================
 
 const siteConfig = {
-  name: 'MasteringReady',
+  name: 'Mastering Ready',
   url: 'https://masteringready.com',
   author: 'Matías Carvajal',
   twitter: '@matcarvy',
@@ -27,8 +27,8 @@ export const metadata: Metadata = {
   // BASIC META
   // ─────────────────────────────────────────────────────────────────────────────
   title: {
-    default: 'MasteringReady | Analyze your mix before mastering',
-    template: '%s | MasteringReady'
+    default: 'Mastering Ready | Analyze your mix before mastering',
+    template: '%s | Mastering Ready'
   },
   description: "Upload your mix and find out if it's ready for mastering. 0-100 score, professional metrics and specific recommendations in 60 seconds. 2 free analyses.",
   keywords: [
@@ -77,7 +77,7 @@ export const metadata: Metadata = {
         url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'MasteringReady - Analyze your mix before mastering',
+        alt: 'Mastering Ready - Analyze your mix before mastering',
         type: 'image/png'
       }
     ]
@@ -146,7 +146,7 @@ const structuredData = {
   softwareApplication: {
     '@context': 'https://schema.org',
     '@type': 'SoftwareApplication',
-    name: 'MasteringReady',
+    name: 'Mastering Ready',
     applicationCategory: 'MultimediaApplication',
     operatingSystem: 'Web Browser',
     offers: {
@@ -186,7 +186,7 @@ const structuredData = {
     '@context': 'https://schema.org',
     '@type': 'HowTo',
     name: 'How to analyze your mix before mastering',
-    description: 'Step-by-step guide to verify your mix is ready for professional mastering using MasteringReady.',
+    description: 'Step-by-step guide to verify your mix is ready for professional mastering using Mastering Ready.',
     totalTime: 'PT2M',
     tool: [
       {
@@ -226,7 +226,7 @@ const structuredData = {
   organization: {
     '@context': 'https://schema.org',
     '@type': 'Organization',
-    name: 'MasteringReady',
+    name: 'Mastering Ready',
     url: 'https://masteringready.com',
     logo: 'https://masteringready.com/logo.png',
     contactPoint: {
@@ -245,7 +245,7 @@ const structuredData = {
   product: {
     '@context': 'https://schema.org',
     '@type': 'Book',
-    name: 'MasteringReady: Ensure mastering success from the mix',
+    name: 'Mastering Ready: Ensure mastering success from the mix',
     author: {
       '@type': 'Person',
       name: 'Matías Carvajal'

@@ -37,7 +37,7 @@ const translations = {
     analyze: 'Analizar',
     currentPlan: 'Plan actual',
     free: 'Gratis',
-    pro: 'MasteringReady Pro',
+    pro: 'Mastering Ready Pro',
     proBadge: 'PRO',
     // Free plan
     analysisUsage: 'Uso de análisis',
@@ -86,7 +86,7 @@ const translations = {
     analyze: 'Analyze',
     currentPlan: 'Current plan',
     free: 'Free',
-    pro: 'MasteringReady Pro',
+    pro: 'Mastering Ready Pro',
     proBadge: 'PRO',
     // Free plan
     analysisUsage: 'Analysis usage',
@@ -351,7 +351,7 @@ export default function SubscriptionPage() {
                 WebkitTextFillColor: 'transparent',
                 backgroundClip: 'text'
               }}>
-                MasteringReady
+                Mastering Ready
               </span>
             )}
           </Link>
