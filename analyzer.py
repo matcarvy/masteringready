@@ -3943,7 +3943,7 @@ def generate_cta(score: int, strict: bool, lang: str, mode: str = "write") -> Di
             return {
                 "message": (
                     "🔧 Tu mezcla necesita trabajo antes del mastering.\n"
-                    "Hay problemas técnicos que no se corrigen en mastering — se corrigen en la mezcla. "
+                    "Hay problemas técnicos que no se corrigen en mastering, se corrigen en la mezcla. "
                     "Puedo ayudarte a identificar exactamente qué ajustar."
                 ),
                 "button": "Revisar mi mezcla",
@@ -3955,7 +3955,7 @@ def generate_cta(score: int, strict: bool, lang: str, mode: str = "write") -> Di
             return {
                 "message": (
                     "🔧 Tu mezcla necesita atención en varios puntos.\n"
-                    "El mastering no corrige problemas de mezcla — los expone. Antes de pensar "
+                    "El mastering no corrige problemas de mezcla, los expone. Antes de pensar "
                     "en mastering, hay que resolver lo que el análisis señala."
                 ),
                 "button": "Revisar mi mezcla",
@@ -3967,7 +3967,7 @@ def generate_cta(score: int, strict: bool, lang: str, mode: str = "write") -> Di
             return {
                 "message": (
                     "🔧 Tu mezcla tiene problemas técnicos importantes.\n"
-                    "No te recomiendo masterizar en este estado — el resultado no va a ser competitivo. "
+                    "No te recomiendo masterizar en este estado, el resultado no va a ser competitivo. "
                     "Puedo ayudarte a trabajar los puntos críticos desde la sesión."
                 ),
                 "button": "Trabajar mi mezcla",
@@ -4029,7 +4029,7 @@ def generate_cta(score: int, strict: bool, lang: str, mode: str = "write") -> Di
             return {
                 "message": (
                     "🔧 Your mix needs work before mastering.\n"
-                    "There are technical issues that mastering can't fix — they need to be addressed "
+                    "There are technical issues that mastering can't fix. They need to be addressed "
                     "in the mix. I can help you identify exactly what to adjust."
                 ),
                 "button": "Review my mix",
@@ -4041,7 +4041,7 @@ def generate_cta(score: int, strict: bool, lang: str, mode: str = "write") -> Di
             return {
                 "message": (
                     "🔧 Your mix needs attention in several areas.\n"
-                    "Mastering doesn't fix mix problems — it exposes them. Before thinking about "
+                    "Mastering doesn't fix mix problems, it exposes them. Before thinking about "
                     "mastering, the issues flagged in the analysis need to be resolved."
                 ),
                 "button": "Review my mix",
@@ -4053,7 +4053,7 @@ def generate_cta(score: int, strict: bool, lang: str, mode: str = "write") -> Di
             return {
                 "message": (
                     "🔧 Your mix has significant technical issues.\n"
-                    "I wouldn't recommend mastering in this state — the result won't be competitive. "
+                    "I wouldn't recommend mastering in this state, the result won't be competitive. "
                     "I can help you work through the critical points from the session."
                 ),
                 "button": "Work on my mix",
@@ -6545,7 +6545,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                 message += "📊 Technical observations of this master:\n"
                 message += "\n".join(observations)
                 message += "\n\n"
-                message += "💡 These observations do NOT invalidate the master—they simply contextualize the technical decisions made during the process.\n\n"
+                message += "💡 These observations do NOT invalidate the master, they simply contextualize the technical decisions made during the process.\n\n"
             
             # SECTION 4: Bifurcation - If Mix
             # Calculate how much to reduce (correct formula)

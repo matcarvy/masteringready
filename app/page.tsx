@@ -292,6 +292,19 @@ function Home() {
   const [showRatingWidget, setShowRatingWidget] = useState(false)
   const [ctaSource, setCtaSource] = useState<string | null>(null)
 
+  // Modal scroll lock
+  useEffect(() => {
+    const anyModalOpen = showContactModal || showFeedbackModal || showAuthModal ||
+      showIpLimitModal || showFreeLimitModal || showVpnModal || showUpgradeModal
+    if (anyModalOpen) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => { document.body.style.overflow = '' }
+  }, [showContactModal, showFeedbackModal, showAuthModal, showIpLimitModal,
+      showFreeLimitModal, showVpnModal, showUpgradeModal])
+
   // Geo detection for regional pricing
   const { geo } = useGeo()
   const proPrice = getPlanDisplayPrice(PRICING.PRO_MONTHLY, geo)
@@ -1647,16 +1660,9 @@ by Matías Carvajal
                 icon: <TrendingUp size={48} color="#667eea" />,
                 title: lang === 'es' ? 'Recomendaciones específicas' : 'Specific recommendations',
                 desc: lang === 'es'
-                  ? 'No solo números — te decimos exactamente qué ajustar y por qué.'
-                  : "Not just numbers — we tell you exactly what to adjust and why."
+                  ? 'No solo números, te decimos exactamente qué ajustar y por qué.'
+                  : "Not just numbers. We tell you exactly what to adjust and why."
               },
-              {
-                icon: <Globe size={48} color="#667eea" />,
-                title: lang === 'es' ? 'Precios accesibles para LATAM' : 'Accessible prices for LATAM',
-                desc: lang === 'es'
-                  ? 'Precios regionales ajustados. Pro desde $3.99/mes en Latinoamérica.'
-                  : 'Adjusted regional prices. Pro from $3.99/month in Latin America.'
-              }
             ].map((feature, i) => (
               <div key={i} style={{
                 background: 'white',
@@ -3695,7 +3701,8 @@ by Matías Carvajal
             justifyContent: 'center',
             zIndex: 100,
             padding: 'clamp(0.75rem, 3vw, 1.5rem)',
-            animation: 'modalBackdropIn 0.25s ease-out'
+            animation: 'modalBackdropIn 0.25s ease-out',
+            overscrollBehavior: 'contain'
           }}
         >
           <div
@@ -3805,8 +3812,8 @@ by Matías Carvajal
               <a
                 href={`mailto:mat@matcarvy.com?subject=${encodeURIComponent(
                   lang === 'es'
-                    ? `${ctaSource === 'mastering' ? 'Mastering' : 'Revisión de mezcla'} — ${result?.filename || 'Mi track'}`
-                    : `${ctaSource === 'mastering' ? 'Mastering' : 'Mix review'} — ${result?.filename || 'My track'}`
+                    ? `${ctaSource === 'mastering' ? 'Mastering' : 'Revisión de mezcla'}: ${result?.filename || 'Mi track'}`
+                    : `${ctaSource === 'mastering' ? 'Mastering' : 'Mix review'}: ${result?.filename || 'My track'}`
                 )}&body=${encodeURIComponent(
                   lang === 'es'
                     ? `Hola Matías,\n\nAnalicé "${result?.filename || 'mi mezcla'}" en MasteringReady.\nPuntuación: ${result?.score || 'N/A'}/100\n\n${ctaSource === 'mastering' ? 'Me interesa el mastering de este track.' : 'Me gustaría revisar algunos aspectos técnicos de la mezcla.'}\n\nGracias.`
@@ -3904,7 +3911,8 @@ by Matías Carvajal
             justifyContent: 'center',
             zIndex: 100,
             padding: 'clamp(0.75rem, 3vw, 1.5rem)',
-            animation: 'modalBackdropIn 0.25s ease-out'
+            animation: 'modalBackdropIn 0.25s ease-out',
+            overscrollBehavior: 'contain'
           }}
         >
           <div
@@ -4271,7 +4279,8 @@ by Matías Carvajal
           justifyContent: 'center',
           zIndex: 100,
           padding: 'clamp(0.75rem, 3vw, 1rem)',
-          animation: 'modalBackdropIn 0.25s ease-out'
+          animation: 'modalBackdropIn 0.25s ease-out',
+          overscrollBehavior: 'contain'
         }}>
           <div style={{
             background: 'white',
@@ -4431,7 +4440,8 @@ by Matías Carvajal
           justifyContent: 'center',
           zIndex: 100,
           padding: 'clamp(0.75rem, 3vw, 1rem)',
-          animation: 'modalBackdropIn 0.25s ease-out'
+          animation: 'modalBackdropIn 0.25s ease-out',
+          overscrollBehavior: 'contain'
         }}>
           <div style={{
             background: 'white',
@@ -4606,7 +4616,8 @@ by Matías Carvajal
           justifyContent: 'center',
           zIndex: 100,
           padding: 'clamp(0.75rem, 3vw, 1rem)',
-          animation: 'modalBackdropIn 0.25s ease-out'
+          animation: 'modalBackdropIn 0.25s ease-out',
+          overscrollBehavior: 'contain'
         }}>
           <div style={{
             background: 'white',
@@ -4769,7 +4780,8 @@ by Matías Carvajal
           justifyContent: 'center',
           zIndex: 100,
           padding: 'clamp(0.75rem, 3vw, 1rem)',
-          animation: 'modalBackdropIn 0.25s ease-out'
+          animation: 'modalBackdropIn 0.25s ease-out',
+          overscrollBehavior: 'contain'
         }}>
           <div style={{
             background: 'white',

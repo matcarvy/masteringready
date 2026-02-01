@@ -1956,7 +1956,7 @@ export default function AdminPage() {
           borderRadius: '1rem',
           padding: '1.5rem',
           boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-          maxWidth: '400px'
+          maxWidth: isMobile ? '100%' : '400px'
         }}>
           <h3 style={{ fontSize: '1rem', fontWeight: '600', color: '#111827', marginBottom: '1rem' }}>
             {t.analytics.contactByMethod}
@@ -3121,7 +3121,8 @@ export default function AdminPage() {
     <div style={{
       minHeight: '100vh',
       background: '#f3f4f6',
-      fontFamily: 'Inter, system-ui, sans-serif'
+      fontFamily: 'Inter, system-ui, sans-serif',
+      overflowX: 'hidden'
     }}>
       {/* Spin animation for refresh icon */}
       <style>{`
@@ -3157,7 +3158,7 @@ export default function AdminPage() {
       <header style={{
         background: 'white',
         borderBottom: '1px solid #e5e7eb',
-        padding: '0.75rem 1.5rem',
+        padding: isMobile ? '0.75rem 0.75rem' : '0.75rem 1.5rem',
         position: 'sticky',
         top: 0,
         zIndex: 50

@@ -27,7 +27,7 @@ export const metadata: Metadata = {
   // BASIC META
   // ─────────────────────────────────────────────────────────────────────────────
   title: {
-    default: 'MasteringReady — Analyze your mix before mastering',
+    default: 'MasteringReady | Analyze your mix before mastering',
     template: '%s | MasteringReady'
   },
   description: "Upload your mix and find out if it's ready for mastering. 0-100 score, professional metrics and specific recommendations in 60 seconds. 2 free analyses.",
@@ -245,7 +245,7 @@ const structuredData = {
   product: {
     '@context': 'https://schema.org',
     '@type': 'Book',
-    name: 'MasteringReady — Ensure mastering success from the mix',
+    name: 'MasteringReady: Ensure mastering success from the mix',
     author: {
       '@type': 'Person',
       name: 'Matías Carvajal'

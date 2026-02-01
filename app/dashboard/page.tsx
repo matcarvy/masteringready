@@ -39,7 +39,7 @@ import {
 
 const translations = {
   es: {
-    dashboard: 'Dashboard',
+    dashboard: 'Mis Análisis',
     welcome: 'Bienvenido',
     yourAnalyses: 'Tus Análisis',
     noAnalyses: 'Aún no tienes análisis',
@@ -89,8 +89,8 @@ const translations = {
     proAnalysesLeft: 'análisis este mes',
     proLimit: 'de 30',
     addonAvailable: 'Necesitas más? Compra un paquete adicional',
-    buyAddon: 'Comprar 10 análisis ($3.99)',
-    singlePurchase: 'Comprar 1 análisis ($5.99)',
+    buyAddon: 'Comprar 10 análisis extra',
+    singlePurchase: 'Comprar 1 análisis',
     limitReached: 'Límite alcanzado',
     upgradeNow: 'Actualizar ahora',
     fileInfo: {
@@ -113,7 +113,7 @@ const translations = {
     }
   },
   en: {
-    dashboard: 'Dashboard',
+    dashboard: 'My Analyses',
     welcome: 'Welcome',
     yourAnalyses: 'Your Analyses',
     noAnalyses: "You don't have any analyses yet",
@@ -163,8 +163,8 @@ const translations = {
     proAnalysesLeft: 'analyses this month',
     proLimit: 'of 30',
     addonAvailable: 'Need more? Buy an add-on pack',
-    buyAddon: 'Buy 10 analyses ($3.99)',
-    singlePurchase: 'Buy 1 analysis ($5.99)',
+    buyAddon: 'Buy 10 extra analyses',
+    singlePurchase: 'Buy 1 analysis',
     limitReached: 'Limit reached',
     upgradeNow: 'Upgrade now',
     fileInfo: {
@@ -384,6 +384,17 @@ function DashboardContent() {
     window.addEventListener('resize', check)
     return () => window.removeEventListener('resize', check)
   }, [])
+
+  // Modal scroll lock
+  useEffect(() => {
+    const anyModalOpen = !!selectedAnalysis || showUpgradeModal || showContactModal
+    if (anyModalOpen) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => { document.body.style.overflow = '' }
+  }, [selectedAnalysis, showUpgradeModal, showContactModal])
 
   // Redirect if not logged in
   useEffect(() => {
@@ -744,7 +755,8 @@ function DashboardContent() {
       <main style={{
         maxWidth: '1200px',
         margin: '0 auto',
-        padding: isMobile ? '1rem' : '2rem 1.5rem'
+        padding: isMobile ? '1rem' : '2rem 1.5rem',
+        overflowX: 'hidden'
       }}>
         {/* Welcome to Pro Banner */}
         {showWelcomeBanner && (
@@ -798,7 +810,7 @@ function DashboardContent() {
         {/* Welcome & Stats */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+          gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(240px, 1fr))',
           gap: '1rem',
           marginBottom: '2rem'
         }}>
@@ -824,7 +836,7 @@ function DashboardContent() {
           <div style={{
             background: 'white',
             borderRadius: '1rem',
-            padding: '1.5rem',
+            padding: isMobile ? '1rem' : '1.5rem',
             boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
             opacity: 0,
             animation: 'cardFadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) 75ms forwards'
@@ -882,7 +894,7 @@ function DashboardContent() {
           <div style={{
             background: 'white',
             borderRadius: '1rem',
-            padding: '1.5rem',
+            padding: isMobile ? '1rem' : '1.5rem',
             boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
             opacity: 0,
             animation: 'cardFadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) 150ms forwards',
@@ -959,7 +971,7 @@ function DashboardContent() {
           <div style={{
             background: 'white',
             borderRadius: '1rem',
-            padding: '1.5rem',
+            padding: isMobile ? '1rem' : '1.5rem',
             boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
             opacity: 0,
             animation: 'cardFadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) 225ms forwards'
@@ -1179,7 +1191,8 @@ function DashboardContent() {
           justifyContent: 'center',
           zIndex: 100,
           padding: '1rem',
-          animation: 'modalBackdropIn 0.25s ease-out'
+          animation: 'modalBackdropIn 0.25s ease-out',
+          overscrollBehavior: 'contain'
         }}>
           <div style={{
             background: 'white',
@@ -1474,8 +1487,8 @@ function DashboardContent() {
                                 style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}
                               >
                                 <div style={{
-                                  minWidth: '100px',
-                                  maxWidth: '120px',
+                                  minWidth: isMobile ? '75px' : '100px',
+                                  maxWidth: isMobile ? '90px' : '120px',
                                   fontSize: '0.75rem',
                                   fontWeight: '500',
                                   color: '#4b5563',
@@ -1639,7 +1652,7 @@ function DashboardContent() {
                         cursor: 'pointer',
                         boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
                         transition: 'all 0.2s',
-                        marginLeft: '3.5rem'
+                        marginLeft: isMobile ? '0' : '3.5rem'
                       }}
                       onMouseEnter={(e) => {
                         e.currentTarget.style.transform = 'translateY(-1px)'
@@ -1811,7 +1824,8 @@ function DashboardContent() {
           justifyContent: 'center',
           zIndex: 100,
           padding: '1rem',
-          animation: 'modalBackdropIn 0.25s ease-out'
+          animation: 'modalBackdropIn 0.25s ease-out',
+          overscrollBehavior: 'contain'
         }}>
           <div style={{
             background: 'white',
@@ -2029,7 +2043,8 @@ function DashboardContent() {
             justifyContent: 'center',
             zIndex: 110,
             padding: '1.5rem',
-            animation: 'modalBackdropIn 0.25s ease-out'
+            animation: 'modalBackdropIn 0.25s ease-out',
+            overscrollBehavior: 'contain'
           }}
         >
           <div
