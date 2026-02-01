@@ -520,16 +520,12 @@ function Home() {
     }
   }, [pendingAnalysisQuotaExceeded, clearPendingAnalysisQuotaExceeded])
 
-  // Proactive quota check — show free limit modal immediately if user can't analyze
-  // Prevents UX issue where user navigates back from dashboard, uploads a file,
-  // and only finds out they can't analyze after clicking the button
+  // Proactive quota cache — pre-fetch quota status so handleAnalyze can use cached check
+  // Modal is NOT shown here; it only appears when user clicks Analyze (conversion-friendly UX)
   useEffect(() => {
     if (authLoading || !isLoggedIn || result || loading) return
     checkCanAnalyze().then((status) => {
       setUserAnalysisStatus(status)
-      if (!status.can_analyze) {
-        setShowFreeLimitModal(true)
-      }
     }).catch(() => {
       // Don't block page load on failed quota check
     })
@@ -1256,7 +1252,6 @@ by Matías Carvajal
 
   const isFileTooLarge = file && file.size > 500 * 1024 * 1024 // 500MB hard limit
   const needsCompression = file && file.size > 100 * 1024 * 1024 && file.size <= 500 * 1024 * 1024
-  const isQuotaExhausted = isLoggedIn && userAnalysisStatus !== null && !userAnalysisStatus.can_analyze
 
   const getScoreColor = (score: number) => {
     if (score >= 85) return '#10b981'
@@ -2027,31 +2022,31 @@ by Matías Carvajal
               {file && !isFileTooLarge && (
                 <button
                   onClick={handleAnalyze}
-                  disabled={loading || compressing || isQuotaExhausted}
+                  disabled={loading || compressing}
                   style={{
                     width: '100%',
-                    background: (loading || compressing || isQuotaExhausted) ? '#d1d5db' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                    color: (loading || compressing || isQuotaExhausted) ? '#6b7280' : 'white',
+                    background: (loading || compressing) ? '#d1d5db' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    color: (loading || compressing) ? '#6b7280' : 'white',
                     padding: 'clamp(0.75rem, 2vw, 1rem)',
                     borderRadius: '0.75rem',
                     fontWeight: '600',
                     fontSize: 'clamp(0.9375rem, 2.5vw, 1.125rem)',
                     minHeight: '48px',
                     border: 'none',
-                    cursor: (loading || compressing || isQuotaExhausted) ? 'not-allowed' : 'pointer',
+                    cursor: (loading || compressing) ? 'not-allowed' : 'pointer',
                     transition: 'all 0.3s',
-                    boxShadow: (loading || compressing || isQuotaExhausted) ? 'none' : '0 4px 20px rgba(102, 126, 234, 0.3)',
-                    opacity: (loading || compressing || isQuotaExhausted) ? 0.6 : 1
+                    boxShadow: (loading || compressing) ? 'none' : '0 4px 20px rgba(102, 126, 234, 0.3)',
+                    opacity: (loading || compressing) ? 0.6 : 1
                   }}
                   onMouseEnter={(e) => {
-                    if (!loading && !compressing && !isQuotaExhausted) {
+                    if (!loading && !compressing) {
                       e.currentTarget.style.transform = 'scale(1.02)'
                       e.currentTarget.style.boxShadow = '0 8px 30px rgba(102, 126, 234, 0.4)'
                     }
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.transform = 'scale(1)'
-                    e.currentTarget.style.boxShadow = (loading || compressing || isQuotaExhausted) ? 'none' : '0 4px 20px rgba(102, 126, 234, 0.3)'
+                    e.currentTarget.style.boxShadow = (loading || compressing) ? 'none' : '0 4px 20px rgba(102, 126, 234, 0.3)'
                   }}
                 >
                   {compressing ? (
