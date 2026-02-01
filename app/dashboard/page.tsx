@@ -633,7 +633,8 @@ function DashboardContent() {
     <div style={{
       minHeight: '100vh',
       background: '#f3f4f6',
-      fontFamily: 'Inter, system-ui, sans-serif'
+      fontFamily: 'Inter, system-ui, sans-serif',
+      overflowX: 'hidden'
     }}>
       {/* Header */}
       <header style={{
@@ -672,15 +673,17 @@ function DashboardContent() {
             }}>
               <Music size={18} color="white" />
             </div>
-            <span style={{
-              fontWeight: '700',
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text'
-            }}>
-              MasteringReady
-            </span>
+            {!isMobile && (
+              <span style={{
+                fontWeight: '700',
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text'
+              }}>
+                MasteringReady
+              </span>
+            )}
           </Link>
 
           {/* Right side: Actions */}
@@ -718,7 +721,7 @@ function DashboardContent() {
             </button>
 
             {/* User Menu with Logout */}
-            <UserMenu lang={lang} />
+            <UserMenu lang={lang} isMobile={isMobile} />
 
             {/* Analyze Button */}
             <Link

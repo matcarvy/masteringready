@@ -199,6 +199,7 @@ export default function HistoryPage() {
   const { user, loading: authLoading } = useAuth()
 
   const [lang, setLang] = useState<'es' | 'en'>('es')
+  const [isMobile, setIsMobile] = useState(false)
   const [analyses, setAnalyses] = useState<Analysis[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedAnalysis, setSelectedAnalysis] = useState<Analysis | null>(null)
@@ -217,6 +218,14 @@ export default function HistoryPage() {
   // Detect language
   useEffect(() => {
     setLang(detectLanguage())
+  }, [])
+
+  // Detect mobile
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
   }, [])
 
   // Redirect if not logged in
@@ -367,7 +376,8 @@ export default function HistoryPage() {
     <div style={{
       minHeight: '100vh',
       background: '#f3f4f6',
-      fontFamily: 'Inter, system-ui, sans-serif'
+      fontFamily: 'Inter, system-ui, sans-serif',
+      overflowX: 'hidden'
     }}>
       {/* Header */}
       <header style={{
@@ -405,15 +415,17 @@ export default function HistoryPage() {
             }}>
               <Music size={18} color="white" />
             </div>
-            <span style={{
-              fontWeight: '700',
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text'
-            }}>
-              MasteringReady
-            </span>
+            {!isMobile && (
+              <span style={{
+                fontWeight: '700',
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text'
+              }}>
+                MasteringReady
+              </span>
+            )}
           </Link>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
@@ -447,7 +459,7 @@ export default function HistoryPage() {
               {lang === 'es' ? 'EN' : 'ES'}
             </button>
 
-            <UserMenu lang={lang} />
+            <UserMenu lang={lang} isMobile={isMobile} />
 
             <Link
               href="/#analyze"
