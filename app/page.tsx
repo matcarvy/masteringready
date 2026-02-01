@@ -1352,8 +1352,8 @@ by Matías Carvajal
                 {lang === 'es' ? 'Analizar' : 'Analyze'}
               </button>
 
-              {/* Hamburger menu — mobile only, when not logged in */}
-              {isMobile && !user && (
+              {/* Hamburger menu — mobile only, when not logged in and auth resolved */}
+              {isMobile && !user && !authLoading && (
                 <div ref={mobileMenuRef} style={{ position: 'relative' }}>
                   <button
                     onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -1477,8 +1477,8 @@ by Matías Carvajal
                 color: '#e9d5ff'
               }}>
                 {lang === 'es'
-                  ? 'Te decimos exactamente qué debes revisar antes de enviarla a master'
-                  : 'We tell you exactly what to check before sending it to master'}
+                  ? <>Te decimos qué debes revisar <span style={{ whiteSpace: 'nowrap' }}>antes de</span> <span style={{ whiteSpace: 'nowrap' }}>enviarla a master</span></>
+                  : <>We tell you what to check <span style={{ whiteSpace: 'nowrap' }}>before sending it</span> <span style={{ whiteSpace: 'nowrap' }}>to master</span></>}
               </p>
               
               <button

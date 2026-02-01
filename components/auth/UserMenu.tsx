@@ -71,17 +71,9 @@ export function UserMenu({ lang = 'es', isMobile = false }: UserMenuProps) {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  // Loading state
+  // Loading state — render nothing to avoid ghost text flash
   if (loading) {
-    return (
-      <div style={{
-        padding: '0.5rem 1rem',
-        color: 'rgba(255,255,255,0.7)',
-        fontSize: '0.875rem'
-      }}>
-        {t.loading}
-      </div>
-    )
+    return null
   }
 
   // Not logged in
