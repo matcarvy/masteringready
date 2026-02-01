@@ -589,6 +589,14 @@ const handleAnalyze = async () => {
   // Wait for auth state to be determined — prevents treating a logged-in user
   // as anonymous when navigating back (auth re-initializing)
   if (authLoading) return
+
+  // Quick check: if cached status already says quota is exhausted, block immediately
+  // (prevents re-click after closing FreeLimitModal with file still loaded)
+  if (isLoggedIn && userAnalysisStatus && !userAnalysisStatus.can_analyze) {
+    setShowFreeLimitModal(true)
+    return
+  }
+
   setLoading(true)
   setProgress(0)
   setError(null)
@@ -629,6 +637,16 @@ const handleAnalyze = async () => {
       try {
         const analysisStatus = await checkCanAnalyze()
         setUserAnalysisStatus(analysisStatus)
+
+        // Defensive: if user is logged in but checkCanAnalyze returns ANONYMOUS,
+        // the Supabase session may have expired — deny analysis rather than bypass quota
+        if (analysisStatus.reason === 'ANONYMOUS') {
+          setLoading(false)
+          setError(lang === 'es'
+            ? 'No se pudo verificar tu sesión. Recarga la página e intenta de nuevo.'
+            : 'Could not verify your session. Please reload the page and try again.')
+          return
+        }
 
         if (!analysisStatus.can_analyze) {
           setLoading(false)
@@ -749,20 +767,20 @@ const handleAnalyze = async () => {
     const data = await pollForResult()
 
     setProgress(100)
-    setResult(data)
 
-    // Save analysis
+    // Save analysis — results are only shown AFTER confirming quota (logged-in)
+    // or immediately (anonymous). Never show results before quota is verified.
     if (data) {
       if (isLoggedIn && user) {
-        // Re-check quota before saving — prevents bypass when user logs in during analysis
-        // (user may have started as anonymous but logged in while polling)
+        // Re-check quota before saving AND showing results
+        // Prevents bypass when user logs in during analysis or session state drifts
         try {
           const quotaCheck = await checkCanAnalyze()
-          if (!quotaCheck.can_analyze) {
-            console.log('[Analysis] User quota exhausted at save time, blocking save:', quotaCheck.reason)
+          if (!quotaCheck.can_analyze || quotaCheck.reason === 'ANONYMOUS') {
+            console.log('[Analysis] User quota exhausted at save time, blocking save + display:', quotaCheck.reason)
             setUserAnalysisStatus(quotaCheck)
             setShowFreeLimitModal(true)
-            // Analysis result is visible on screen but NOT saved to account
+            // Do NOT show results — analysis is lost
           } else {
             console.log('[Analysis] Saving to database for logged-in user:', user.id)
             const savedData = await saveAnalysisToDatabase(user.id, {
@@ -773,12 +791,16 @@ const handleAnalyze = async () => {
               strict
             }, file, geo?.countryCode)
             setSavedAnalysisId(savedData?.[0]?.id || null)
+            setResult(data) // Only show results after confirmed save
           }
         } catch (saveErr) {
           console.error('[Analysis] Failed to save to database:', saveErr)
+          // On save error, still show results (the analysis ran successfully)
+          setResult(data)
         }
       } else {
-        // Save to localStorage for later account linking (anonymous users)
+        // Anonymous: show results immediately and save to localStorage
+        setResult(data)
         const pendingAnalysis = {
           ...data,
           filename: file.name,
@@ -1234,6 +1256,7 @@ by Matías Carvajal
 
   const isFileTooLarge = file && file.size > 500 * 1024 * 1024 // 500MB hard limit
   const needsCompression = file && file.size > 100 * 1024 * 1024 && file.size <= 500 * 1024 * 1024
+  const isQuotaExhausted = isLoggedIn && userAnalysisStatus !== null && !userAnalysisStatus.can_analyze
 
   const getScoreColor = (score: number) => {
     if (score >= 85) return '#10b981'
@@ -2004,31 +2027,31 @@ by Matías Carvajal
               {file && !isFileTooLarge && (
                 <button
                   onClick={handleAnalyze}
-                  disabled={loading || compressing}
+                  disabled={loading || compressing || isQuotaExhausted}
                   style={{
                     width: '100%',
-                    background: (loading || compressing) ? '#d1d5db' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                    color: (loading || compressing) ? '#6b7280' : 'white',
+                    background: (loading || compressing || isQuotaExhausted) ? '#d1d5db' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    color: (loading || compressing || isQuotaExhausted) ? '#6b7280' : 'white',
                     padding: 'clamp(0.75rem, 2vw, 1rem)',
                     borderRadius: '0.75rem',
                     fontWeight: '600',
                     fontSize: 'clamp(0.9375rem, 2.5vw, 1.125rem)',
                     minHeight: '48px',
                     border: 'none',
-                    cursor: (loading || compressing) ? 'not-allowed' : 'pointer',
+                    cursor: (loading || compressing || isQuotaExhausted) ? 'not-allowed' : 'pointer',
                     transition: 'all 0.3s',
-                    boxShadow: (loading || compressing) ? 'none' : '0 4px 20px rgba(102, 126, 234, 0.3)',
-                    opacity: (loading || compressing) ? 0.6 : 1
+                    boxShadow: (loading || compressing || isQuotaExhausted) ? 'none' : '0 4px 20px rgba(102, 126, 234, 0.3)',
+                    opacity: (loading || compressing || isQuotaExhausted) ? 0.6 : 1
                   }}
                   onMouseEnter={(e) => {
-                    if (!loading && !compressing) {
+                    if (!loading && !compressing && !isQuotaExhausted) {
                       e.currentTarget.style.transform = 'scale(1.02)'
                       e.currentTarget.style.boxShadow = '0 8px 30px rgba(102, 126, 234, 0.4)'
                     }
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.transform = 'scale(1)'
-                    e.currentTarget.style.boxShadow = (loading || compressing) ? 'none' : '0 4px 20px rgba(102, 126, 234, 0.3)'
+                    e.currentTarget.style.boxShadow = (loading || compressing || isQuotaExhausted) ? 'none' : '0 4px 20px rgba(102, 126, 234, 0.3)'
                   }}
                 >
                   {compressing ? (
