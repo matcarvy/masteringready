@@ -7497,17 +7497,12 @@ def generate_complete_pdf(
         # Format bit depth
         bit_depth_str = f"{bit_depth}-bit" if bit_depth > 0 else "N/A"
         
-        # NEW v7.3.50: Format analysis time
-        analysis_time = report.get('analysis_time_seconds', 0)
-        analysis_time_str = f"{analysis_time:.1f}s" if analysis_time > 0 else "N/A"
-        
         file_info_data = [
             ["Archivo" if lang == 'es' else "File", clean_filename],
             ["Fecha" if lang == 'es' else "Date", datetime.now().strftime('%d/%m/%Y %H:%M')],
             ["Duración" if lang == 'es' else "Duration", duration_str],
             ["Sample Rate" if lang == 'es' else "Sample Rate", sample_rate_str],
             ["Bit Depth" if lang == 'es' else "Bit Depth", bit_depth_str],
-            ["Tiempo de análisis" if lang == 'es' else "Analysis time", analysis_time_str],  # v7.3.50 (no emoji for PDF compatibility)
             ["Puntuación MR" if lang == 'es' else "MR Score", f"{report.get('score', 0)}/100"],
             ["Veredicto" if lang == 'es' else "Verdict", verdict_text]
         ]
