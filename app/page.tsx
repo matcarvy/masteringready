@@ -644,6 +644,15 @@ const handleAnalyze = async () => {
           return
         }
 
+        // Check failed (network/RPC error) — show retry message, not FreeLimitModal
+        if (analysisStatus.reason === 'ERROR' || analysisStatus.reason === 'NO_DATA') {
+          setLoading(false)
+          setError(lang === 'es'
+            ? 'No se pudo verificar tu plan. Intenta de nuevo en unos segundos.'
+            : 'Could not verify your plan. Please try again in a few seconds.')
+          return
+        }
+
         if (!analysisStatus.can_analyze) {
           setLoading(false)
 

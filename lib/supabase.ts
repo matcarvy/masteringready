@@ -196,25 +196,46 @@ export interface AnalysisStatus {
  * Verificar si el usuario puede realizar análisis (dentro de límites)
  */
 export async function checkCanAnalyze(): Promise<AnalysisStatus> {
-  const user = await getCurrentUser()
+  try {
+    const user = await getCurrentUser()
 
-  if (!user) {
-    // Anonymous users can analyze (tracked differently via IP)
-    return {
-      can_analyze: true,
-      reason: 'ANONYMOUS',
+    if (!user) {
+      // Anonymous users can analyze (tracked differently via IP)
+      return {
+        can_analyze: true,
+        reason: 'ANONYMOUS',
+        analyses_used: 0,
+        analyses_limit: 1,
+        is_lifetime: false
+      }
+    }
+
+    const { data, error } = await supabase.rpc('can_user_analyze', {
+      p_user_id: user.id
+    })
+
+    if (error) {
+      console.error('Error checking analysis limit:', error)
+      return {
+        can_analyze: false,
+        reason: 'ERROR',
+        analyses_used: 0,
+        analyses_limit: 0,
+        is_lifetime: false
+      }
+    }
+
+    // The function returns an array with one row
+    const result = Array.isArray(data) ? data[0] : data
+    return result || {
+      can_analyze: false,
+      reason: 'NO_DATA',
       analyses_used: 0,
-      analyses_limit: 1,
+      analyses_limit: 0,
       is_lifetime: false
     }
-  }
-
-  const { data, error } = await supabase.rpc('can_user_analyze', {
-    p_user_id: user.id
-  })
-
-  if (error) {
-    console.error('Error checking analysis limit:', error)
+  } catch (err) {
+    console.error('checkCanAnalyze threw unexpectedly:', err)
     return {
       can_analyze: false,
       reason: 'ERROR',
@@ -222,16 +243,6 @@ export async function checkCanAnalyze(): Promise<AnalysisStatus> {
       analyses_limit: 0,
       is_lifetime: false
     }
-  }
-
-  // The function returns an array with one row
-  const result = Array.isArray(data) ? data[0] : data
-  return result || {
-    can_analyze: false,
-    reason: 'NO_DATA',
-    analyses_used: 0,
-    analyses_limit: 0,
-    is_lifetime: false
   }
 }
 
