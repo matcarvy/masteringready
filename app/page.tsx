@@ -500,12 +500,18 @@ function Home() {
   }, [isLoggedIn, authLoading])
 
   // React to pending analysis save success (from AuthProvider after login)
-  // Only NOW play the unlock animation — quota was checked before saving
   useEffect(() => {
     if (pendingAnalysisSaved) {
-      setIsUnlocking(true)
-      setTimeout(() => setIsUnlocking(false), 1500)
       clearPendingAnalysisSaved()
+      if (result) {
+        // Unlock button path: user logged in via AuthModal, result is still visible
+        setIsUnlocking(true)
+        setTimeout(() => setIsUnlocking(false), 1500)
+      } else {
+        // Header login/signup path: user navigated away, result state was lost
+        // Redirect to dashboard where they can see their saved analysis
+        window.location.href = `/dashboard?lang=${lang}`
+      }
     }
   }, [pendingAnalysisSaved, clearPendingAnalysisSaved])
 
