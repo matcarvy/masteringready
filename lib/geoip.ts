@@ -84,16 +84,42 @@ function setCachedGeo(data: GeoData): void {
 }
 
 /**
- * Fetch country code from ipinfo.io
+ * Fetch country code from our own API route (reads Vercel's X-Vercel-IP-Country header).
+ * Works on all devices because it reads the IP at the edge server.
+ */
+async function fetchFromVercelGeo(): Promise<string | null> {
+  try {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 5000)
+
+    const response = await fetch('/api/geo', {
+      signal: controller.signal,
+      headers: { 'Accept': 'application/json' }
+    })
+    clearTimeout(timeout)
+
+    if (!response.ok) return null
+
+    const data = await response.json()
+    return data.countryCode || null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Fetch country code from ipinfo.io (fallback for local development)
  */
 async function fetchFromIpInfo(): Promise<string | null> {
   try {
-    // Note: Token is optional, free tier works without it (50k/month)
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 5000)
+
     const response = await fetch('https://ipinfo.io/json', {
-      headers: {
-        'Accept': 'application/json'
-      }
+      signal: controller.signal,
+      headers: { 'Accept': 'application/json' }
     })
+    clearTimeout(timeout)
 
     if (!response.ok) return null
 
@@ -166,9 +192,15 @@ export async function detectCountry(forceRefresh = false): Promise<GeoData> {
   // Try to detect country
   let countryCode: string | null = null
 
-  // Method 1: ipinfo.io
-  countryCode = await fetchFromIpInfo()
-  console.log('[Geo] ipinfo.io detected country:', countryCode)
+  // Method 1: Vercel edge header (fast, reliable on all devices)
+  countryCode = await fetchFromVercelGeo()
+  console.log('[Geo] Vercel header detected country:', countryCode)
+
+  // Method 2: ipinfo.io fallback (for local dev or if Vercel header missing)
+  if (!countryCode) {
+    countryCode = await fetchFromIpInfo()
+    console.log('[Geo] ipinfo.io fallback detected country:', countryCode)
+  }
 
   // Fallback to US if detection fails
   if (!countryCode) {
