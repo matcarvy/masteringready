@@ -30,7 +30,7 @@ Mastering Ready es un servicio de análisis técnico de mezclas de audio que te 
         title: 'Descripción del Servicio',
         content: `Mastering Ready proporciona:
 
-• Análisis técnico de archivos de audio (WAV, MP3, AIFF)
+• Análisis técnico de archivos de audio (WAV, MP3, AIFF, AAC, M4A)
 • Métricas como LUFS, True Peak, Headroom, correlación estéreo y balance frecuencial
 • Reportes descargables en formato PDF (según tu plan)
 • Recomendaciones basadas en estándares profesionales de la industria
@@ -124,7 +124,7 @@ Mastering Ready is a technical mix analysis service that helps you evaluate whet
         title: 'Service Description',
         content: `Mastering Ready provides:
 
-• Technical analysis of audio files (WAV, MP3, AIFF)
+• Technical analysis of audio files (WAV, MP3, AIFF, AAC, M4A)
 • Metrics such as LUFS, True Peak, Headroom, stereo correlation, and frequency balance
 • Downloadable PDF reports (depending on your plan)
 • Recommendations based on professional industry standards

@@ -1893,7 +1893,7 @@ by Matías Carvajal
                       : 'or click to select'}
                   </p>
                   <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.5rem' }}>
-                    {lang === 'es' ? 'WAV, MP3 o AIFF • Máximo 500MB' : 'WAV, MP3 or AIFF • Max 500MB'}
+                    {lang === 'es' ? 'WAV, MP3, AIFF, AAC o M4A • Máximo 500MB' : 'WAV, MP3, AIFF, AAC or M4A • Max 500MB'}
                   </p>
                 </div>
               </div>
