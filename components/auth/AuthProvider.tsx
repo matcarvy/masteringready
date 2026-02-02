@@ -277,10 +277,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const result = await savePendingAnalysisForUser(freshUser.id)
       console.log('Analysis save result:', result)
 
-      if (result === 'quota_exceeded') {
-        setPendingAnalysisQuotaExceeded(true)
-      } else if (result === 'saved') {
+      if (result === 'saved') {
         setPendingAnalysisSaved(true)
+      } else if (result === 'quota_exceeded' || result === 'error') {
+        setPendingAnalysisQuotaExceeded(true)
       }
 
       return result
@@ -376,10 +376,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
           // Check for pending analysis after login/signup
           const saveResult = await savePendingAnalysisForUser(u.id)
-          if (saveResult === 'quota_exceeded') {
-            setPendingAnalysisQuotaExceeded(true)
-          } else if (saveResult === 'saved') {
+          if (saveResult === 'saved') {
             setPendingAnalysisSaved(true)
+          } else if (saveResult === 'quota_exceeded' || saveResult === 'error') {
+            // Both quota exhausted and RPC errors must clear results
+            // — never show unpaid analysis results on failure
+            setPendingAnalysisQuotaExceeded(true)
           }
         }
       }
