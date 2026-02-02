@@ -855,6 +855,12 @@ const handleAnalyze = async () => {
 }
 
   const handleReset = () => {
+    // Check quota before allowing new upload — don't let user waste time uploading
+    if (isLoggedIn && userAnalysisStatus && !userAnalysisStatus.can_analyze) {
+      setShowFreeLimitModal(true)
+      return
+    }
+
     setFile(null)
     setResult(null)
     setError(null)
