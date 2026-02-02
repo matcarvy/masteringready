@@ -464,54 +464,40 @@ function Home() {
     }
   }, [result])
 
-  // Check for OAuth redirect and trigger unlock animation
+  // Quota guard: clear results immediately when user logs in
+  // "Guilty until proven innocent" — results from anonymous analysis are cleared
+  // on login. AuthProvider signals determine follow-up:
+  //   pendingAnalysisSaved → redirect to dashboard
+  //   pendingAnalysisQuotaExceeded → show FreeLimitModal
+  const prevUserRef = useRef<typeof user | 'init'>('init')
   useEffect(() => {
-    if (isLoggedIn && !authLoading) {
-      try {
-        const authFlowData = localStorage.getItem('authModalFlow')
-        if (authFlowData) {
-          const { fromModal, timestamp } = JSON.parse(authFlowData)
-          const fiveMinutes = 5 * 60 * 1000
+    const prevUser = prevUserRef.current
+    prevUserRef.current = user
 
-          // Check if flag is recent (within 5 minutes)
-          if (fromModal && timestamp && (Date.now() - timestamp) < fiveMinutes) {
-            // Clear the flag
-            localStorage.removeItem('authModalFlow')
+    // Skip initial render
+    if (prevUser === 'init') return
 
-            // Trigger unlock animation if there's a pending analysis
-            const pendingAnalysis = localStorage.getItem('pendingAnalysis')
-            if (pendingAnalysis) {
-              setIsUnlocking(true)
-              // Animation duration: 800ms
-              setTimeout(() => {
-                setIsUnlocking(false)
-              }, 800)
-            }
-          } else {
-            // Clear expired flag
-            localStorage.removeItem('authModalFlow')
-          }
-        }
-      } catch (e) {
-        console.error('Error checking auth flow:', e)
-        localStorage.removeItem('authModalFlow')
+    // User just logged in (was null, now has value)
+    if (prevUser === null && user !== null) {
+      // Clean up OAuth flow marker (if any)
+      localStorage.removeItem('authModalFlow')
+
+      if (result) {
+        console.log('[QuotaGuard] User logged in with pending results — clearing immediately')
+        setResult(null)
+        setIsUnlocking(false)
+        // Don't show FreeLimitModal yet — AuthProvider will signal the outcome
       }
     }
-  }, [isLoggedIn, authLoading])
+  }, [user, result])
 
   // React to pending analysis save success (from AuthProvider after login)
+  // QuotaGuard clears results before this fires, so redirect to dashboard always
   useEffect(() => {
     if (pendingAnalysisSaved) {
       clearPendingAnalysisSaved()
-      if (result) {
-        // Unlock button path: user logged in via AuthModal, result is still visible
-        setIsUnlocking(true)
-        setTimeout(() => setIsUnlocking(false), 1500)
-      } else {
-        // Header login/signup path: user navigated away, result state was lost
-        // Redirect to dashboard where they can see their saved analysis
-        window.location.href = `/dashboard?lang=${lang}`
-      }
+      // Redirect to dashboard where user can see their saved analysis
+      window.location.href = `/dashboard?lang=${lang}`
     }
   }, [pendingAnalysisSaved, clearPendingAnalysisSaved])
 
