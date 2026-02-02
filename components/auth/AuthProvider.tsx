@@ -393,11 +393,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, [])
 
   // Sign out function / Función de cerrar sesión
+  // Clear state immediately for instant UI response (hamburger, menus)
+  // then revoke session in background
   const signOut = async () => {
+    setUser(null)
+    setSession(null)
     try {
       await supabase.auth.signOut()
-      setUser(null)
-      setSession(null)
     } catch (err) {
       console.error('Sign out error:', err)
     }

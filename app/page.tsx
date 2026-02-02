@@ -596,6 +596,9 @@ const handleAnalyze = async () => {
   // as anonymous when navigating back (auth re-initializing)
   if (authLoading) return
 
+  // Snapshot auth state at start — used to skip redundant post-analysis re-check
+  const wasLoggedInAtStart = isLoggedIn
+
   // Quick check: if cached status already says quota is exhausted, block immediately
   // (prevents re-click after closing FreeLimitModal with file still loaded)
   if (isLoggedIn && userAnalysisStatus && !userAnalysisStatus.can_analyze) {
@@ -639,9 +642,12 @@ const handleAnalyze = async () => {
     } else {
       // ============================================================
       // USER LIMIT CHECK (for logged-in users)
+      // Use cached status if available and positive — skip RPC round-trip
       // ============================================================
       try {
-        const analysisStatus = await checkCanAnalyze()
+        const analysisStatus = (userAnalysisStatus?.can_analyze && userAnalysisStatus.reason !== 'ANONYMOUS')
+          ? userAnalysisStatus
+          : await checkCanAnalyze()
         setUserAnalysisStatus(analysisStatus)
 
         // Defensive: if user is logged in but checkCanAnalyze returns ANONYMOUS,
@@ -709,9 +715,7 @@ const handleAnalyze = async () => {
         
         fileToAnalyze = compressedFile
         originalMetadata = metadata
-        
-        // Wait a moment to show completion
-        await new Promise(resolve => setTimeout(resolve, 500))
+
         setCompressing(false)
         setCompressionProgress(0)
       } catch (compressionError) {
@@ -787,27 +791,31 @@ const handleAnalyze = async () => {
     // or immediately (anonymous). Never show results before quota is verified.
     if (data) {
       if (isLoggedIn && user) {
-        // Re-check quota before saving AND showing results
-        // Prevents bypass when user logs in during analysis or session state drifts
+        // If user was logged in at start, quota was already verified by pre-check RPC.
+        // Only re-check if user logged in DURING analysis (wasLoggedInAtStart=false).
         try {
-          const quotaCheck = await checkCanAnalyze()
-          if (!quotaCheck.can_analyze || quotaCheck.reason === 'ANONYMOUS') {
-            console.log('[Analysis] User quota exhausted at save time, blocking save + display:', quotaCheck.reason)
-            setUserAnalysisStatus(quotaCheck)
-            setShowFreeLimitModal(true)
-            // Do NOT show results — analysis is lost
-          } else {
-            console.log('[Analysis] Saving to database for logged-in user:', user.id)
-            const savedData = await saveAnalysisToDatabase(user.id, {
-              ...data,
-              filename: file.name,
-              created_at: new Date().toISOString(),
-              lang,
-              strict
-            }, file, geo?.countryCode)
-            setSavedAnalysisId(savedData?.[0]?.id || null)
-            setResult(data) // Only show results after confirmed save
+          if (!wasLoggedInAtStart) {
+            const quotaCheck = await checkCanAnalyze()
+            if (!quotaCheck.can_analyze || quotaCheck.reason === 'ANONYMOUS') {
+              console.log('[Analysis] User quota exhausted at save time, blocking save + display:', quotaCheck.reason)
+              setUserAnalysisStatus(quotaCheck)
+              setShowFreeLimitModal(true)
+              // Do NOT show results — analysis is lost
+              setProgress(0)
+              setLoading(false)
+              return
+            }
           }
+          console.log('[Analysis] Saving to database for logged-in user:', user.id)
+          const savedData = await saveAnalysisToDatabase(user.id, {
+            ...data,
+            filename: file.name,
+            created_at: new Date().toISOString(),
+            lang,
+            strict
+          }, file, geo?.countryCode)
+          setSavedAnalysisId(savedData?.[0]?.id || null)
+          setResult(data) // Only show results after confirmed save
         } catch (saveErr) {
           console.error('[Analysis] Failed to save to database:', saveErr)
           // On save error, still show results (the analysis ran successfully)
