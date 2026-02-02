@@ -757,9 +757,14 @@ export default function AdminPage() {
     if (authLoading) return
 
     if (!user) {
+      setIsAdmin(false)
       setAdminChecked(true)
       return
     }
+
+    // Reset before async check — prevents "Access Denied" flash
+    // when transitioning from no-user (adminChecked=true) to logged-in
+    setAdminChecked(false)
 
     const checkAdmin = async () => {
       try {
@@ -774,10 +779,13 @@ export default function AdminPage() {
           const row = profile as Record<string, unknown>
           if (row.is_admin === true) {
             setIsAdmin(true)
+          } else {
+            setIsAdmin(false)
           }
         }
       } catch {
         // Not admin or error
+        setIsAdmin(false)
       }
       setAdminChecked(true)
     }
