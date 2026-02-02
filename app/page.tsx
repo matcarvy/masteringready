@@ -492,12 +492,16 @@ function Home() {
   }, [user, result])
 
   // React to pending analysis save success (from AuthProvider after login)
-  // QuotaGuard clears results before this fires, so redirect to dashboard always
+  // Play unlock animation briefly, then redirect to dashboard
   useEffect(() => {
     if (pendingAnalysisSaved) {
       clearPendingAnalysisSaved()
-      // Redirect to dashboard where user can see their saved analysis
-      window.location.href = `/dashboard?lang=${lang}`
+      // Brief unlock animation → redirect to dashboard
+      setIsUnlocking(true)
+      setTimeout(() => {
+        setIsUnlocking(false)
+        window.location.href = `/dashboard?lang=${lang}`
+      }, 800)
     }
   }, [pendingAnalysisSaved, clearPendingAnalysisSaved])
 

@@ -176,8 +176,10 @@ export function AuthModal({ isOpen, onClose, onSuccess, lang }: AuthModalProps) 
       }
 
       if (data.user) {
-        // Trigger unlock animation
-        triggerUnlockAnimation()
+        // Close modal immediately — page.tsx handles unlock animation
+        // based on AuthProvider quota check result
+        setLoading(false)
+        onSuccess()
       }
     } catch (err) {
       console.error('Login error:', err)
@@ -242,13 +244,10 @@ export function AuthModal({ isOpen, onClose, onSuccess, lang }: AuthModalProps) 
       }
 
       if (data.user) {
-        // If session exists (no email confirmation), trigger animation
-        if (data.session) {
-          triggerUnlockAnimation()
-        } else {
-          // Email confirmation required - still show success
-          triggerUnlockAnimation()
-        }
+        // Close modal immediately — page.tsx handles unlock animation
+        // based on AuthProvider quota check result
+        setLoading(false)
+        onSuccess()
       }
     } catch (err) {
       console.error('Signup error:', err)
