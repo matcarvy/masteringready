@@ -1037,8 +1037,25 @@ Confirmed all user interactions are tracked and visible in admin dashboard:
 
 4. `772c0d8` - feat: AAC/M4A conversion via pydub/ffmpeg, .aif extension support
 5. `2511c41` - fix: bundle ffmpeg via imageio-ffmpeg for Render free tier
+6. `ad50e5a` - ux: check quota on "Analyze another file" before allowing new upload
 
-**Git state**: dev on `2511c41`, pushed. Build clean.
+##### AAC Test Confirmed
+- User tested AAC file: "TU AMISTAD ME HACE BIEN" (128kbit AAC, 3.9MB, 4:08, 44.1kHz, 16-bit, stereo)
+- Analysis completed successfully via Quick Analysis mode
+
+##### ffmpeg Bundling (imageio-ffmpeg)
+- `apt-get install ffmpeg` won't work on Render free tier (no system package access)
+- Solution: `imageio-ffmpeg` Python package bundles a static ffmpeg binary
+- Configured in `main.py`: `AudioSegment.converter = imageio_ffmpeg.get_ffmpeg_exe()`
+- No Render build command changes needed — `pip install -r requirements.txt` handles everything
+
+##### Quota Check on "Analyze Another File" (`ad50e5a`)
+- **Problem**: User with exhausted quota clicks "Analizar otro archivo" → uploads new file → clicks Analyze → THEN told no quota. Wasted time.
+- **Fix**: `handleReset()` now checks cached `userAnalysisStatus` before resetting to upload screen
+- If `can_analyze: false` → shows FreeLimitModal immediately (instant, no API call)
+- If quota available → normal reset to upload screen
+
+**Git state**: dev on `ad50e5a`, pushed. Build clean.
 
 #### Next Step: Stripe Configuration
 All code is complete and tested. Next step is Stripe dashboard setup (see LAUNCH READINESS STATUS > Step 1 above):
