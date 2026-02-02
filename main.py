@@ -56,6 +56,13 @@ from datetime import datetime, timedelta
 import soundfile as sf
 from pydub import AudioSegment
 
+# Configure pydub to use bundled ffmpeg (imageio-ffmpeg) — no system install needed
+try:
+    import imageio_ffmpeg
+    AudioSegment.converter = imageio_ffmpeg.get_ffmpeg_exe()
+except ImportError:
+    pass  # Fall back to system ffmpeg if available
+
 # Analyzer version - used in API responses for tracking
 ANALYZER_VERSION = "7.4.1"
 
