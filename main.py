@@ -188,7 +188,7 @@ app.add_middleware(
 
 # Constants
 MAX_FILE_SIZE = 200 * 1024 * 1024  # 200MB
-ALLOWED_EXTENSIONS = {'.wav', '.mp3', '.aiff', '.aac', '.m4a'}
+ALLOWED_EXTENSIONS = {'.wav', '.mp3', '.aiff', '.aac', '.m4a', '.ogg'}
 
 # Bilingual error messages (matching frontend lib/error-messages.ts)
 ERROR_MSGS = {

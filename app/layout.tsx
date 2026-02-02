@@ -191,14 +191,14 @@ const structuredData = {
     tool: [
       {
         '@type': 'HowToTool',
-        name: 'Audio file (WAV, MP3, AIFF, AAC or M4A)'
+        name: 'Audio file (WAV, MP3, AIFF, AAC, M4A or OGG)'
       }
     ],
     step: [
       {
         '@type': 'HowToStep',
         name: 'Upload your mix',
-        text: 'Drag and drop your audio file (WAV, MP3, AIFF, AAC or M4A, max 500MB) into the analyzer.',
+        text: 'Drag and drop your audio file (WAV, MP3, AIFF, AAC, M4A or OGG, max 500MB) into the analyzer.',
         position: 1
       },
       {

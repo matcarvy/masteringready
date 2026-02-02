@@ -566,8 +566,8 @@ function Home() {
   // File validation helper
   const validateFile = (file: File): { valid: boolean; error?: string } => {
     const maxSize = 500 * 1024 * 1024 // 500MB
-    const allowedTypes = ['audio/wav', 'audio/mpeg', 'audio/mp3', 'audio/aiff', 'audio/x-aiff', 'audio/aac', 'audio/mp4', 'audio/x-m4a']
-    const allowedExtensions = ['.wav', '.mp3', '.aiff', '.aac', '.m4a']
+    const allowedTypes = ['audio/wav', 'audio/mpeg', 'audio/mp3', 'audio/aiff', 'audio/x-aiff', 'audio/aac', 'audio/mp4', 'audio/x-m4a', 'audio/ogg', 'audio/opus']
+    const allowedExtensions = ['.wav', '.mp3', '.aiff', '.aac', '.m4a', '.ogg']
     
     const fileName = file.name.toLowerCase()
     const hasValidExtension = allowedExtensions.some(ext => fileName.endsWith(ext))
@@ -1851,7 +1851,7 @@ by Matías Carvajal
                   <input
                     id="file-input"
                     type="file"
-                    accept=".wav,.mp3,.aiff,.aac,.m4a"
+                    accept=".wav,.mp3,.aiff,.aac,.m4a,.ogg"
                     onChange={(e) => {
                       const selectedFile = e.target.files?.[0] || null
                       
@@ -1893,7 +1893,7 @@ by Matías Carvajal
                       : 'or click to select'}
                   </p>
                   <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.5rem' }}>
-                    {lang === 'es' ? 'WAV, MP3, AIFF, AAC o M4A • Máximo 500MB' : 'WAV, MP3, AIFF, AAC or M4A • Max 500MB'}
+                    {lang === 'es' ? 'WAV, MP3, AIFF, AAC, M4A u OGG • Máximo 500MB' : 'WAV, MP3, AIFF, AAC, M4A or OGG • Max 500MB'}
                   </p>
                 </div>
               </div>
