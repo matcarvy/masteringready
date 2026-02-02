@@ -1703,8 +1703,8 @@ by Matías Carvajal
                 icon: <TrendingUp size={48} color="#667eea" />,
                 title: lang === 'es' ? 'Recomendaciones específicas' : 'Specific recommendations',
                 desc: lang === 'es'
-                  ? 'No solo números, te decimos exactamente qué ajustar y por qué.'
-                  : "Not just numbers. We tell you exactly what to adjust and why."
+                  ? 'No solo números, te decimos qué ajustar y por qué.'
+                  : "Not just numbers. We tell you what to adjust and why."
               },
             ].map((feature, i) => (
               <div key={i} style={{
