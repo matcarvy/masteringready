@@ -16,7 +16,7 @@ import {
   Search, ChevronDown, ChevronUp, ArrowLeft, RefreshCw,
   Filter, CheckCircle, Clock, AlertCircle, Crown,
   TrendingUp, FileAudio, Globe, Eye, X, ArrowUpDown,
-  Music, Shield, Target, Mail, Lock, EyeOff
+  Music, Shield, Target, Mail, Lock, EyeOff, LogOut
 } from 'lucide-react'
 
 // ============================================================================
@@ -167,6 +167,7 @@ const translations = {
   es: {
     adminPanel: 'Panel de Administración',
     backToHome: 'Volver al inicio',
+    logout: 'Cerrar sesión',
     tabs: {
       overview: 'Vista general',
       users: 'Usuarios',
@@ -325,6 +326,7 @@ const translations = {
   en: {
     adminPanel: 'Admin Panel',
     backToHome: 'Back to home',
+    logout: 'Sign out',
     tabs: {
       overview: 'Overview',
       users: 'Users',
@@ -3343,25 +3345,52 @@ export default function AdminPage() {
             </div>
           </div>
 
-          <button
-            onClick={() => {
-              const newLang = lang === 'es' ? 'en' : 'es'
-              setLang(newLang)
-              setLanguageCookie(newLang)
-            }}
-            style={{
-              background: '#f3f4f6',
-              border: 'none',
-              padding: '0.5rem 1rem',
-              borderRadius: '0.5rem',
-              cursor: 'pointer',
-              fontSize: '0.875rem',
-              fontWeight: '500',
-              color: '#374151'
-            }}
-          >
-            {lang === 'es' ? 'EN' : 'ES'}
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <button
+              onClick={() => {
+                const newLang = lang === 'es' ? 'en' : 'es'
+                setLang(newLang)
+                setLanguageCookie(newLang)
+              }}
+              style={{
+                background: '#f3f4f6',
+                border: 'none',
+                padding: '0.5rem 1rem',
+                borderRadius: '0.5rem',
+                cursor: 'pointer',
+                fontSize: '0.875rem',
+                fontWeight: '500',
+                color: '#374151'
+              }}
+            >
+              {lang === 'es' ? 'EN' : 'ES'}
+            </button>
+            <button
+              onClick={async () => {
+                try {
+                  await supabase.auth.signOut()
+                } catch (err) {
+                  console.error('Sign out error:', err)
+                }
+              }}
+              style={{
+                background: '#fee2e2',
+                border: 'none',
+                padding: '0.5rem 1rem',
+                borderRadius: '0.5rem',
+                cursor: 'pointer',
+                fontSize: '0.875rem',
+                fontWeight: '500',
+                color: '#dc2626',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.375rem'
+              }}
+            >
+              <LogOut size={14} />
+              {isMobile ? '' : t.logout}
+            </button>
+          </div>
         </div>
       </header>
 
