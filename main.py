@@ -54,6 +54,7 @@ import urllib.parse
 from typing import Optional, Dict, Any
 from datetime import datetime, timedelta
 import soundfile as sf
+from pydub import AudioSegment
 
 # Analyzer version - used in API responses for tracking
 ANALYZER_VERSION = "7.4.1"
@@ -188,7 +189,10 @@ app.add_middleware(
 
 # Constants
 MAX_FILE_SIZE = 200 * 1024 * 1024  # 200MB
-ALLOWED_EXTENSIONS = {'.wav', '.mp3', '.aiff', '.aac', '.m4a', '.ogg'}
+ALLOWED_EXTENSIONS = {'.wav', '.mp3', '.aiff', '.aif', '.aac', '.m4a', '.ogg'}
+
+# Formats that need conversion to WAV before analysis (not natively supported by libsndfile)
+NEEDS_CONVERSION = {'.aac', '.m4a'}
 
 # Bilingual error messages (matching frontend lib/error-messages.ts)
 ERROR_MSGS = {
@@ -227,6 +231,17 @@ def classify_analysis_error(error_str: str) -> str:
     if any(kw in lower for kw in corrupt_keywords):
         return 'corrupt_file'
     return 'server_error'
+
+def convert_to_wav(input_path: str, file_ext: str) -> str:
+    """Convert AAC/M4A to WAV using pydub (requires ffmpeg). Returns path to WAV temp file."""
+    logger.info(f"🔄 Converting {file_ext} to WAV via pydub/ffmpeg...")
+    fmt = 'aac' if file_ext == '.aac' else file_ext.lstrip('.')
+    audio = AudioSegment.from_file(input_path, format=fmt)
+    wav_temp = tempfile.NamedTemporaryFile(delete=False, suffix='.wav')
+    audio.export(wav_temp.name, format='wav')
+    wav_temp.close()
+    logger.info(f"✅ Converted to WAV: {wav_temp.name} ({len(audio) / 1000:.1f}s)")
+    return wav_temp.name
 
 # Initialize IP rate limiter and VPN detector
 if IP_LIMITER_AVAILABLE:
@@ -452,11 +467,22 @@ async def analyze_mix_endpoint(
             temp_file.flush()
             
             logger.info(f"💾 Temp file created: {temp_file.name}")
-            
+
+            # Convert AAC/M4A to WAV (not natively supported by libsndfile)
+            analysis_path = temp_file.name
+            wav_converted = None
+            if file_ext in NEEDS_CONVERSION:
+                try:
+                    wav_converted = convert_to_wav(temp_file.name, file_ext)
+                    analysis_path = wav_converted
+                except Exception as conv_err:
+                    logger.error(f"❌ Conversion failed: {conv_err}")
+                    raise HTTPException(status_code=400, detail=bilingual_error('corrupt_file', lang))
+
             # Analyze
             logger.info("🔍 Starting analysis...")
             result = analyze_file(
-                Path(temp_file.name),
+                Path(analysis_path),
                 lang=lang,
                 strict=strict,
                 original_metadata=original_metadata_from_frontend
@@ -508,7 +534,16 @@ async def analyze_mix_endpoint(
                 status_code=500,
                 detail=bilingual_error(category, lang)
             )
-    
+        finally:
+            # Clean up converted WAV if created
+            if wav_converted:
+                try:
+                    import os
+                    os.unlink(wav_converted)
+                    logger.info(f"🗑️ Converted WAV cleaned up: {wav_converted}")
+                except Exception:
+                    pass
+
     # File automatically deleted here
     logger.info("🗑️ Temp file auto-deleted")
 
@@ -683,7 +718,21 @@ async def start_analysis(
                 temp_file.flush()
                 
                 logger.info(f"💾 [{job_id}] Temp file created")
-                
+
+                # Convert AAC/M4A to WAV (not natively supported by libsndfile)
+                analysis_path = temp_file.name
+                wav_converted = None
+                if file_ext in NEEDS_CONVERSION:
+                    try:
+                        wav_converted = convert_to_wav(temp_file.name, file_ext)
+                        analysis_path = wav_converted
+                    except Exception as conv_err:
+                        logger.error(f"❌ [{job_id}] Conversion failed: {conv_err}")
+                        async with jobs_lock:
+                            jobs[job_id]['status'] = 'error'
+                            jobs[job_id]['error'] = bilingual_error('corrupt_file', lang)
+                        return
+
                 # ============================================================
                 # PRIORITIZE METADATA FROM FRONTEND (if available)
                 # This handles the case where frontend compressed the file
@@ -697,8 +746,8 @@ async def start_analysis(
                 else:
                     # Fallback: Read metadata from uploaded file
                     try:
-                        file_info = sf.info(temp_file.name)
-                        
+                        file_info = sf.info(analysis_path)
+
                         # Extract bit depth safely (MP3 and other formats don't have bits_per_sample)
                         bit_depth = None
                         if hasattr(file_info, 'subtype_info'):
@@ -756,7 +805,7 @@ async def start_analysis(
                 else:
                     # WAV/AIFF without known duration - try reading header directly
                     try:
-                        fallback_info = sf.info(temp_file.name)
+                        fallback_info = sf.info(analysis_path)
                         estimated_duration_min = fallback_info.duration / 60.0
                         logger.info(f"📊 [{job_id}] Duration from sf.info fallback: {estimated_duration_min:.1f} min")
                     except Exception:
@@ -792,7 +841,7 @@ async def start_analysis(
                     
                     analyze_func = functools.partial(
                         analyze_file_chunked,
-                        Path(temp_file.name),
+                        Path(analysis_path),
                         lang=lang,
                         strict=strict,
                         chunk_duration=30.0,  # 30 second chunks
@@ -804,12 +853,12 @@ async def start_analysis(
                     
                     analyze_func = functools.partial(
                         analyze_file,
-                        Path(temp_file.name),
+                        Path(analysis_path),
                         lang=lang,
                         strict=strict,
                         original_metadata=original_metadata  # ← Pass original metadata
                     )
-                
+
                 result = await loop.run_in_executor(None, analyze_func)
                 
                 logger.info(f"✅ [{job_id}] Analysis complete: Score {result['score']}/100")
@@ -980,7 +1029,16 @@ async def start_analysis(
                     )
                 except Exception as alert_err:
                     logger.warning(f"⚠️ Failed to send error alert: {alert_err}")
-    
+        finally:
+            # Clean up converted WAV if created
+            if wav_converted:
+                try:
+                    import os
+                    os.unlink(wav_converted)
+                    logger.info(f"🗑️ [{job_id}] Converted WAV cleaned up: {wav_converted}")
+                except Exception:
+                    pass
+
     # Start asyncio task (non-blocking)
     asyncio.create_task(analyze_in_background())
     

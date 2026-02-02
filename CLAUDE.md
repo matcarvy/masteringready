@@ -775,6 +775,280 @@ User reported 6 bugs from mobile testing. Entered plan mode, explored codebase, 
 
 **Git state**: dev on `e961983`, pushed. Build clean.
 
+### 2026-02-01 (Session 13)
+- Continued from same session (Session 12)
+
+#### Language Toggle Always Visible — Landing Page Fix
+- **Problem**: Dashboard showed EN/ES toggle correctly, but landing page hid it on mobile (wrapped in `{!isMobile && (...)}`)
+- **Root cause**: Landing page language toggle was desktop-only; mobile version was inside hamburger menu, which only showed for non-logged-in users. Logged-in mobile users had no toggle.
+- **Fix** (`app/page.tsx`):
+  - Language toggle: removed `{!isMobile}` wrapper, now always visible
+  - Added profile persistence on toggle (matching dashboard behavior)
+  - Logo restructured: icon-in-gradient-box + `{!isMobile && text}` (matching dashboard style)
+  - Removed redundant language toggle from hamburger menu
+  - Right-side gap: `clamp()` → `isMobile ? '0.5rem' : '0.75rem'` (matching dashboard)
+- **Fix** (`history/page.tsx`, `subscription/page.tsx`, `settings/page.tsx`):
+  - Right-side gap made responsive: `'0.75rem'` → `isMobile ? '0.5rem' : '0.75rem'`
+
+#### Header Ghost Text + Hamburger Flash Fix
+- **Problem**: On landing page load, "Cargando..." ghost text appeared where UserMenu would be, and hamburger menu flashed briefly during auth loading
+- **Root cause**: UserMenu rendered "Cargando..." text during `loading` state (styled for dark background but rendered on white header). Hamburger showed because `!user` is true during loading.
+- **Fix**:
+  - `UserMenu.tsx`: Loading state returns `null` instead of "Cargando..." text
+  - `page.tsx`: Hamburger condition changed from `isMobile && !user` to `isMobile && !user && !authLoading`
+
+#### Subheadline Copy Fix
+- **Change**: Removed "exactamente"/"exactly" from hero subheadline
+  - ES: "Te decimos qué debes revisar `antes de` `enviarla a master`"
+  - EN: "We tell you what to check `before sending it` `to master`"
+- Added `whiteSpace: 'nowrap'` spans to prevent bad line breaks ("de" alone at end of line)
+
+#### GeoIP Detection Fix — Vercel Edge Header
+- **Problem**: Regional pricing didn't work on mobile (WiFi, cellular, or both). Users in Colombia saw US pricing on mobile but correct pricing on desktop.
+- **Root cause**: Only detection method was `ipinfo.io` (external API, client-side). On mobile networks this can timeout, be blocked, or fail silently → falls back to US. Result cached for 24h in localStorage, so one failure locks US pricing for a day.
+- **Fix**:
+  - New `/app/api/geo/route.ts`: Server-side endpoint that reads Vercel's `X-Vercel-IP-Country` header (free, instant, works on all devices/connections)
+  - Updated `lib/geoip.ts` detection order:
+    1. Vercel edge header via `/api/geo` (primary — works on mobile, desktop, WiFi, cellular, airplane+WiFi)
+    2. `ipinfo.io` fallback (for local development)
+    3. US default
+  - Added 5-second timeout to both detection methods (prevents hanging on slow networks)
+- **Connection types verified**: WiFi only, cellular only, airplane+WiFi, both active — all hit Vercel edge which reads IP at the server, connection type is irrelevant
+
+#### Analysis Quota Flow — Verified Correct, No Changes
+- Full audit confirmed 3-layer defense system:
+  1. Pre-check BEFORE upload (IP limit for anonymous, `can_user_analyze()` RPC for logged-in)
+  2. Quota check in AuthProvider BEFORE DB insert (pending analysis on login)
+  3. Re-check BEFORE saving (covers login-during-analysis edge case)
+- All catch blocks deny on failure (secure-by-default, fail-closed)
+- IP rate limit runs against Supabase `anonymous_sessions` table, no Render env var needed
+
+#### Commits to dev (Session 13)
+1. `a60a242` - fix: language toggle always visible in header, consistent mobile layout
+2. `5f0a8a1` - fix: header consistency, remove ghost text, subheadline copy
+3. `54032a0` - fix: use Vercel edge header for GeoIP, ipinfo.io as fallback
+
+**Git state**: dev on `54032a0`, pushed. Build clean.
+
+### 2026-02-01 (Session 14)
+- Continued from context summary (Session 13 ran out of context)
+
+#### Security Fix: Quota Bypass on Re-Click After FreeLimitModal Close (CRITICAL)
+- **Bug**: User with exhausted quota closes FreeLimitModal → file still loaded → clicks Analyze again → analysis starts, bypassing quota
+- **Root causes (2)**:
+  1. `checkCanAnalyze()` in `lib/supabase.ts` calls `getCurrentUser()` independently — if Supabase session has a momentary gap, returns `can_analyze: true, reason: 'ANONYMOUS'`, bypassing user quota even though component-level `isLoggedIn` is `true`
+  2. `setResult(data)` at line 752 showed results BEFORE the save/re-check at line 757 — user could see analysis even when quota blocked the save
+  3. Analyze button had no quota-based disabled state — only disabled by `loading || compressing`
+  4. `handleAnalyze()` didn't check cached `userAnalysisStatus` before starting — relied solely on async RPC call
+
+- **Fix (4 layers of defense)** in `app/page.tsx`:
+  1. **Cached status quick check**: At top of `handleAnalyze()`, before even starting loading state, checks if `userAnalysisStatus` already says `can_analyze: false`. Blocks immediately and re-shows FreeLimitModal. Catches exact bug: close modal → re-click.
+  2. **ANONYMOUS session guard**: In the `isLoggedIn` branch, after `checkCanAnalyze()` returns, checks if `reason === 'ANONYMOUS'`. If so, denies analysis with bilingual "reload page" error instead of silently bypassing quota.
+  3. **Results gated behind save**: `setResult(data)` now only runs AFTER quota re-check AND successful DB save for logged-in users. If quota fails at save time, FreeLimitModal shows and results are never displayed. Anonymous users see results immediately. On save error (DB failure), results still shown (analysis ran successfully).
+  4. **Button disabled when quota exhausted**: New `isQuotaExhausted` computed variable (`isLoggedIn && userAnalysisStatus !== null && !userAnalysisStatus.can_analyze`). Analyze button: disabled, grayed out, not-allowed cursor, no hover effects when exhausted.
+
+- **5 defense layers now (complete):**
+  1. Proactive `useEffect` on page load → checks quota, shows modal if exhausted
+  2. Cached `userAnalysisStatus` quick check → blocks re-clicks after modal close
+  3. `checkCanAnalyze()` RPC call → server-side quota verification (with ANONYMOUS guard)
+  4. Post-analysis `checkCanAnalyze()` re-check → blocks display + save if quota drifted
+  5. Button disabled state → visual + interaction lock when quota exhausted
+
+#### Commits to dev (Session 14)
+1. `fc49dac` - fix: defense-in-depth quota bypass — block re-analysis after FreeLimitModal close
+
+**Git state**: dev on `fc49dac`, pushed. Build clean.
+
+### 2026-02-01 (Session 15)
+- Continued from context summary (Session 14 ran out of context)
+
+#### Critical Fix: Anonymous Analysis Results Persist After Login (ONGOING from Session 14)
+- **Bug**: User runs analysis logged out → logs in with 0 quota → results stay visible, no FreeLimitModal
+- **Root cause**: Signal-based approach (`pendingAnalysisQuotaExceeded` from AuthProvider) had multiple failure points — async chain could fail silently, `pendingAnalysis` in localStorage could be consumed before signal chain ran
+
+#### Fix 1: QuotaGuard — "Guilty Until Proven Innocent" (`c10fb13`)
+- **New useEffect** in `app/page.tsx`: tracks `user` state transitions via `prevUserRef`
+- When user goes from `null` to non-null AND `result` exists → **clear results immediately**
+- Replaces old `authModalFlow` useEffect (line 468-500) that triggered unlock animation from localStorage before quota was verified — conflicted with signal pattern
+- `pendingAnalysisSaved` handler simplified: always redirects to `/dashboard?lang=${lang}` (results already cleared by QuotaGuard before signal arrives)
+- **6 defense layers now**: proactive cache → cached quick check → RPC call → post-analysis re-check → QuotaGuard on login → AuthProvider signals
+
+#### Fix 2: AuthModal Closes Immediately (`43ab7a5`)
+- **Problem**: AuthModal's internal unlock animation (shake/open/green, 1000ms) always played after login, even when user had no quota → confusing when nothing appeared after animation
+- **Fix**: `handleLogin()` and `handleSignup()` in `AuthModal.tsx` now call `onSuccess()` directly (closes modal), no internal animation
+- **page.tsx controls visual feedback** based on AuthProvider signal:
+  - `pendingAnalysisSaved` → unlock ripple (800ms) → redirect to dashboard
+  - `pendingAnalysisQuotaExceeded` → FreeLimitModal immediately, no animation
+- `triggerUnlockAnimation()` and animation states (`authSuccess`, `lockAnimationPhase`) remain in AuthModal but are no longer called
+
+#### Fix 3: QuotaGuard Checks Quota Directly (`457ac70`)
+- **Problem**: QuotaGuard cleared results but AuthProvider's `[SaveAnalysis] No pending analysis in localStorage` meant no signal fired → user saw blank page, no FreeLimitModal
+- **Fix**: QuotaGuard now calls `checkCanAnalyze()` directly after clearing results
+  - `can_analyze: false` → `setShowFreeLimitModal(true)` immediately
+  - `can_analyze: true` → wait for AuthProvider's `pendingAnalysisSaved` signal → unlock animation → redirect
+  - Error → show FreeLimitModal as safety fallback
+- **No longer depends solely on AuthProvider signal chain** — works even when `pendingAnalysis` localStorage is already consumed
+
+#### Confirmed Working Flow
+- **Without quota**: Login → modal closes → results cleared → FreeLimitModal immediately
+- **With quota**: Login → modal closes → results cleared → analysis saved → unlock ripple → redirect to dashboard
+- **After FreeLimitModal close**: file still loaded, click Analyze → FreeLimitModal again (logged in, no quota)
+- **After purchase**: re-upload + analyze (~60s) — acceptable for MVP. V2: persist pending analysis through Stripe checkout session
+
+#### Fix 4: Admin Inline Login (`4adfb5e`)
+- **Problem**: `/admin` → login link → `/auth/login` → redirect to home → manually navigate back to `/admin`. Didn't work on mobile.
+- **Fix**: Replaced login link with inline email/password form directly on `/admin` page
+- After successful auth, `onAuthStateChange` updates user state → admin page re-renders showing admin panel
+- No redirect needed, works on mobile, email-only (no OAuth for admin)
+- Added `Mail`, `Lock`, `EyeOff` Lucide imports, `FormEvent` import
+
+#### Pre-Launch Decisions
+- **Delete test data**: Yes, before merge dev → main. Keep admin account + table structure.
+- **2FA for admin**: Not for MVP. Strong unique password sufficient. V2: email code or IP whitelist.
+- **Email**: `mat@matcarvy.com` for MVP. Configure `masteringready.com` email later.
+- **Anonymous analysis after purchase**: Acceptable for MVP — user re-uploads (~60s). V2: persist through Stripe checkout.
+
+#### Commits to dev (Session 15)
+1. `c10fb13` - fix: clear anonymous results immediately on login (quota guard)
+2. `43ab7a5` - ux: unlock animation only on successful save, FreeLimitModal immediate
+3. `457ac70` - fix: QuotaGuard checks quota directly, shows FreeLimitModal immediately
+4. `4adfb5e` - fix: inline admin login form, stays on /admin after auth
+
+**Git state**: dev on `4adfb5e`, pushed. Build clean.
+
+### 2026-02-01 (Session 16)
+- Continued from context summary (Session 15 ran out of context)
+
+#### Performance Optimizations (`f1c0cfb`)
+- User reported: hamburger menu slow on mobile after logout, analysis feels slower after security changes
+- Implemented 4 optimizations to reduce latency without compromising security:
+
+##### Fix 1: Instant signOut (`components/auth/AuthProvider.tsx`)
+- **Problem**: `signOut()` awaited `supabase.auth.signOut()` before clearing `user`/`session` state → UI delayed (hamburger menu slow to appear on mobile)
+- **Fix**: Clear `user` and `session` state immediately, then revoke session in background
+- Impact: Hamburger menu appears instantly on mobile logout
+
+##### Fix 2: Cached quota pre-check (`app/page.tsx`)
+- **Problem**: Every analysis start called `checkCanAnalyze()` RPC even when cached `userAnalysisStatus` already confirmed quota available
+- **Fix**: Use cached `userAnalysisStatus` when `can_analyze: true` and `reason !== 'ANONYMOUS'`, skip RPC round-trip
+- Impact: Saves ~200-400ms RPC round-trip for logged-in users with known-good quota
+
+##### Fix 3: Remove compression delay (`app/page.tsx`)
+- **Problem**: 500ms `setTimeout` after compression completed — artificial delay with no purpose
+- **Fix**: Removed `await new Promise(resolve => setTimeout(resolve, 500))`
+- Impact: 500ms saved on large file uploads that trigger compression
+
+##### Fix 4: Skip redundant post-analysis re-check (`app/page.tsx`)
+- **Problem**: After analysis completed, `checkCanAnalyze()` RPC was called again even when user was logged in from the start (quota already verified by pre-check)
+- **Fix**: Added `wasLoggedInAtStart` snapshot at top of `handleAnalyze()`. Post-analysis re-check only runs when `wasLoggedInAtStart === false` (user logged in during polling — the actual security-relevant edge case)
+- Impact: Saves ~200-400ms RPC round-trip for users who were already authenticated
+- **Security preserved**: Re-check still runs when user logs in mid-analysis (the bypass scenario it was designed to catch)
+
+#### Logout Redirect Fix (`50ff665`)
+- **Problem**: Logging out from dashboard/history/subscription/settings redirected to `/auth/login` instead of home
+- **Root cause**: All 4 protected pages had `router.push('/auth/login')` guard. With instant signOut, `user` becomes null before `window.location.href` navigates — the guard's `router.push` wins the race
+- **Fix**: Changed all 4 guards from `router.push('/auth/login')` to `window.location.href = '/?lang=${lang}'`
+- Files: `dashboard/page.tsx`, `history/page.tsx`, `subscription/page.tsx`, `settings/page.tsx`
+
+#### Auth Pages Mobile Width (`50ff665`)
+- **Problem**: Login/signup pages too tight on mobile — card right at screen edge
+- **Fix** (all auth pages: login, signup, forgot-password, reset-password):
+  - Outer padding: `'1rem'` → `clamp(1rem, 5vw, 2rem)` — more breathing room
+  - Card width: `calc(100% - 1rem)` → `100%` — outer padding handles margins
+- Also fixed leftover "Mastering Ready" → "MasteringReady" in login subtitles (ES + EN)
+
+#### Admin Logout Button (`b692cf9`)
+- Added red "Cerrar sesion" / "Sign out" button in admin header next to language toggle
+- On mobile: shows LogOut icon only. On desktop: icon + text
+- Calls `supabase.auth.signOut()` → `onAuthStateChange` resets state → shows login form
+
+#### Admin "Access Denied" Flash Fix (`00882e6`)
+- **Problem**: Logging into admin on mobile briefly flashed "Access Denied" before showing admin panel
+- **Root cause**: Race condition — `adminChecked` was `true` (from previous no-user state) but `isAdmin` still `false` (async profile query not yet completed). Condition `adminChecked && !isAdmin` matched, rendering access denied for a split second
+- **Fix**: Reset `adminChecked = false` when user changes, so loading spinner shows during async admin check instead of access denied. Also added explicit `setIsAdmin(false)` resets for non-admin and error paths
+
+#### Tracking Verification — All Interactions Recorded
+Confirmed all user interactions are tracked and visible in admin dashboard:
+
+| Interaction | DB Table | Admin Tab | Metrics |
+|---|---|---|---|
+| CTA clicks (mastering/mix help) | `cta_clicks` | Analytics | Total clicks, click rate, by type, by score range |
+| Contact method (WhatsApp/Email/Instagram) | `contact_requests` | Leads | Individual cards, method filters, conversion rate |
+| Feedback (thumbs up/down + form) | `user_feedback` | Feedback + Analytics | Satisfaction rate, admin response system |
+
+#### Commits to dev (Session 16)
+1. `f1c0cfb` - perf: instant signOut, cached quota check, skip redundant re-checks
+2. `50ff665` - fix: logout redirects to home, auth pages mobile width, brand name
+3. `b692cf9` - fix: add logout button to admin dashboard header
+4. `00882e6` - fix: prevent Access Denied flash on admin login
+
+**Git state**: dev on `00882e6`, pushed. Build clean.
+
+### 2026-02-01 (Session 17)
+- Continued from context summary (Session 16 ran out of context)
+
+#### Format Support Expansion + AAC/M4A Conversion
+
+##### Format Strings Updated (all files)
+- Error messages (`lib/error-messages.ts`): Added AAC, M4A, OGG to format_not_supported messages
+- Upload hint (`app/page.tsx`): "WAV, MP3, AIFF, AAC, M4A u OGG" / "WAV, MP3, AIFF, AAC, M4A or OGG"
+- Structured data (`app/layout.tsx`): Updated HowToTool with all 6 formats, fixed "50MB" → "500MB"
+- Terms of Service (`app/terms/page.tsx`): Updated format lists in both ES and EN
+
+##### OGG Support (frontend + backend)
+- Backend: `.ogg` already in compression detection list. Added to `ALLOWED_EXTENSIONS`
+- Frontend: Added `audio/ogg`, `audio/opus` MIME types + `.ogg` extension
+- Tested and confirmed working end-to-end
+
+##### AAC/M4A Conversion (NEW — requires ffmpeg on server)
+- **Problem**: `libsndfile` (used by `soundfile` + `librosa`) doesn't support AAC natively → server error on AAC upload
+- **Solution**: Convert AAC/M4A → WAV via `pydub` + `ffmpeg` before analysis
+- **Implementation** (`main.py`):
+  - `NEEDS_CONVERSION = {'.aac', '.m4a'}` — formats that need pre-conversion
+  - `convert_to_wav(input_path, file_ext)` — converts via pydub/ffmpeg, returns temp WAV path
+  - `analysis_path` variable: points to original file or converted WAV
+  - **Sync endpoint**: Conversion after temp file creation, cleanup in `finally` block
+  - **Polling endpoint**: Same pattern — conversion, all `sf.info()` and `analyze_file()`/`analyze_file_chunked()` calls use `analysis_path`, cleanup in `finally` block
+- **Dependencies**: Added `pydub` to `requirements.txt`
+- **Deployment requirement**: Render needs `ffmpeg` installed (add to build command: `apt-get update && apt-get install -y ffmpeg`)
+
+##### `.aif` Extension Support
+- Backend: `.aif` added to `ALLOWED_EXTENSIONS` (already handled by libsndfile as AIFF)
+- Frontend: `.aif` added to `allowedExtensions` array + file input `accept` attribute
+
+##### Copy Fix: "exactamente"/"exactly" removed
+- Value prop description: Removed "exactamente"/"exactly" for consistency with hero subheadline
+- `app/page.tsx` value prop card text updated
+
+##### Supported Formats (complete list after this session)
+| Format | Extension(s) | Backend Handling |
+|--------|-------------|-----------------|
+| WAV | .wav | Native (libsndfile) |
+| MP3 | .mp3 | Native (librosa) |
+| AIFF | .aiff, .aif | Native (libsndfile) |
+| AAC | .aac | Converted to WAV (pydub/ffmpeg) |
+| M4A | .m4a | Converted to WAV (pydub/ffmpeg) |
+| OGG | .ogg | Native (libsndfile) |
+
+##### Commits to dev (Session 17 — from before context loss)
+1. `a7f7919` - feat: add AAC, M4A, OGG to format strings and supported formats
+2. `7c766b2` - feat: add OGG audio support (backend + frontend validation)
+3. `476530a` - copy: remove "exactamente"/"exactly" from value prop description
+
+##### Changes in this continuation (not yet committed)
+- `main.py`: Completed AAC/M4A conversion — polling endpoint now uses `analysis_path` for `sf.info()`, `analyze_file()`, `analyze_file_chunked()`; added `finally` cleanup for converted WAV
+- `app/page.tsx`: Added `.aif` to `allowedExtensions` + file input `accept`
+- Build passes clean (all 16 pages)
+
+#### Next Step: Stripe Configuration
+All code is complete and tested. Next step is Stripe dashboard setup (see LAUNCH READINESS STATUS > Step 1 above):
+1. Create 3 Products + Prices in Stripe Dashboard
+2. Get API keys (test first, then live)
+3. Create webhook endpoint
+4. Configure Customer Portal
+5. Set Vercel environment variables
+6. Test checkout flow with test card `4242 4242 4242 4242`
+
 ### Previous Sessions (1)
 - Implemented full Stripe + subscription system (tasks #1-#9)
 - Discovered sync issue with analysis counters in profiles table
