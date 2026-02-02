@@ -466,9 +466,9 @@ function Home() {
 
   // Quota guard: clear results immediately when user logs in
   // "Guilty until proven innocent" — results from anonymous analysis are cleared
-  // on login. AuthProvider signals determine follow-up:
-  //   pendingAnalysisSaved → redirect to dashboard
-  //   pendingAnalysisQuotaExceeded → show FreeLimitModal
+  // on login, then quota is checked directly to determine follow-up:
+  //   has quota → AuthProvider signal → redirect to dashboard
+  //   no quota → FreeLimitModal immediately
   const prevUserRef = useRef<typeof user | 'init'>('init')
   useEffect(() => {
     const prevUser = prevUserRef.current
@@ -486,7 +486,21 @@ function Home() {
         console.log('[QuotaGuard] User logged in with pending results — clearing immediately')
         setResult(null)
         setIsUnlocking(false)
-        // Don't show FreeLimitModal yet — AuthProvider will signal the outcome
+
+        // Check quota directly — don't rely solely on AuthProvider signal
+        // (pendingAnalysis in localStorage may already be consumed)
+        checkCanAnalyze().then((status) => {
+          setUserAnalysisStatus(status)
+          if (!status.can_analyze) {
+            console.log('[QuotaGuard] No quota — showing FreeLimitModal')
+            setShowFreeLimitModal(true)
+          }
+          // If can_analyze is true, AuthProvider's pendingAnalysisSaved signal
+          // will handle the unlock animation + redirect to dashboard
+        }).catch(() => {
+          // On error, show FreeLimitModal as safety fallback
+          setShowFreeLimitModal(true)
+        })
       }
     }
   }, [user, result])
