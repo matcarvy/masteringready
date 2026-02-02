@@ -6,7 +6,7 @@
  * Bilingual: ES LATAM Neutro + US English
  */
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, FormEvent } from 'react'
 import Link from 'next/link'
 import { useAuth } from '@/components/auth/AuthProvider'
 import { supabase } from '@/lib/supabase'
@@ -16,7 +16,7 @@ import {
   Search, ChevronDown, ChevronUp, ArrowLeft, RefreshCw,
   Filter, CheckCircle, Clock, AlertCircle, Crown,
   TrendingUp, FileAudio, Globe, Eye, X, ArrowUpDown,
-  Music, Shield, Target
+  Music, Shield, Target, Mail, Lock, EyeOff
 } from 'lucide-react'
 
 // ============================================================================
@@ -528,6 +528,175 @@ function getCategoryColor(category: string): string {
 }
 
 // ============================================================================
+// ADMIN LOGIN FORM (inline — stays on /admin after auth)
+// ============================================================================
+
+function AdminLoginForm({ lang }: { lang: 'es' | 'en' }) {
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [showPw, setShowPw] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const t = lang === 'es' ? {
+    title: 'Panel de administracion',
+    subtitle: 'Inicia sesion para acceder',
+    email: 'Correo electronico',
+    password: 'Contrasena',
+    button: 'Iniciar sesion',
+    loggingIn: 'Verificando...',
+    invalid: 'Credenciales invalidas',
+    error: 'Error. Intenta de nuevo.'
+  } : {
+    title: 'Admin panel',
+    subtitle: 'Sign in to access',
+    email: 'Email address',
+    password: 'Password',
+    button: 'Sign in',
+    loggingIn: 'Verifying...',
+    invalid: 'Invalid credentials',
+    error: 'Error. Please try again.'
+  }
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault()
+    setError(null)
+    setLoading(true)
+
+    try {
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password
+      })
+
+      if (signInError) {
+        setError(signInError.message.includes('Invalid login credentials')
+          ? t.invalid : signInError.message)
+        setLoading(false)
+        return
+      }
+      // Success — onAuthStateChange will update user state and re-render AdminPage
+    } catch {
+      setError(t.error)
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div style={{
+      minHeight: '100vh',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      background: '#f3f4f6',
+      fontFamily: 'Inter, system-ui, sans-serif',
+      padding: '1rem'
+    }}>
+      <div style={{
+        background: 'white',
+        borderRadius: '1rem',
+        padding: '2.5rem',
+        boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
+        maxWidth: '380px',
+        width: '100%'
+      }}>
+        <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+          <Shield size={40} style={{ color: '#667eea', marginBottom: '0.75rem' }} />
+          <h1 style={{ fontSize: '1.25rem', fontWeight: '700', color: '#111827', marginBottom: '0.25rem' }}>
+            {t.title}
+          </h1>
+          <p style={{ color: '#9ca3af', fontSize: '0.85rem' }}>{t.subtitle}</p>
+        </div>
+
+        <form onSubmit={handleSubmit}>
+          {error && (
+            <div style={{
+              background: '#fef2f2',
+              border: '1px solid #fecaca',
+              color: '#dc2626',
+              padding: '0.5rem 0.75rem',
+              borderRadius: '0.5rem',
+              marginBottom: '0.75rem',
+              fontSize: '0.8rem'
+            }}>
+              {error}
+            </div>
+          )}
+
+          <div style={{ marginBottom: '0.75rem', position: 'relative' }}>
+            <Mail size={16} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }} />
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder={t.email}
+              required
+              style={{
+                width: '100%',
+                padding: '0.625rem 0.75rem 0.625rem 2.5rem',
+                border: '1px solid #d1d5db',
+                borderRadius: '0.5rem',
+                fontSize: '0.875rem',
+                outline: 'none',
+                boxSizing: 'border-box'
+              }}
+            />
+          </div>
+
+          <div style={{ marginBottom: '1rem', position: 'relative' }}>
+            <Lock size={16} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }} />
+            <input
+              type={showPw ? 'text' : 'password'}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder={t.password}
+              required
+              style={{
+                width: '100%',
+                padding: '0.625rem 2.5rem 0.625rem 2.5rem',
+                border: '1px solid #d1d5db',
+                borderRadius: '0.5rem',
+                fontSize: '0.875rem',
+                outline: 'none',
+                boxSizing: 'border-box'
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPw(!showPw)}
+              style={{
+                position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)',
+                background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', padding: 0
+              }}
+            >
+              {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
+            </button>
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            style={{
+              width: '100%',
+              padding: '0.75rem',
+              background: loading ? '#9ca3af' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '0.5rem',
+              fontSize: '0.9rem',
+              fontWeight: '600',
+              cursor: loading ? 'not-allowed' : 'pointer'
+            }}
+          >
+            {loading ? t.loggingIn : t.button}
+          </button>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+// ============================================================================
 // COMPONENT
 // ============================================================================
 
@@ -902,45 +1071,9 @@ export default function AdminPage() {
     )
   }
 
-  // Not logged in - show login prompt
+  // Not logged in - show inline login form (stays on /admin after auth)
   if (adminChecked && !user) {
-    return (
-      <div style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: '#f3f4f6',
-        fontFamily: 'Inter, system-ui, sans-serif'
-      }}>
-        <div style={{
-          textAlign: 'center',
-          background: 'white',
-          borderRadius: '1rem',
-          padding: '3rem',
-          boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
-          maxWidth: '400px'
-        }}>
-          <Shield size={48} style={{ color: '#667eea', marginBottom: '1rem' }} />
-          <h1 style={{ fontSize: '1.5rem', fontWeight: '700', color: '#111827', marginBottom: '0.5rem' }}>
-            {t.loginRequired}
-          </h1>
-          <p style={{ color: '#6b7280', marginBottom: '1.5rem' }}>{t.loginRequiredMsg}</p>
-          <Link href="/auth/login" style={{
-            display: 'inline-block',
-            padding: '0.75rem 2rem',
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            color: 'white',
-            borderRadius: '0.75rem',
-            textDecoration: 'none',
-            fontWeight: '600',
-            fontSize: '0.95rem'
-          }}>
-            {t.loginButton}
-          </Link>
-        </div>
-      </div>
-    )
+    return <AdminLoginForm lang={lang} />
   }
 
   // Access denied (logged in but not admin)
