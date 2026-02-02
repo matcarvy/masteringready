@@ -1035,10 +1035,10 @@ Confirmed all user interactions are tracked and visible in admin dashboard:
 2. `7c766b2` - feat: add OGG audio support (backend + frontend validation)
 3. `476530a` - copy: remove "exactamente"/"exactly" from value prop description
 
-##### Changes in this continuation (not yet committed)
-- `main.py`: Completed AAC/M4A conversion — polling endpoint now uses `analysis_path` for `sf.info()`, `analyze_file()`, `analyze_file_chunked()`; added `finally` cleanup for converted WAV
-- `app/page.tsx`: Added `.aif` to `allowedExtensions` + file input `accept`
-- Build passes clean (all 16 pages)
+4. `772c0d8` - feat: AAC/M4A conversion via pydub/ffmpeg, .aif extension support
+5. `2511c41` - fix: bundle ffmpeg via imageio-ffmpeg for Render free tier
+
+**Git state**: dev on `2511c41`, pushed. Build clean.
 
 #### Next Step: Stripe Configuration
 All code is complete and tested. Next step is Stripe dashboard setup (see LAUNCH READINESS STATUS > Step 1 above):
