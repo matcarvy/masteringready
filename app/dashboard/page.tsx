@@ -396,12 +396,12 @@ function DashboardContent() {
     return () => { document.body.style.overflow = '' }
   }, [selectedAnalysis, showUpgradeModal, showContactModal])
 
-  // Redirect if not logged in
+  // Redirect if not logged in (to home, not login — home has login options in header)
   useEffect(() => {
     if (!authLoading && !user) {
-      router.push('/auth/login')
+      window.location.href = `/?lang=${lang}`
     }
-  }, [authLoading, user, router])
+  }, [authLoading, user, lang])
 
   // Fetch data
   useEffect(() => {

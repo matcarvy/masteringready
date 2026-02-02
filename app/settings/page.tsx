@@ -162,12 +162,12 @@ export default function SettingsPage() {
     return () => window.removeEventListener('resize', check)
   }, [])
 
-  // Redirect if not logged in
+  // Redirect if not logged in (to home, not login — home has login options in header)
   useEffect(() => {
     if (!authLoading && !user) {
-      router.push('/auth/login')
+      window.location.href = `/?lang=${lang}`
     }
-  }, [authLoading, user, router])
+  }, [authLoading, user, lang])
 
   // Fetch data
   useEffect(() => {

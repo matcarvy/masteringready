@@ -21,7 +21,7 @@ import { Headphones, Mail, Lock, ArrowLeft, Eye, EyeOff } from 'lucide-react'
 const translations = {
   es: {
     title: 'Iniciar Sesión',
-    subtitle: 'Bienvenido de vuelta a Mastering Ready',
+    subtitle: 'Bienvenido de vuelta a MasteringReady',
     email: 'Correo electrónico',
     password: 'Contraseña',
     forgotPassword: '¿Olvidaste tu contraseña?',
@@ -38,7 +38,7 @@ const translations = {
   },
   en: {
     title: 'Sign In',
-    subtitle: 'Welcome back to Mastering Ready',
+    subtitle: 'Welcome back to MasteringReady',
     email: 'Email address',
     password: 'Password',
     forgotPassword: 'Forgot your password?',
@@ -135,7 +135,7 @@ function LoginContent() {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      padding: '1rem',
+      padding: 'clamp(1rem, 5vw, 2rem)',
       fontFamily: 'Inter, system-ui, sans-serif'
     }}>
       {/* Language Toggle - Single button like main page */}
@@ -170,7 +170,7 @@ function LoginContent() {
         background: 'white',
         borderRadius: '1.5rem',
         padding: 'clamp(1.5rem, 5vw, 2.5rem)',
-        width: 'calc(100% - 1rem)',
+        width: '100%',
         maxWidth: '420px',
         boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
       }}>

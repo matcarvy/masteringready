@@ -94,7 +94,7 @@ function ForgotPasswordContent() {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      padding: '1rem',
+      padding: 'clamp(1rem, 5vw, 2rem)',
       fontFamily: 'Inter, system-ui, sans-serif'
     }}>
       <button
@@ -127,7 +127,7 @@ function ForgotPasswordContent() {
         background: 'white',
         borderRadius: '1.5rem',
         padding: 'clamp(1.5rem, 5vw, 2.5rem)',
-        width: 'calc(100% - 1rem)',
+        width: '100%',
         maxWidth: '420px',
         boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
       }}>
