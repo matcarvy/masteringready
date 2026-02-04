@@ -4,23 +4,18 @@
  * POST /api/checkout
  *
  * Creates a Stripe Checkout session for:
- * - Pro Monthly subscription ($9.99)
- * - Single Analysis purchase ($5.99)
- * - Add-on Pack purchase ($3.99, Pro only)
+ * - Pro Monthly subscription
+ * - Single Analysis purchase
+ * - Add-on Pack purchase (Pro only)
  *
- * Includes regional pricing based on user's country.
+ * Includes regional pricing with local currency for Tier 1 countries.
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
-import {
-  getStripeClient,
-  getOrCreateCustomer,
-  calculateRegionalPrice,
-  toStripeAmount,
-  PRODUCT_DEFINITIONS
-} from '@/lib/stripe'
+import { getStripeClient, getOrCreateCustomer } from '@/lib/stripe'
+import { getProductPrice, getPricingForCountry } from '@/lib/pricing-config'
 
 export const dynamic = 'force-dynamic'
 
@@ -28,6 +23,13 @@ interface CheckoutRequest {
   productType: 'pro_monthly' | 'single' | 'addon'
   countryCode?: string
 }
+
+// Product names for Stripe
+const PRODUCT_NAMES = {
+  pro_monthly: 'MasteringReady Pro',
+  single: 'Single Analysis',
+  addon: 'Pro Add-on Pack'
+} as const
 
 export async function POST(request: NextRequest) {
   try {
@@ -109,42 +111,24 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Get regional pricing - use default if not found
-    let multiplier = 1.0
-    const { data: pricing } = await supabase
-      .from('regional_pricing')
-      .select('multiplier')
-      .eq('country_code', countryCode)
-      .single() as { data: { multiplier: number } | null }
-
-    if (pricing) {
-      multiplier = pricing.multiplier
-    }
-
-    // Get product details
-    const productKey = productType === 'pro_monthly' ? 'PRO_MONTHLY' :
-      productType === 'single' ? 'SINGLE_ANALYSIS' : 'ADDON_PACK'
-    const product = PRODUCT_DEFINITIONS[productKey]
-
-    // Calculate regional price
-    const regionalPrice = calculateRegionalPrice(product.basePriceUsd, multiplier)
+    // Get pricing for this country (with local currency for Tier 1)
+    const priceInfo = getProductPrice(countryCode, productType)
+    const pricingConfig = getPricingForCountry(countryCode)
 
     // Get or create Stripe customer
     const stripe = getStripeClient()
     const customer = await getOrCreateCustomer(user.id, user.email!)
 
-    // Create price for this checkout
-    // For regional pricing, we create a custom price
+    // Create price for this checkout with correct currency
     const stripePrice = await stripe.prices.create({
-      currency: 'usd',
-      unit_amount: toStripeAmount(regionalPrice),
+      currency: priceInfo.currency,
+      unit_amount: priceInfo.amount,
       product_data: {
-        name: product.name,
+        name: PRODUCT_NAMES[productType],
         metadata: {
           product_type: productType,
-          base_price_usd: product.basePriceUsd.toString(),
           country_code: countryCode,
-          multiplier: multiplier.toString()
+          currency: priceInfo.currency.toUpperCase()
         }
       },
       ...(productType === 'pro_monthly' && {
@@ -176,7 +160,8 @@ export async function POST(request: NextRequest) {
         user_id: user.id,
         product_type: productType,
         country_code: countryCode,
-        regional_price: regionalPrice.toString()
+        currency: priceInfo.currency.toUpperCase(),
+        amount_cents: priceInfo.amount.toString()
       },
       allow_promotion_codes: true,
       billing_address_collection: 'auto',
@@ -201,7 +186,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       sessionId: session.id,
-      url: session.url
+      url: session.url,
+      currency: priceInfo.currency.toUpperCase(),
+      amount: priceInfo.amount
     })
 
   } catch (error) {
