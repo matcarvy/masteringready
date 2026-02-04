@@ -214,6 +214,7 @@ Test in this order:
 - [ ] **Sentry error tracking** (`NEXT_PUBLIC_SENTRY_DSN` — optional)
 - [ ] **Stream Ready** (video creators platform — July 2026, separate product)
 - [ ] **Smart Leveler** (future feature using captured energy_curve + spectral_6band data)
+- [ ] **Priority Queue System** (when ~50-100 active users or OOM errors) — Serializes analysis processing (max 1 at a time), prioritizes paid users over free. Spec: `docs/specs/priority-queue-system.xml`. Triggers: sustained queue depth >5, Pro users waiting >30s, OOM errors in Render logs, or MRR >$500.
 
 ---
 

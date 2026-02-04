@@ -1,0 +1,398 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feature_specification>
+  <metadata>
+    <name>Priority Queue System for Audio Analysis</name>
+    <project>MasteringReady</project>
+    <version>1.0</version>
+    <date>2026-02-03</date>
+  </metadata>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════
+       PROBLEMA
+       ═══════════════════════════════════════════════════════════════════════════ -->
+  
+  <problem>
+    <summary>
+      El backend corre en Render Starter ($7/mes) con 512 MB RAM. El análisis de audio 
+      consume RAM significativa. Si múltiples usuarios analizan simultáneamente, 
+      el servidor puede quedarse sin memoria y crashear.
+    </summary>
+    
+    <constraints>
+      <constraint type="infrastructure">
+        <service>Render Starter</service>
+        <ram>512 MB</ram>
+        <cpu>0.5 (shared)</cpu>
+        <cost>$7/mes</cost>
+      </constraint>
+      
+      <constraint type="analysis">
+        <description>Cada análisis de audio consume ~100-200 MB RAM mientras procesa</description>
+        <duration>5-30 segundos dependiendo del archivo</duration>
+        <max_concurrent_safe>1-2 análisis simultáneos</max_concurrent_safe>
+      </constraint>
+      
+      <constraint type="goal">
+        <description>Maximizar usuarios soportados antes de necesitar upgrade a Standard ($25/mes)</description>
+        <target>Soportar hasta 400-500 Pro subs en Starter</target>
+      </constraint>
+    </constraints>
+  </problem>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════
+       SOLUCIÓN: SISTEMA DE COLA CON PRIORIDAD
+       ═══════════════════════════════════════════════════════════════════════════ -->
+  
+  <solution>
+    <summary>
+      Implementar una cola de análisis que:
+      1. Serializa el procesamiento (máximo 1 análisis a la vez)
+      2. Prioriza usuarios pagos sobre free
+      3. Si no hay pagos en cola, free procesa inmediatamente (sin delay artificial)
+    </summary>
+
+    <priority_levels>
+      <level value="1" name="pro_subscriber">
+        <description>Usuario con suscripción Pro activa</description>
+        <behavior>Máxima prioridad, procesa antes que cualquier free</behavior>
+      </level>
+      
+      <level value="2" name="single_purchase">
+        <description>Usuario que compró análisis individual</description>
+        <behavior>Segunda prioridad, después de Pro pero antes de free</behavior>
+      </level>
+      
+      <level value="3" name="free_user">
+        <description>Usuario en plan gratuito</description>
+        <behavior>Última prioridad, pero procesa INMEDIATAMENTE si no hay pagos esperando</behavior>
+      </level>
+    </priority_levels>
+
+    <critical_requirement>
+      <name>No Artificial Delay for Free Users</name>
+      <description>
+        Si la cola está vacía o solo tiene free users, el análisis debe iniciar 
+        INMEDIATAMENTE. La prioridad solo aplica cuando hay competencia por recursos.
+        Un free user solo espera si hay un pago en cola o procesándose.
+      </description>
+    </critical_requirement>
+  </solution>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════
+       ARQUITECTURA RECOMENDADA
+       ═══════════════════════════════════════════════════════════════════════════ -->
+  
+  <architecture>
+    <approach name="supabase_queue">
+      <description>Cola implementada como tabla en Supabase con polling</description>
+      <pros>
+        <pro>Sin costo adicional (usa Supabase existente)</pro>
+        <pro>Simple de implementar</pro>
+        <pro>Fácil de debuggear (puedes ver la cola en el dashboard)</pro>
+      </pros>
+      <cons>
+        <con>Polling consume algunas queries</con>
+      </cons>
+    </approach>
+
+    <database_schema>
+      <table name="analysis_queue">
+        <column name="id" type="uuid" primary_key="true" default="gen_random_uuid()" />
+        <column name="user_id" type="uuid" foreign_key="auth.users.id" />
+        <column name="file_path" type="text" description="Path del archivo en storage" />
+        <column name="file_name" type="text" description="Nombre original del archivo" />
+        <column name="priority" type="integer" description="1=Pro, 2=Single, 3=Free" />
+        <column name="status" type="text" default="pending" description="pending, processing, completed, failed" />
+        <column name="position" type="integer" nullable="true" description="Posición en cola (calculada)" />
+        <column name="result" type="jsonb" nullable="true" description="Resultado del análisis" />
+        <column name="error" type="text" nullable="true" description="Mensaje de error si falló" />
+        <column name="created_at" type="timestamptz" default="now()" />
+        <column name="started_at" type="timestamptz" nullable="true" />
+        <column name="completed_at" type="timestamptz" nullable="true" />
+        
+        <index columns="status, priority, created_at" description="Para obtener siguiente en cola" />
+        <index columns="user_id, status" description="Para consultar análisis del usuario" />
+      </table>
+    </database_schema>
+
+    <sql_migrations>
+      <migration name="create_analysis_queue">
+        <![CDATA[
+-- Tabla de cola de análisis
+CREATE TABLE IF NOT EXISTS analysis_queue (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  file_path TEXT NOT NULL,
+  file_name TEXT NOT NULL,
+  priority INTEGER NOT NULL DEFAULT 3,
+  status TEXT NOT NULL DEFAULT 'pending',
+  position INTEGER,
+  result JSONB,
+  error TEXT,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  started_at TIMESTAMPTZ,
+  completed_at TIMESTAMPTZ
+);
+
+-- Índices para performance
+CREATE INDEX idx_queue_next ON analysis_queue (status, priority, created_at) 
+  WHERE status = 'pending';
+CREATE INDEX idx_queue_user ON analysis_queue (user_id, status);
+
+-- RLS
+ALTER TABLE analysis_queue ENABLE ROW LEVEL SECURITY;
+
+-- Usuarios pueden ver sus propios análisis
+CREATE POLICY "Users can view own queue items" ON analysis_queue
+  FOR SELECT USING (auth.uid() = user_id);
+
+-- Usuarios pueden insertar en cola
+CREATE POLICY "Users can insert queue items" ON analysis_queue
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+-- Solo el backend (service role) puede actualizar
+CREATE POLICY "Service can update queue" ON analysis_queue
+  FOR UPDATE USING (true);
+        ]]>
+      </migration>
+      
+      <migration name="queue_helper_functions">
+        <![CDATA[
+-- Función para obtener posición en cola
+CREATE OR REPLACE FUNCTION get_queue_position(item_id UUID)
+RETURNS INTEGER AS $$
+  SELECT COUNT(*)::INTEGER + 1
+  FROM analysis_queue
+  WHERE status = 'pending'
+    AND (priority < (SELECT priority FROM analysis_queue WHERE id = item_id)
+         OR (priority = (SELECT priority FROM analysis_queue WHERE id = item_id)
+             AND created_at < (SELECT created_at FROM analysis_queue WHERE id = item_id)))
+$$ LANGUAGE SQL STABLE;
+
+-- Función para obtener siguiente item a procesar
+CREATE OR REPLACE FUNCTION get_next_queue_item()
+RETURNS analysis_queue AS $$
+  SELECT * FROM analysis_queue
+  WHERE status = 'pending'
+  ORDER BY priority ASC, created_at ASC
+  LIMIT 1
+  FOR UPDATE SKIP LOCKED
+$$ LANGUAGE SQL;
+        ]]>
+      </migration>
+    </sql_migrations>
+  </architecture>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════
+       FLUJOS DE USUARIO
+       ═══════════════════════════════════════════════════════════════════════════ -->
+  
+  <user_flows>
+    <flow name="submit_analysis">
+      <step order="1">Usuario sube archivo de audio</step>
+      <step order="2">Frontend sube archivo a Supabase Storage</step>
+      <step order="3">Frontend determina prioridad basado en plan del usuario</step>
+      <step order="4">Frontend inserta registro en analysis_queue con status='pending'</step>
+      <step order="5">Frontend muestra UI de espera con posición en cola</step>
+      <step order="6">Frontend hace polling o subscribe a cambios del registro</step>
+      <step order="7">Cuando status='completed', frontend muestra resultados</step>
+    </flow>
+
+    <flow name="worker_process">
+      <step order="1">Worker hace polling cada 2-3 segundos buscando items pendientes</step>
+      <step order="2">Worker llama get_next_queue_item() para obtener siguiente</step>
+      <step order="3">Si hay item, actualiza status='processing' y started_at=now()</step>
+      <step order="4">Worker descarga archivo de Storage</step>
+      <step order="5">Worker ejecuta análisis de audio</step>
+      <step order="6">Worker actualiza status='completed', result=JSON, completed_at=now()</step>
+      <step order="7">Worker elimina archivo temporal de Storage (opcional)</step>
+      <step order="8">Worker vuelve al paso 1</step>
+    </flow>
+  </user_flows>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════
+       UI/UX PARA COLA
+       ═══════════════════════════════════════════════════════════════════════════ -->
+  
+  <ui_specifications>
+    <state name="pending_no_queue">
+      <condition>Usuario es el único en cola o no hay nadie delante</condition>
+      <display>
+        <message_es>Analizando tu archivo...</message_es>
+        <message_en>Analyzing your file...</message_en>
+        <show_position>false</show_position>
+        <show_spinner>true</show_spinner>
+      </display>
+    </state>
+
+    <state name="pending_in_queue">
+      <condition>Hay otros usuarios (especialmente pagos) delante en la cola</condition>
+      <display>
+        <message_es>Tu análisis está en cola. Posición: {position}</message_es>
+        <message_en>Your analysis is queued. Position: {position}</message_en>
+        <show_position>true</show_position>
+        <show_spinner>true</show_spinner>
+        <upsell_cta user_type="free">
+          <message_es>¿No quieres esperar? Los usuarios Pro tienen prioridad.</message_es>
+          <message_en>Don't want to wait? Pro users get priority.</message_en>
+          <button_es>Ver planes</button_es>
+          <button_en>See plans</button_en>
+        </upsell_cta>
+      </display>
+    </state>
+
+    <state name="processing">
+      <condition>El análisis está siendo procesado activamente</condition>
+      <display>
+        <message_es>Procesando análisis...</message_es>
+        <message_en>Processing analysis...</message_en>
+        <show_progress>true</show_progress>
+        <estimated_time>15-30 segundos</estimated_time>
+      </display>
+    </state>
+
+    <state name="completed">
+      <condition>Análisis terminado exitosamente</condition>
+      <display>
+        <action>Mostrar resultados del análisis</action>
+      </display>
+    </state>
+
+    <state name="failed">
+      <condition>Análisis falló por algún error</condition>
+      <display>
+        <message_es>Hubo un error al analizar tu archivo. Por favor intenta de nuevo.</message_es>
+        <message_en>There was an error analyzing your file. Please try again.</message_en>
+        <show_retry_button>true</show_retry_button>
+      </display>
+    </state>
+  </ui_specifications>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════
+       REGLAS DE NEGOCIO
+       ═══════════════════════════════════════════════════════════════════════════ -->
+  
+  <business_rules>
+    <rule name="priority_assignment">
+      <description>Cómo asignar prioridad al encolar</description>
+      <logic>
+        <![CDATA[
+function getPriority(user) {
+  if (user.subscription_status === 'active' && user.plan === 'pro') {
+    return 1; // Pro subscriber
+  }
+  if (user.single_analyses_remaining > 0 || user.addon_analyses_remaining > 0) {
+    return 2; // Paid analysis
+  }
+  return 3; // Free user
+}
+        ]]>
+      </logic>
+    </rule>
+
+    <rule name="free_user_queue_limit">
+      <description>Limitar cuántos análisis free pueden estar en cola a la vez por usuario</description>
+      <limit>1 análisis pendiente en cola por usuario free</limit>
+      <rationale>Evita que un free user llene la cola</rationale>
+    </rule>
+
+    <rule name="queue_timeout">
+      <description>Tiempo máximo que un item puede estar en processing</description>
+      <timeout>5 minutos</timeout>
+      <action>Marcar como failed y permitir retry</action>
+      <rationale>Previene items huérfanos si el worker crashea</rationale>
+    </rule>
+
+    <rule name="cleanup_old_items">
+      <description>Limpiar items completados/fallidos antiguos</description>
+      <retention>7 días</retention>
+      <action>DELETE FROM analysis_queue WHERE completed_at < now() - interval '7 days'</action>
+    </rule>
+  </business_rules>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════
+       MONITOREO
+       ═══════════════════════════════════════════════════════════════════════════ -->
+  
+  <monitoring>
+    <metric name="queue_depth">
+      <description>Número de items pendientes en cola</description>
+      <query>SELECT COUNT(*) FROM analysis_queue WHERE status = 'pending'</query>
+      <alert_threshold>20</alert_threshold>
+      <alert_action>Considerar upgrade de infraestructura</alert_action>
+    </metric>
+
+    <metric name="avg_wait_time">
+      <description>Tiempo promedio de espera en cola</description>
+      <query>
+        SELECT AVG(EXTRACT(EPOCH FROM (started_at - created_at))) 
+        FROM analysis_queue 
+        WHERE started_at IS NOT NULL
+      </query>
+      <alert_threshold>120 segundos</alert_threshold>
+    </metric>
+
+    <metric name="free_vs_paid_ratio">
+      <description>Ratio de análisis free vs paid</description>
+      <use>Identificar si hay muchos free users esperando (oportunidad de conversión)</use>
+    </metric>
+  </monitoring>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════
+       CUÁNDO HACER UPGRADE DE RENDER
+       ═══════════════════════════════════════════════════════════════════════════ -->
+  
+  <infrastructure_upgrade_triggers>
+    <trigger name="sustained_queue">
+      <description>Cola constantemente con 5+ items pendientes</description>
+      <action>Considerar upgrade a Standard ($25/mes)</action>
+    </trigger>
+
+    <trigger name="high_wait_times">
+      <description>Usuarios Pro esperando más de 30 segundos en promedio</description>
+      <action>Upgrade inmediato - experiencia de pago no debe degradarse</action>
+    </trigger>
+
+    <trigger name="memory_errors">
+      <description>Errores de out-of-memory en logs de Render</description>
+      <action>Upgrade urgente a Standard (2 GB RAM)</action>
+    </trigger>
+
+    <trigger name="revenue_threshold">
+      <description>MRR supera $500/mes</description>
+      <action>El costo de $25 vs $7 es insignificante, upgrade para headroom</action>
+    </trigger>
+  </infrastructure_upgrade_triggers>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════
+       NOTAS PARA IMPLEMENTACIÓN
+       ═══════════════════════════════════════════════════════════════════════════ -->
+  
+  <implementation_notes>
+    <note priority="high">
+      El worker debe correr como parte del backend (no como servicio separado) para 
+      no duplicar costos de Render. Puede ser un proceso que corre en background 
+      o un endpoint que se auto-invoca.
+    </note>
+
+    <note priority="high">
+      Usar transacciones y FOR UPDATE SKIP LOCKED para evitar que dos workers 
+      (si eventualmente hay más de uno) procesen el mismo item.
+    </note>
+
+    <note priority="medium">
+      Considerar usar Supabase Realtime para notificar al frontend cuando el 
+      análisis está completo, en lugar de polling.
+    </note>
+
+    <note priority="medium">
+      Los archivos de audio deben borrarse de Storage después de procesar para 
+      no consumir el límite de 1 GB del free tier de Supabase.
+    </note>
+
+    <note priority="low">
+      En el futuro, si se necesita escalar más, se puede migrar a un sistema de 
+      colas dedicado como BullMQ con Upstash Redis.
+    </note>
+  </implementation_notes>
+</feature_specification>
