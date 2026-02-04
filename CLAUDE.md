@@ -1058,6 +1058,55 @@ Confirmed all user interactions are tracked and visible in admin dashboard:
 
 **Git state**: dev on `ad50e5a`, pushed. Build clean.
 
+### 2026-02-04 (Session 18)
+- Continued from context summary
+
+#### Priority Queue System Spec — Saved for Phase 2
+- User provided `MasteringReady_Queue_System_Spec.xml` — priority queue for handling concurrent analyses on Render Starter (512MB RAM)
+- **Decision**: Not implementing now — optimización prematura. Lanzar primero, implementar cuando haya evidencia de necesidad (OOM errors, queue depth >5, ~50-100 active users)
+- Spec saved to `docs/specs/priority-queue-system.xml`
+- Added reference to CLAUDE.md Phase 2 section
+
+#### Supabase Keep-Alive Health Check
+- Created `/app/api/health/route.ts` — pings Supabase to prevent free tier pause (7 days inactivity)
+- Returns: `{ status, service, latency_ms, timestamp }`
+- User to configure cron-job.org: `https://masteringready.com/api/health` every 5 days
+- Render already has `/health` endpoint (verified working, returns version 7.3.9)
+
+#### Exchange Rates Updated to February 2026
+- Updated `lib/geoip.ts` EXCHANGE_RATES with current rates
+- Major changes from Jan 2025:
+  - COP: 4200 → 3621 (-14%, peso strengthened)
+  - ARS: 850 → 1449 (+70%, devaluation)
+  - EUR: 0.92 → 0.847 (-8%, euro strengthened)
+  - PEN: 3.80 → 3.36 (-12%, sol strengthened)
+
+#### Regional Pricing with Local Currency (Full Implementation)
+- User provided `MasteringReady_Pricing_Internacional.xlsx` and `MasteringReady_Pricing_Regional_Task.xml`
+- **New file**: `lib/pricing-config.ts` — all pricing by country in cents
+- **Tier 1 (local currency)**:
+  - US: $9.99 USD
+  - EU (20 countries): €10 EUR
+  - UK: £9 GBP
+  - CA: $13.99 CAD
+  - AU: $14.99 AUD
+- **Tier 2-6 (USD with PPP multiplier)**:
+  - CL, UY: $7.49 (0.75x)
+  - MX: $6.99 (0.70x)
+  - BR: $5.99 (0.60x)
+  - CO, PE, EC: $5.49 (0.55x) ← Colombia updated from 0.50
+  - AR: $3.99 (0.40x)
+- **Updated**: `app/api/checkout/route.ts` — now uses `pricing-config.ts`, creates Stripe price in correct currency
+- **SQL migration**: `20260204000001_pricing_updates.sql` — Colombia 0.55, Australia added, all Eurozone countries mapped to EUR
+- SQL executed in Supabase Dashboard — success
+
+#### Commits to dev (Session 18)
+1. `5b8b9c6` - feat: add health check endpoint + save queue system spec for Phase 2
+2. `2c0d0bc` - chore: update exchange rates to February 2026
+3. `dc900ad` - feat: implement regional pricing with local currency for Tier 1
+
+**Git state**: dev on `dc900ad`, pushed. Build clean.
+
 #### Next Step: Stripe Configuration
 All code is complete and tested. Next step is Stripe dashboard setup (see LAUNCH READINESS STATUS > Step 1 above):
 1. Create 3 Products + Prices in Stripe Dashboard
@@ -1089,7 +1138,9 @@ All code is complete and tested. Next step is Stripe dashboard setup (see LAUNCH
 | `app/api/admin/feedback/route.ts` | Admin feedback API |
 | `lib/stripe.ts` | Stripe client + product config |
 | `lib/supabase.ts` | Supabase clients (anon + admin) |
-| `lib/geoip.ts` | GeoIP country detection |
+| `lib/geoip.ts` | GeoIP country detection + exchange rates |
+| `lib/pricing-config.ts` | Regional pricing by country (Tier 1-6, local currency) |
+| `app/api/health/route.ts` | Supabase keep-alive health check |
 | `lib/language.ts` | Language detection + cookie persistence |
 | `lib/api.ts` | Analyzer API communication + AnalysisApiError class |
 | `lib/error-messages.ts` | 6 bilingual error messages + classifier |
