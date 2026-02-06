@@ -164,7 +164,7 @@ export async function getAnalysisStatus(jobId: string, lang: 'es' | 'en' = 'es')
 
 export interface IpCheckResult {
   can_analyze: boolean
-  reason: 'OK' | 'LIMIT_REACHED' | 'VPN_DETECTED' | 'DISABLED' | 'AUTHENTICATED'
+  reason: 'OK' | 'LIMIT_REACHED' | 'VPN_DETECTED' | 'DISABLED' | 'AUTHENTICATED' | 'IP_CHECK_UNAVAILABLE'
   analyses_used: number
   max_analyses: number
   is_vpn: boolean
@@ -186,11 +186,11 @@ export async function checkIpLimit(isAuthenticated: boolean = false): Promise<Ip
     })
 
     if (!res.ok) {
-      // If endpoint not available, allow analysis (feature not deployed yet)
-      console.warn('IP check endpoint not available, allowing analysis')
+      // If endpoint not available, deny analysis (fail-closed)
+      console.warn('IP check endpoint not available, denying analysis')
       return {
-        can_analyze: true,
-        reason: 'DISABLED',
+        can_analyze: false,
+        reason: 'IP_CHECK_UNAVAILABLE',
         analyses_used: 0,
         max_analyses: 2,
         is_vpn: false,
@@ -200,11 +200,11 @@ export async function checkIpLimit(isAuthenticated: boolean = false): Promise<Ip
 
     return res.json()
   } catch (error) {
-    // Network error or endpoint not available - allow analysis
-    console.warn('IP check failed, allowing analysis:', error)
+    // Network error or endpoint not available - deny analysis (fail-closed)
+    console.warn('IP check failed, denying analysis:', error)
     return {
-      can_analyze: true,
-      reason: 'DISABLED',
+      can_analyze: false,
+      reason: 'IP_CHECK_UNAVAILABLE',
       analyses_used: 0,
       max_analyses: 2,
       is_vpn: false,

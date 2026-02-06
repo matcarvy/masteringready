@@ -185,10 +185,31 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
+@app.on_event("startup")
+async def startup_validation():
+    """Validate critical dependencies are available at startup."""
+    # Check ffmpeg (required for AAC/M4A conversion)
+    try:
+        import imageio_ffmpeg
+        ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
+        logger.info(f"✅ ffmpeg available: {ffmpeg_path}")
+    except Exception as e:
+        logger.warning(f"⚠️ ffmpeg not available — AAC/M4A conversion will fail: {e}")
+
+    # Check optional modules
+    logger.info(f"📦 IP rate limiting: {'enabled' if IP_LIMITER_AVAILABLE else 'disabled'}")
+    logger.info(f"📦 Telegram alerts: {'enabled' if TELEGRAM_ENABLED else 'disabled'}")
+    logger.info(f"🚀 Mastering Ready API v{ANALYZER_VERSION} ready")
+
 # CORS Configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # For development - restrict in production
+    allow_origins=[
+        "https://masteringready.com",
+        "https://www.masteringready.com",
+        "https://masteringready-git-dev-matcarvys-projects.vercel.app",
+        "http://localhost:3000",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -204,12 +225,12 @@ NEEDS_CONVERSION = {'.aac', '.m4a'}
 # Bilingual error messages (matching frontend lib/error-messages.ts)
 ERROR_MSGS = {
     'file_too_large': {
-        'es': 'El archivo es muy grande. El limite es 500MB. Intenta comprimir el audio o usa un formato mas ligero como MP3.',
-        'en': 'File is too large. The limit is 500MB. Try compressing the audio or use a lighter format like MP3.',
+        'es': 'El archivo es muy grande. El limite es 200MB. Intenta comprimir el audio o usa un formato mas ligero como MP3.',
+        'en': 'File is too large. The limit is 200MB. Try compressing the audio or use a lighter format like MP3.',
     },
     'format_not_supported': {
-        'es': 'Este formato no es compatible. Por favor sube un archivo WAV, MP3 o AIFF.',
-        'en': 'This format is not supported. Please upload a WAV, MP3 or AIFF file.',
+        'es': 'Este formato no es compatible. Por favor sube un archivo WAV, MP3, AIFF, AAC, M4A u OGG.',
+        'en': 'This format is not supported. Please upload a WAV, MP3, AIFF, AAC, M4A or OGG file.',
     },
     'corrupt_file': {
         'es': 'No pudimos leer este archivo. Puede estar corrupto o danado. Intenta exportarlo de nuevo desde tu DAW.',
@@ -450,7 +471,7 @@ async def analyze_mix_endpoint(
 
     if file_size > MAX_FILE_SIZE:
         raise HTTPException(
-            status_code=400,
+            status_code=413,
             detail=bilingual_error('file_too_large', lang)
         )
 

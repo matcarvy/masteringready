@@ -795,8 +795,8 @@ function DashboardContent() {
                 background: 'rgba(255,255,255,0.2)',
                 border: 'none',
                 borderRadius: '50%',
-                width: '28px',
-                height: '28px',
+                width: '44px',
+                height: '44px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -804,8 +804,9 @@ function DashboardContent() {
                 flexShrink: 0,
                 color: 'white'
               }}
+              aria-label={lang === 'es' ? 'Cerrar' : 'Close'}
             >
-              <X size={16} />
+              <X size={18} />
             </button>
           </div>
         )}
@@ -1240,8 +1241,9 @@ function DashboardContent() {
                   border: 'none',
                   cursor: 'pointer',
                   color: '#6b7280',
-                  padding: '0.5rem'
+                  padding: '0.75rem'
                 }}
+                aria-label={lang === 'es' ? 'Cerrar' : 'Close'}
               >
                 <X size={20} />
               </button>
@@ -1851,8 +1853,9 @@ function DashboardContent() {
                 border: 'none',
                 cursor: 'pointer',
                 color: '#6b7280',
-                padding: '0.25rem'
+                padding: '0.75rem'
               }}
+              aria-label={lang === 'es' ? 'Cerrar' : 'Close'}
             >
               <X size={20} />
             </button>
@@ -2068,8 +2071,9 @@ function DashboardContent() {
               style={{
                 position: 'absolute', top: '1rem', right: '1rem',
                 background: 'none', border: 'none', cursor: 'pointer',
-                color: '#6b7280', padding: '0.25rem'
+                color: '#6b7280', padding: '0.75rem'
               }}
+              aria-label={lang === 'es' ? 'Cerrar' : 'Close'}
             >
               <X size={20} />
             </button>

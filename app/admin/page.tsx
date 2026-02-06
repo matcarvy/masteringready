@@ -193,7 +193,7 @@ const translations = {
       country: 'País',
       joined: 'Registro',
       noUsers: 'No se encontraron usuarios',
-      lifetime: 'Para empezar',
+      lifetime: 'Gratis usados',
       thisMonth: 'Este mes',
       subscription: 'Suscripción',
       status: 'Estado',
@@ -317,6 +317,7 @@ const translations = {
     },
     loading: 'Cargando...',
     refresh: 'Actualizar',
+    fetchError: 'Error al cargar datos. Intenta actualizar.',
     accessDenied: 'Acceso restringido',
     accessDeniedMsg: 'No tienes permisos de administrador.',
     loginRequired: 'Iniciar sesion',
@@ -352,7 +353,7 @@ const translations = {
       country: 'Country',
       joined: 'Joined',
       noUsers: 'No users found',
-      lifetime: 'To get started',
+      lifetime: 'Free used',
       thisMonth: 'This month',
       subscription: 'Subscription',
       status: 'Status',
@@ -476,6 +477,7 @@ const translations = {
     },
     loading: 'Loading...',
     refresh: 'Refresh',
+    fetchError: 'Failed to load data. Try refreshing.',
     accessDenied: 'Access Denied',
     accessDeniedMsg: 'You do not have admin permissions.',
     loginRequired: 'Log in',
@@ -736,6 +738,7 @@ export default function AdminPage() {
   const [leadsDateFilter, setLeadsDateFilter] = useState('all')
   const [feedbackList, setFeedbackList] = useState<FeedbackRow[]>([])
   const [feedbackLoading, setFeedbackLoading] = useState(false)
+  const [fetchError, setFetchError] = useState<string | null>(null)
   const [feedbackFilter, setFeedbackFilter] = useState('all')
   const [respondingTo, setRespondingTo] = useState<string | null>(null)
   const [responseEs, setResponseEs] = useState('')
@@ -814,9 +817,13 @@ export default function AdminPage() {
       if (res.ok) {
         const data = await res.json()
         setStatsData(data)
+        setFetchError(null)
+      } else {
+        setFetchError(t.fetchError)
       }
     } catch (err) {
       console.error('Failed to fetch stats:', err)
+      setFetchError(t.fetchError)
     }
     setStatsLoading(false)
   }, [getAuthHeaders])
@@ -870,6 +877,7 @@ export default function AdminPage() {
       }
     } catch (err) {
       console.error('Failed to fetch users:', err)
+      setFetchError(t.fetchError)
     }
     setUsersLoading(false)
   }, [userSearch, userSort])
@@ -921,6 +929,7 @@ export default function AdminPage() {
       }
     } catch (err) {
       console.error('Failed to fetch payments:', err)
+      setFetchError(t.fetchError)
     }
     setPaymentsLoading(false)
   }, [])
@@ -972,6 +981,7 @@ export default function AdminPage() {
       }
     } catch (err) {
       console.error('Failed to fetch feedback:', err)
+      setFetchError(t.fetchError)
     }
     setFeedbackLoading(false)
   }, [feedbackFilter])
@@ -989,6 +999,7 @@ export default function AdminPage() {
       }
     } catch (err) {
       console.error('Failed to fetch leads:', err)
+      setFetchError(t.fetchError)
     }
     setLeadsLoading(false)
   }, [getAuthHeaders])
@@ -1206,7 +1217,16 @@ export default function AdminPage() {
                 fontSize: isMobile ? '1.25rem' : '1.75rem',
                 fontWeight: '700',
                 color: '#111827',
-                margin: 0
+                margin: 0,
+                ...(statsLoading && !statsData && {
+                  background: 'linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%)',
+                  backgroundSize: '200% 100%',
+                  animation: 'shimmer 1.5s ease-in-out infinite',
+                  borderRadius: '0.25rem',
+                  color: 'transparent',
+                  minWidth: '4rem',
+                  minHeight: '1.75rem'
+                })
               }}>
                 {card.value}
               </p>
@@ -2458,7 +2478,7 @@ export default function AdminPage() {
                     <>
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
                         <span style={{ fontWeight: '500', color: '#111827' }}>
-                          {formatCurrency(p.amount / 100)}
+                          {formatCurrency(p.amount)}
                         </span>
                         <span style={{
                           fontSize: '0.75rem',
@@ -2482,7 +2502,7 @@ export default function AdminPage() {
                         {p.profile?.email || '-'}
                       </span>
                       <span style={{ fontWeight: '500', color: '#111827' }}>
-                        {formatCurrency(p.amount / 100)}
+                        {formatCurrency(p.amount)}
                       </span>
                       <span style={{ color: '#6b7280' }}>{p.description || '-'}</span>
                       <span>
@@ -2716,6 +2736,29 @@ export default function AdminPage() {
               </button>
             ))}
           </div>
+
+          {/* Refresh */}
+          <button
+            onClick={() => fetchLeads()}
+            disabled={leadsLoading}
+            style={{
+              padding: '0.35rem 0.75rem',
+              borderRadius: '6px',
+              border: '1px solid #e5e7eb',
+              background: 'white',
+              color: '#374151',
+              fontSize: '0.8rem',
+              cursor: leadsLoading ? 'not-allowed' : 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.35rem',
+              marginLeft: 'auto'
+            }}
+            aria-label={t.refresh}
+          >
+            <RefreshCw size={14} style={{ animation: leadsLoading ? 'spin 1s linear infinite' : 'none' }} />
+            {t.refresh}
+          </button>
         </div>
 
         {/* Leads List */}
@@ -2884,7 +2927,8 @@ export default function AdminPage() {
           gap: '0.5rem',
           marginBottom: '1rem',
           overflowX: 'auto',
-          paddingBottom: '0.25rem'
+          paddingBottom: '0.25rem',
+          alignItems: 'center'
         }}>
           {statusFilters.map(status => (
             <button
@@ -2908,6 +2952,32 @@ export default function AdminPage() {
               {t.feedback[status as keyof typeof t.feedback] as string}
             </button>
           ))}
+
+          {/* Refresh */}
+          <button
+            onClick={() => fetchFeedback()}
+            disabled={feedbackLoading}
+            style={{
+              padding: '0.5rem 0.75rem',
+              borderRadius: '9999px',
+              border: 'none',
+              cursor: feedbackLoading ? 'not-allowed' : 'pointer',
+              fontSize: '0.8rem',
+              fontWeight: '500',
+              flexShrink: 0,
+              background: 'white',
+              color: '#374151',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.35rem',
+              marginLeft: 'auto'
+            }}
+            aria-label={t.refresh}
+          >
+            <RefreshCw size={14} style={{ animation: feedbackLoading ? 'spin 1s linear infinite' : 'none' }} />
+            {t.refresh}
+          </button>
         </div>
 
         {/* Feedback list */}
@@ -3267,11 +3337,15 @@ export default function AdminPage() {
       fontFamily: 'Inter, system-ui, sans-serif',
       overflowX: 'hidden'
     }}>
-      {/* Spin animation for refresh icon */}
+      {/* Animations */}
       <style>{`
         @keyframes spin {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
+        }
+        @keyframes shimmer {
+          0% { background-position: 200% 0; }
+          100% { background-position: -200% 0; }
         }
       `}</style>
 
@@ -3451,6 +3525,30 @@ export default function AdminPage() {
         margin: '0 auto',
         padding: isMobile ? '1rem' : '1.5rem'
       }}>
+        {fetchError && (
+          <div style={{
+            background: '#fef2f2',
+            border: '1px solid #fecaca',
+            color: '#991b1b',
+            padding: '0.75rem 1rem',
+            borderRadius: '0.5rem',
+            marginBottom: '1rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            fontSize: '0.875rem'
+          }}>
+            <AlertCircle size={16} />
+            {fetchError}
+            <button
+              onClick={() => setFetchError(null)}
+              style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: '#991b1b', padding: '0.25rem' }}
+              aria-label={lang === 'es' ? 'Cerrar' : 'Close'}
+            >
+              <X size={14} />
+            </button>
+          </div>
+        )}
         {activeTab === 'overview' && renderOverview()}
         {activeTab === 'users' && renderUsers()}
         {activeTab === 'analytics' && renderAnalytics()}

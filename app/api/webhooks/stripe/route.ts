@@ -6,7 +6,8 @@
  * Handles Stripe webhook events:
  * - checkout.session.completed: New subscription or purchase
  * - invoice.paid: Subscription renewal
- * - invoice.payment_failed: Payment failed
+ * - invoice.payment_failed: Subscription payment failed
+ * - charge.failed: One-time payment failed (Single/Addon)
  * - customer.subscription.deleted: Subscription cancelled
  * - customer.subscription.updated: Subscription changed
  */
@@ -84,6 +85,10 @@ export async function POST(request: NextRequest) {
         await handleSubscriptionUpdated(event.data.object as Stripe.Subscription, supabase)
         break
 
+      case 'charge.failed':
+        await handleChargeFailed(event.data.object as Stripe.Charge, supabase)
+        break
+
       default:
         console.log(`Unhandled event type: ${event.type}`)
     }
@@ -102,6 +107,28 @@ export async function POST(request: NextRequest) {
 type SupabaseAdmin = SupabaseClient
 
 /**
+ * Insert a payment record only if the stripe_payment_intent_id hasn't been recorded yet.
+ * Prevents duplicate records when Stripe replays webhook events.
+ */
+async function insertPaymentIfNew(
+  supabase: SupabaseAdmin,
+  payment: Record<string, any>
+) {
+  if (payment.stripe_payment_intent_id) {
+    const { data: existing } = await supabase
+      .from('payments')
+      .select('id')
+      .eq('stripe_payment_intent_id', payment.stripe_payment_intent_id)
+      .maybeSingle()
+    if (existing) {
+      console.log(`Payment already recorded for intent ${payment.stripe_payment_intent_id}, skipping`)
+      return
+    }
+  }
+  await supabase.from('payments').insert(payment)
+}
+
+/**
  * Handle checkout.session.completed
  */
 async function handleCheckoutCompleted(
@@ -112,7 +139,8 @@ async function handleCheckoutCompleted(
   const userId = session.metadata?.user_id
   const productType = session.metadata?.product_type
   const countryCode = session.metadata?.country_code || 'US'
-  const regionalPrice = parseFloat(session.metadata?.regional_price || '0')
+  const amountCents = parseInt(session.metadata?.amount_cents || '0')
+  const regionalPrice = (amountCents || 0) / 100
 
   if (!userId || !productType) {
     console.error('Missing metadata in checkout session')
@@ -139,11 +167,14 @@ async function handleCheckoutCompleted(
     }
 
     // Check free analyses used for welcome bonus
-    const { data: profileData } = await supabase
+    const { data: profileData, error: profileError } = await supabase
       .from('profiles')
       .select('analyses_lifetime_used')
       .eq('id', userId)
       .single()
+    if (profileError) {
+      console.error(`Failed to fetch profile for welcome bonus (user ${userId}):`, profileError)
+    }
     const welcomeBonus = Math.min(profileData?.analyses_lifetime_used || 0, 2)
     if (welcomeBonus > 0) {
       console.log(`Welcome bonus for user ${userId}: ${welcomeBonus} analyses restored`)
@@ -176,8 +207,8 @@ async function handleCheckoutCompleted(
       console.error('Error updating subscription:', subError)
     }
 
-    // Record payment
-    await supabase.from('payments').insert({
+    // Record payment (idempotent — safe on webhook replay)
+    await insertPaymentIfNew(supabase, {
       user_id: userId,
       stripe_payment_intent_id: session.payment_intent as string || null,
       stripe_invoice_id: session.invoice as string || null,
@@ -214,8 +245,8 @@ async function handleCheckoutCompleted(
       status: 'succeeded' as PaymentStatus
     })
 
-    // Record payment
-    await supabase.from('payments').insert({
+    // Record payment (idempotent — safe on webhook replay)
+    await insertPaymentIfNew(supabase, {
       user_id: userId,
       stripe_payment_intent_id: session.payment_intent as string || null,
       amount: regionalPrice,
@@ -271,8 +302,8 @@ async function handleCheckoutCompleted(
         .eq('id', userSub.id)
     }
 
-    // Record payment
-    await supabase.from('payments').insert({
+    // Record payment (idempotent — safe on webhook replay)
+    await insertPaymentIfNew(supabase, {
       user_id: userId,
       stripe_payment_intent_id: session.payment_intent as string || null,
       amount: regionalPrice,
@@ -339,7 +370,8 @@ async function handleInvoicePaid(
     ? invoiceData.payment_intent
     : invoiceData.payment_intent?.id || null
 
-  await supabase.from('payments').insert({
+  // Record payment (idempotent — safe on webhook replay)
+  await insertPaymentIfNew(supabase, {
     user_id: subscription.user_id,
     subscription_id: subscription.id,
     stripe_invoice_id: invoice.id,
@@ -386,7 +418,8 @@ async function handleInvoicePaymentFailed(
     .single()
 
   if (subscription) {
-    await supabase.from('payments').insert({
+    // Record failed payment (idempotent — safe on webhook replay)
+    await insertPaymentIfNew(supabase, {
       user_id: subscription.user_id,
       stripe_invoice_id: invoice.id,
       amount: (invoice.amount_due || 0) / 100,
@@ -478,4 +511,57 @@ async function handleSubscriptionUpdated(
       })
     })
     .eq('stripe_subscription_id', subscription.id)
+}
+
+/**
+ * Handle charge.failed — records failed one-time payments (Single/Addon)
+ */
+async function handleChargeFailed(
+  charge: Stripe.Charge,
+  supabase: SupabaseAdmin
+) {
+  // Only handle one-time payment failures (subscriptions handled by invoice.payment_failed)
+  const chargeData = charge as Stripe.Charge & { invoice?: string | null }
+  if (chargeData.invoice) {
+    console.log(`Charge failed for invoice ${chargeData.invoice}, handled by invoice.payment_failed`)
+    return
+  }
+
+  const customerId = typeof charge.customer === 'string'
+    ? charge.customer
+    : (charge.customer as { id: string } | null)?.id
+
+  if (!customerId) {
+    console.log('Charge failed with no customer ID, skipping')
+    return
+  }
+
+  console.log(`One-time charge failed for customer ${customerId}: ${charge.failure_message || 'unknown reason'}`)
+
+  // Look up user by stripe_customer_id
+  const { data: subscription } = await supabase
+    .from('subscriptions')
+    .select('user_id')
+    .eq('stripe_customer_id', customerId)
+    .maybeSingle()
+
+  const userId = subscription?.user_id || charge.metadata?.user_id
+
+  if (!userId) {
+    console.log(`Could not find user for customer ${customerId}`)
+    return
+  }
+
+  // Record failed payment (idempotent)
+  await insertPaymentIfNew(supabase, {
+    user_id: userId,
+    stripe_payment_intent_id: typeof charge.payment_intent === 'string'
+      ? charge.payment_intent
+      : charge.payment_intent?.id || null,
+    amount: charge.amount / 100,
+    currency: charge.currency?.toUpperCase() || 'USD',
+    status: 'failed' as PaymentStatus,
+    description: `Payment failed: ${charge.metadata?.product_type || 'one-time purchase'}`,
+    failure_message: charge.failure_message || 'Payment declined'
+  })
 }

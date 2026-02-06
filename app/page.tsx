@@ -281,6 +281,7 @@ function Home() {
   const [userAnalysisStatus, setUserAnalysisStatus] = useState<AnalysisStatus | null>(null)
   const [reportView, setReportView] = useState<'visual' | 'short' | 'write'>('visual')
   const [isPro, setIsPro] = useState(false)
+  const [hasPaidAccess, setHasPaidAccess] = useState(false)
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false)
   const [feedback, setFeedback] = useState({ rating: 0, liked: '', change: '', add: '' })
@@ -313,19 +314,35 @@ function Home() {
   // Store request ID for PDF download
   const requestIdRef = useRef<string>('')
 
-  // Check Pro subscription status
+  // Check Pro subscription + paid access (Pro OR Single purchase)
   useEffect(() => {
-    if (!user) { setIsPro(false); return }
-    const checkPro = async () => {
+    if (!user) { setIsPro(false); setHasPaidAccess(false); return }
+    const checkAccess = async () => {
+      // Check Pro subscription
       const { data: subData } = await supabase
         .from('subscriptions')
         .select('*, plan:plans(type)')
         .eq('user_id', user.id)
         .eq('status', 'active')
         .single()
-      setIsPro(subData?.plan?.type === 'pro' || subData?.plan?.type === 'studio')
+      const isProUser = subData?.plan?.type === 'pro' || subData?.plan?.type === 'studio'
+      setIsPro(isProUser)
+
+      if (isProUser) {
+        setHasPaidAccess(true)
+        return
+      }
+
+      // Check if user has any Single purchase
+      const { data: purchases } = await supabase
+        .from('purchases')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('status', 'succeeded')
+        .limit(1)
+      setHasPaidAccess((purchases && purchases.length > 0) || false)
     }
-    checkPro()
+    checkAccess()
   }, [user])
 
   // Mobile detection
@@ -565,7 +582,7 @@ function Home() {
 
   // File validation helper
   const validateFile = (file: File): { valid: boolean; error?: string } => {
-    const maxSize = 500 * 1024 * 1024 // 500MB
+    const maxSize = 200 * 1024 * 1024 // 200MB
     const allowedTypes = ['audio/wav', 'audio/mpeg', 'audio/mp3', 'audio/aiff', 'audio/x-aiff', 'audio/aac', 'audio/mp4', 'audio/x-m4a', 'audio/ogg', 'audio/opus']
     const allowedExtensions = ['.wav', '.mp3', '.aiff', '.aif', '.aac', '.m4a', '.ogg']
     
@@ -1283,8 +1300,8 @@ by Matías Carvajal
       .trim()
   }
 
-  const isFileTooLarge = file && file.size > 500 * 1024 * 1024 // 500MB hard limit
-  const needsCompression = file && file.size > 100 * 1024 * 1024 && file.size <= 500 * 1024 * 1024
+  const isFileTooLarge = file && file.size > 200 * 1024 * 1024 // 200MB hard limit
+  const needsCompression = file && file.size > 100 * 1024 * 1024 && file.size <= 200 * 1024 * 1024
 
   const getScoreColor = (score: number) => {
     if (score >= 85) return '#10b981'
@@ -1368,6 +1385,7 @@ by Matías Carvajal
                   fontWeight: '500',
                   fontSize: '0.875rem'
                 }}
+                aria-label={lang === 'es' ? 'Switch to English' : 'Cambiar a Español'}
               >
                 {lang === 'es' ? 'EN' : 'ES'}
               </button>
@@ -1420,6 +1438,7 @@ by Matías Carvajal
                       cursor: 'pointer',
                       color: '#374151'
                     }}
+                    aria-label={mobileMenuOpen ? (lang === 'es' ? 'Cerrar menú' : 'Close menu') : (lang === 'es' ? 'Abrir menú' : 'Open menu')}
                   >
                     {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
                   </button>
@@ -1687,7 +1706,7 @@ by Matías Carvajal
 
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+            gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(250px, 1fr))',
             gap: '1.5rem'
           }}>
             {[
@@ -1788,6 +1807,10 @@ by Matías Carvajal
                 marginBottom: '1.5rem'
               }}>
                 <div
+                  role="button"
+                  tabIndex={0}
+                  aria-label={lang === 'es' ? 'Subir archivo de audio para analizar' : 'Upload audio file to analyze'}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); !loading && document.getElementById('file-input')?.click() } }}
                   onClick={() => !loading && document.getElementById('file-input')?.click()}
                   onDragOver={(e) => {
                     e.preventDefault()
@@ -1857,6 +1880,7 @@ by Matías Carvajal
                   <input
                     id="file-input"
                     type="file"
+                    aria-label={lang === 'es' ? 'Seleccionar archivo de audio' : 'Select audio file'}
                     accept=".wav,.mp3,.aiff,.aif,.aac,.m4a,.ogg"
                     onChange={(e) => {
                       const selectedFile = e.target.files?.[0] || null
@@ -1899,7 +1923,7 @@ by Matías Carvajal
                       : 'or click to select'}
                   </p>
                   <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.5rem' }}>
-                    {lang === 'es' ? 'WAV, MP3, AIFF, AAC, M4A u OGG • Máximo 500MB' : 'WAV, MP3, AIFF, AAC, M4A or OGG • Max 500MB'}
+                    {lang === 'es' ? 'WAV, MP3, AIFF, AAC, M4A u OGG • Máximo 200MB' : 'WAV, MP3, AIFF, AAC, M4A or OGG • Max 200MB'}
                   </p>
                 </div>
               </div>
@@ -1972,8 +1996,8 @@ by Matías Carvajal
                       </p>
                       <p style={{ fontSize: '0.75rem', color: '#991b1b' }}>
                         {lang === 'es'
-                          ? `El límite máximo es 500MB. Tu archivo tiene ${(file.size / 1024 / 1024).toFixed(1)}MB. Por favor, usa un archivo más pequeño.`
-                          : `Maximum limit is 500MB. Your file is ${(file.size / 1024 / 1024).toFixed(1)}MB. Please use a smaller file.`}
+                          ? `El límite máximo es 200MB. Tu archivo tiene ${(file.size / 1024 / 1024).toFixed(1)}MB. Por favor, usa un archivo más pequeño.`
+                          : `Maximum limit is 200MB. Your file is ${(file.size / 1024 / 1024).toFixed(1)}MB. Please use a smaller file.`}
                       </p>
                     </div>
                   )}
@@ -2212,8 +2236,8 @@ by Matías Carvajal
                   </p>
                   <p style={{ fontSize: '0.875rem', color: '#991b1b' }}>
                     {lang === 'es'
-                      ? `El límite máximo es 500MB. Tu archivo tiene ${(file.size / 1024 / 1024).toFixed(1)}MB.`
-                      : `Maximum limit is 500MB. Your file is ${(file.size / 1024 / 1024).toFixed(1)}MB.`}
+                      ? `El límite máximo es 200MB. Tu archivo tiene ${(file.size / 1024 / 1024).toFixed(1)}MB.`
+                      : `Maximum limit is 200MB. Your file is ${(file.size / 1024 / 1024).toFixed(1)}MB.`}
                   </p>
                   <p style={{ fontSize: '0.75rem', color: '#991b1b', marginTop: '0.5rem' }}>
                     {lang === 'es'
@@ -2384,8 +2408,8 @@ by Matías Carvajal
                           setShowAuthModal(true)
                           return
                         }
-                        // Completo requires Pro subscription
-                        if (view === 'write' && isLoggedIn && !isPro) {
+                        // Completo requires paid access (Pro or Single purchase)
+                        if (view === 'write' && isLoggedIn && !hasPaidAccess) {
                           setShowUpgradeModal(true)
                           return
                         }
@@ -2412,8 +2436,8 @@ by Matías Carvajal
                         position: 'relative'
                       }}
                     >
-                      {/* Crown icon for non-logged users on Resumen, non-Pro on Completo */}
-                      {((view === 'short' && !isLoggedIn) || (view === 'write' && (!isLoggedIn || !isPro))) && (
+                      {/* Crown icon for non-logged users on Resumen, unpaid on Completo */}
+                      {((view === 'short' && !isLoggedIn) || (view === 'write' && (!isLoggedIn || !hasPaidAccess))) && (
                         <Crown size={12} style={{
                           position: 'absolute',
                           top: '4px',
@@ -2873,7 +2897,7 @@ by Matías Carvajal
                         setShowAuthModal(true)
                         return
                       }
-                      if (!isPro) {
+                      if (!hasPaidAccess) {
                         setShowUpgradeModal(true)
                         return
                       }
@@ -2887,30 +2911,30 @@ by Matías Carvajal
                       justifyContent: 'center',
                       gap: '0.5rem',
                       padding: '0.875rem 1.25rem',
-                      background: (!isLoggedIn || !isPro) ? '#e5e7eb' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                      color: (!isLoggedIn || !isPro) ? '#6b7280' : 'white',
+                      background: (!isLoggedIn || !hasPaidAccess) ? '#e5e7eb' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      color: (!isLoggedIn || !hasPaidAccess) ? '#6b7280' : 'white',
                       border: 'none',
                       borderRadius: '0.75rem',
                       fontWeight: '600',
                       fontSize: 'clamp(0.8rem, 2vw, 0.9rem)',
                       cursor: 'pointer',
                       transition: 'all 0.2s',
-                      boxShadow: (!isLoggedIn || !isPro) ? 'none' : '0 4px 12px rgba(102, 126, 234, 0.3)'
+                      boxShadow: (!isLoggedIn || !hasPaidAccess) ? 'none' : '0 4px 12px rgba(102, 126, 234, 0.3)'
                     }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.transform = 'translateY(-2px)'
-                      if (isLoggedIn && isPro) {
+                      if (isLoggedIn && hasPaidAccess) {
                         e.currentTarget.style.boxShadow = '0 6px 20px rgba(102, 126, 234, 0.4)'
                       }
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.transform = 'translateY(0)'
-                      if (isLoggedIn && isPro) {
+                      if (isLoggedIn && hasPaidAccess) {
                         e.currentTarget.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.3)'
                       }
                     }}
                   >
-                    {(!isLoggedIn || !isPro) ? <Crown size={18} style={{ color: '#d97706' }} /> : <Download size={18} />}
+                    {(!isLoggedIn || !hasPaidAccess) ? <Crown size={18} style={{ color: '#d97706' }} /> : <Download size={18} />}
                     {lang === 'es' ? 'Análisis Detallado' : 'Detailed Analysis'}
                   </button>
                 </div>
@@ -3042,8 +3066,8 @@ by Matías Carvajal
                     <button
                       onClick={() => setAnalysisRating(true)}
                       style={{
-                        width: '3rem',
-                        height: '3rem',
+                        width: '3.25rem',
+                        height: '3.25rem',
                         borderRadius: '50%',
                         border: analysisRating === true ? '2px solid #10b981' : '2px solid #e5e7eb',
                         background: analysisRating === true ? '#ecfdf5' : 'white',
@@ -3055,14 +3079,15 @@ by Matías Carvajal
                         transition: 'all 0.2s'
                       }}
                       title={lang === 'es' ? 'Me fue bien' : 'Good experience'}
+                      aria-label={lang === 'es' ? 'Me fue bien' : 'Good experience'}
                     >
                       👍
                     </button>
                     <button
                       onClick={() => setAnalysisRating(false)}
                       style={{
-                        width: '3rem',
-                        height: '3rem',
+                        width: '3.25rem',
+                        height: '3.25rem',
                         borderRadius: '50%',
                         border: analysisRating === false ? '2px solid #ef4444' : '2px solid #e5e7eb',
                         background: analysisRating === false ? '#fef2f2' : 'white',
@@ -3074,6 +3099,7 @@ by Matías Carvajal
                         transition: 'all 0.2s'
                       }}
                       title={lang === 'es' ? 'Podría mejorar' : 'Could be better'}
+                      aria-label={lang === 'es' ? 'Podría mejorar' : 'Could be better'}
                     >
                       👎
                     </button>
@@ -3533,9 +3559,9 @@ by Matías Carvajal
         borderTop: '1px solid rgba(255, 255, 255, 0.1)'
       }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-          <div className="footer-grid" style={{ 
-            display: 'grid', 
-            gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+          <div className="footer-grid" style={{
+            display: 'grid',
+            gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(250px, 1fr))',
             textAlign: 'left'
           }}>
             {/* Brand */}
@@ -3776,27 +3802,13 @@ by Matías Carvajal
                 right: '1rem',
                 background: 'none',
                 border: 'none',
-                fontSize: '1.5rem',
                 cursor: 'pointer',
                 color: '#6b7280',
-                width: '2rem',
-                height: '2rem',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderRadius: '0.5rem',
-                transition: 'all 0.2s'
+                padding: '0.75rem'
               }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = '#f3f4f6'
-                e.currentTarget.style.color = '#111827'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'none'
-                e.currentTarget.style.color = '#6b7280'
-              }}
+              aria-label={lang === 'es' ? 'Cerrar' : 'Close'}
             >
-              ✕
+              <X size={20} />
             </button>
 
             {/* Header */}
@@ -4049,7 +4061,7 @@ by Matías Carvajal
                       style={{
                         width: '100%',
                         minWidth: '1.75rem',
-                        height: 'clamp(2.5rem, 8vw, 2.75rem)',
+                        height: 'clamp(2.75rem, 10vw, 3rem)',
                         borderRadius: '0.5rem',
                         border: feedback.rating === num ? '2px solid #667eea' : '1px solid #d1d5db',
                         background: feedback.rating === num ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'white',
@@ -4340,8 +4352,9 @@ by Matías Carvajal
                 border: 'none',
                 cursor: 'pointer',
                 color: '#6b7280',
-                padding: '0.25rem'
+                padding: '0.75rem'
               }}
+              aria-label={lang === 'es' ? 'Cerrar' : 'Close'}
             >
               <X size={20} />
             </button>
@@ -4501,8 +4514,9 @@ by Matías Carvajal
                 border: 'none',
                 cursor: 'pointer',
                 color: '#6b7280',
-                padding: '0.25rem'
+                padding: '0.75rem'
               }}
+              aria-label={lang === 'es' ? 'Cerrar' : 'Close'}
             >
               <X size={20} />
             </button>
@@ -4677,8 +4691,9 @@ by Matías Carvajal
                 border: 'none',
                 cursor: 'pointer',
                 color: '#6b7280',
-                padding: '0.25rem'
+                padding: '0.75rem'
               }}
+              aria-label={lang === 'es' ? 'Cerrar' : 'Close'}
             >
               <X size={20} />
             </button>
@@ -4840,8 +4855,9 @@ by Matías Carvajal
                 border: 'none',
                 cursor: 'pointer',
                 color: '#6b7280',
-                padding: '0.25rem'
+                padding: '0.75rem'
               }}
+              aria-label={lang === 'es' ? 'Cerrar' : 'Close'}
             >
               <X size={20} />
             </button>

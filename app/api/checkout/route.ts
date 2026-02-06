@@ -139,8 +139,17 @@ export async function POST(request: NextRequest) {
       })
     })
 
-    // Build URLs
-    const origin = request.headers.get('origin') || 'https://masteringready.com'
+    // Build URLs (with origin validation)
+    const ALLOWED_ORIGINS = [
+      'https://masteringready.com',
+      'https://www.masteringready.com',
+      'https://masteringready-git-dev-matcarvys-projects.vercel.app',
+      'http://localhost:3000',
+    ]
+    const requestOrigin = request.headers.get('origin')
+    const origin = (requestOrigin && ALLOWED_ORIGINS.includes(requestOrigin))
+      ? requestOrigin
+      : 'https://masteringready.com'
     const successUrl = `${origin}/dashboard?checkout=success&session_id={CHECKOUT_SESSION_ID}`
     const cancelUrl = `${origin}/dashboard?checkout=cancelled`
 

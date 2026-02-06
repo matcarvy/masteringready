@@ -334,7 +334,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
               id: u.id,
               email: u.email || '',
               full_name: u.user_metadata?.full_name || u.user_metadata?.name || null,
-              avatar_url: u.user_metadata?.avatar_url || null
+              avatar_url: u.user_metadata?.avatar_url || null,
+              terms_accepted_at: new Date().toISOString(),
+              terms_version: '1.0'
             })
 
             // Anti-abuse: Check if this email was previously deleted

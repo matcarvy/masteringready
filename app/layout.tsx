@@ -156,13 +156,7 @@ const structuredData = {
       availability: 'https://schema.org/InStock',
       priceValidUntil: '2026-12-31'
     },
-    aggregateRating: {
-      '@type': 'AggregateRating',
-      ratingValue: '4.8',
-      ratingCount: '50',
-      bestRating: '5',
-      worstRating: '1'
-    },
+    // aggregateRating removed — will add when real reviews exist
     author: {
       '@type': 'Person',
       name: 'Matías Carvajal',

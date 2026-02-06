@@ -334,8 +334,9 @@ export function AuthModal({ isOpen, onClose, onSuccess, lang }: AuthModalProps) 
             border: 'none',
             cursor: 'pointer',
             color: '#6b7280',
-            padding: '0.25rem'
+            padding: '0.75rem'
           }}
+          aria-label={lang === 'es' ? 'Cerrar' : 'Close'}
         >
           <X size={20} />
         </button>
@@ -468,7 +469,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, lang }: AuthModalProps) 
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: '0.25rem',
-                      fontSize: '0.7rem',
+                      fontSize: '0.75rem',
                       color: '#10b981',
                       fontWeight: '500'
                     }}

@@ -835,8 +835,9 @@ export default function HistoryPage() {
                   border: 'none',
                   cursor: 'pointer',
                   color: '#6b7280',
-                  padding: '0.5rem'
+                  padding: '0.75rem'
                 }}
+                aria-label={lang === 'es' ? 'Cerrar' : 'Close'}
               >
                 <X size={20} />
               </button>

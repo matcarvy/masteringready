@@ -984,8 +984,9 @@ export default function SettingsPage() {
               style={{
                 position: 'absolute', top: '1rem', right: '1rem',
                 background: 'none', border: 'none', cursor: 'pointer',
-                color: '#6b7280', padding: '0.25rem'
+                color: '#6b7280', padding: '0.75rem'
               }}
+              aria-label={lang === 'es' ? 'Cerrar' : 'Close'}
             >
               <X size={20} />
             </button>

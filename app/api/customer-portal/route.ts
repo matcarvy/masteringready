@@ -61,9 +61,18 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Build return URL
-    const origin = request.headers.get('origin') || 'https://masteringready.com'
-    const returnUrl = `${origin}/dashboard`
+    // Build return URL (whitelist origins to prevent spoofed redirects)
+    const ALLOWED_ORIGINS = [
+      'https://masteringready.com',
+      'https://www.masteringready.com',
+      'https://masteringready-git-dev-matcarvys-projects.vercel.app',
+      'http://localhost:3000',
+    ]
+    const origin = request.headers.get('origin')
+    const safeOrigin = (origin && ALLOWED_ORIGINS.includes(origin))
+      ? origin
+      : 'https://masteringready.com'
+    const returnUrl = `${safeOrigin}/dashboard`
 
     // Create portal session
     const session = await createPortalSession(

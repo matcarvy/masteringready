@@ -17,7 +17,7 @@ const translations = {
     saving: 'Guardando...',
     backToHome: 'Volver al inicio',
     passwordRequired: 'La contraseña es requerida',
-    passwordMin: 'La contraseña debe tener al menos 6 caracteres',
+    passwordMin: 'La contraseña debe tener al menos 8 caracteres',
     passwordMismatch: 'Las contraseñas no coinciden',
     error: 'No se pudo actualizar la contraseña. Intenta de nuevo.',
     noSession: 'Enlace expirado o no válido. Solicita uno nuevo.',
@@ -35,7 +35,7 @@ const translations = {
     saving: 'Saving...',
     backToHome: 'Back to home',
     passwordRequired: 'Password is required',
-    passwordMin: 'Password must be at least 6 characters',
+    passwordMin: 'Password must be at least 8 characters',
     passwordMismatch: 'Passwords do not match',
     error: 'Could not update password. Please try again.',
     noSession: 'Link expired or invalid. Request a new one.',
@@ -88,7 +88,7 @@ function ResetPasswordContent() {
       setError(t.passwordRequired)
       return
     }
-    if (password.length < 6) {
+    if (password.length < 8) {
       setError(t.passwordMin)
       return
     }

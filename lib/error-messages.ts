@@ -3,8 +3,8 @@
 
 export const ERROR_MESSAGES = {
   file_too_large: {
-    es: 'El archivo es muy grande. El limite es 500MB. Intenta comprimir el audio o usa un formato mas ligero como MP3.',
-    en: 'File is too large. The limit is 500MB. Try compressing the audio or use a lighter format like MP3.',
+    es: 'El archivo es muy grande. El limite es 200MB. Intenta comprimir el audio o usa un formato mas ligero como MP3.',
+    en: 'File is too large. The limit is 200MB. Try compressing the audio or use a lighter format like MP3.',
   },
   format_not_supported: {
     es: 'Este formato no es compatible. Por favor sube un archivo WAV, MP3, AIFF, AAC, M4A u OGG.',
