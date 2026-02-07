@@ -227,7 +227,7 @@ Test in this order:
 - Privacy: never store audio files, only derived analysis data
 - Auth: Google OAuth, Facebook OAuth, Email+Password (Apple removed)
 - i18n: language ONLY changes if user explicitly changes it (golden rule). Detect browser lang → ES LATAM or US EN → persist via cookie.
-- Analyzer version: 7.4.1 (9 bugs from v7.3.51 + band correlation None fixes)
+- Analyzer version: 7.4.1 (9 bugs from v7.3.51 + band correlation None fixes + scoring gap fix + dead param cleanup)
 
 ---
 
@@ -1205,7 +1205,7 @@ All CRITICAL, HIGH, and MEDIUM fixes from first audit **confirmed resolved**.
 #### Commits to dev (Session 19)
 1. `39114b9` - fix: pre-launch audit fixes — webhook, accessibility, security, backend
 
-**Git state**: dev on `39114b9`, committed (not pushed). Build clean.
+**Git state**: dev on `13f3989`, pushed. Build clean.
 
 #### Final (3rd) Audit — ALL PASS (8 parallel Explore agents)
 
@@ -1223,6 +1223,70 @@ All CRITICAL, HIGH, and MEDIUM fixes from first audit **confirmed resolved**.
 **LAUNCH READINESS: APPROVED** — Zero CRITICAL, zero HIGH, zero blocking issues.
 
 Optional post-launch: Google Search Console ID (layout.tsx line ~117), pin `resampy` version.
+
+### 2026-02-07 (Session 20)
+- Continued from context summary (Session 19 ran out of context)
+
+#### Analyzer Audio Accuracy Audit (continued from Session 19)
+- Session 19 launched 3 Explore agents to audit scoring thresholds, interpretive texts, and frontend bar display
+- All 3 completed with detailed reports; direct code verification cross-referenced findings
+- **Comprehensive cross-reference report presented** covering all 6 scored metrics + 2 informational metrics across 3 parallel systems (ScoringThresholds, bar percentages, interpretive texts)
+
+##### Key findings from accuracy audit:
+- **Headroom**: All 3 systems aligned at -3.0 threshold (normal), -5.0 (strict) ✓
+- **True Peak**: Bars more generous than scoring (green ≤-1.5 vs scoring perfect ≤-3.0) — intentional design choice
+- **PLR**: All 3 systems perfectly aligned ✓
+- **Stereo**: All 3 systems generally aligned ✓
+- **LUFS**: Bar/text minor range difference — zero impact (weight=0) ✓
+- **Frequency Balance**: Mode-independent, correct ✓
+- **Zero technically inaccurate audio claims found**
+
+#### Analyzer Cleanup Fixes
+1. **Headroom scoring gap fixed** (`analyzer.py:492`) — Normal mode "pass" lambda expanded from `(-9.0 <= peak < -3.0)` to `(-9.0 <= peak < -3.0) or (-3.0 < peak <= -2.0)`. Range (-3.0, -2.0] now returns "pass" with score delta 0.7 (was falling through to else with 0.4).
+2. **Dead parameter removed** (`interpretative_texts.py:75`) — `_get_headroom_status(headroom, true_peak, strict)` → `_get_headroom_status(headroom, strict)`. 3 callers updated (lines 50, 956, 1014).
+
+#### Strict Mode Verification (Explore agent)
+- Cross-referenced all metrics in strict mode across scoring, bars, and text
+- **Headroom strict**: All 3 systems aligned ✓ (mode-aware bars)
+- **True Peak strict**: Bars intentionally mode-independent (green ≤-1.5 shows "safe zone", scoring requires ≤-3.0 for perfect) — by design
+- **PLR strict**: Bars mode-independent (green ≥12, scoring perfect ≥14) — by design
+- **Stereo strict**: Bars slightly lenient (green ≥0.7 vs scoring perfect ≥0.75) — by design
+- **Design philosophy confirmed**: Only headroom has mode-aware bars. Others show "mastering safe zone" regardless of mode.
+
+#### Final Pre-Launch Analyzer Audit (6 parallel agents)
+Comprehensive audit across 8 categories: Copy/Texts, Score/Verdicts, Error Handling, PDF Generation, Metrics/Recommendations, Edge Cases/Formats.
+
+##### Results: 28 passing checks, 5 issues found
+
+**🔴 BLOCKER (2) — fixed:**
+1. PDF branding "Mastering Ready" → "MasteringReady" in 5 user-facing strings (PDF title, footer, tooltips)
+2. "exactamente"/"exactly" still in 4 user-facing strings (headroom perfect msg, CTA score 60-74)
+
+**🟡 SHOULD FIX (3) — fixed:**
+3. "vale la pena" → "conviene" (ES LATAM Neutro) in PDF subtext
+4. Hard fail verdict aligned with score 5-19 verdict (same text for same score)
+5. Stale comment `>500MB` → `>200MB` in page.tsx
+
+**🟢 NICE TO HAVE (3) — deferred to post-launch:**
+- Timeout keyword in error classifier
+- PDF missing file metadata (format, channels, size)
+- FLAC format support
+
+##### 28 Passing Checks:
+- Bilingual completeness, no TODOs/placeholders, no em dashes, no markdown in text
+- No forbidden words, ES LATAM Neutro dialect, professional tone
+- Score ranges 0-100 fully covered (7 verdict tiers), score floor at 5
+- Weights sum to 1.0, hard fail at TP ≥+3.0 or clipping ≥0.999999
+- All 6 error categories bilingual, no raw tracebacks, correct HTTP codes
+- Mono files safe, short files (<10s) handled, long files chunked
+- All 7 formats working (WAV, MP3, AIFF, AIF, AAC, M4A, OGG)
+- Strict mode wired through both endpoints, metrics/recommendations complete
+- Score/bar/text consistency verified, NaN/Inf protection, CTA texts professional
+
+#### Commits to dev (Session 20)
+1. `4836de4` - fix: analyzer cleanup — branding, copy, scoring gap, dead parameter
+
+**Git state**: dev on `4836de4`, committed. Build clean.
 
 ### Previous Sessions (1)
 - Implemented full Stripe + subscription system (tasks #1-#9)

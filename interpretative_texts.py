@@ -47,7 +47,7 @@ def generate_interpretative_texts(
     ms_ratio = metrics.get('ms_ratio', 0.5)  # ADDED: M/S ratio support
     
     # Determine status for each metric (considering strict mode)
-    headroom_status = _get_headroom_status(headroom, true_peak, strict)
+    headroom_status = _get_headroom_status(headroom, strict)
     dr_status = _get_dr_status(dr_value, strict)
     level_status = _get_level_status(lufs, strict)
     stereo_status = _get_stereo_status(stereo_balance, stereo_correlation, ms_ratio, strict)
@@ -72,7 +72,7 @@ def generate_interpretative_texts(
 # STATUS DETERMINATION FUNCTIONS - ALIGNED WITH analyzer.py v7.3.30
 # ============================================================================
 
-def _get_headroom_status(headroom: float, true_peak: float, strict: bool = False) -> str:
+def _get_headroom_status(headroom: float, strict: bool = False) -> str:
     """
     Determine headroom status - aligned with bar thresholds in analyzer.py
 
@@ -953,10 +953,7 @@ def format_for_api_response(
             "metrics": {
                 "headroom_dbfs": metrics.get('headroom', 0),
                 "true_peak_dbtp": metrics.get('true_peak', 0),
-                "status": _get_headroom_status(
-                    metrics.get('headroom', 0),
-                    metrics.get('true_peak', 0)
-                )
+                "status": _get_headroom_status(metrics.get('headroom', 0))
             }
         },
         "dynamic_range": {
@@ -1014,10 +1011,7 @@ def format_for_api_response_v2(
                 "metrics": {
                     "headroom_dbfs": metrics.get('headroom', 0),
                     "true_peak_dbtp": metrics.get('true_peak', 0),
-                    "status": _get_headroom_status(
-                        metrics.get('headroom', 0),
-                        metrics.get('true_peak', 0)
-                    )
+                    "status": _get_headroom_status(metrics.get('headroom', 0))
                 },
                 "interpretation": interpretations["headroom"]["interpretation"],
                 "recommendation": interpretations["headroom"]["recommendation"]

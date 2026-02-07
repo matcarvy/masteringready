@@ -2216,7 +2216,7 @@ by Matías Carvajal
                 </button>
               )}
 
-              {/* Message when file is too large (>500MB) */}
+              {/* Message when file is too large (>200MB) */}
               {file && isFileTooLarge && (
                 <div style={{
                   width: '100%',

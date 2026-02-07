@@ -489,7 +489,7 @@ class ScoringThresholds:
             "critical": lambda peak: peak >= -1.0,
             "warning": lambda peak: -2.0 < peak < -1.0,
             "perfect": lambda peak: -6.0 <= peak <= -3.0,
-            "pass": lambda peak: -9.0 <= peak < -3.0,
+            "pass": lambda peak: (-9.0 <= peak < -3.0) or (-3.0 < peak <= -2.0),
             "conservative": lambda peak: -12.0 <= peak < -9.0,
         }
     }
@@ -1381,13 +1381,13 @@ def calculate_metrics_bars_percentages(metrics: List[Dict[str, Any]], strict: bo
     # Tooltips by status (Mastering Ready philosophy)
     tooltips = {
         "es": {
-            "excellent": "Dentro del rango recomendado por Mastering Ready.",
+            "excellent": "Dentro del rango recomendado por MasteringReady.",
             "good": "Funcional, con margen suficiente para el máster.",
             "warning": "Revisar si buscas máxima compatibilidad y margen.",
             "critical": "Revisión prioritaria antes del máster final."
         },
         "en": {
-            "excellent": "Within Mastering Ready recommended range.",
+            "excellent": "Within MasteringReady recommended range.",
             "good": "Functional, with sufficient margin for mastering.",
             "warning": "Review if you want maximum compatibility and margin.",
             "critical": "Priority review before final master."
@@ -2712,7 +2712,7 @@ def _status_headroom_en(peak_db: float, strict: bool = False) -> Tuple[str, str,
         },
         "perfect": {
             "strict": "Ideal headroom for commercial mastering delivery.",
-            "normal": f"Headroom of {abs(peak_db):.1f} dB is exactly what I'm looking for - gives me room to work with EQ, compression and limiting without compromising quality.",
+            "normal": f"Headroom of {abs(peak_db):.1f} dB is what I'm looking for - gives me room to work with EQ, compression and limiting without compromising quality.",
         },
         "pass": {
             "strict": "Headroom is acceptable for mastering delivery.",
@@ -2946,7 +2946,7 @@ def _status_headroom_es(peak_db: float, strict: bool = False) -> Tuple[str, str,
         },
         "perfect": {
             "strict": "Headroom perfecto para entrega comercial profesional.",
-            "normal": f"El headroom de {abs(peak_db):.1f} dB es exactamente lo que busco - me da espacio para trabajar EQ, compresión y limiting sin comprometer la calidad.",
+            "normal": f"El headroom de {abs(peak_db):.1f} dB es lo que busco - me da espacio para trabajar EQ, compresión y limiting sin comprometer la calidad.",
         },
         "pass": {
             "strict": "Headroom aceptable, pero -6 a -4 dBFS es ideal para clientes/labels.",
@@ -3228,8 +3228,8 @@ def score_report(metrics: List[Dict[str, Any]], hard_fail: bool, strict: bool = 
     # v7.4.0 FIX: Minimum score is 5, never 0
     if hard_fail:
         if lang == 'es':
-            return 5, "❌ Requiere revisión antes del mastering"
-        return 5, "❌ Requires review before mastering"
+            return 5, "❌ Requiere revisión - tu archivo necesita trabajo antes del mastering"
+        return 5, "❌ Requires review - your file needs work before mastering"
 
     # v7.4.0: Added "poor" status for correlation 0.1-0.3
     mult = {"perfect": 1.0, "pass": 0.9, "warning": 0.7, "poor": 0.4, "critical": 0.0, "catastrophic": 0.0, "info": 1.0}
@@ -3944,7 +3944,7 @@ def generate_cta(score: int, strict: bool, lang: str, mode: str = "write") -> Di
                 "message": (
                     "🔧 Tu mezcla necesita trabajo antes del mastering.\n"
                     "Hay problemas técnicos que no se corrigen en mastering, se corrigen en la mezcla. "
-                    "Puedo ayudarte a identificar exactamente qué ajustar."
+                    "Puedo ayudarte a identificar qué ajustar."
                 ),
                 "button": "Revisar mi mezcla",
                 "action": "preparation"
@@ -4030,7 +4030,7 @@ def generate_cta(score: int, strict: bool, lang: str, mode: str = "write") -> Di
                 "message": (
                     "🔧 Your mix needs work before mastering.\n"
                     "There are technical issues that mastering can't fix. They need to be addressed "
-                    "in the mix. I can help you identify exactly what to adjust."
+                    "in the mix. I can help you identify what to adjust."
                 ),
                 "button": "Review my mix",
                 "action": "preparation"
@@ -7454,7 +7454,7 @@ def generate_complete_pdf(
         )
         
         # Header
-        story.append(Paragraph("MASTERING READY", title_style))
+        story.append(Paragraph("MASTERINGREADY", title_style))
         story.append(Paragraph(
             "Reporte Completo de Análisis" if lang == 'es' else "Complete Analysis Report",
             header_subtitle_style
@@ -7636,7 +7636,7 @@ def generate_complete_pdf(
             story.append(Spacer(1, 0.05*inch))
             
             # Subtexto explicativo - Mastering Ready philosophy
-            subtext = "Estos indicadores no significan que tu mezcla esté mal, sino que hay decisiones técnicas que vale la pena revisar antes del máster final." if lang == 'es' else "These indicators don't mean your mix is wrong, but there are technical decisions worth reviewing before the final master."
+            subtext = "Estos indicadores no significan que tu mezcla esté mal, sino que hay decisiones técnicas que conviene revisar antes del máster final." if lang == 'es' else "These indicators don't mean your mix is wrong, but there are technical decisions worth reviewing before the final master."
             story.append(Paragraph(
                 clean_text_for_pdf(subtext),
                 ParagraphStyle('Subtext', parent=body_style, fontSize=8, textColor=colors.HexColor('#6b7280'), fontStyle='italic')
@@ -7730,7 +7730,7 @@ def generate_complete_pdf(
                 ))
                 
                 # Footer note
-                footer_note = "Basado en criterios de Mastering Ready para compatibilidad, margen y traducción." if lang == 'es' else "Based on Mastering Ready criteria for compatibility, margin and translation."
+                footer_note = "Basado en criterios de MasteringReady para compatibilidad, margen y traducción." if lang == 'es' else "Based on MasteringReady criteria for compatibility, margin and translation."
                 story.append(Paragraph(
                     clean_text_for_pdf(footer_note),
                     ParagraphStyle('FooterNote', parent=body_style, fontSize=7, textColor=colors.HexColor('#9ca3af'), alignment=TA_CENTER)
@@ -7990,7 +7990,7 @@ def generate_complete_pdf(
         )
         
         story.append(Paragraph(
-            "Analizado con Mastering Ready" if lang == 'es' else "Analyzed with Mastering Ready",
+            "Analizado con MasteringReady" if lang == 'es' else "Analyzed with MasteringReady",
             footer_style
         ))
         story.append(Paragraph("www.masteringready.com", footer_style))
