@@ -17,8 +17,8 @@ from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
-# Feature flag - disabled by default for easy launch control
-ENABLE_IP_RATE_LIMIT = os.getenv('ENABLE_IP_RATE_LIMIT', 'false').lower() == 'true'
+# Feature flag - enabled by default for security (set to 'false' to disable)
+ENABLE_IP_RATE_LIMIT = os.getenv('ENABLE_IP_RATE_LIMIT', 'true').lower() == 'true'
 
 # Maximum free analyses per IP
 MAX_FREE_ANALYSES_PER_IP = 2

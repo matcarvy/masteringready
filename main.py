@@ -178,11 +178,11 @@ async def cleanup_old_jobs():
 
 # Create FastAPI app
 app = FastAPI(
-    title="Mastering Ready API",
-    description="Audio analysis API based on Matías Carvajal's Mastering Ready methodology",
+    title="MasteringReady API",
+    description="Audio analysis API based on Matías Carvajal's MasteringReady methodology",
     version=ANALYZER_VERSION,
-    docs_url="/docs",
-    redoc_url="/redoc"
+    docs_url=None,
+    redoc_url=None
 )
 
 @app.on_event("startup")
