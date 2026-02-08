@@ -1284,9 +1284,60 @@ Comprehensive audit across 8 categories: Copy/Texts, Score/Verdicts, Error Handl
 - Score/bar/text consistency verified, NaN/Inf protection, CTA texts professional
 
 #### Commits to dev (Session 20)
-1. `4836de4` - fix: analyzer cleanup — branding, copy, scoring gap, dead parameter
+1. `4913e75` - fix: analyzer cleanup — branding, copy, scoring gap, dead parameter
 
-**Git state**: dev on `4836de4`, committed. Build clean.
+**Git state**: dev on `4913e75`, pushed. Build clean.
+
+### 2026-02-07 (Session 21)
+- Continued from context summary (Session 20 ran out of context)
+
+#### Security Audit — Penetration Test Simulation (6 parallel agents)
+Comprehensive security penetration test covering 7 attack vectors with 6 parallel Explore agents.
+
+##### Results: 0 CRITICAL, 5 MEDIUM, 37 PASS
+
+| Vector | Verdict | Details |
+|---|---|---|
+| Auth Bypass | ✅ ALL PASS | JWT validation, RLS, 3-layer admin check, webhook signatures, OAuth PKCE |
+| Quota Bypass | 🟡 3 MEDIUM | Direct Render API (no auth), fake localStorage (mitigated by 6-layer defense), IP rate limit disabled by default |
+| File Upload | ✅ ALL PASS | Extension whitelist, libsndfile validation, 200MB limit, temp cleanup, safe ffmpeg |
+| API Abuse + Injection | ✅ ALL PASS | Parameterized queries, no shell execution, React XSS protection, server-side pricing |
+| Data Access + RLS | ✅ ALL PASS | RLS on all 9 tables, user_id from session, service role key isolated |
+| Secrets + Exposure | 🟡 2 MEDIUM | `/docs` Swagger UI public, missing security headers (CSP, X-Frame-Options) |
+
+**Key strengths identified**: 6-layer quota defense, Stripe signature verification, Supabase RLS, fail-closed error handling, parameterized queries, no shell execution.
+
+#### Security Hardening — 4 Quick Fixes
+
+##### Fix 1: IP rate limit fallback (already done in Session 19)
+- `lib/api.ts:189` already returns `can_analyze: false` on endpoint failure
+- Both `!res.ok` and `catch` paths deny access (fail-closed)
+
+##### Fix 2: Disable Swagger UI (`main.py:184-185`)
+- Changed `docs_url="/docs"` → `docs_url=None`
+- Changed `redoc_url="/redoc"` → `redoc_url=None`
+- Also fixed branding: "Mastering Ready API" → "MasteringReady API"
+
+##### Fix 3: Security headers (`next.config.js` — NEW file)
+- `Content-Security-Policy`: self + Stripe JS + Supabase + Render + ipinfo.io
+- `X-Frame-Options: DENY` (anti-clickjacking)
+- `X-Content-Type-Options: nosniff` (MIME sniffing prevention)
+- `Referrer-Policy: strict-origin-when-cross-origin`
+- `poweredByHeader: false` (removes X-Powered-By: Next.js)
+- `frame-ancestors: 'none'` in CSP (redundant with X-Frame-Options for defense-in-depth)
+
+##### Fix 4: Shared secret Vercel ↔ Render — DEFERRED to post-launch
+- ~15 min implementation: `X-API-Secret` header check on Render + sending from `lib/api.ts`
+- Requires coordinated env var deploy on both Vercel and Render
+
+##### Fix 5: IP rate limit enabled by default (`ip_limiter.py:21`)
+- Changed `ENABLE_IP_RATE_LIMIT` default from `'false'` to `'true'`
+- Can still disable via env var `ENABLE_IP_RATE_LIMIT=false` if needed
+
+#### Commits to dev (Session 21)
+1. `5e16103` - sec: security hardening — disable Swagger UI, add security headers, enable IP rate limit
+
+**Git state**: dev on `5e16103`, pushed. Build clean.
 
 ### Previous Sessions (1)
 - Implemented full Stripe + subscription system (tasks #1-#9)
@@ -1327,6 +1378,8 @@ Comprehensive audit across 8 categories: Copy/Texts, Score/Verdicts, Error Handl
 | `app/not-found.tsx` | Branded 404 page |
 | `app/error.tsx` | Error boundary |
 | `app/global-error.tsx` | Root-level error boundary |
+| `next.config.js` | Security headers (CSP, X-Frame-Options, nosniff) |
+| `ip_limiter.py` | IP rate limiting for anonymous users |
 | `analyzer.py` | Audio analysis engine (~8200 lines) — DO NOT modify algorithms |
 | `interpretative_texts.py` | Bilingual interpretive text generator (ES/EN) |
 | `main.py` | FastAPI backend (sync + async endpoints) |
