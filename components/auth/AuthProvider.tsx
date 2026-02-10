@@ -19,6 +19,7 @@ interface AuthContextType {
   user: User | null
   session: Session | null
   loading: boolean
+  isAdmin: boolean
   signOut: () => Promise<void>
   savePendingAnalysis: () => Promise<SaveAnalysisResult>
   pendingAnalysisQuotaExceeded: boolean
@@ -39,6 +40,7 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   session: null,
   loading: true,
+  isAdmin: false,
   signOut: async () => {},
   savePendingAnalysis: async () => 'no_pending',
   pendingAnalysisQuotaExceeded: false,
@@ -80,7 +82,7 @@ function mapVerdictToEnum(verdict: string): 'ready' | 'almost_ready' | 'needs_wo
 }
 
 // Save pending analysis from localStorage to database
-async function savePendingAnalysisForUser(userId: string): Promise<SaveAnalysisResult> {
+async function savePendingAnalysisForUser(userId: string, userIsAdmin: boolean = false): Promise<SaveAnalysisResult> {
   try {
     const pendingData = localStorage.getItem('pendingAnalysis')
     if (!pendingData) {
@@ -174,7 +176,9 @@ async function savePendingAnalysisForUser(userId: string): Promise<SaveAnalysisR
       energy_analysis: analysis.energy_analysis || null,
       categorical_flags: analysis.categorical_flags || null,
       // Client context
-      client_timezone: typeof Intl !== 'undefined' ? Intl.DateTimeFormat().resolvedOptions().timeZone : null
+      client_timezone: typeof Intl !== 'undefined' ? Intl.DateTimeFormat().resolvedOptions().timeZone : null,
+      // Admin test flag
+      is_test_analysis: userIsAdmin
     }
 
     console.log('[SaveAnalysis] Report fields:', {
@@ -251,6 +255,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
+  const [isAdmin, setIsAdmin] = useState(false)
   const [pendingAnalysisQuotaExceeded, setPendingAnalysisQuotaExceeded] = useState(false)
   const [pendingAnalysisSaved, setPendingAnalysisSaved] = useState(false)
 
@@ -274,7 +279,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     if (freshUser) {
       console.log('Saving analysis for fresh user:', freshUser.id)
-      const result = await savePendingAnalysisForUser(freshUser.id)
+      const result = await savePendingAnalysisForUser(freshUser.id, isAdmin)
       console.log('Analysis save result:', result)
 
       if (result === 'saved') {
@@ -324,7 +329,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
           // Check if profile exists
           const { data: existingProfile } = await supabase
             .from('profiles')
-            .select('id')
+            .select('id, is_admin')
             .eq('id', u.id)
             .single()
 
@@ -376,8 +381,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
             }
           }
 
+          // Set admin status from profile
+          const adminStatus = existingProfile?.is_admin === true
+          setIsAdmin(adminStatus)
+
           // Check for pending analysis after login/signup
-          const saveResult = await savePendingAnalysisForUser(u.id)
+          const saveResult = await savePendingAnalysisForUser(u.id, adminStatus)
           if (saveResult === 'saved') {
             setPendingAnalysisSaved(true)
           } else if (saveResult === 'quota_exceeded' || saveResult === 'error') {
@@ -400,6 +409,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const signOut = async () => {
     setUser(null)
     setSession(null)
+    setIsAdmin(false)
     try {
       await supabase.auth.signOut()
     } catch (err) {
@@ -408,7 +418,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, signOut, savePendingAnalysis, pendingAnalysisQuotaExceeded, clearPendingAnalysisQuotaExceeded, pendingAnalysisSaved, clearPendingAnalysisSaved }}>
+    <AuthContext.Provider value={{ user, session, loading, isAdmin, signOut, savePendingAnalysis, pendingAnalysisQuotaExceeded, clearPendingAnalysisQuotaExceeded, pendingAnalysisSaved, clearPendingAnalysisSaved }}>
       {children}
     </AuthContext.Provider>
   )

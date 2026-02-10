@@ -76,11 +76,12 @@ export async function GET(request: NextRequest) {
         .select('id', { count: 'exact', head: true })
         .gte('created_at', monthStart),
 
-      // Total analyses for conversion rate
+      // Total analyses for conversion rate (exclude admin test analyses)
       adminClient
         .from('analyses')
         .select('id', { count: 'exact', head: true })
-        .is('deleted_at', null),
+        .is('deleted_at', null)
+        .eq('is_test_analysis', false),
 
       // Detailed list with joins (latest 100)
       adminClient

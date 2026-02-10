@@ -37,7 +37,7 @@ function mapVerdictToEnum(verdict: string): 'ready' | 'almost_ready' | 'needs_wo
 // ============================================================================
 // Helper: Save analysis directly to database for logged-in users
 // ============================================================================
-async function saveAnalysisToDatabase(userId: string, analysis: any, fileObj?: File, countryCode?: string) {
+async function saveAnalysisToDatabase(userId: string, analysis: any, fileObj?: File, countryCode?: string, isTestAnalysis?: boolean) {
   console.log('[SaveAnalysis] Saving for logged-in user:', userId, 'file:', analysis.filename)
   console.log('[SaveAnalysis] API response keys:', Object.keys(analysis).join(', '))
   console.log('[SaveAnalysis] Report fields:', {
@@ -97,7 +97,9 @@ async function saveAnalysisToDatabase(userId: string, analysis: any, fileObj?: F
       categorical_flags: analysis.categorical_flags || null,
       // v1.6: Country + timezone for admin analytics
       client_country: countryCode || null,
-      client_timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || null
+      client_timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || null,
+      // Admin test flag
+      is_test_analysis: isTestAnalysis || false
     })
     .select()
 
@@ -246,7 +248,7 @@ function InterpretativeSection({ title, interpretation, recommendation, metrics,
 
 function Home() {
   // Auth state - check if user is logged in
-  const { user, loading: authLoading, savePendingAnalysis, pendingAnalysisQuotaExceeded, clearPendingAnalysisQuotaExceeded, pendingAnalysisSaved, clearPendingAnalysisSaved } = useAuth()
+  const { user, loading: authLoading, isAdmin, savePendingAnalysis, pendingAnalysisQuotaExceeded, clearPendingAnalysisQuotaExceeded, pendingAnalysisSaved, clearPendingAnalysisSaved } = useAuth()
   const isLoggedIn = !!user
 
   const [file, setFile] = useState<File | null>(null)
@@ -830,7 +832,7 @@ const handleAnalyze = async () => {
             created_at: new Date().toISOString(),
             lang,
             strict
-          }, file, geo?.countryCode)
+          }, file, geo?.countryCode, isAdmin)
           setSavedAnalysisId(savedData?.[0]?.id || null)
           setResult(data) // Only show results after confirmed save
         } catch (saveErr) {

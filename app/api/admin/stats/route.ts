@@ -91,9 +91,10 @@ export async function GET(request: NextRequest) {
       // Total users
       adminClient.from('profiles').select('id', { count: 'exact', head: true }),
 
-      // Total analyses
+      // Total analyses (exclude admin test analyses)
       adminClient.from('analyses').select('id', { count: 'exact', head: true })
-        .is('deleted_at', null),
+        .is('deleted_at', null)
+        .eq('is_test_analysis', false),
 
       // Active Pro subscriptions
       adminClient.from('subscriptions')
@@ -111,22 +112,26 @@ export async function GET(request: NextRequest) {
       adminClient.from('analyses')
         .select('id', { count: 'exact', head: true })
         .gte('created_at', today)
-        .is('deleted_at', null),
+        .is('deleted_at', null)
+        .eq('is_test_analysis', false),
 
       // Score data for avg + distribution
       adminClient.from('analyses')
         .select('score')
-        .is('deleted_at', null),
+        .is('deleted_at', null)
+        .eq('is_test_analysis', false),
 
       // Verdict distribution
       adminClient.from('analyses')
         .select('verdict')
-        .is('deleted_at', null),
+        .is('deleted_at', null)
+        .eq('is_test_analysis', false),
 
       // File format breakdown
       adminClient.from('analyses')
         .select('file_format')
-        .is('deleted_at', null),
+        .is('deleted_at', null)
+        .eq('is_test_analysis', false),
 
       // Top countries
       adminClient.from('profiles')
@@ -137,6 +142,7 @@ export async function GET(request: NextRequest) {
         .select('created_at')
         .gte('created_at', thirtyDaysAgo)
         .is('deleted_at', null)
+        .eq('is_test_analysis', false)
         .order('created_at', { ascending: true }),
 
       // Revenue from subscriptions this month
@@ -178,34 +184,40 @@ export async function GET(request: NextRequest) {
       adminClient.from('analyses')
         .select('score, spectral_6band')
         .is('deleted_at', null)
+        .eq('is_test_analysis', false)
         .not('spectral_6band', 'is', null),
 
       // Categorical flags (for % with issues)
       adminClient.from('analyses')
         .select('categorical_flags')
         .is('deleted_at', null)
+        .eq('is_test_analysis', false)
         .not('categorical_flags', 'is', null),
 
       // Energy analysis (peak position + temporal distribution)
       adminClient.from('analyses')
         .select('energy_analysis')
         .is('deleted_at', null)
+        .eq('is_test_analysis', false)
         .not('energy_analysis', 'is', null),
 
       // Performance: processing time + chunked flag
       adminClient.from('analyses')
         .select('processing_time_seconds, is_chunked_analysis')
-        .is('deleted_at', null),
+        .is('deleted_at', null)
+        .eq('is_test_analysis', false),
 
       // Files: duration + size
       adminClient.from('analyses')
         .select('duration_seconds, file_size_bytes')
-        .is('deleted_at', null),
+        .is('deleted_at', null)
+        .eq('is_test_analysis', false),
 
       // Engagement: analyses with user_id + created_at for active user counts
       adminClient.from('analyses')
         .select('user_id, created_at')
         .is('deleted_at', null)
+        .eq('is_test_analysis', false)
         .not('user_id', 'is', null),
 
       // Engagement: users with >1 analysis
