@@ -207,9 +207,9 @@ app.add_middleware(
     allow_origins=[
         "https://masteringready.com",
         "https://www.masteringready.com",
-        "https://masteringready-git-dev-matcarvys-projects.vercel.app",
         "http://localhost:3000",
     ],
+    allow_origin_regex=r"https://masteringready.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
