@@ -584,8 +584,8 @@ function Home() {
   // File validation helper
   const validateFile = (file: File): { valid: boolean; error?: string } => {
     const maxSize = 200 * 1024 * 1024 // 200MB
-    const allowedTypes = ['audio/wav', 'audio/mpeg', 'audio/mp3', 'audio/aiff', 'audio/x-aiff', 'audio/aac', 'audio/mp4', 'audio/x-m4a', 'audio/ogg', 'audio/opus']
-    const allowedExtensions = ['.wav', '.mp3', '.aiff', '.aif', '.aac', '.m4a', '.ogg']
+    const allowedTypes = ['audio/wav', 'audio/mpeg', 'audio/mp3', 'audio/aiff', 'audio/x-aiff', 'audio/aac', 'audio/mp4', 'audio/x-m4a', 'audio/ogg', 'audio/opus', 'audio/flac', 'audio/x-flac']
+    const allowedExtensions = ['.wav', '.mp3', '.aiff', '.aif', '.aac', '.m4a', '.ogg', '.flac']
     
     const fileName = file.name.toLowerCase()
     const hasValidExtension = allowedExtensions.some(ext => fileName.endsWith(ext))
@@ -1882,7 +1882,7 @@ by Matías Carvajal
                     id="file-input"
                     type="file"
                     aria-label={lang === 'es' ? 'Seleccionar archivo de audio' : 'Select audio file'}
-                    accept=".wav,.mp3,.aiff,.aif,.aac,.m4a,.ogg"
+                    accept=".wav,.mp3,.aiff,.aif,.aac,.m4a,.ogg,.flac"
                     onChange={(e) => {
                       const selectedFile = e.target.files?.[0] || null
                       
@@ -1924,7 +1924,7 @@ by Matías Carvajal
                       : 'or click to select'}
                   </p>
                   <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.5rem' }}>
-                    {lang === 'es' ? 'WAV, MP3, AIFF, AAC, M4A u OGG • Máximo 200MB' : 'WAV, MP3, AIFF, AAC, M4A or OGG • Max 200MB'}
+                    {lang === 'es' ? 'WAV, MP3, AIFF, FLAC, AAC, M4A u OGG • Máximo 200MB' : 'WAV, MP3, AIFF, FLAC, AAC, M4A or OGG • Max 200MB'}
                   </p>
                 </div>
               </div>

@@ -7,8 +7,8 @@ export const ERROR_MESSAGES = {
     en: 'File is too large. The limit is 200MB. Try compressing the audio or use a lighter format like MP3.',
   },
   format_not_supported: {
-    es: 'Este formato no es compatible. Por favor sube un archivo WAV, MP3, AIFF, AAC, M4A u OGG.',
-    en: 'This format is not supported. Please upload a WAV, MP3, AIFF, AAC, M4A or OGG file.',
+    es: 'Este formato no es compatible. Por favor sube un archivo WAV, MP3, AIFF, FLAC, AAC, M4A u OGG.',
+    en: 'This format is not supported. Please upload a WAV, MP3, AIFF, FLAC, AAC, M4A or OGG file.',
   },
   corrupt_file: {
     es: 'No pudimos leer este archivo. Puede estar corrupto o dañado. Intenta exportarlo de nuevo desde tu DAW.',
