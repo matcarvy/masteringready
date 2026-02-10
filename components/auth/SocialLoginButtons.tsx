@@ -121,7 +121,7 @@ export function SocialLoginButtons({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-      {providers.map((provider) => (
+      {providers.filter(p => p.id !== 'facebook').map((provider) => (
         <button
           key={provider.id}
           onClick={() => handleSocialLogin(provider.id)}

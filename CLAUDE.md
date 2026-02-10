@@ -45,9 +45,9 @@
 ### CODE — COMPLETE
 All features implemented, TypeScript compiles clean, pushed to `dev`.
 
-### CONFIGURATION — PENDING (what you need to do)
+### CONFIGURATION — IN PROGRESS
 
-#### Step 1: Stripe Dashboard Setup
+#### Step 1: Stripe Dashboard Setup — DONE (2026-02-09)
 1. **Create 3 Products + Prices** at dashboard.stripe.com:
    - MasteringReady Pro → $9.99/month (Recurring)
    - Single Analysis → $5.99 (One-time)
@@ -64,7 +64,7 @@ All features implemented, TypeScript compiles clean, pushed to `dev`.
    - Enable payment method updates
 5. **(Optional)** Store Stripe Product IDs as env vars: `STRIPE_PRODUCT_PRO_MONTHLY`, `STRIPE_PRODUCT_SINGLE`, `STRIPE_PRODUCT_ADDON`. Current code creates prices dynamically which works fine — this is an optimization.
 
-#### Step 2: Vercel Environment Variables
+#### Step 2: Vercel Environment Variables — DONE (2026-02-09)
 Set ALL of these in Vercel > Project Settings > Environment Variables:
 ```
 # Supabase
@@ -1391,3 +1391,98 @@ Comprehensive security penetration test covering 7 attack vectors with 6 paralle
 | `analyzer.py` | Audio analysis engine (~8200 lines) — DO NOT modify algorithms |
 | `interpretative_texts.py` | Bilingual interpretive text generator (ES/EN) |
 | `main.py` | FastAPI backend (sync + async endpoints) |
+
+---
+
+## SESSION LOG
+
+### Session 2026-02-09 — Stripe Setup & Account Activation
+
+**What was done:**
+1. Walked through full Stripe business account activation (onboarding wizard)
+   - Category: Software
+   - Statement descriptor: `MASTERINGREADY.COM` / Shortened: `MASTERINGR`
+   - Payout schedule: Manual (switch to automatic later)
+   - Tax calculation: Skipped (optional, enable later)
+   - Climate contributions: Skipped (optional, enable later)
+2. Obtained **live** Stripe API keys (pk_live + sk_live)
+3. Created webhook endpoint: `https://masteringready.com/api/webhooks/stripe`
+   - 6 events: `checkout.session.completed`, `invoice.paid`, `invoice.payment_failed`, `charge.failed`, `customer.subscription.deleted`, `customer.subscription.updated`
+   - Obtained webhook signing secret (whsec_...)
+4. Configured Customer Portal (Billing > Customer Portal):
+   - Payment methods: enabled
+   - Cancel subscriptions: enabled (at end of billing period)
+   - Collect cancellation reason: enabled
+5. Set all 3 Stripe env vars in Vercel (Production + Preview + Development):
+   - `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`
+   - `STRIPE_SECRET_KEY`
+   - `STRIPE_WEBHOOK_SECRET`
+6. Redeployed main site on Vercel with new env vars
+
+**Key decisions:**
+- Using live keys directly (not test mode) — account is in Live mode
+- Prices created dynamically at checkout time (no pre-created Stripe Products needed)
+- Payhip transition notice dismissed — eBook will move to MasteringReady site later
+
+**Still pending (from launch checklist):**
+- Step 3: Supabase Auth providers — IN PROGRESS (see Session 2 below)
+- Step 4: Domain & DNS verification
+- Step 5: Post-deploy verification (10-step test sequence)
+- Step 6: SEO (optional)
+
+### Session 2026-02-09 (Part 2) — OAuth Provider Setup
+
+**What was done:**
+1. **Google OAuth — COMPLETE**
+   - Created Google Cloud project: `MasteringReady` (project ID: `masteringready`)
+   - Configured OAuth consent screen (External, app name: MasteringReady)
+   - Created OAuth 2.0 Client ID (Web application: `MasteringReady Web`)
+     - Authorized JS origins: `https://masteringready.com`, `https://cetgbmrylzgaqnrlfamt.supabase.co`
+     - Authorized redirect URI: `https://cetgbmrylzgaqnrlfamt.supabase.co/auth/v1/callback`
+   - Client ID: `803761556910-daoe3i1j6qcq6oij5qqqkoag54u41efa.apps.googleusercontent.com`
+   - Plugged Client ID + Secret into Supabase > Authentication > Providers > Google (enabled + saved)
+   - **IMPORTANT: App is still in "Testing" mode** — must go to Google Cloud Console > Audience > "Publish App" before launch, otherwise only manually-added test users can log in
+
+2. **Facebook OAuth — NOT STARTED**
+   - Meta for Developers account created and registered
+   - Ready to create app at: https://developers.facebook.com/apps/
+   - Next steps:
+     1. Click "Create App" on the Meta apps page
+     2. Choose app type (Consumer or "Authenticate and request data from users with Facebook Login")
+     3. App name: `MasteringReady`
+     4. After creation, go to Facebook Login > Settings
+     5. Add Valid OAuth redirect URI: `https://cetgbmrylzgaqnrlfamt.supabase.co/auth/v1/callback`
+     6. Go to App Settings > Basic to get App ID + App Secret
+     7. Plug those into Supabase > Authentication > Providers > Facebook
+
+3. **Supabase URL Configuration — NOT YET DONE**
+   - Still need to set in Supabase > Authentication > URL Configuration:
+     - Site URL: `https://masteringready.com`
+     - Redirect URLs: `https://masteringready.com/auth/callback`, `https://masteringready-git-dev-matcarvys-projects.vercel.app/auth/callback`, `http://localhost:3000/auth/callback`
+
+### Session 2026-02-09 (Part 3) — Facebook OAuth + Supabase URL Config
+
+**What was done:**
+1. **Facebook OAuth — COMPLETE**
+   - Created Meta app: `MasteringReady` (App ID: `1634157831233542`)
+   - Use case: "Authenticate and request data from users with Facebook Login"
+   - No business portfolio connected
+   - App Settings > Basic: Privacy policy URL, Terms URL, User data deletion URL, Category (Business and pages) filled
+   - Permissions: `email` + `public_profile` both "Ready for testing"
+   - Facebook Login > Settings: Valid OAuth Redirect URI set to `https://cetgbmrylzgaqnrlfamt.supabase.co/auth/v1/callback`
+   - Supabase > Authentication > Providers > Facebook: enabled with App ID + Secret
+   - **App is in Development mode** — works for test users. Business verification + App Review needed for public launch.
+
+2. **Supabase URL Configuration — COMPLETE**
+   - Site URL: `https://masteringready.com`
+   - Redirect URLs (3): `https://masteringready.com/auth/callback`, `https://masteringready-git-dev-matcarvys-projects.vercel.app/auth/callback`, `http://localhost:3000/auth/callback`
+
+3. **Google OAuth — Published to Production**
+   - Google Cloud Console > Audience > "Publish app" — now "In production"
+   - Any Google account can log in (basic scopes only, no verification needed)
+
+**Still pending:**
+- Facebook OAuth: Business verification + App Review (for public access beyond test users — dev mode works for testing)
+- Step 4: Domain & DNS verification
+- Step 5: Post-deploy verification (10-step test sequence)
+- Step 6: SEO (optional)
