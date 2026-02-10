@@ -12,7 +12,7 @@ import Link from 'next/link'
 import { useAuth, UserMenu } from '@/components/auth'
 import { supabase, getUserAnalysisStatus, checkCanBuyAddon, UserDashboardStatus } from '@/lib/supabase'
 import { useGeo } from '@/lib/useGeo'
-import { getPlanDisplayPrice, PRICING } from '@/lib/geoip'
+import { getAllPricesForCountry } from '@/lib/pricing-config'
 import { detectLanguage, setLanguageCookie } from '@/lib/language'
 import {
   Music,
@@ -151,9 +151,7 @@ export default function SubscriptionPage() {
   const { geo } = useGeo()
   const t = translations[lang]
 
-  const proPrice = getPlanDisplayPrice(PRICING.PRO_MONTHLY, geo)
-  const singlePrice = getPlanDisplayPrice(PRICING.SINGLE, geo)
-  const addonPrice = getPlanDisplayPrice(PRICING.ADDON_PACK, geo)
+  const prices = getAllPricesForCountry(geo?.countryCode || 'US')
 
   // Detect language: cookie > timezone > browser
   useEffect(() => {
@@ -574,7 +572,7 @@ export default function SubscriptionPage() {
                     cursor: 'pointer'
                   }}
                 >
-                  {t.add10} ({addonPrice.showLocal ? `~${addonPrice.formattedLocal}` : addonPrice.formatted})
+                  {t.add10} ({prices.addon})
                 </button>
                 <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.5rem' }}>
                   {t.maxPacks}
@@ -621,20 +619,9 @@ export default function SubscriptionPage() {
 
               {/* Price */}
               <div style={{ textAlign: 'center', marginBottom: '1.25rem' }}>
-                {proPrice.showLocal ? (
-                  <>
-                    <span style={{ fontSize: 'clamp(1.5rem, 5vw, 2rem)', fontWeight: '700' }}>
-                      ~{proPrice.formattedLocal}
-                    </span>
-                    <span style={{ fontSize: '0.875rem', opacity: 0.9, display: 'block', marginTop: '0.25rem' }}>
-                      ({proPrice.formatted}{t.perMonth})
-                    </span>
-                  </>
-                ) : (
-                  <span style={{ fontSize: 'clamp(1.5rem, 5vw, 2rem)', fontWeight: '700' }}>
-                    {proPrice.formatted}{t.perMonth}
-                  </span>
-                )}
+                <span style={{ fontSize: 'clamp(1.5rem, 5vw, 2rem)', fontWeight: '700' }}>
+                  {prices.pro_monthly}{t.perMonth}
+                </span>
               </div>
 
               <button
@@ -689,7 +676,7 @@ export default function SubscriptionPage() {
                   cursor: 'pointer'
                 }}
               >
-                {t.buySingle} ({singlePrice.showLocal ? `~${singlePrice.formattedLocal}` : singlePrice.formatted})
+                {t.buySingle} ({prices.single})
               </button>
             </div>
           </>

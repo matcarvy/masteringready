@@ -9,7 +9,7 @@ import { startAnalysisPolling, getAnalysisStatus } from '@/lib/api'
 import { compressAudioFile } from '@/lib/audio-compression'
 import { supabase, checkCanAnalyze, AnalysisStatus } from '@/lib/supabase'
 import { useGeo } from '@/lib/useGeo'
-import { getPlanDisplayPrice, PRICING } from '@/lib/geoip'
+import { getAllPricesForCountry } from '@/lib/pricing-config'
 import { detectLanguage, setLanguageCookie } from '@/lib/language'
 import { getErrorMessage, ERROR_MESSAGES } from '@/lib/error-messages'
 
@@ -310,8 +310,7 @@ function Home() {
 
   // Geo detection for regional pricing
   const { geo } = useGeo()
-  const proPrice = getPlanDisplayPrice(PRICING.PRO_MONTHLY, geo)
-  const singlePrice = getPlanDisplayPrice(PRICING.SINGLE, geo)
+  const prices = getAllPricesForCountry(geo?.countryCode || 'US')
 
   // Store request ID for PDF download
   const requestIdRef = useRef<string>('')
@@ -4580,22 +4579,8 @@ by Matías Carvajal
                 fontWeight: '600',
                 marginBottom: '0.5rem'
               }}>
-                Mastering Ready Pro · {proPrice.showLocal ? (
-                  <>~{proPrice.formattedLocal}/{lang === 'es' ? 'mes' : 'mo'}</>
-                ) : (
-                  <>{proPrice.formatted}/{lang === 'es' ? 'mes' : 'mo'}</>
-                )}
+                Mastering Ready Pro · {prices.pro_monthly}/{lang === 'es' ? 'mes' : 'mo'}
               </p>
-              {proPrice.showLocal && (
-                <p style={{
-                  fontSize: '0.7rem',
-                  color: '#7c3aed',
-                  marginBottom: '0.5rem',
-                  fontStyle: 'italic'
-                }}>
-                  ({proPrice.formatted})
-                </p>
-              )}
               <ul style={{
                 margin: 0,
                 paddingLeft: '1.25rem',
@@ -4647,7 +4632,7 @@ by Matías Carvajal
                   boxSizing: 'border-box'
                 }}
               >
-                {lang === 'es' ? 'Comprar 1 análisis' : 'Buy 1 analysis'} ({singlePrice.showLocal ? `~${singlePrice.formattedLocal}` : singlePrice.formatted})
+                {lang === 'es' ? 'Comprar 1 análisis' : 'Buy 1 analysis'} ({prices.single})
               </a>
             </div>
           </div>
@@ -4925,23 +4910,9 @@ by Matías Carvajal
             </div>
 
             <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
-              {proPrice.showLocal ? (
-                <>
-                  <span style={{ fontSize: '1.75rem', fontWeight: '700', color: '#111827' }}>
-                    ~{proPrice.formattedLocal}
-                  </span>
-                  <span style={{ fontSize: '1rem', color: '#6b7280', display: 'block', marginTop: '0.25rem' }}>
-                    ({proPrice.formatted}/{lang === 'es' ? 'mes' : 'month'})
-                  </span>
-                  <span style={{ fontSize: '0.7rem', color: '#9ca3af', display: 'block', marginTop: '0.25rem' }}>
-                    {lang === 'es' ? 'Cobro en USD' : 'Charged in USD'}
-                  </span>
-                </>
-              ) : (
-                <span style={{ fontSize: '2rem', fontWeight: '700', color: '#111827' }}>
-                  {proPrice.formatted}/{lang === 'es' ? 'mes' : 'month'}
-                </span>
-              )}
+              <span style={{ fontSize: '2rem', fontWeight: '700', color: '#111827' }}>
+                {prices.pro_monthly}/{lang === 'es' ? 'mes' : 'month'}
+              </span>
             </div>
 
             <a
