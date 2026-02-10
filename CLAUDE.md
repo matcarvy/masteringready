@@ -1481,8 +1481,26 @@ Comprehensive security penetration test covering 7 attack vectors with 6 paralle
    - Google Cloud Console > Audience > "Publish app" — now "In production"
    - Any Google account can log in (basic scopes only, no verification needed)
 
-**Still pending:**
-- Facebook OAuth: Business verification + App Review (for public access beyond test users — dev mode works for testing)
-- Step 4: Domain & DNS verification
-- Step 5: Post-deploy verification (10-step test sequence)
-- Step 6: SEO (optional)
+4. **Facebook button hidden for launch** (`83d2530`)
+   - Filtered out Facebook from `SocialLoginButtons.tsx` — launch with Google + Email only
+   - Facebook OAuth fully configured (Meta app + Supabase) — just hidden until App Review approved
+   - To re-enable: remove `.filter(p => p.id !== 'facebook')` in SocialLoginButtons.tsx
+
+5. **Supabase auth settings verified**
+   - "Confirm email" ON for email+password signups (OAuth users auto-confirmed)
+   - Google "Allow users without an email" OFF (require email)
+
+6. **Domain & DNS — ALREADY CONFIGURED**
+   - Namecheap Advanced DNS: A record `@` → Vercel, CNAME `www` → Vercel
+   - `masteringready.com` live on Vercel (main branch)
+
+**Launch plan (Feb 11):**
+1. Final testing on dev preview URL
+2. Merge `dev` → `main`
+3. Vercel auto-deploys to `masteringready.com`
+4. Run 10-step post-deploy verification
+5. Live
+
+**Still pending (post-launch):**
+- Facebook OAuth: Submit for Meta App Review + Business Verification → re-enable button
+- SEO (optional): Google Search Console, OG image verification
