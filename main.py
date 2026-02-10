@@ -1077,14 +1077,17 @@ async def download_pdf(
     async with jobs_lock:
         if request_id not in jobs:
             logger.error(f"❌ Request ID not found: {request_id}")
-            raise HTTPException(status_code=404, detail="Analysis not found")
+            raise HTTPException(status_code=404, detail=bilingual_error('timeout', lang))
         
         job = jobs[request_id]
         
         # Accept both 'complete' and 'completed' for compatibility
         if job['status'] not in ['complete', 'completed']:
             logger.error(f"❌ Analysis not completed: {request_id} (status: {job['status']})")
-            raise HTTPException(status_code=400, detail="Analysis not completed yet")
+            raise HTTPException(
+                status_code=400,
+                detail="El análisis aún no ha terminado. Intenta de nuevo en unos segundos." if lang == 'es' else "Analysis not completed yet. Please try again in a few seconds."
+            )
         
         result = job['result']
     
@@ -1107,7 +1110,7 @@ async def download_pdf(
         
         if not success:
             logger.error(f"❌ PDF generation failed for {request_id}")
-            raise HTTPException(status_code=500, detail="Failed to generate PDF")
+            raise HTTPException(status_code=500, detail=bilingual_error('server_error', lang))
         
         # Prepare filename
         filename_base = result.get('filename', 'analisis').replace('.wav', '').replace('.mp3', '')
@@ -1158,7 +1161,7 @@ async def download_pdf(
         logger.error(f"❌ Error generating PDF: {e}")
         import traceback
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"PDF generation error: {str(e)}")
+        raise HTTPException(status_code=500, detail=bilingual_error('server_error', lang))
 
 
 # ============== STATS ENDPOINTS ==============
