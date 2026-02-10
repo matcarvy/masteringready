@@ -64,7 +64,7 @@ except ImportError:
     pass  # Fall back to system ffmpeg if available
 
 # Analyzer version - used in API responses for tracking
-ANALYZER_VERSION = "7.4.1"
+ANALYZER_VERSION = "7.4.2"
 
 # Import IP rate limiting and VPN detection
 try:
@@ -225,7 +225,7 @@ NEEDS_CONVERSION = {'.aac', '.m4a'}
 # Bilingual error messages (matching frontend lib/error-messages.ts)
 ERROR_MSGS = {
     'file_too_large': {
-        'es': 'El archivo es muy grande. El limite es 200MB. Intenta comprimir el audio o usa un formato mas ligero como MP3.',
+        'es': 'El archivo es muy grande. El límite es 200MB. Intenta comprimir el audio o usa un formato más ligero como MP3.',
         'en': 'File is too large. The limit is 200MB. Try compressing the audio or use a lighter format like MP3.',
     },
     'format_not_supported': {
@@ -233,15 +233,15 @@ ERROR_MSGS = {
         'en': 'This format is not supported. Please upload a WAV, MP3, AIFF, AAC, M4A or OGG file.',
     },
     'corrupt_file': {
-        'es': 'No pudimos leer este archivo. Puede estar corrupto o danado. Intenta exportarlo de nuevo desde tu DAW.',
+        'es': 'No pudimos leer este archivo. Puede estar corrupto o dañado. Intenta exportarlo de nuevo desde tu DAW.',
         'en': "We couldn't read this file. It may be corrupt or damaged. Try exporting it again from your DAW.",
     },
     'timeout': {
-        'es': 'El analisis esta tardando mas de lo esperado. Esto puede pasar con archivos muy largos. Intenta de nuevo o prueba con un archivo mas corto.',
+        'es': 'El análisis está tardando más de lo esperado. Esto puede pasar con archivos muy largos. Intenta de nuevo o prueba con un archivo más corto.',
         'en': 'The analysis is taking longer than expected. This can happen with very long files. Try again or use a shorter file.',
     },
     'server_error': {
-        'es': 'Algo salio mal en nuestro servidor. Por favor intenta de nuevo en unos minutos. Si el problema persiste, escribenos a mat@matcarvy.com',
+        'es': 'Algo salió mal en nuestro servidor. Por favor intenta de nuevo en unos minutos. Si el problema persiste, escríbenos a mat@matcarvy.com',
         'en': 'Something went wrong on our server. Please try again in a few minutes. If the problem persists, contact us at mat@matcarvy.com',
     },
 }
@@ -521,7 +521,7 @@ async def analyze_mix_endpoint(
             # GENERATE BOTH REPORTS - Frontend decides which to show
             logger.info("📝 Generating both report modes...")
             report_write = write_report(result, strict=strict, lang=lang, filename=file.filename)
-            report_short = generate_short_mode_report(result, lang, file.filename, strict)
+            report_short = generate_short_mode_report(result, strict=strict, lang=lang, filename=file.filename)
             
             # For backward compatibility, use mode to set primary report
             if mode == "short":
@@ -577,67 +577,6 @@ async def analyze_mix_endpoint(
 
 
 # ============== POLLING ENDPOINTS (Render Starter workaround) ==============
-
-def generate_short_mode_report(result: Dict[str, Any], lang: str, filename: str, strict: bool = False) -> str:
-    """Generate short mode report by removing technical details section"""
-    logger.info(f"🔧 SHORT MODE - Lang: {lang}")
-    
-    # Get full report first
-    full_report = write_report(result, strict=strict, lang=lang, filename=filename)
-    
-    logger.info(f"📏 Full report length: {len(full_report)}")
-    
-    # Find and remove technical details section
-    logger.info("🔍 Searching for tech section marker...")
-    
-    if lang == 'es':
-        marker_start = "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n📊 DETALLES TÉCNICOS COMPLETOS"
-        marker_end = "💡 Recomendación:"
-    else:
-        marker_start = "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n📊 COMPLETE TECHNICAL DETAILS"
-        marker_end = "💡 Recommendation:"
-    
-    logger.info(f"   Has marker_start: {marker_start in full_report}")
-    logger.info(f"   Has marker_end: {marker_end in full_report}")
-    
-    if marker_start in full_report and marker_end in full_report:
-        logger.info("✂️ Removing tech section...")
-        before = full_report.split(marker_start)[0]
-        after_parts = full_report.split(marker_end)
-        if len(after_parts) > 1:
-            recommendation = marker_end + after_parts[1]
-            result_report = before.strip() + "\n\n" + recommendation.strip()
-            logger.info(f"✅ Tech section removed. New length: {len(result_report)}")
-            return result_report
-    
-    # If markers not found, try to keep just the summary part
-    # Look for the intro and recommendation, skip middle sections
-    logger.warning("⚠️ Tech section markers not found")
-    
-    # For chunked analysis, just return intro + recommendation
-    if result.get('chunked', False):
-        logger.info("📦 Chunked analysis detected - generating simplified short report")
-        
-        # Extract just the intro part (before any technical details)
-        lines = full_report.split('\n')
-        short_lines = []
-        skip_mode = False
-        
-        for line in lines:
-            # Keep everything until we hit technical details
-            if '━━━' in line or '📊' in line or 'TECHNICAL' in line or 'TÉCNICOS' in line:
-                skip_mode = True
-            elif '💡' in line or 'Recomendación' in line or 'Recommendation' in line:
-                skip_mode = False
-            
-            if not skip_mode:
-                short_lines.append(line)
-        
-        return '\n'.join(short_lines)
-    
-    logger.warning("   Returning full report")
-    return full_report
-
 
 @app.post("/api/analyze/start")
 async def start_analysis(
@@ -915,9 +854,9 @@ async def start_analysis(
                 short_func = functools.partial(
                     generate_short_mode_report,
                     result,
-                    strict,
-                    lang,
-                    file.filename
+                    strict=strict,
+                    lang=lang,
+                    filename=file.filename
                 )
                 report_short = await loop.run_in_executor(None, short_func)
                 

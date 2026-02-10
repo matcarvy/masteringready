@@ -1,5 +1,5 @@
 /**
- * Mastering Ready - Supabase Client Configuration
+ * MasteringReady - Supabase Client Configuration
  * Configuración del Cliente de Supabase
  *
  * This file provides Supabase client instances for both

@@ -2,8 +2,8 @@
 
 /**
  * Login Page / Página de Inicio de Sesión
- * Supports email/password and OAuth (Google, Apple, Facebook)
- * Soporta email/contraseña y OAuth (Google, Apple, Facebook)
+ * Supports email/password and OAuth (Google, Facebook)
+ * Soporta email/contraseña y OAuth (Google, Facebook)
  */
 
 import { useState, useEffect, Suspense } from 'react'
@@ -21,7 +21,7 @@ import { Headphones, Mail, Lock, ArrowLeft, Eye, EyeOff } from 'lucide-react'
 const translations = {
   es: {
     title: 'Iniciar Sesión',
-    subtitle: 'Bienvenido de vuelta a MasteringReady',
+    subtitle: 'Bienvenido de vuelta a Mastering Ready',
     email: 'Correo electrónico',
     password: 'Contraseña',
     forgotPassword: '¿Olvidaste tu contraseña?',
@@ -38,7 +38,7 @@ const translations = {
   },
   en: {
     title: 'Sign In',
-    subtitle: 'Welcome back to MasteringReady',
+    subtitle: 'Welcome back to Mastering Ready',
     email: 'Email address',
     password: 'Password',
     forgotPassword: 'Forgot your password?',
@@ -117,8 +117,11 @@ function LoginContent() {
       }
 
       if (data.user) {
-        // Redirect to home or intended page
-        const redirectTo = searchParams.get('redirect') || '/'
+        // Redirect to home or intended page (validate to prevent open redirect)
+        let redirectTo = searchParams.get('redirect') || '/'
+        if (!redirectTo.startsWith('/') || redirectTo.startsWith('//')) {
+          redirectTo = '/'
+        }
         router.push(redirectTo)
       }
     } catch (err) {

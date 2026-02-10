@@ -1381,13 +1381,13 @@ def calculate_metrics_bars_percentages(metrics: List[Dict[str, Any]], strict: bo
     # Tooltips by status (Mastering Ready philosophy)
     tooltips = {
         "es": {
-            "excellent": "Dentro del rango recomendado por MasteringReady.",
+            "excellent": "Dentro del rango recomendado por Mastering Ready.",
             "good": "Funcional, con margen suficiente para el máster.",
             "warning": "Revisar si buscas máxima compatibilidad y margen.",
             "critical": "Revisión prioritaria antes del máster final."
         },
         "en": {
-            "excellent": "Within MasteringReady recommended range.",
+            "excellent": "Within Mastering Ready recommended range.",
             "good": "Functional, with sufficient margin for mastering.",
             "warning": "Review if you want maximum compatibility and margin.",
             "critical": "Priority review before final master."
@@ -2202,8 +2202,9 @@ def analyze_lr_balance_temporal(y: np.ndarray, sr: int, threshold: float = 3.0) 
             else:
                 # Save previous region and start new one
                 avg_balance = sum(w['balance_db'] for w in current_region_windows) / len(current_region_windows)
-                max_severity = max(w['severity'] for w in current_region_windows)
-                
+                _sev_rank = {'ok': 0, 'warning': 1, 'critical': 2}
+                max_severity = max((w['severity'] for w in current_region_windows), key=lambda s: _sev_rank.get(s, 0))
+
                 problem_regions.append({
                     "start": format_timestamp(current_region_start),
                     "end": format_timestamp(current_region_end),
@@ -2216,10 +2217,10 @@ def analyze_lr_balance_temporal(y: np.ndarray, sr: int, threshold: float = 3.0) 
                 current_region_start = curr_time
                 current_region_end = curr_time
                 current_region_windows = [problem_windows[i]]
-        
+
         # Don't forget the last region
         avg_balance = sum(w['balance_db'] for w in current_region_windows) / len(current_region_windows)
-        max_severity = max(w['severity'] for w in current_region_windows)
+        max_severity = max((w['severity'] for w in current_region_windows), key=lambda s: _sev_rank.get(s, 0))
         
         problem_regions.append({
             "start": format_timestamp(current_region_start),
@@ -5137,10 +5138,11 @@ def analyze_file_chunked(
         weighted_lufs = -23.0
         lufs_reliable = False
     
-    # PLR: difference between peak and LUFS
+    # PLR: difference between TRUE PEAK and LUFS
     # v7.4.0 FIX: Only calculate PLR if LUFS is reliable
+    # v7.4.2 FIX: Use final_tp (true peak) not final_peak (sample peak) — PLR is Peak-to-Loudness Ratio using True Peak
     if lufs_reliable:
-        final_plr = final_peak - weighted_lufs
+        final_plr = final_tp - weighted_lufs
         plr_reliable = True
     else:
         final_plr = None
@@ -5497,6 +5499,12 @@ def analyze_file_chunked(
         strict
     )
     
+    # v7.4.2 FIX: Severity ranking for correct max() comparison
+    # String max() is alphabetical ("warning" > "critical") which is wrong
+    _SEVERITY_RANK = {'ok': 0, 'warning': 1, 'critical': 2}
+    def _max_severity(chunks):
+        return max((c['severity'] for c in chunks), key=lambda s: _SEVERITY_RANK.get(s, 0))
+
     # Build comprehensive stereo temporal analysis
     stereo_temporal = None
     has_stereo_problems = (
@@ -5535,7 +5543,7 @@ def analyze_file_chunked(
                     'duration': r['end'] - r['start'],
                     'avg_correlation': avg_corr,
                     'issue': _classify_correlation_issue(avg_corr),  # FIX: Reclassify based on average
-                    'severity': max(c['severity'] for c in r['chunks']),
+                    'severity': _max_severity(r['chunks']),
                     'band_correlation': avg_band_corr  # v7.3.35: Per-band analysis
                 })
             
@@ -5556,7 +5564,7 @@ def analyze_file_chunked(
                         'duration': r['end'] - r['start'],
                         'avg_ms_ratio': sum(c['ms_ratio'] for c in r['chunks']) / len(r['chunks']),
                         'issue': r['chunks'][0]['issue'],  # 'mono' or 'too_wide'
-                        'severity': max(c['severity'] for c in r['chunks'])
+                        'severity': _max_severity(r['chunks'])
                     }
                     for r in ms_regions[:25]
                 ]
@@ -5574,7 +5582,7 @@ def analyze_file_chunked(
                         'duration': r['end'] - r['start'],
                         'avg_balance_db': sum(c['lr_balance_db'] for c in r['chunks']) / len(r['chunks']),
                         'side': r['chunks'][0]['side'],  # 'left' or 'right'
-                        'severity': max(c['severity'] for c in r['chunks'])
+                        'severity': _max_severity(r['chunks'])
                     }
                     for r in lr_regions[:25]
                 ]
@@ -7730,7 +7738,7 @@ def generate_complete_pdf(
                 ))
                 
                 # Footer note
-                footer_note = "Basado en criterios de MasteringReady para compatibilidad, margen y traducción." if lang == 'es' else "Based on MasteringReady criteria for compatibility, margin and translation."
+                footer_note = "Basado en criterios de Mastering Ready para compatibilidad, margen y traducción." if lang == 'es' else "Based on Mastering Ready criteria for compatibility, margin and translation."
                 story.append(Paragraph(
                     clean_text_for_pdf(footer_note),
                     ParagraphStyle('FooterNote', parent=body_style, fontSize=7, textColor=colors.HexColor('#9ca3af'), alignment=TA_CENTER)
@@ -7990,7 +7998,7 @@ def generate_complete_pdf(
         )
         
         story.append(Paragraph(
-            "Analizado con MasteringReady" if lang == 'es' else "Analyzed with MasteringReady",
+            "Analizado con Mastering Ready" if lang == 'es' else "Analyzed with Mastering Ready",
             footer_style
         ))
         story.append(Paragraph("www.masteringready.com", footer_style))

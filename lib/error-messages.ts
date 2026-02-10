@@ -3,7 +3,7 @@
 
 export const ERROR_MESSAGES = {
   file_too_large: {
-    es: 'El archivo es muy grande. El limite es 200MB. Intenta comprimir el audio o usa un formato mas ligero como MP3.',
+    es: 'El archivo es muy grande. El límite es 200MB. Intenta comprimir el audio o usa un formato más ligero como MP3.',
     en: 'File is too large. The limit is 200MB. Try compressing the audio or use a lighter format like MP3.',
   },
   format_not_supported: {
@@ -11,19 +11,19 @@ export const ERROR_MESSAGES = {
     en: 'This format is not supported. Please upload a WAV, MP3, AIFF, AAC, M4A or OGG file.',
   },
   corrupt_file: {
-    es: 'No pudimos leer este archivo. Puede estar corrupto o danado. Intenta exportarlo de nuevo desde tu DAW.',
+    es: 'No pudimos leer este archivo. Puede estar corrupto o dañado. Intenta exportarlo de nuevo desde tu DAW.',
     en: "We couldn't read this file. It may be corrupt or damaged. Try exporting it again from your DAW.",
   },
   timeout: {
-    es: 'El analisis esta tardando mas de lo esperado. Esto puede pasar con archivos muy largos. Intenta de nuevo o prueba con un archivo mas corto.',
+    es: 'El análisis está tardando más de lo esperado. Esto puede pasar con archivos muy largos. Intenta de nuevo o prueba con un archivo más corto.',
     en: 'The analysis is taking longer than expected. This can happen with very long files. Try again or use a shorter file.',
   },
   server_error: {
-    es: 'Algo salio mal en nuestro servidor. Por favor intenta de nuevo en unos minutos. Si el problema persiste, escribenos a mat@matcarvy.com',
+    es: 'Algo salió mal en nuestro servidor. Por favor intenta de nuevo en unos minutos. Si el problema persiste, escríbenos a mat@matcarvy.com',
     en: 'Something went wrong on our server. Please try again in a few minutes. If the problem persists, contact us at mat@matcarvy.com',
   },
   offline: {
-    es: 'Parece que perdiste la conexion. Verifica tu internet e intenta de nuevo.',
+    es: 'Parece que perdiste la conexión. Verifica tu internet e intenta de nuevo.',
     en: 'It looks like you lost connection. Check your internet and try again.',
   },
 } as const

@@ -53,7 +53,7 @@ const translations = {
     or: 'o continúa con',
     // Benefits
     benefit1: 'Ver análisis completo sin blur',
-    benefit2: 'Guardar en tu dashboard',
+    benefit2: 'Guardar en Mis Análisis',
     benefit3: '1 análisis extra gratis',
     // Validation errors
     nameRequired: 'El nombre es requerido',
@@ -91,7 +91,7 @@ const translations = {
     or: 'or continue with',
     // Benefits
     benefit1: 'See full analysis without blur',
-    benefit2: 'Save to your dashboard',
+    benefit2: 'Save to My Analyses',
     benefit3: '1 extra free analysis',
     // Validation errors
     nameRequired: 'Name is required',

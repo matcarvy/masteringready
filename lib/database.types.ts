@@ -1,5 +1,5 @@
 /**
- * Mastering Ready - Supabase Database Types
+ * MasteringReady - Supabase Database Types
  * Auto-generated types for TypeScript integration
  *
  * To regenerate after schema changes:

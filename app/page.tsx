@@ -2502,7 +2502,7 @@ by Matías Carvajal
                           📊 {lang === 'es' ? 'Áreas de Atención Prioritaria' : 'Priority Attention Areas'}
                         </h4>
                         
-                        {/* Subtexto explicativo - Mastering Ready philosophy */}
+                        {/* Subtexto explicativo - MasteringReady philosophy */}
                         <p style={{
                           fontSize: '0.7rem',
                           color: '#6b7280',
@@ -2599,7 +2599,7 @@ by Matías Carvajal
                           })()}
                         </div>
                         
-                        {/* Legend - Mastering Ready philosophy: margin, not judgment */}
+                        {/* Legend - MasteringReady philosophy: margin, not judgment */}
                         <div style={{ 
                           display: 'flex', 
                           flexWrap: 'wrap',
@@ -3527,9 +3527,9 @@ by Matías Carvajal
                   color: '#64748b',
                   margin: 0
                 }}>
-                  {lang === 'es' 
-                    ? '15 USD hasta el 31 de enero con código READY15'
-                    : '15 USD until January 31 with code READY15'}
+                  {lang === 'es'
+                    ? '15 USD con código READY15'
+                    : '15 USD with code READY15'}
                 </p>
                 <p style={{
                   fontSize: '0.75rem',
@@ -5066,7 +5066,7 @@ by Matías Carvajal
           margin-top: 0.25rem;
         }
         
-        /* Mastering Ready baja para alinearse */
+        /* MasteringReady baja para alinearse */
         .footer-grid > div:first-child > div:first-child {
           margin-bottom: 0.75rem;
           margin-top: 0.25rem;

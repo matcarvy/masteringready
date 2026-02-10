@@ -320,9 +320,9 @@ const translations = {
     fetchError: 'Error al cargar datos. Intenta actualizar.',
     accessDenied: 'Acceso restringido',
     accessDeniedMsg: 'No tienes permisos de administrador.',
-    loginRequired: 'Iniciar sesion',
-    loginRequiredMsg: 'Inicia sesion para acceder al panel de administracion.',
-    loginButton: 'Iniciar sesion'
+    loginRequired: 'Iniciar sesión',
+    loginRequiredMsg: 'Inicia sesión para acceder al panel de administración.',
+    loginButton: 'Iniciar sesión'
   },
   en: {
     adminPanel: 'Admin Panel',
@@ -543,13 +543,13 @@ function AdminLoginForm({ lang }: { lang: 'es' | 'en' }) {
   const [error, setError] = useState<string | null>(null)
 
   const t = lang === 'es' ? {
-    title: 'Panel de administracion',
-    subtitle: 'Inicia sesion para acceder',
-    email: 'Correo electronico',
-    password: 'Contrasena',
-    button: 'Iniciar sesion',
+    title: 'Panel de administración',
+    subtitle: 'Inicia sesión para acceder',
+    email: 'Correo electrónico',
+    password: 'Contraseña',
+    button: 'Iniciar sesión',
     loggingIn: 'Verificando...',
-    invalid: 'Credenciales invalidas',
+    invalid: 'Credenciales inválidas',
     error: 'Error. Intenta de nuevo.'
   } : {
     title: 'Admin panel',

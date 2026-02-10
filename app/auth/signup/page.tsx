@@ -2,8 +2,8 @@
 
 /**
  * Signup Page / Página de Registro
- * Supports email/password and OAuth (Google, Apple, Facebook)
- * Soporta email/contraseña y OAuth (Google, Apple, Facebook)
+ * Supports email/password and OAuth (Google, Facebook)
+ * Soporta email/contraseña y OAuth (Google, Facebook)
  */
 
 import { useState, useEffect, Suspense } from 'react'

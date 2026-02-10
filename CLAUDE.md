@@ -227,7 +227,9 @@ Test in this order:
 - Privacy: never store audio files, only derived analysis data
 - Auth: Google OAuth, Facebook OAuth, Email+Password (Apple removed)
 - i18n: language ONLY changes if user explicitly changes it (golden rule). Detect browser lang → ES LATAM or US EN → persist via cookie.
-- Analyzer version: 7.4.1 (9 bugs from v7.3.51 + band correlation None fixes + scoring gap fix + dead param cleanup)
+- Analyzer version: 7.4.2 (v7.4.1 + chunked PLR True Peak fix + severity string max fix + duplicate generate_short_mode_report removed)
+- Brand name rule: "Mastering Ready" (with space) in ALL user-facing text. "MasteringReady" (no space) ONLY for URLs, domains, code identifiers, email addresses. NEVER "MasteringReady" in display text.
+- IP rate limiting: ON by default (`ip_limiter.py:21` default='true'). Will be active on merge to main/Render deploy.
 
 ---
 
@@ -1504,3 +1506,113 @@ Comprehensive security penetration test covering 7 attack vectors with 6 paralle
 **Still pending (post-launch):**
 - Facebook OAuth: Submit for Meta App Review + Business Verification → re-enable button
 - SEO (optional): Google Search Console, OG image verification
+
+### Session 2026-02-10 (Part 4) — Full Audit + Bug Fixes + Brand Name Correction
+
+**Context**: Continued from Part 3 (ran out of context). Comprehensive pre-launch audit session.
+
+**4 parallel audit agents launched:**
+1. Frontend UI/UX bilingual audit
+2. Security audit (full penetration test simulation)
+3. Analyzer backend audit
+4. Code quality and performance audit
+
+**Audit findings and fixes applied:**
+
+#### Brand Name Correction (CRITICAL)
+- Brand name is "Mastering Ready" WITH space in user-facing text
+- "MasteringReady" (no space) ONLY for URLs, domains, code identifiers
+- Previous session incorrectly replaced all instances to no-space — reverted ~83 user-facing strings across 14 files
+
+#### Security Fixes
+1. **Open redirect** (`app/auth/login/page.tsx`): Validates `redirect` param starts with `/` and not `//`
+2. **CSP img-src** (`next.config.js`): Added Google/Facebook avatar CDN domains
+3. **HSTS header** (`next.config.js`): Added `Strict-Transport-Security: max-age=63072000; includeSubDomains; preload`
+4. **Country code verification** (`app/api/checkout/route.ts`): Server-side `X-Vercel-IP-Country` header validation prevents pricing manipulation
+
+#### Analyzer Fixes (v7.4.1 → v7.4.2)
+1. **Chunked PLR bug** (`analyzer.py:5143`): Changed `final_peak` (sample peak) to `final_tp` (True Peak) — PLR by definition uses True Peak. Non-chunked path was already correct.
+2. **String severity max() bug** (5 locations total):
+   - `analyzer.py:5543, 5565, 5583` (chunked stereo temporal) — added `_SEVERITY_RANK` dict + `_max_severity()` helper
+   - `analyzer.py:2205, 2222` (`analyze_lr_balance_temporal()`) — same fix with `_sev_rank` dict
+   - Bug: Python `max()` on strings is alphabetical — "warning" > "critical" when it should be the reverse
+3. **Duplicate `generate_short_mode_report`** (`main.py:581-639`): Deleted local shadowing function that did fragile string surgery. Sync endpoint now uses imported analyzer.py version (clean bullet-point format). Fixed argument order to use keyword args.
+4. **Version bumped** to `7.4.2`
+
+#### Spanish Accent Fixes
+1. **Backend `main.py` ERROR_MSGS** (BLOCKER): All 5 Spanish error messages were missing accents — límite, más, dañado, análisis, está, salió, escríbenos
+2. **Frontend `lib/error-messages.ts`**: "escribenos" → "escríbenos"
+3. **Admin login form** (`app/admin/page.tsx`): administración, sesión, electrónico, Contraseña, inválidas
+4. **Forbidden word** (`components/auth/AuthModal.tsx`): "dashboard" → "Mis Análisis" / "My Analyses"
+
+#### Other Fixes
+- Stale eBook promo "until January 31" removed (`app/page.tsx`)
+- Bilingual legal dates on privacy + terms pages
+- Apple references removed from JSDoc comments
+- Facebook button already hidden (Google + Email only for launch)
+
+**Comprehensive final audit results:**
+- BLOCKERS: 0 remaining (2 found, 2 fixed)
+- HIGH: 0 remaining (brand name fixed, accents fixed)
+- MEDIUM: 6 (all post-launch — CSP unsafe-inline, admin page shell visible, TXT download headers, touch targets on non-interactive elements, Facebook provider defined but filtered, em dashes in comments)
+- LOW: 5 (duplicate cleanReportText, hardcoded fallback API URL, SEO English-only, Search Console placeholder, Swagger UI disabled)
+- PASS: 37 checks across security, auth, payments, quota defense, analyzer accuracy, mobile, iOS
+
+**Merge notes (dev → main):**
+- IP rate limiting will be ACTIVE by default (`ip_limiter.py:21` default='true')
+- Analyzer version 7.4.2 (PLR + severity + dedup fixes)
+- All security headers active (CSP, HSTS, X-Frame-Options, nosniff)
+- Facebook hidden, Google + Email only
+
+**Still pending for Feb 10-11:**
+- Data erasure (clean test data from Supabase before launch)
+- Admin test analyzer (`is_test_analysis` flag) for testing without polluting data
+- Shared secret Vercel ↔ Render (`X-API-Secret` header) — ~15 min post-launch task
+- Dev → main merge + post-deploy verification
+- Launch
+
+**Git state**: dev branch, build clean. All changes uncommitted (pending user request to commit).
+
+### Session 2026-02-10 (Part 5) — Final Pre-Launch Audit (4 Agents)
+
+**Context**: Continued from Part 4 (ran out of context). Final audit before Feb 11 launch.
+
+**4 parallel final audit agents launched:**
+1. Text, brand name, i18n audit
+2. Security and payments audit
+3. Analyzer accuracy audit
+4. Build, UI, mobile audit
+
+**Results — ALL 4 LAUNCH READY:**
+
+| Audit Area | Verdict | BLOCKER | HIGH | MEDIUM | LOW |
+|---|---|---|---|---|---|
+| Security & Payments | LAUNCH READY | 0 | 0 | 2 | 3 |
+| Text, Brand, i18n | LAUNCH READY (after fixes) | 1→0 | 1→0 | 0 | 0 |
+| Analyzer Accuracy | LAUNCH READY | 0 | 0 | 1 | 2 |
+| Build, UI, Mobile | LAUNCH READY | 0 | 0 | 3 | 2 |
+
+**BLOCKER fixed:**
+- `analyzer.py` lines 1384, 1390, 7741, 8001: "MasteringReady" (no space) in PDF user-facing text → changed to "Mastering Ready" (with space). Now zero "MasteringReady" in analyzer.py.
+
+**HIGH fixed:**
+- `app/admin/page.tsx` lines 323-325: Missing Spanish accents in admin login strings — `sesion` → `sesión`, `administracion` → `administración`
+
+**MEDIUM items (all post-launch safe):**
+- Chunked hard_fail missing clipping check (analyzer — reporting only, per rules)
+- Password toggle touch target 18px on auth pages (common pattern, not blocking)
+- 4 conversion modals intentionally lack backdrop dismiss
+- Admin grid overflow on very small screens (admin-only)
+- Security items (known, documented)
+
+**LOW items (7 total, all cosmetic):**
+- PDF endpoint exposes raw Python exception string
+- PDF error messages not bilingual
+- Language toggle height under 44px
+- Dashboard modals no backdrop dismiss
+
+**Verification:**
+- `grep "MasteringReady" analyzer.py` → zero matches
+- `npx next build` → clean, all 22 routes compiled, zero errors
+
+**Git state**: dev branch, build clean. All changes uncommitted (commit scheduled for Feb 11).

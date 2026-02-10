@@ -26,7 +26,7 @@ interface CheckoutRequest {
 
 // Product names for Stripe
 const PRODUCT_NAMES = {
-  pro_monthly: 'MasteringReady Pro',
+  pro_monthly: 'Mastering Ready Pro',
   single: 'Single Analysis',
   addon: 'Pro Add-on Pack'
 } as const
@@ -35,7 +35,11 @@ export async function POST(request: NextRequest) {
   try {
     // Parse request body
     const body: CheckoutRequest = await request.json()
-    const { productType, countryCode = 'US' } = body
+    const { productType, countryCode: clientCountryCode = 'US' } = body
+
+    // Verify country code server-side to prevent pricing manipulation
+    const serverCountry = request.headers.get('x-vercel-ip-country') || clientCountryCode
+    const countryCode = serverCountry || 'US'
 
     if (!productType || !['pro_monthly', 'single', 'addon'].includes(productType)) {
       return NextResponse.json(

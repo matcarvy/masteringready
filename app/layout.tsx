@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import { AuthProvider } from '@/components/auth'
 
 // =============================================================================
-// SEO METADATA - Mastering Ready
+// SEO METADATA - MasteringReady
 // =============================================================================
 
 const siteConfig = {

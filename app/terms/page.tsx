@@ -320,7 +320,7 @@ export default function TermsPage() {
             color: '#6b7280',
             fontSize: '0.875rem'
           }}>
-            {t.lastUpdated}: 28 de enero de 2026
+            {t.lastUpdated}: {lang === 'es' ? '28 de enero de 2026' : 'January 28, 2026'}
           </p>
         </div>
 
