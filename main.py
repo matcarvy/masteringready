@@ -399,9 +399,11 @@ async def root():
 @app.get("/health")
 async def health_check():
     """Detailed health check."""
+    import sys
     return {
         "status": "healthy",
         "version": ANALYZER_VERSION,
+        "python": sys.version,
         "analyzer_loaded": True,
         "privacy": "In-memory processing, auto-delete guaranteed",
         "timestamp": datetime.utcnow().isoformat()
