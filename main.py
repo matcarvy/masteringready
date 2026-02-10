@@ -408,31 +408,6 @@ async def health_check():
     }
 
 
-@app.get("/debug/test-analyze")
-async def debug_test_analyze():
-    """TEMPORARY: Test analyzer with a generated tone to diagnose errors. Remove before launch."""
-    import traceback, struct, math, wave, io
-    try:
-        # Generate a minimal valid WAV in memory
-        buf = io.BytesIO()
-        with wave.open(buf, 'w') as w:
-            w.setnchannels(2)
-            w.setsampwidth(2)
-            w.setframerate(44100)
-            for i in range(44100 * 2):  # 2 seconds
-                v = int(16000 * math.sin(2 * math.pi * 440 * i / 44100))
-                w.writeframes(struct.pack('<hh', v, v))
-        buf.seek(0)
-        # Write to temp file
-        with tempfile.NamedTemporaryFile(delete=True, suffix='.wav') as tf:
-            tf.write(buf.read())
-            tf.flush()
-            info = sf.info(tf.name)
-            result = analyze_file(Path(tf.name), lang='es', strict=False)
-            return {"status": "ok", "score": result["score"], "sf_info": str(info)}
-    except Exception as e:
-        return {"status": "error", "type": type(e).__name__, "message": str(e), "traceback": traceback.format_exc()}
-
 
 # ============== MAIN ANALYZER ENDPOINT ==============
 @app.post("/api/analyze/mix")
