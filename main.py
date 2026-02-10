@@ -399,11 +399,31 @@ async def root():
 @app.get("/health")
 async def health_check():
     """Detailed health check."""
-    import sys
+    import sys, traceback, struct, math, wave, io
+    # Quick inline analyzer test
+    test_result = "not_run"
+    try:
+        buf = io.BytesIO()
+        with wave.open(buf, 'w') as w:
+            w.setnchannels(2)
+            w.setsampwidth(2)
+            w.setframerate(44100)
+            for i in range(44100 * 2):
+                v = int(16000 * math.sin(2 * math.pi * 440 * i / 44100))
+                w.writeframes(struct.pack('<hh', v, v))
+        buf.seek(0)
+        with tempfile.NamedTemporaryFile(delete=True, suffix='.wav') as tf:
+            tf.write(buf.read())
+            tf.flush()
+            result = analyze_file(Path(tf.name), lang='es', strict=False)
+            test_result = f"ok_score_{result['score']}"
+    except Exception as e:
+        test_result = f"{type(e).__name__}: {e}\n{traceback.format_exc()}"
     return {
         "status": "healthy",
         "version": ANALYZER_VERSION,
         "python": sys.version,
+        "analyzer_test": test_result,
         "analyzer_loaded": True,
         "privacy": "In-memory processing, auto-delete guaranteed",
         "timestamp": datetime.utcnow().isoformat()
