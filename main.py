@@ -408,28 +408,6 @@ async def health_check():
     }
 
 
-@app.get("/debug/test-analyze")
-async def debug_test_analyze():
-    """TEMPORARY debug endpoint."""
-    import traceback, struct, math, wave, io
-    try:
-        buf = io.BytesIO()
-        with wave.open(buf, 'w') as w:
-            w.setnchannels(2)
-            w.setsampwidth(2)
-            w.setframerate(44100)
-            for i in range(44100 * 2):
-                v = int(16000 * math.sin(2 * math.pi * 440 * i / 44100))
-                w.writeframes(struct.pack('<hh', v, v))
-        buf.seek(0)
-        with tempfile.NamedTemporaryFile(delete=True, suffix='.wav') as tf:
-            tf.write(buf.read())
-            tf.flush()
-            result = analyze_file(Path(tf.name), lang='es', strict=False)
-            return {"status": "ok", "score": result["score"]}
-    except Exception as e:
-        return {"status": "error", "type": type(e).__name__, "message": str(e), "traceback": traceback.format_exc()}
-
 
 
 # ============== MAIN ANALYZER ENDPOINT ==============
