@@ -411,12 +411,13 @@ function DashboardContent() {
       setLoading(true)
 
       try {
-        // Parallel fetch: profile + subscription + analyses + status (all use user.id directly, no redundant auth call)
-        const [profileResult, subResult, analysesResult, statusResult] = await Promise.all([
+        // Parallel fetch: profile + subscription + analyses + status + addon check (all use user.id directly, no redundant auth call)
+        const [profileResult, subResult, analysesResult, statusResult, addonResult] = await Promise.all([
           supabase.from('profiles').select('*').eq('id', user.id).single(),
           supabase.from('subscriptions').select('*, plan:plans(type, name)').eq('user_id', user.id).eq('status', 'active').single(),
           supabase.from('analyses').select('*').eq('user_id', user.id).is('deleted_at', null).order('created_at', { ascending: false }).limit(50),
-          supabase.rpc('get_user_analysis_status', { p_user_id: user.id })
+          supabase.rpc('get_user_analysis_status', { p_user_id: user.id }),
+          supabase.rpc('can_buy_addon', { p_user_id: user.id })
         ])
 
         if (cancelled) return
@@ -469,11 +470,10 @@ function DashboardContent() {
             }
           }
 
-          // Check if Pro user can buy addon (inline RPC to skip redundant auth call)
+          // Use addon result from parallel batch
           if (!cancelled && status.plan_type === 'pro') {
-            const { data: addonData } = await supabase.rpc('can_buy_addon', { p_user_id: user.id })
-            const addonResult = addonData ? (Array.isArray(addonData) ? addonData[0] : addonData) : null
-            if (!cancelled) setCanBuyAddon(addonResult?.can_buy ?? false)
+            const addon = addonResult.data ? (Array.isArray(addonResult.data) ? addonResult.data[0] : addonResult.data) : null
+            setCanBuyAddon(addon?.can_buy ?? false)
           }
         }
       } catch (error) {
