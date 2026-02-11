@@ -270,7 +270,7 @@ export default function SubscriptionPage() {
   const usedAnalyses = userStatus?.analyses_used || 0
   const maxAnalyses = isPro ? 30 : 2
   const remaining = isPro
-    ? Math.min(30, Math.max(0, 30 - usedAnalyses + (userStatus?.addon_remaining || 0)))
+    ? Math.max(0, 30 - usedAnalyses)
     : Math.max(0, 2 - usedAnalyses)
 
   // Safety timeout — if loading hangs for more than 10s, force stop
