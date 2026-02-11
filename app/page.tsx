@@ -320,6 +320,7 @@ function Home() {
     if (!user) { setIsPro(false); setHasPaidAccess(false); return }
     // Admin always has full access
     if (isAdmin) { setHasPaidAccess(true); return }
+    let cancelled = false
     const checkAccess = async () => {
       // Check Pro subscription
       const { data: subData } = await supabase
@@ -328,6 +329,7 @@ function Home() {
         .eq('user_id', user.id)
         .eq('status', 'active')
         .single()
+      if (cancelled) return
       const isProUser = subData?.plan?.type === 'pro' || subData?.plan?.type === 'studio'
       setIsPro(isProUser)
 
@@ -343,9 +345,11 @@ function Home() {
         .eq('user_id', user.id)
         .eq('status', 'succeeded')
         .limit(1)
+      if (cancelled) return
       setHasPaidAccess((purchases && purchases.length > 0) || false)
     }
     checkAccess()
+    return () => { cancelled = true }
   }, [user, isAdmin])
 
   // Mobile detection
