@@ -799,7 +799,7 @@ const handleAnalyze = async () => {
     
     // POLL FOR RESULT
     let pollAttempts = 0
-    const maxPollAttempts = 60  // 60 attempts * 3 sec = 3 min max
+    const maxPollAttempts = 120  // 120 attempts * 1.5 sec = 3 min max
     
     const pollForResult = async (): Promise<any> => {
       return new Promise((resolve, reject) => {
@@ -834,7 +834,7 @@ const handleAnalyze = async () => {
             reject(pollError)
           }
           
-        }, 3000)  // Poll every 3 seconds
+        }, 1500)  // Poll every 1.5 seconds
       })
     }
     
