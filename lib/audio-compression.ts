@@ -142,7 +142,7 @@ export async function compressAudioFile(
 }
 
 // Parse bit depth, sample rate, and channel count from WAV/AIFF file header
-function parseFileHeader(arrayBuffer: ArrayBuffer, fileName: string): { bitDepth: number; sampleRate: number | null; numberOfChannels: number | null } {
+export function parseFileHeader(arrayBuffer: ArrayBuffer, fileName: string): { bitDepth: number; sampleRate: number | null; numberOfChannels: number | null } {
   const name = fileName.toLowerCase()
 
   // WAV: RIFF header — fmt chunk contains sampleRate + bitsPerSample + numChannels

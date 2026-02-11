@@ -1303,7 +1303,7 @@ function DashboardContent() {
               if (selectedAnalysis.file_size_bytes != null) items.push({ label: t.fileInfo.fileSize, value: formatFileSize(selectedAnalysis.file_size_bytes) })
               if (selectedAnalysis.file_format != null) items.push({ label: t.fileInfo.format, value: selectedAnalysis.file_format.toUpperCase() })
               if (selectedAnalysis.channels != null) items.push({ label: t.fileInfo.channels, value: selectedAnalysis.channels === 2 ? t.fileInfo.stereo : selectedAnalysis.channels === 1 ? t.fileInfo.mono : `${selectedAnalysis.channels}` })
-              if (selectedAnalysis.processing_time_seconds != null) items.push({ label: t.fileInfo.processingTime, value: `${selectedAnalysis.processing_time_seconds.toFixed(1)}s` })
+              // processing_time_seconds — admin-only metric, not shown to regular users
               if (items.length === 0) return null
               return (
                 <div style={{
