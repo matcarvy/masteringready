@@ -6,7 +6,7 @@ import { Download, Check, Upload, Zap, Shield, TrendingUp, Play, Music, Crown, X
 import { UserMenu, useAuth, AuthModal } from '@/components/auth'
 import { analyzeFile, checkIpLimit, IpCheckResult } from '@/lib/api'
 import { startAnalysisPolling, getAnalysisStatus } from '@/lib/api'
-import { compressAudioFile } from '@/lib/audio-compression'
+import { compressAudioFile, parseFileHeader } from '@/lib/audio-compression'
 import { supabase, checkCanAnalyze, AnalysisStatus } from '@/lib/supabase'
 import { useGeo } from '@/lib/useGeo'
 import { getAllPricesForCountry } from '@/lib/pricing-config'
@@ -559,7 +559,16 @@ function Home() {
   useEffect(() => {
     if (authLoading || !isLoggedIn || result || loading) return
     checkCanAnalyze().then((status) => {
-      setUserAnalysisStatus(status)
+      // NO_PLAN means profile may not exist yet (new OAuth user) — retry after 2s
+      if (status.reason === 'NO_PLAN') {
+        setTimeout(() => {
+          checkCanAnalyze().then((retryStatus) => {
+            setUserAnalysisStatus(retryStatus)
+          }).catch(() => {})
+        }, 2000)
+      } else {
+        setUserAnalysisStatus(status)
+      }
     }).catch(() => {
       // Don't block page load on failed quota check
     })
@@ -625,7 +634,8 @@ const handleAnalyze = async () => {
 
   // Quick check: if cached status already says quota is exhausted, block immediately
   // (prevents re-click after closing FreeLimitModal with file still loaded)
-  if (isLoggedIn && userAnalysisStatus && !userAnalysisStatus.can_analyze) {
+  // Skip if reason is NO_PLAN (new user profile may not exist yet — let RPC re-check)
+  if (isLoggedIn && userAnalysisStatus && !userAnalysisStatus.can_analyze && userAnalysisStatus.reason !== 'NO_PLAN') {
     setShowFreeLimitModal(true)
     return
   }
@@ -712,32 +722,50 @@ const handleAnalyze = async () => {
     // ============================================================
 
     let fileToAnalyze = file
-    let originalMetadata = undefined
+    let originalMetadata: { sampleRate: number; bitDepth: number; numberOfChannels: number; duration: number; fileSize: number } | undefined = undefined
 
-    // Check if file needs compression
-    // API accepts up to 200MB — only compress very large files to avoid
-    // losing stereo info or bit depth through Web Audio API re-encoding
-    const maxSize = 100 * 1024 * 1024  // 100MB threshold
+    // Always capture original metadata from file header (before any compression)
+    // This ensures correct bit depth/sample rate even if backend reads compressed file
+    try {
+      const headerBuffer = await file.slice(0, 1024).arrayBuffer()
+      const headerInfo = parseFileHeader(headerBuffer, file.name)
+      if (headerInfo.sampleRate || headerInfo.bitDepth > 16) {
+        // Create a temporary AudioContext just to get duration
+        const tempCtx = new (window.AudioContext || (window as any).webkitAudioContext)()
+        const fullBuffer = await file.arrayBuffer()
+        const decoded = await tempCtx.decodeAudioData(fullBuffer)
+        originalMetadata = {
+          sampleRate: headerInfo.sampleRate || decoded.sampleRate,
+          bitDepth: headerInfo.bitDepth,
+          numberOfChannels: headerInfo.numberOfChannels || decoded.numberOfChannels,
+          duration: decoded.duration,
+          fileSize: file.size
+        }
+        tempCtx.close()
+      }
+    } catch {
+      // Header parsing failed — backend will read from file directly
+    }
+
+    // Compress files over 50MB to prevent Render OOM (512MB RAM limit)
+    const maxSize = 50 * 1024 * 1024
     if (file.size > maxSize) {
       setCompressing(true)
       setCompressionProgress(0)
-      
-      // Simulate compression progress
+
       const compressionInterval = setInterval(() => {
         setCompressionProgress(prev => Math.min(prev + 10, 90))
       }, 500)
-      
+
       try {
         const { file: compressedFile, compressed, originalSize, newSize, originalMetadata: metadata } =
           await compressAudioFile(file, 20)
-        
+
         clearInterval(compressionInterval)
         setCompressionProgress(100)
-        
-        if (compressed) {
-        }
-        
+
         fileToAnalyze = compressedFile
+        // compressAudioFile captures full metadata including duration — prefer its result
         originalMetadata = metadata
 
         setCompressing(false)
@@ -892,7 +920,7 @@ const handleAnalyze = async () => {
 
   const handleReset = () => {
     // Check quota before allowing new upload — don't let user waste time uploading
-    if (isLoggedIn && userAnalysisStatus && !userAnalysisStatus.can_analyze) {
+    if (isLoggedIn && userAnalysisStatus && !userAnalysisStatus.can_analyze && userAnalysisStatus.reason !== 'NO_PLAN') {
       setShowFreeLimitModal(true)
       return
     }
