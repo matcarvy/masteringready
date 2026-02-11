@@ -180,10 +180,22 @@ async function handleCheckoutCompleted(
       console.log(`Welcome bonus for user ${userId}: ${welcomeBonus} analyses restored`)
     }
 
-    // Get subscription period from Stripe - cast through unknown to access properties
-    const subData = subscription as unknown as { current_period_start: number; current_period_end: number }
-    const periodStart = subData.current_period_start
-    const periodEnd = subData.current_period_end
+    // Get subscription period from Stripe
+    // API 2025-12-15.clover moved period to items; fall back to top-level for older versions
+    const subAny = subscription as any
+    const periodStart: number | undefined =
+      subAny.current_period_start ??
+      subAny.items?.data?.[0]?.current_period_start ??
+      undefined
+    const periodEnd: number | undefined =
+      subAny.current_period_end ??
+      subAny.items?.data?.[0]?.current_period_end ??
+      undefined
+
+    // Fallback: now + 30 days if period not available
+    const now = Math.floor(Date.now() / 1000)
+    const safeStart = periodStart || now
+    const safeEnd = periodEnd || (now + 30 * 24 * 60 * 60)
 
     // Update or create subscription record
     const { error: subError } = await supabase
@@ -194,8 +206,8 @@ async function handleCheckoutCompleted(
         stripe_customer_id: session.customer as string,
         stripe_subscription_id: subscriptionId,
         status: 'active' as SubscriptionStatus,
-        current_period_start: new Date(periodStart * 1000).toISOString(),
-        current_period_end: new Date(periodEnd * 1000).toISOString(),
+        current_period_start: new Date(safeStart * 1000).toISOString(),
+        current_period_end: new Date(safeEnd * 1000).toISOString(),
         analyses_used_this_cycle: 0,
         addon_analyses_remaining: welcomeBonus,
         addon_packs_this_cycle: 0
@@ -482,11 +494,16 @@ async function handleSubscriptionUpdated(
 ) {
   console.log(`Subscription updated: ${subscription.id}, status: ${subscription.status}`)
 
-  // Cast subscription to access period properties
-  const subData = subscription as Stripe.Subscription & {
-    current_period_start: number
-    current_period_end: number
-  }
+  // Get period from Stripe — API 2025-12-15.clover moved period to items
+  const subAny = subscription as any
+  const periodStart: number | undefined =
+    subAny.current_period_start ??
+    subAny.items?.data?.[0]?.current_period_start ??
+    undefined
+  const periodEnd: number | undefined =
+    subAny.current_period_end ??
+    subAny.items?.data?.[0]?.current_period_end ??
+    undefined
 
   // Map Stripe status to our status
   const statusMap: Record<string, SubscriptionStatus> = {
@@ -500,12 +517,16 @@ async function handleSubscriptionUpdated(
 
   const status = statusMap[subscription.status] || 'active'
 
+  // Build period fields only if available
+  const periodFields: Record<string, string> = {}
+  if (periodStart) periodFields.current_period_start = new Date(periodStart * 1000).toISOString()
+  if (periodEnd) periodFields.current_period_end = new Date(periodEnd * 1000).toISOString()
+
   await supabase
     .from('subscriptions')
     .update({
       status,
-      current_period_start: new Date(subData.current_period_start * 1000).toISOString(),
-      current_period_end: new Date(subData.current_period_end * 1000).toISOString(),
+      ...periodFields,
       ...(subscription.cancel_at && {
         canceled_at: new Date(subscription.cancel_at * 1000).toISOString()
       })
