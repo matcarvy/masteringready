@@ -52,7 +52,7 @@ const translations = {
     justNeedOne: '¿Solo necesitas un análisis?',
     buySingle: 'Comprar análisis individual',
     // Pro plan
-    usageThisMonth: 'Uso este mes',
+    usageThisMonth: 'Análisis restantes este mes',
     analysesOf30: 'análisis',
     resetsOn: 'Se reinicia el',
     needMore: '¿Necesitas más análisis?',
@@ -101,7 +101,7 @@ const translations = {
     justNeedOne: 'Just need one analysis?',
     buySingle: 'Buy single analysis',
     // Pro plan
-    usageThisMonth: 'Usage this month',
+    usageThisMonth: 'Analyses remaining this month',
     analysesOf30: 'analyses',
     resetsOn: 'Resets on',
     needMore: 'Need more analyses?',
@@ -508,10 +508,10 @@ export default function SubscriptionPage() {
               marginBottom: '0.5rem'
             }}>
               <span style={{ color: '#374151', fontWeight: '600' }}>
-                {usedAnalyses} / {maxAnalyses + (userStatus?.addon_remaining || 0)}
+                {remaining} / {maxAnalyses + (userStatus?.addon_remaining || 0)}
               </span>
               <span style={{ color: '#6b7280' }}>
-                {isPro ? t.analysesOf30 : t.lifetimeAnalyses}
+                {isPro ? (lang === 'es' ? 'restantes' : 'remaining') : t.lifetimeAnalyses}
               </span>
             </div>
             <div style={{
