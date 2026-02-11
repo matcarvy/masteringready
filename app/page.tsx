@@ -315,9 +315,11 @@ function Home() {
   // Store request ID for PDF download
   const requestIdRef = useRef<string>('')
 
-  // Check Pro subscription + paid access (Pro OR Single purchase)
+  // Check Pro subscription + paid access (Pro OR Single purchase OR Admin)
   useEffect(() => {
     if (!user) { setIsPro(false); setHasPaidAccess(false); return }
+    // Admin always has full access
+    if (isAdmin) { setHasPaidAccess(true) }
     const checkAccess = async () => {
       // Check Pro subscription
       const { data: subData } = await supabase
@@ -344,7 +346,7 @@ function Home() {
       setHasPaidAccess((purchases && purchases.length > 0) || false)
     }
     checkAccess()
-  }, [user])
+  }, [user, isAdmin])
 
   // Mobile detection
   useEffect(() => {

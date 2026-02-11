@@ -3,10 +3,32 @@
  *
  * Defines prices per country in local currency.
  * Tier 1: Local currency (EUR, GBP, CAD, AUD)
- * Tier 2-6: USD with PPP multiplier
+ * Tier 2-6: USD with PPP multiplier (displayed in local currency)
  *
  * All amounts are in CENTS (999 = $9.99)
  */
+
+import { EXCHANGE_RATES, formatLocalCurrencyPrice } from './geoip'
+
+// Country code → local currency code (for USD-tier countries)
+const COUNTRY_TO_LOCAL_CURRENCY: Record<string, string> = {
+  'MX': 'MXN',
+  'BR': 'BRL',
+  'CO': 'COP',
+  'PE': 'PEN',
+  'EC': 'USD',  // Ecuador uses USD
+  'AR': 'ARS',
+  'CL': 'CLP',
+  'UY': 'UYU',
+  'GT': 'GTQ',
+  'CR': 'CRC',
+  'HN': 'HNL',
+  'NI': 'NIO',
+  'DO': 'DOP',
+  'VE': 'VES',
+  'BO': 'BOB',
+  'PA': 'USD',  // Panama uses USD
+}
 
 export interface PricingConfig {
   currency: string
@@ -32,7 +54,7 @@ export const PRICING_BY_COUNTRY: Record<string, PricingConfig> = {
   'US': { currency: 'usd', pro_monthly: 999, pro_yearly: 9900, single: 599, addon: 399 },
 
   // United Kingdom
-  'GB': { currency: 'gbp', pro_monthly: 900, pro_yearly: 8900, single: 500, addon: 350 },
+  'GB': { currency: 'gbp', pro_monthly: 1000, pro_yearly: 9900, single: 600, addon: 400 },
 
   // Canada
   'CA': { currency: 'cad', pro_monthly: 1399, pro_yearly: 13900, single: 799, addon: 499 },
@@ -145,6 +167,9 @@ export function formatPriceForDisplay(
 
 /**
  * Get all prices for a country (for UI display)
+ *
+ * Tier 1 (EUR, GBP, CAD, AUD): Shows exact local price (what Stripe charges)
+ * Tier 2-6 (USD): Converts to local currency for display (Stripe charges USD)
  */
 export function getAllPricesForCountry(countryCode: string): {
   currency: string
@@ -159,6 +184,34 @@ export function getAllPricesForCountry(countryCode: string): {
   addon_raw: number
 } {
   const config = getPricingForCountry(countryCode)
+  const upperCountry = countryCode.toUpperCase()
+
+  // For USD-tier countries with a different local currency, show local currency
+  const localCurrency = COUNTRY_TO_LOCAL_CURRENCY[upperCountry]
+  const showLocal = config.currency === 'usd'
+    && localCurrency
+    && localCurrency !== 'USD'
+    && EXCHANGE_RATES[localCurrency] !== undefined
+
+  if (showLocal) {
+    // Convert USD cents to local currency display
+    const formatLocal = (cents: number) => formatLocalCurrencyPrice(cents / 100, localCurrency)
+
+    return {
+      currency: localCurrency,
+      symbol: '',
+      pro_monthly: formatLocal(config.pro_monthly),
+      pro_yearly: formatLocal(config.pro_yearly),
+      single: formatLocal(config.single),
+      addon: formatLocal(config.addon),
+      pro_monthly_raw: config.pro_monthly,
+      pro_yearly_raw: config.pro_yearly,
+      single_raw: config.single,
+      addon_raw: config.addon
+    }
+  }
+
+  // Tier 1 or USD countries (US, EC, PA): show exact price in charging currency
   const symbols: Record<string, string> = {
     'usd': '$',
     'eur': '€',
