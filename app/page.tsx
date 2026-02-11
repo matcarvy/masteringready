@@ -1232,7 +1232,7 @@ ${new Date().toLocaleDateString()}
             const url = URL.createObjectURL(blob)
             const a = document.createElement('a')
             a.href = url
-            const filename = result.filename?.replace(/\.(wav|mp3|flac)$/i, '') || 'analisis'
+            const filename = result.filename?.replace(/\.(wav|mp3|flac)$/i, '') || 'análisis'
             a.download = `masteringready-${lang === 'es' ? 'detallado' : 'detailed'}-${filename}.pdf`
             document.body.appendChild(a)
             a.click()
@@ -1286,7 +1286,7 @@ by Matías Carvajal
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      const filename = result.filename?.replace(/\.(wav|mp3|flac)$/i, '') || 'analisis'
+      const filename = result.filename?.replace(/\.(wav|mp3|flac)$/i, '') || 'análisis'
       a.download = `masteringready-${lang === 'es' ? 'detallado' : 'detailed'}-${filename}.txt`
       document.body.appendChild(a)
       a.click()
