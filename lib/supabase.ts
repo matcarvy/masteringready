@@ -43,6 +43,26 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   }
 })
 
+/**
+ * Create a fresh Supabase client for isolated queries.
+ * Use this in pages that navigate from the analyzer — the shared singleton
+ * can have stale internal state (auth locks, pending requests) that causes
+ * queries to hang on SPA navigation.
+ */
+export async function createFreshQueryClient() {
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session) return null
+
+  const fresh = createClient(supabaseUrl, supabaseAnonKey, {
+    auth: { persistSession: false, autoRefreshToken: false }
+  })
+  await fresh.auth.setSession({
+    access_token: session.access_token,
+    refresh_token: session.refresh_token
+  })
+  return fresh
+}
+
 // ============================================================================
 // SERVER-SIDE SUPABASE CLIENT / CLIENTE SUPABASE PARA SERVIDOR
 // ============================================================================
