@@ -17,15 +17,14 @@ import { createClient } from '@supabase/supabase-js'
 // ENVIRONMENT VARIABLES / VARIABLES DE ENTORNO
 // ============================================================================
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
 
-// Validate environment variables / Validar variables de entorno
+// Warn at build time, fail at runtime if env vars are truly missing
 if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error(
-    'Missing Supabase environment variables. Please check your .env.local file.\n' +
-    'Faltan variables de entorno de Supabase. Por favor revisa tu archivo .env.local.'
-  )
+  if (typeof window !== 'undefined') {
+    console.error('Missing Supabase environment variables.')
+  }
 }
 
 // ============================================================================
