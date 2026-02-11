@@ -540,9 +540,13 @@ function DashboardContent() {
   // Handle Stripe checkout
   const handleCheckout = async (productType: 'pro_monthly' | 'single' | 'addon') => {
     try {
+      const { data: { session } } = await supabase.auth.getSession()
       const response = await fetch('/api/checkout', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(session?.access_token && { 'Authorization': `Bearer ${session.access_token}` })
+        },
         body: JSON.stringify({
           productType,
           countryCode: geo.countryCode
@@ -566,8 +570,12 @@ function DashboardContent() {
   // Handle customer portal
   const handleManageSubscription = async () => {
     try {
+      const { data: { session } } = await supabase.auth.getSession()
       const response = await fetch('/api/customer-portal', {
-        method: 'POST'
+        method: 'POST',
+        headers: {
+          ...(session?.access_token && { 'Authorization': `Bearer ${session.access_token}` })
+        }
       })
 
       const data = await response.json()
