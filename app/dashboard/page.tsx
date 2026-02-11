@@ -908,7 +908,7 @@ function DashboardContent() {
             <p style={{ fontSize: '1.5rem', fontWeight: '700', color: '#111827' }}>
               {isPro ? (
                 <>
-                  {userStatus ? Math.min(30, Math.max(0, 30 - userStatus.analyses_used + userStatus.addon_remaining)) : 30}
+                  {userStatus ? Math.max(0, 30 - userStatus.analyses_used) : 30}
                   <span style={{ fontSize: '0.875rem', fontWeight: '400', color: '#6b7280' }}>
                     {' '}{t.proLimit}
                   </span>
