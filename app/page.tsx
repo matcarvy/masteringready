@@ -1348,7 +1348,7 @@ by Matías Carvajal
   }
 
   const isFileTooLarge = file && file.size > 200 * 1024 * 1024 // 200MB hard limit
-  const needsCompression = file && file.size > 100 * 1024 * 1024 && file.size <= 200 * 1024 * 1024
+  const needsCompression = file && file.size > 50 * 1024 * 1024 && file.size <= 200 * 1024 * 1024
 
   const getScoreColor = (score: number) => {
     if (score >= 85) return '#10b981'
