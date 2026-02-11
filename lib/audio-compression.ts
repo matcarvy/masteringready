@@ -34,15 +34,16 @@ export async function compressAudioFile(
   
   // Read file as ArrayBuffer
   const arrayBuffer = await file.arrayBuffer()
-  
-  // Decode audio to get ORIGINAL metadata
-  const audioBuffer = await audioContext.decodeAudioData(arrayBuffer)
-  
+
   // ============================================================
   // CAPTURE ORIGINAL METADATA BEFORE ANY COMPRESSION
-  // This is the TRUE metadata that backend needs for PDF
+  // CRITICAL: parseFileHeader MUST run BEFORE decodeAudioData()
+  // because decodeAudioData() detaches the ArrayBuffer, making it empty
   // ============================================================
   const headerInfo = parseFileHeader(arrayBuffer, file.name)
+
+  // Decode audio (WARNING: this detaches arrayBuffer — do NOT use arrayBuffer after this)
+  const audioBuffer = await audioContext.decodeAudioData(arrayBuffer)
   const originalMetadata = {
     sampleRate: headerInfo.sampleRate || audioBuffer.sampleRate, // Prefer header (true rate), fallback to AudioContext
     bitDepth: headerInfo.bitDepth,
