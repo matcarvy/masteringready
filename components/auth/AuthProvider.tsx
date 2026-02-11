@@ -306,6 +306,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
         } else {
           setSession(session)
           setUser(session?.user ?? null)
+
+          // Load admin status for existing session
+          if (session?.user) {
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('is_admin')
+              .eq('id', session.user.id)
+              .single()
+            setIsAdmin(profile?.is_admin === true)
+          }
         }
       } catch (err) {
         console.error('Auth error:', err)
