@@ -177,5 +177,5 @@ For issues or questions:
 
 ---
 
-**Version:** 1.0.0-beta  
-**Last Updated:** December 2025
+**Version:** 1.0.0
+**Last Updated:** January 2026

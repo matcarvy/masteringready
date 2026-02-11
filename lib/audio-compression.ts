@@ -18,6 +18,7 @@ export interface CompressionResult {
     bitDepth: number;
     numberOfChannels: number;
     duration: number;
+    fileSize: number;
   };
 }
 
@@ -41,15 +42,33 @@ export async function compressAudioFile(
   // CAPTURE ORIGINAL METADATA BEFORE ANY COMPRESSION
   // This is the TRUE metadata that backend needs for PDF
   // ============================================================
+  const headerInfo = parseFileHeader(arrayBuffer, file.name)
   const originalMetadata = {
-    sampleRate: audioBuffer.sampleRate,
-    bitDepth: getBitDepthFromHeader(arrayBuffer, file.name), // Read from WAV/AIFF header
-    numberOfChannels: audioBuffer.numberOfChannels,
-    duration: audioBuffer.duration
+    sampleRate: headerInfo.sampleRate || audioBuffer.sampleRate, // Prefer header (true rate), fallback to AudioContext
+    bitDepth: headerInfo.bitDepth,
+    numberOfChannels: headerInfo.numberOfChannels || audioBuffer.numberOfChannels,
+    duration: audioBuffer.duration,
+    fileSize: file.size  // Original file size before compression
   }
-  
+
   // ============================================================
-  
+
+  // STEREO SAFETY: If the browser decoder collapsed channels, skip compression
+  // Web Audio API may decode some formats (e.g. 32-bit float WAV) as mono
+  if (headerInfo.numberOfChannels && headerInfo.numberOfChannels > audioBuffer.numberOfChannels) {
+    console.warn(
+      `[Compression] Browser decoded ${headerInfo.numberOfChannels}ch file as ${audioBuffer.numberOfChannels}ch — skipping compression to preserve stereo`
+    )
+    audioContext.close()
+    return {
+      file,
+      compressed: false,
+      originalSize: file.size,
+      newSize: file.size,
+      originalMetadata
+    }
+  }
+
   // If file is already under limit, return as-is with original metadata
   if (file.size <= maxBytes) {
     audioContext.close()
@@ -58,7 +77,7 @@ export async function compressAudioFile(
       compressed: false,
       originalSize: file.size,
       newSize: file.size,
-      originalMetadata // ← NUEVO: Always return original metadata
+      originalMetadata
     }
   }
 
@@ -122,18 +141,16 @@ export async function compressAudioFile(
   }
 }
 
-// Parse bit depth from WAV/AIFF file header
-function getBitDepthFromHeader(arrayBuffer: ArrayBuffer, fileName: string): number {
+// Parse bit depth, sample rate, and channel count from WAV/AIFF file header
+function parseFileHeader(arrayBuffer: ArrayBuffer, fileName: string): { bitDepth: number; sampleRate: number | null; numberOfChannels: number | null } {
   const name = fileName.toLowerCase()
 
-  // WAV: RIFF header has bitsPerSample at byte 34 (fmt chunk)
+  // WAV: RIFF header — fmt chunk contains sampleRate + bitsPerSample + numChannels
   if (name.endsWith('.wav') && arrayBuffer.byteLength >= 44) {
     const view = new DataView(arrayBuffer)
-    // Verify RIFF/WAVE signature
     const riff = String.fromCharCode(view.getUint8(0), view.getUint8(1), view.getUint8(2), view.getUint8(3))
     const wave = String.fromCharCode(view.getUint8(8), view.getUint8(9), view.getUint8(10), view.getUint8(11))
     if (riff === 'RIFF' && wave === 'WAVE') {
-      // Find fmt chunk (usually at offset 12, but search to be safe)
       let offset = 12
       while (offset + 8 < arrayBuffer.byteLength && offset < 1024) {
         const chunkId = String.fromCharCode(
@@ -142,14 +159,21 @@ function getBitDepthFromHeader(arrayBuffer: ArrayBuffer, fileName: string): numb
         )
         const chunkSize = view.getUint32(offset + 4, true) // little-endian
         if (chunkId === 'fmt ') {
-          const audioFormat = view.getUint16(offset + 8, true) // 1=PCM, 3=IEEE float
+          // fmt chunk layout (little-endian):
+          //   +8:  audioFormat (uint16) — 1=PCM, 3=IEEE float
+          //   +10: numChannels (uint16)
+          //   +12: sampleRate  (uint32)
+          //   +16: byteRate    (uint32)
+          //   +20: blockAlign  (uint16)
+          //   +22: bitsPerSample (uint16)
+          const numChannels = view.getUint16(offset + 10, true)
+          const sampleRate = view.getUint32(offset + 12, true)
           const bitsPerSample = view.getUint16(offset + 22, true)
-          // audioFormat 3 = IEEE float (32-bit or 64-bit float)
-          // audioFormat 1 = PCM integer
-          if (bitsPerSample > 0 && bitsPerSample <= 64) {
-            return bitsPerSample
+          return {
+            bitDepth: (bitsPerSample > 0 && bitsPerSample <= 64) ? bitsPerSample : 16,
+            sampleRate: sampleRate > 0 ? sampleRate : null,
+            numberOfChannels: numChannels > 0 ? numChannels : null
           }
-          break
         }
         offset += 8 + chunkSize
         if (chunkSize % 2 !== 0) offset++ // RIFF chunks are word-aligned
@@ -157,7 +181,7 @@ function getBitDepthFromHeader(arrayBuffer: ArrayBuffer, fileName: string): numb
     }
   }
 
-  // AIFF: FORM/AIFF header, COMM chunk contains sampleSize
+  // AIFF: FORM/AIFF header — COMM chunk contains numChannels + sampleSize + sampleRate
   if ((name.endsWith('.aiff') || name.endsWith('.aif')) && arrayBuffer.byteLength >= 30) {
     const view = new DataView(arrayBuffer)
     const form = String.fromCharCode(view.getUint8(0), view.getUint8(1), view.getUint8(2), view.getUint8(3))
@@ -171,11 +195,19 @@ function getBitDepthFromHeader(arrayBuffer: ArrayBuffer, fileName: string): numb
         )
         const chunkSize = view.getUint32(offset + 4, false) // big-endian
         if (chunkId === 'COMM') {
-          const sampleSize = view.getInt16(offset + 14, false) // big-endian
-          if (sampleSize > 0 && sampleSize <= 64) {
-            return sampleSize
+          // COMM chunk layout (big-endian):
+          //   +8:  numChannels     (int16)
+          //   +10: numSampleFrames (uint32)
+          //   +14: sampleSize      (int16) — bits per sample
+          //   +16: sampleRate      (80-bit IEEE 754 extended, 10 bytes)
+          const numChannels = view.getInt16(offset + 8, false)
+          const sampleSize = view.getInt16(offset + 14, false)
+          const sampleRate = parseIeee80(view, offset + 16)
+          return {
+            bitDepth: (sampleSize > 0 && sampleSize <= 64) ? sampleSize : 16,
+            sampleRate: sampleRate > 0 ? sampleRate : null,
+            numberOfChannels: numChannels > 0 ? numChannels : null
           }
-          break
         }
         offset += 8 + chunkSize
         if (chunkSize % 2 !== 0) offset++ // AIFF chunks are word-aligned
@@ -183,8 +215,33 @@ function getBitDepthFromHeader(arrayBuffer: ArrayBuffer, fileName: string): numb
     }
   }
 
-  // Lossy formats (MP3, AAC) — no meaningful bit depth in header
-  return 16
+  // Lossy formats (MP3, AAC) — no reliable header parsing
+  return { bitDepth: 16, sampleRate: null, numberOfChannels: null }
+}
+
+// Parse 80-bit IEEE 754 extended float (used in AIFF COMM chunk for sample rate)
+function parseIeee80(view: DataView, offset: number): number {
+  const exponentByte0 = view.getUint8(offset)
+  const exponentByte1 = view.getUint8(offset + 1)
+
+  const sign = (exponentByte0 >> 7) & 1
+  const exponent = ((exponentByte0 & 0x7F) << 8) | exponentByte1
+
+  // 64-bit mantissa (big-endian) with explicit integer bit
+  const mantissaHigh = view.getUint32(offset + 2, false)
+  const mantissaLow = view.getUint32(offset + 6, false)
+
+  if (exponent === 0 && mantissaHigh === 0 && mantissaLow === 0) return 0
+  if (exponent === 0x7FFF) return 0 // NaN/Inf — not a valid sample rate
+
+  // value = 2^(exponent - 16383) * mantissa / 2^63
+  // Rearranged to avoid JS precision loss with large integers:
+  // value = mantissaHigh * 2^(32 - shift) + mantissaLow * 2^(-shift)
+  // where shift = 63 - (exponent - 16383) = 16446 - exponent
+  const shift = 16446 - exponent
+  const value = mantissaHigh * Math.pow(2, 32 - shift) + mantissaLow * Math.pow(2, -shift)
+
+  return sign ? -value : value
 }
 
 // Helper: Convert AudioBuffer to WAV Blob

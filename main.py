@@ -1,8 +1,14 @@
 """
-MasteringReady API v7.3.9 - Stats Endpoints
+Mastering Ready API v7.4.0 - IP Rate Limiting
 =====================================================
 
-FastAPI backend for MasteringReady web application.
+FastAPI backend for Mastering Ready web application.
+
+FEATURES in v7.4.0:
+- IP-based rate limiting for anonymous users (1 free analysis per IP)
+- VPN/Proxy detection to prevent circumvention
+- Feature flags for easy launch control (ENABLE_IP_RATE_LIMIT)
+- /api/check-ip endpoint for pre-analysis limit checking
 
 FIXES in v7.3.9:
 - Added /api/stats endpoint for daily statistics
@@ -30,10 +36,10 @@ Previous fixes (v7.3.5):
 
 Based on Matías Carvajal's "Mastering Ready" methodology
 Author: Matías Carvajal García (@matcarvy)
-Version: 7.3.8-production
+Version: 7.4.0-production
 """
 
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException, BackgroundTasks
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, BackgroundTasks, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, FileResponse
 import tempfile
@@ -48,9 +54,28 @@ import urllib.parse
 from typing import Optional, Dict, Any
 from datetime import datetime, timedelta
 import soundfile as sf
+from pydub import AudioSegment
+
+# Configure pydub to use bundled ffmpeg (imageio-ffmpeg) — no system install needed
+try:
+    import imageio_ffmpeg
+    AudioSegment.converter = imageio_ffmpeg.get_ffmpeg_exe()
+except ImportError:
+    pass  # Fall back to system ffmpeg if available
 
 # Analyzer version - used in API responses for tracking
-ANALYZER_VERSION = "7.4.0"
+ANALYZER_VERSION = "7.4.2"
+
+# Import IP rate limiting and VPN detection
+try:
+    from ip_limiter import init_ip_limiter, get_ip_limiter, get_client_ip, IPLimiter
+    from vpn_detector import init_vpn_detector, get_vpn_detector, VPNDetector
+    IP_LIMITER_AVAILABLE = True
+    logger_placeholder = logging.getLogger(__name__)  # Will be replaced
+except ImportError as e:
+    IP_LIMITER_AVAILABLE = False
+    logger_placeholder = logging.getLogger(__name__)
+    logger_placeholder.warning(f"⚠️ IP limiter not available: {e}")
 
 # Setup logging
 logging.basicConfig(
@@ -115,7 +140,7 @@ try:
     logger.info("✅ Analyzer module imported successfully")
 except ImportError as e:
     logger.error(f"❌ Failed to import analyzer: {e}")
-    logger.error("Make sure mix_analyzer_v7.3_BETA.py is renamed to analyzer.py")
+    logger.error("Make sure analyzer module is available as analyzer.py")
     sys.exit(1)
 
 # Import Telegram alerts
@@ -154,16 +179,37 @@ async def cleanup_old_jobs():
 # Create FastAPI app
 app = FastAPI(
     title="MasteringReady API",
-    description="Audio analysis API based on Matías Carvajal's Mastering Ready methodology",
-    version="7.3.9",
-    docs_url="/docs",
-    redoc_url="/redoc"
+    description="Audio analysis API based on Matías Carvajal's MasteringReady methodology",
+    version=ANALYZER_VERSION,
+    docs_url=None,
+    redoc_url=None
 )
+
+@app.on_event("startup")
+async def startup_validation():
+    """Validate critical dependencies are available at startup."""
+    # Check ffmpeg (required for AAC/M4A conversion)
+    try:
+        import imageio_ffmpeg
+        ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
+        logger.info(f"✅ ffmpeg available: {ffmpeg_path}")
+    except Exception as e:
+        logger.warning(f"⚠️ ffmpeg not available — AAC/M4A conversion will fail: {e}")
+
+    # Check optional modules
+    logger.info(f"📦 IP rate limiting: {'enabled' if IP_LIMITER_AVAILABLE else 'disabled'}")
+    logger.info(f"📦 Telegram alerts: {'enabled' if TELEGRAM_ENABLED else 'disabled'}")
+    logger.info(f"🚀 Mastering Ready API v{ANALYZER_VERSION} ready")
 
 # CORS Configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # For development - restrict in production
+    allow_origins=[
+        "https://masteringready.com",
+        "https://www.masteringready.com",
+        "http://localhost:3000",
+    ],
+    allow_origin_regex=r"https://masteringready.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -171,17 +217,174 @@ app.add_middleware(
 
 # Constants
 MAX_FILE_SIZE = 200 * 1024 * 1024  # 200MB
-ALLOWED_EXTENSIONS = {'.wav', '.mp3', '.aiff', '.aac', '.m4a'}
+ALLOWED_EXTENSIONS = {'.wav', '.mp3', '.aiff', '.aif', '.aac', '.m4a', '.ogg', '.flac'}
+
+# Formats that need conversion to WAV before analysis (not natively supported by libsndfile)
+NEEDS_CONVERSION = {'.aac', '.m4a'}
+
+# Bilingual error messages (matching frontend lib/error-messages.ts)
+ERROR_MSGS = {
+    'file_too_large': {
+        'es': 'El archivo es muy grande. El límite es 200MB. Intenta comprimir el audio o usa un formato más ligero como MP3.',
+        'en': 'File is too large. The limit is 200MB. Try compressing the audio or use a lighter format like MP3.',
+    },
+    'format_not_supported': {
+        'es': 'Este formato no es compatible. Por favor sube un archivo WAV, MP3, AIFF, FLAC, AAC, M4A u OGG.',
+        'en': 'This format is not supported. Please upload a WAV, MP3, AIFF, FLAC, AAC, M4A or OGG file.',
+    },
+    'corrupt_file': {
+        'es': 'No pudimos leer este archivo. Puede estar corrupto o dañado. Intenta exportarlo de nuevo desde tu DAW.',
+        'en': "We couldn't read this file. It may be corrupt or damaged. Try exporting it again from your DAW.",
+    },
+    'timeout': {
+        'es': 'El análisis está tardando más de lo esperado. Esto puede pasar con archivos muy largos. Intenta de nuevo o prueba con un archivo más corto.',
+        'en': 'The analysis is taking longer than expected. This can happen with very long files. Try again or use a shorter file.',
+    },
+    'server_error': {
+        'es': 'Algo salió mal en nuestro servidor. Por favor intenta de nuevo en unos minutos. Si el problema persiste, escríbenos a mat@matcarvy.com',
+        'en': 'Something went wrong on our server. Please try again in a few minutes. If the problem persists, contact us at mat@matcarvy.com',
+    },
+}
+
+def bilingual_error(category: str, lang: str) -> str:
+    """Return the error message for the given category in the requested language."""
+    msgs = ERROR_MSGS.get(category, ERROR_MSGS['server_error'])
+    return msgs.get(lang, msgs['en'])
+
+def classify_analysis_error(error_str: str) -> str:
+    """Classify an analysis exception into a bilingual error category."""
+    lower = error_str.lower()
+    corrupt_keywords = ['corrupt', 'librosa', 'soundfile', 'leyendo', 'cargando audio',
+                        'empty', 'vacío', 'too short', 'demasiado corto', 'no audio']
+    if any(kw in lower for kw in corrupt_keywords):
+        return 'corrupt_file'
+    return 'server_error'
+
+def convert_to_wav(input_path: str, file_ext: str) -> str:
+    """Convert AAC/M4A to WAV using pydub (requires ffmpeg). Returns path to WAV temp file."""
+    logger.info(f"🔄 Converting {file_ext} to WAV via pydub/ffmpeg...")
+    fmt = 'aac' if file_ext == '.aac' else file_ext.lstrip('.')
+    audio = AudioSegment.from_file(input_path, format=fmt)
+    wav_temp = tempfile.NamedTemporaryFile(delete=False, suffix='.wav')
+    audio.export(wav_temp.name, format='wav')
+    wav_temp.close()
+    logger.info(f"✅ Converted to WAV: {wav_temp.name} ({len(audio) / 1000:.1f}s)")
+    return wav_temp.name
+
+# Initialize IP rate limiter and VPN detector
+if IP_LIMITER_AVAILABLE:
+    ip_limiter = init_ip_limiter()
+    vpn_detector = init_vpn_detector()
+    logger.info(f"✅ IP Limiter initialized. Enabled: {ip_limiter.is_enabled()}")
+    logger.info(f"✅ VPN Detector initialized. Enabled: {vpn_detector.is_enabled()}")
+else:
+    ip_limiter = None
+    vpn_detector = None
+    logger.warning("⚠️ IP rate limiting not available")
 
 
-# ============== HELPER: SHORT MODE ==============
+# ============== IP RATE LIMITING ENDPOINTS ==============
+
+@app.get("/api/check-ip")
+async def check_ip_limit(request: Request, is_authenticated: bool = False):
+    """
+    Check if the client IP can perform an analysis.
+
+    Frontend should call this BEFORE starting an analysis for anonymous users.
+    Returns whether analysis is allowed and any blocking reasons.
+
+    Args:
+        is_authenticated: If true, skip IP check (logged-in users have separate limits)
+
+    Returns:
+        {
+            "can_analyze": bool,
+            "reason": "OK" | "LIMIT_REACHED" | "VPN_DETECTED" | "DISABLED",
+            "analyses_used": int,
+            "max_analyses": int,
+            "is_vpn": bool,
+            "ip_limited_enabled": bool
+        }
+    """
+    # Logged-in users bypass IP limiting
+    if is_authenticated:
+        return {
+            "can_analyze": True,
+            "reason": "AUTHENTICATED",
+            "analyses_used": 0,
+            "max_analyses": -1,
+            "is_vpn": False,
+            "ip_limit_enabled": False
+        }
+
+    # If IP limiter not available, allow all
+    if not IP_LIMITER_AVAILABLE or not ip_limiter:
+        return {
+            "can_analyze": True,
+            "reason": "DISABLED",
+            "analyses_used": 0,
+            "max_analyses": 2,
+            "is_vpn": False,
+            "ip_limit_enabled": False
+        }
+
+    # If IP limiting is disabled via env var, allow all
+    if not ip_limiter.is_enabled():
+        return {
+            "can_analyze": True,
+            "reason": "DISABLED",
+            "analyses_used": 0,
+            "max_analyses": 2,
+            "is_vpn": False,
+            "ip_limit_enabled": False
+        }
+
+    # Get client IP
+    client_ip = get_client_ip(request)
+    user_agent = request.headers.get('User-Agent')
+
+    logger.info(f"🔍 IP check request from: {client_ip[:16]}...")
+
+    # Check VPN first (if enabled)
+    vpn_info = {'is_vpn': False, 'is_proxy': False, 'is_tor': False}
+    if vpn_detector and vpn_detector.is_enabled():
+        try:
+            vpn_info = await vpn_detector.detect(client_ip)
+
+            if vpn_info.get('is_vpn') or vpn_info.get('is_proxy') or vpn_info.get('is_tor'):
+                logger.warning(f"🚫 VPN/Proxy detected for IP: {client_ip[:16]}...")
+                return {
+                    "can_analyze": False,
+                    "reason": "VPN_DETECTED",
+                    "analyses_used": 0,
+                    "max_analyses": 2,
+                    "is_vpn": True,
+                    "vpn_service": vpn_info.get('service_name'),
+                    "ip_limit_enabled": True
+                }
+        except Exception as e:
+            logger.warning(f"⚠️ VPN detection failed: {e}")
+
+    # Check IP limit
+    can_analyze, message, details = await ip_limiter.check_ip_limit(client_ip, user_agent)
+
+    return {
+        "can_analyze": can_analyze,
+        "reason": message,
+        "analyses_used": details.get('analyses_used', 0),
+        "max_analyses": 2,
+        "is_vpn": details.get('is_vpn', False),
+        "ip_limit_enabled": True
+    }
+
+
 # ============== HEALTH CHECK ==============
 @app.get("/")
 async def root():
     """Health check endpoint."""
     return {
-        "name": "MasteringReady API",
-        "version": "7.3.9",
+        "name": "Mastering Ready API",
+        "version": ANALYZER_VERSION,
         "status": "healthy",
         "methodology": "Basado en 'Mastering Ready' de Matías Carvajal",
         "endpoints": {
@@ -196,13 +399,17 @@ async def root():
 @app.get("/health")
 async def health_check():
     """Detailed health check."""
+    import sys
     return {
         "status": "healthy",
-        "version": "7.3.9",
+        "version": ANALYZER_VERSION,
+        "python": sys.version,
         "analyzer_loaded": True,
         "privacy": "In-memory processing, auto-delete guaranteed",
         "timestamp": datetime.utcnow().isoformat()
     }
+
+
 
 
 # ============== MAIN ANALYZER ENDPOINT ==============
@@ -247,7 +454,8 @@ async def analyze_mix_endpoint(
                 'sample_rate': int(metadata.get('sampleRate', 0)),
                 'bit_depth': int(metadata.get('bitDepth', 0)),
                 'duration': float(metadata.get('duration', 0)),
-                'channels': int(metadata.get('numberOfChannels', 0))
+                'channels': int(metadata.get('numberOfChannels', 0)),
+                'original_file_size': int(metadata.get('fileSize', 0))
             }
             logger.info(f"📊 Received original metadata from frontend: {original_metadata_from_frontend}")
         except Exception as e:
@@ -258,23 +466,23 @@ async def analyze_mix_endpoint(
     if file_ext not in ALLOWED_EXTENSIONS:
         raise HTTPException(
             status_code=400,
-            detail=f"Formato no soportado. Solo se aceptan: {', '.join(ALLOWED_EXTENSIONS)}"
+            detail=bilingual_error('format_not_supported', lang)
         )
-    
+
     # Validate file size
     content = await file.read()
     file_size = len(content)
-    
+
     if file_size > MAX_FILE_SIZE:
         raise HTTPException(
-            status_code=400,
-            detail=f"Archivo demasiado grande. Máximo: {MAX_FILE_SIZE / 1024 / 1024}MB"
+            status_code=413,
+            detail=bilingual_error('file_too_large', lang)
         )
-    
+
     if file_size == 0:
         raise HTTPException(
             status_code=400,
-            detail="Archivo vacío"
+            detail=bilingual_error('corrupt_file', lang)
         )
     
     logger.info(f"📊 File size: {file_size / 1024 / 1024:.2f} MB")
@@ -291,13 +499,25 @@ async def analyze_mix_endpoint(
             temp_file.flush()
             
             logger.info(f"💾 Temp file created: {temp_file.name}")
-            
+
+            # Convert AAC/M4A to WAV (not natively supported by libsndfile)
+            analysis_path = temp_file.name
+            wav_converted = None
+            if file_ext in NEEDS_CONVERSION:
+                try:
+                    wav_converted = convert_to_wav(temp_file.name, file_ext)
+                    analysis_path = wav_converted
+                except Exception as conv_err:
+                    logger.error(f"❌ Conversion failed: {conv_err}")
+                    raise HTTPException(status_code=400, detail=bilingual_error('corrupt_file', lang))
+
             # Analyze
             logger.info("🔍 Starting analysis...")
             result = analyze_file(
-                Path(temp_file.name),
+                Path(analysis_path),
                 lang=lang,
-                strict=strict
+                strict=strict,
+                original_metadata=original_metadata_from_frontend
             )
             
             logger.info(f"✅ Analysis complete: Score {result['score']}/100")
@@ -305,7 +525,7 @@ async def analyze_mix_endpoint(
             # GENERATE BOTH REPORTS - Frontend decides which to show
             logger.info("📝 Generating both report modes...")
             report_write = write_report(result, strict=strict, lang=lang, filename=file.filename)
-            report_short = generate_short_mode_report(result, lang, file.filename, strict)
+            report_short = generate_short_mode_report(result, strict=strict, lang=lang, filename=file.filename)
             
             # For backward compatibility, use mode to set primary report
             if mode == "short":
@@ -341,92 +561,43 @@ async def analyze_mix_endpoint(
             
         except Exception as e:
             logger.error(f"❌ Analysis error: {str(e)}")
+            category = classify_analysis_error(str(e))
             raise HTTPException(
                 status_code=500,
-                detail=f"Error al analizar el archivo: {str(e)}"
+                detail=bilingual_error(category, lang)
             )
-    
+        finally:
+            # Clean up converted WAV if created
+            if wav_converted:
+                try:
+                    import os
+                    os.unlink(wav_converted)
+                    logger.info(f"🗑️ Converted WAV cleaned up: {wav_converted}")
+                except Exception:
+                    pass
+
     # File automatically deleted here
     logger.info("🗑️ Temp file auto-deleted")
 
 
 # ============== POLLING ENDPOINTS (Render Starter workaround) ==============
 
-def generate_short_mode_report(result: Dict[str, Any], lang: str, filename: str, strict: bool = False) -> str:
-    """Generate short mode report by removing technical details section"""
-    logger.info(f"🔧 SHORT MODE - Lang: {lang}")
-    
-    # Get full report first
-    full_report = write_report(result, strict=strict, lang=lang, filename=filename)
-    
-    logger.info(f"📏 Full report length: {len(full_report)}")
-    
-    # Find and remove technical details section
-    logger.info("🔍 Searching for tech section marker...")
-    
-    if lang == 'es':
-        marker_start = "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n📊 DETALLES TÉCNICOS COMPLETOS"
-        marker_end = "💡 Recomendación:"
-    else:
-        marker_start = "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n📊 COMPLETE TECHNICAL DETAILS"
-        marker_end = "💡 Recommendation:"
-    
-    logger.info(f"   Has marker_start: {marker_start in full_report}")
-    logger.info(f"   Has marker_end: {marker_end in full_report}")
-    
-    if marker_start in full_report and marker_end in full_report:
-        logger.info("✂️ Removing tech section...")
-        before = full_report.split(marker_start)[0]
-        after_parts = full_report.split(marker_end)
-        if len(after_parts) > 1:
-            recommendation = marker_end + after_parts[1]
-            result_report = before.strip() + "\n\n" + recommendation.strip()
-            logger.info(f"✅ Tech section removed. New length: {len(result_report)}")
-            return result_report
-    
-    # If markers not found, try to keep just the summary part
-    # Look for the intro and recommendation, skip middle sections
-    logger.warning("⚠️ Tech section markers not found")
-    
-    # For chunked analysis, just return intro + recommendation
-    if result.get('chunked', False):
-        logger.info("📦 Chunked analysis detected - generating simplified short report")
-        
-        # Extract just the intro part (before any technical details)
-        lines = full_report.split('\n')
-        short_lines = []
-        skip_mode = False
-        
-        for line in lines:
-            # Keep everything until we hit technical details
-            if '━━━' in line or '📊' in line or 'TECHNICAL' in line or 'TÉCNICOS' in line:
-                skip_mode = True
-            elif '💡' in line or 'Recomendación' in line or 'Recommendation' in line:
-                skip_mode = False
-            
-            if not skip_mode:
-                short_lines.append(line)
-        
-        return '\n'.join(short_lines)
-    
-    logger.warning("   Returning full report")
-    return full_report
-
-
 @app.post("/api/analyze/start")
 async def start_analysis(
+    request: Request,
     file: UploadFile = File(...),
     lang: str = Form("es"),
     mode: str = Form("write"),
     strict: bool = Form(False),
-    original_metadata_json: Optional[str] = Form(None)  # NEW: Original file metadata from frontend
+    original_metadata_json: Optional[str] = Form(None),  # Original file metadata from frontend
+    is_authenticated: bool = Form(False)  # Whether user is logged in
 ):
     """
     Start analysis and return job_id immediately (<1 sec).
     Client polls /api/analyze/status/{job_id} for progress and result.
-    
+
     This endpoint avoids Render's 30-second timeout by returning immediately.
-    
+
     Parameters:
     - file: Audio file
     - lang: Language (es/en)
@@ -434,8 +605,17 @@ async def start_analysis(
     - strict: Strict mode (true/false)
     - original_metadata_json: (Optional) JSON with original file metadata
         Example: {"sampleRate": 48000, "bitDepth": 24, "duration": 391.2, "numberOfChannels": 2}
+    - is_authenticated: Whether user is logged in (bypasses IP limit)
     """
-    
+
+    # Get client IP for rate limiting
+    client_ip = None
+    user_agent = None
+    if IP_LIMITER_AVAILABLE and ip_limiter and ip_limiter.is_enabled() and not is_authenticated:
+        client_ip = get_client_ip(request)
+        user_agent = request.headers.get('User-Agent')
+        logger.info(f"📍 Request from IP: {client_ip[:16]}... (authenticated: {is_authenticated})")
+
     # Cleanup old jobs
     await cleanup_old_jobs()
     
@@ -449,7 +629,8 @@ async def start_analysis(
                 'sample_rate': int(metadata.get('sampleRate', 0)),
                 'bit_depth': int(metadata.get('bitDepth', 0)),
                 'duration': float(metadata.get('duration', 0)),
-                'channels': int(metadata.get('numberOfChannels', 0))
+                'channels': int(metadata.get('numberOfChannels', 0)),
+                'original_file_size': int(metadata.get('fileSize', 0))
             }
             logger.info(f"📊 Received original metadata from frontend: {original_metadata_from_frontend}")
         except Exception as e:
@@ -457,13 +638,13 @@ async def start_analysis(
     
     # Validate file
     if not file.filename:
-        raise HTTPException(status_code=400, detail="No filename provided")
-    
+        raise HTTPException(status_code=400, detail=bilingual_error('corrupt_file', lang))
+
     file_ext = Path(file.filename).suffix.lower()
     if file_ext not in ALLOWED_EXTENSIONS:
         raise HTTPException(
             status_code=400,
-            detail=f"Invalid file type. Allowed: {', '.join(ALLOWED_EXTENSIONS)}"
+            detail=bilingual_error('format_not_supported', lang)
         )
     
     # Read file content
@@ -476,7 +657,7 @@ async def start_analysis(
     if file_size > MAX_FILE_SIZE:
         raise HTTPException(
             status_code=413,
-            detail=f"File too large. Max: {MAX_FILE_SIZE / 1024 / 1024:.0f}MB"
+            detail=bilingual_error('file_too_large', lang)
         )
     
     # Generate unique job ID
@@ -508,7 +689,21 @@ async def start_analysis(
                 temp_file.flush()
                 
                 logger.info(f"💾 [{job_id}] Temp file created")
-                
+
+                # Convert AAC/M4A to WAV (not natively supported by libsndfile)
+                analysis_path = temp_file.name
+                wav_converted = None
+                if file_ext in NEEDS_CONVERSION:
+                    try:
+                        wav_converted = convert_to_wav(temp_file.name, file_ext)
+                        analysis_path = wav_converted
+                    except Exception as conv_err:
+                        logger.error(f"❌ [{job_id}] Conversion failed: {conv_err}")
+                        async with jobs_lock:
+                            jobs[job_id]['status'] = 'error'
+                            jobs[job_id]['error'] = bilingual_error('corrupt_file', lang)
+                        return
+
                 # ============================================================
                 # PRIORITIZE METADATA FROM FRONTEND (if available)
                 # This handles the case where frontend compressed the file
@@ -522,8 +717,8 @@ async def start_analysis(
                 else:
                     # Fallback: Read metadata from uploaded file
                     try:
-                        file_info = sf.info(temp_file.name)
-                        
+                        file_info = sf.info(analysis_path)
+
                         # Extract bit depth safely (MP3 and other formats don't have bits_per_sample)
                         bit_depth = None
                         if hasattr(file_info, 'subtype_info'):
@@ -581,7 +776,7 @@ async def start_analysis(
                 else:
                     # WAV/AIFF without known duration - try reading header directly
                     try:
-                        fallback_info = sf.info(temp_file.name)
+                        fallback_info = sf.info(analysis_path)
                         estimated_duration_min = fallback_info.duration / 60.0
                         logger.info(f"📊 [{job_id}] Duration from sf.info fallback: {estimated_duration_min:.1f} min")
                     except Exception:
@@ -617,7 +812,7 @@ async def start_analysis(
                     
                     analyze_func = functools.partial(
                         analyze_file_chunked,
-                        Path(temp_file.name),
+                        Path(analysis_path),
                         lang=lang,
                         strict=strict,
                         chunk_duration=30.0,  # 30 second chunks
@@ -629,12 +824,12 @@ async def start_analysis(
                     
                     analyze_func = functools.partial(
                         analyze_file,
-                        Path(temp_file.name),
+                        Path(analysis_path),
                         lang=lang,
                         strict=strict,
                         original_metadata=original_metadata  # ← Pass original metadata
                     )
-                
+
                 result = await loop.run_in_executor(None, analyze_func)
                 
                 logger.info(f"✅ [{job_id}] Analysis complete: Score {result['score']}/100")
@@ -663,9 +858,9 @@ async def start_analysis(
                 short_func = functools.partial(
                     generate_short_mode_report,
                     result,
-                    strict,
-                    lang,
-                    file.filename
+                    strict=strict,
+                    lang=lang,
+                    filename=file.filename
                 )
                 report_short = await loop.run_in_executor(None, short_func)
                 
@@ -739,7 +934,7 @@ async def start_analysis(
                         "privacy_note": "🔒 Audio analizado en memoria y eliminado inmediatamente.",
                         "methodology": "Basado en la metodología 'Mastering Ready' de Matías Carvajal"
                     }
-
+                
                 logger.info(f"✅ [{job_id}] Job complete")
                 
                 # 🔔 TELEGRAM ALERT: Análisis completado
@@ -768,13 +963,31 @@ async def start_analysis(
                         )
                     except Exception as alert_err:
                         logger.warning(f"⚠️ Failed to send Telegram alert: {alert_err}")
-                
-                
+
+                # 📍 RECORD IP USAGE: Track anonymous user analysis
+                if client_ip and IP_LIMITER_AVAILABLE and ip_limiter and ip_limiter.is_enabled():
+                    try:
+                        # Get VPN info if we have the detector
+                        vpn_info = {}
+                        if vpn_detector and vpn_detector.is_enabled():
+                            vpn_info = await vpn_detector.detect(client_ip)
+
+                        await ip_limiter.record_analysis(
+                            ip_address=client_ip,
+                            user_agent=user_agent,
+                            vpn_info=vpn_info
+                        )
+                        logger.info(f"📍 [{job_id}] Recorded IP usage for: {client_ip[:16]}...")
+                    except Exception as ip_err:
+                        logger.warning(f"⚠️ Failed to record IP usage: {ip_err}")
+
+
         except Exception as e:
             logger.error(f"❌ [{job_id}] Analysis error: {str(e)}")
+            category = classify_analysis_error(str(e))
             async with jobs_lock:
                 jobs[job_id]['status'] = 'error'
-                jobs[job_id]['error'] = str(e)
+                jobs[job_id]['error'] = bilingual_error(category, lang)
             
             # 🔔 TELEGRAM ALERT: Error en análisis
             if TELEGRAM_ENABLED:
@@ -787,7 +1000,16 @@ async def start_analysis(
                     )
                 except Exception as alert_err:
                     logger.warning(f"⚠️ Failed to send error alert: {alert_err}")
-    
+        finally:
+            # Clean up converted WAV if created
+            if wav_converted:
+                try:
+                    import os
+                    os.unlink(wav_converted)
+                    logger.info(f"🗑️ [{job_id}] Converted WAV cleaned up: {wav_converted}")
+                except Exception:
+                    pass
+
     # Start asyncio task (non-blocking)
     asyncio.create_task(analyze_in_background())
     
@@ -801,21 +1023,21 @@ async def start_analysis(
 
 
 @app.get("/api/analyze/status/{job_id}")
-async def get_analysis_status(job_id: str):
+async def get_analysis_status(job_id: str, lang: str = "es"):
     """
     Poll this endpoint to check analysis progress and retrieve result.
-    
+
     Returns:
     - status: "processing", "complete", or "error"
     - progress: 0-100
     - result: (only when status="complete")
     - error: (only when status="error")
     """
-    
+
     if job_id not in jobs:
         raise HTTPException(
             status_code=404,
-            detail="Job not found or expired (jobs expire after 10 minutes)"
+            detail=bilingual_error('timeout', lang)
         )
     
     async with jobs_lock:
@@ -859,14 +1081,17 @@ async def download_pdf(
     async with jobs_lock:
         if request_id not in jobs:
             logger.error(f"❌ Request ID not found: {request_id}")
-            raise HTTPException(status_code=404, detail="Analysis not found")
+            raise HTTPException(status_code=404, detail=bilingual_error('timeout', lang))
         
         job = jobs[request_id]
         
         # Accept both 'complete' and 'completed' for compatibility
         if job['status'] not in ['complete', 'completed']:
             logger.error(f"❌ Analysis not completed: {request_id} (status: {job['status']})")
-            raise HTTPException(status_code=400, detail="Analysis not completed yet")
+            raise HTTPException(
+                status_code=400,
+                detail="El análisis aún no ha terminado. Intenta de nuevo en unos segundos." if lang == 'es' else "Analysis not completed yet. Please try again in a few seconds."
+            )
         
         result = job['result']
     
@@ -889,7 +1114,7 @@ async def download_pdf(
         
         if not success:
             logger.error(f"❌ PDF generation failed for {request_id}")
-            raise HTTPException(status_code=500, detail="Failed to generate PDF")
+            raise HTTPException(status_code=500, detail=bilingual_error('server_error', lang))
         
         # Prepare filename
         filename_base = result.get('filename', 'analisis').replace('.wav', '').replace('.mp3', '')
@@ -940,7 +1165,7 @@ async def download_pdf(
         logger.error(f"❌ Error generating PDF: {e}")
         import traceback
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"PDF generation error: {str(e)}")
+        raise HTTPException(status_code=500, detail=bilingual_error('server_error', lang))
 
 
 # ============== STATS ENDPOINTS ==============

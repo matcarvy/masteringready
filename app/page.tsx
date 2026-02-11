@@ -1,10 +1,122 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Download, Check, Upload, Zap, Shield, TrendingUp, Play, Music } from 'lucide-react'
-import { analyzeFile } from '@/lib/api'
+import Link from 'next/link'
+import { Download, Check, Upload, Zap, Shield, TrendingUp, Play, Music, Crown, X, AlertTriangle, Globe, Headphones, Menu } from 'lucide-react'
+import { UserMenu, useAuth, AuthModal } from '@/components/auth'
+import { analyzeFile, checkIpLimit, IpCheckResult } from '@/lib/api'
 import { startAnalysisPolling, getAnalysisStatus } from '@/lib/api'
 import { compressAudioFile } from '@/lib/audio-compression'
+import { supabase, checkCanAnalyze, AnalysisStatus } from '@/lib/supabase'
+import { useGeo } from '@/lib/useGeo'
+import { getAllPricesForCountry } from '@/lib/pricing-config'
+import { detectLanguage, setLanguageCookie } from '@/lib/language'
+import { getErrorMessage, ERROR_MESSAGES } from '@/lib/error-messages'
+
+// ============================================================================
+// Helper: Map verdict string to database enum
+// ============================================================================
+function mapVerdictToEnum(verdict: string): 'ready' | 'almost_ready' | 'needs_work' | 'critical' {
+  if (!verdict) return 'needs_work'
+  const v = verdict.toLowerCase()
+  if (v.includes('óptimo') || v.includes('optimo') || v.includes('listo') ||
+      v.includes('ready') || v.includes('excellent') || v.includes('excelente')) {
+    return 'ready'
+  }
+  if (v.includes('casi') || v.includes('almost') || v.includes('good') ||
+      v.includes('bien') || v.includes('aceptable')) {
+    return 'almost_ready'
+  }
+  if (v.includes('critical') || v.includes('crítico') || v.includes('critico') ||
+      v.includes('serious') || v.includes('grave')) {
+    return 'critical'
+  }
+  return 'needs_work'
+}
+
+// ============================================================================
+// Helper: Save analysis directly to database for logged-in users
+// ============================================================================
+async function saveAnalysisToDatabase(userId: string, analysis: any, fileObj?: File, countryCode?: string, isTestAnalysis?: boolean) {
+  console.log('[SaveAnalysis] Saving for logged-in user:', userId, 'file:', analysis.filename)
+  console.log('[SaveAnalysis] API response keys:', Object.keys(analysis).join(', '))
+  console.log('[SaveAnalysis] Report fields:', {
+    report: analysis.report ? `${analysis.report.substring(0, 50)}...` : null,
+    report_short: analysis.report_short ? `${analysis.report_short.substring(0, 50)}...` : null,
+    report_write: analysis.report_write ? `${analysis.report_write.substring(0, 50)}...` : null,
+    report_visual: analysis.report_visual ? `${analysis.report_visual.substring(0, 50)}...` : null
+  })
+
+  const mappedVerdict = mapVerdictToEnum(analysis.verdict)
+  const reportShort = analysis.report_short || analysis.report || null
+  const reportWrite = analysis.report_write || analysis.report || null
+  const reportVisual = analysis.report_visual || analysis.report_short || analysis.report || null
+
+  // Combine metrics and metrics_bars into one object for storage
+  const metricsData = {
+    metrics: analysis.metrics || [],
+    metrics_bars: analysis.metrics_bars || null
+  }
+
+  // Extract file metadata from API response
+  const fileInfo = analysis.file || {}
+  const fileExtension = (analysis.filename || '').split('.').pop()?.toLowerCase() || null
+
+  // Insert to analyses table
+  const { data: insertedData, error } = await supabase
+    .from('analyses')
+    .insert({
+      user_id: userId,
+      filename: analysis.filename || 'Unknown',
+      score: analysis.score,
+      verdict: mappedVerdict,
+      lang: analysis.lang || 'es',
+      strict_mode: analysis.strict || false,
+      report_mode: 'write',
+      metrics: metricsData,
+      interpretations: analysis.interpretations || null,
+      report_short: reportShort,
+      report_write: reportWrite,
+      report_visual: reportVisual,
+      created_at: analysis.created_at || new Date().toISOString(),
+      // File metadata
+      file_size_bytes: fileObj?.size || fileInfo.size || null,
+      file_format: fileExtension,
+      duration_seconds: fileInfo.duration || null,
+      sample_rate: fileInfo.sample_rate || null,
+      bit_depth: fileInfo.bit_depth || null,
+      channels: fileInfo.channels || null,
+      // Analysis metadata
+      processing_time_seconds: analysis.analysis_time_seconds || null,
+      analysis_version: analysis.analysis_version || null,
+      is_chunked_analysis: analysis.is_chunked_analysis || false,
+      chunk_count: analysis.chunk_count || null,
+      // v1.5: New data capture fields
+      spectral_6band: analysis.spectral_6band || null,
+      energy_analysis: analysis.energy_analysis || null,
+      categorical_flags: analysis.categorical_flags || null,
+      // v1.6: Country + timezone for admin analytics
+      client_country: countryCode || null,
+      client_timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || null,
+      // Admin test flag
+      is_test_analysis: isTestAnalysis || false
+    })
+    .select()
+
+  if (error) {
+    console.error('[SaveAnalysis] INSERT ERROR:', error.message)
+    throw error
+  }
+
+  console.log('[SaveAnalysis] Insert successful:', insertedData)
+
+  // Call increment function which handles all plan-specific counter logic
+  // (updates analyses_lifetime_used for free, analyses_used_this_cycle for pro, etc.)
+  const { data: incrementResult } = await supabase.rpc('increment_analysis_count', { p_user_id: userId })
+  console.log('[SaveAnalysis] Analysis count incremented:', incrementResult)
+
+  return insertedData
+}
 
 // Interpretative Section Component
 interface InterpretativeSectionProps {
@@ -135,111 +247,228 @@ function InterpretativeSection({ title, interpretation, recommendation, metrics,
 }
 
 function Home() {
+  // Auth state - check if user is logged in
+  const { user, loading: authLoading, isAdmin, savePendingAnalysis, pendingAnalysisQuotaExceeded, clearPendingAnalysisQuotaExceeded, pendingAnalysisSaved, clearPendingAnalysisSaved } = useAuth()
+  const isLoggedIn = !!user
+
   const [file, setFile] = useState<File | null>(null)
   const [lang, setLang] = useState<'es' | 'en'>('es')
   const [mode, setMode] = useState<'short' | 'write'>('write')
   const [strict, setStrict] = useState(false)
   const [langDetected, setLangDetected] = useState(false)
-  
+
   const [loading, setLoading] = useState(false)
   const [progress, setProgress] = useState(0)
   const [result, setResult] = useState<any>(null)
+  const [displayScore, setDisplayScore] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const [compressing, setCompressing] = useState(false)
   const [compressionProgress, setCompressionProgress] = useState(0)
   const [showContactModal, setShowContactModal] = useState(false)
+
+  // Mobile detection
+  const [isMobile, setIsMobile] = useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const mobileMenuRef = useRef<HTMLDivElement>(null)
+  const [loadingMsgIndex, setLoadingMsgIndex] = useState(0)
+  const [glossaryOpen, setGlossaryOpen] = useState(false)
+  const [tabTransition, setTabTransition] = useState(false)
   const [showFeedbackModal, setShowFeedbackModal] = useState(false)
+  const [showAuthModal, setShowAuthModal] = useState(false)
+  const [isUnlocking, setIsUnlocking] = useState(false)
+  const [showIpLimitModal, setShowIpLimitModal] = useState(false)
+  const [showVpnModal, setShowVpnModal] = useState(false)
+  const [vpnServiceName, setVpnServiceName] = useState<string | null>(null)
+  const [showFreeLimitModal, setShowFreeLimitModal] = useState(false)
+  const [userAnalysisStatus, setUserAnalysisStatus] = useState<AnalysisStatus | null>(null)
   const [reportView, setReportView] = useState<'visual' | 'short' | 'write'>('visual')
+  const [isPro, setIsPro] = useState(false)
+  const [hasPaidAccess, setHasPaidAccess] = useState(false)
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false)
   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false)
   const [feedback, setFeedback] = useState({ rating: 0, liked: '', change: '', add: '' })
-  
+  // Feedback widget + CTA tracking state
+  const [savedAnalysisId, setSavedAnalysisId] = useState<string | null>(null)
+  const [analysisRating, setAnalysisRating] = useState<boolean | null>(null)
+  const [analysisComment, setAnalysisComment] = useState('')
+  const [ratingSubmitted, setRatingSubmitted] = useState(false)
+  const [showRatingWidget, setShowRatingWidget] = useState(false)
+  const [ctaSource, setCtaSource] = useState<string | null>(null)
+
+  // Modal scroll lock
+  useEffect(() => {
+    const anyModalOpen = showContactModal || showFeedbackModal || showAuthModal ||
+      showIpLimitModal || showFreeLimitModal || showVpnModal || showUpgradeModal
+    if (anyModalOpen) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => { document.body.style.overflow = '' }
+  }, [showContactModal, showFeedbackModal, showAuthModal, showIpLimitModal,
+      showFreeLimitModal, showVpnModal, showUpgradeModal])
+
+  // Geo detection for regional pricing
+  const { geo } = useGeo()
+  const prices = getAllPricesForCountry(geo?.countryCode || 'US')
+
   // Store request ID for PDF download
   const requestIdRef = useRef<string>('')
 
+  // Check Pro subscription + paid access (Pro OR Single purchase OR Admin)
+  useEffect(() => {
+    if (!user) { setIsPro(false); setHasPaidAccess(false); return }
+    // Admin always has full access
+    if (isAdmin) { setHasPaidAccess(true); return }
+    let cancelled = false
+    const checkAccess = async () => {
+      // Check Pro subscription
+      const { data: subData } = await supabase
+        .from('subscriptions')
+        .select('*, plan:plans(type)')
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+        .single()
+      if (cancelled) return
+      const isProUser = subData?.plan?.type === 'pro' || subData?.plan?.type === 'studio'
+      setIsPro(isProUser)
+
+      if (isProUser) {
+        setHasPaidAccess(true)
+        return
+      }
+
+      // Check if user has any Single purchase
+      const { data: purchases } = await supabase
+        .from('purchases')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('status', 'succeeded')
+        .limit(1)
+      if (cancelled) return
+      setHasPaidAccess((purchases && purchases.length > 0) || false)
+    }
+    checkAccess()
+    return () => { cancelled = true }
+  }, [user, isAdmin])
+
+  // Mobile detection
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
+
+  // Close mobile menu on outside click
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (mobileMenuRef.current && !mobileMenuRef.current.contains(event.target as Node)) {
+        setMobileMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  // Delayed rating widget appearance (4s after results load)
+  useEffect(() => {
+    if (!result) {
+      setShowRatingWidget(false)
+      return
+    }
+    const timer = setTimeout(() => setShowRatingWidget(true), 4000)
+    return () => clearTimeout(timer)
+  }, [result])
+
+  // Score count-up animation
+  useEffect(() => {
+    if (!result) {
+      setDisplayScore(0)
+      return
+    }
+    // Respect reduced motion preference
+    if (typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      setDisplayScore(result.score)
+      return
+    }
+    const target = result.score
+    const duration = 1200
+    const start = performance.now()
+    const easeOut = (t: number) => 1 - Math.pow(1 - t, 3)
+    let raf: number
+    const animate = (now: number) => {
+      const elapsed = now - start
+      const progress = Math.min(elapsed / duration, 1)
+      setDisplayScore(Math.round(easeOut(progress) * target))
+      if (progress < 1) raf = requestAnimationFrame(animate)
+    }
+    raf = requestAnimationFrame(animate)
+    return () => cancelAnimationFrame(raf)
+  }, [result])
+
+  // Rotate loading messages: anchor first (6-8s), then random non-repeating
+  const shownIndicesRef = useRef<Set<number>>(new Set())
+  useEffect(() => {
+    if (!loading) {
+      setLoadingMsgIndex(0)
+      shownIndicesRef.current = new Set()
+      return
+    }
+
+    // Start with anchor message (index 0)
+    setLoadingMsgIndex(0)
+    shownIndicesRef.current = new Set([0])
+    let loopCount = 0
+
+    const pickNext = () => {
+      const rotatingIndices = [1, 2, 3, 4, 5]
+      // Filter out already shown in this loop
+      let available = rotatingIndices.filter(i => !shownIndicesRef.current.has(i))
+
+      if (available.length === 0) {
+        loopCount++
+        if (loopCount >= 1) return // Max 1 full loop (stop after all shown once)
+        shownIndicesRef.current = new Set([0]) // Reset for next loop, keep anchor excluded
+        available = rotatingIndices
+      }
+
+      const nextIndex = available[Math.floor(Math.random() * available.length)]
+      shownIndicesRef.current.add(nextIndex)
+      setLoadingMsgIndex(nextIndex)
+    }
+
+    // Random interval between 6-8 seconds per message
+    let timeoutId: NodeJS.Timeout
+    const scheduleNext = () => {
+      const delay = 6000 + Math.random() * 2000
+      timeoutId = setTimeout(() => {
+        pickNext()
+        scheduleNext()
+      }, delay)
+    }
+
+    // First rotation after anchor shows for 6-8s
+    scheduleNext()
+
+    return () => clearTimeout(timeoutId)
+  }, [loading])
+
   // Auto-detect language based on user's location
+  // Priority: URL param > cookie > timezone/browser detection
   useEffect(() => {
     if (!langDetected) {
-      // Try to detect language from browser/timezone
-      const detectLanguage = async () => {
-        try {
-          // Get timezone
-          const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone
-          
-          // English-speaking regions in Americas (exclude these first)
-          const englishRegions = [
-            'America/New_York',
-            'America/Chicago', 
-            'America/Denver',
-            'America/Los_Angeles',
-            'America/Phoenix',
-            'America/Anchorage',
-            'America/Honolulu',
-            'America/Toronto',
-            'America/Vancouver',
-            'America/Montreal',
-            'America/Halifax',
-            'America/Winnipeg',
-            'America/Edmonton'
-          ]
-          
-          // Portuguese-speaking (Brazil)
-          const portugueseRegions = [
-            'America/Sao_Paulo',
-            'America/Rio_Branco',
-            'America/Manaus',
-            'America/Belem',
-            'America/Fortaleza',
-            'America/Recife',
-            'America/Bahia',
-            'America/Cuiaba',
-            'America/Campo_Grande',
-            'America/Porto_Velho',
-            'America/Boa_Vista',
-            'America/Santarem',
-            'America/Araguaina',
-            'America/Maceio',
-            'America/Noronha'
-          ]
-          
-          // Check if it's an English or Portuguese region first
-          const isEnglishRegion = englishRegions.some(region => timezone === region)
-          const isPortugueseRegion = portugueseRegions.some(region => timezone === region)
-          
-          if (isEnglishRegion || isPortugueseRegion) {
-            setLang('en')
-          } else {
-            // Spanish-speaking regions
-            const spanishRegions = [
-              'America/', // Rest of Americas (Latin America)
-              'Europe/Madrid', // Spain
-              'Atlantic/Canary', // Canary Islands
-              'Africa/Ceuta' // Spanish territories
-            ]
-            
-            // Check if timezone matches Spanish-speaking regions
-            const isSpanishRegion = spanishRegions.some(region => timezone.startsWith(region))
-            
-            // Also check browser language as fallback
-            const browserLang = navigator.language || navigator.languages?.[0] || ''
-            const isSpanishLang = browserLang.toLowerCase().startsWith('es')
-            
-            // Set Spanish if either timezone or browser language indicates Spanish
-            if (isSpanishRegion || isSpanishLang) {
-              setLang('es')
-            } else {
-              // Default to English for rest of the world
-              setLang('en')
-            }
-          }
-          
-          setLangDetected(true)
-        } catch (error) {
-          // If detection fails, keep default (Spanish)
-          setLangDetected(true)
-        }
+      // 1. Check URL param (e.g., after logout redirect)
+      const urlParams = new URLSearchParams(window.location.search)
+      const urlLang = urlParams.get('lang')
+      if (urlLang === 'es' || urlLang === 'en') {
+        setLang(urlLang)
+        setLanguageCookie(urlLang)
+      } else {
+        // 2. Cookie > timezone > browser (centralized in lib/language.ts)
+        setLang(detectLanguage())
       }
-      
-      detectLanguage()
+      setLangDetected(true)
     }
   }, [langDetected])
 
@@ -249,8 +478,8 @@ function Home() {
       const resultsElement = document.getElementById('analysis-results')
       if (resultsElement) {
         setTimeout(() => {
-          resultsElement.scrollIntoView({ 
-            behavior: 'smooth', 
+          resultsElement.scrollIntoView({
+            behavior: 'smooth',
             block: 'start',
             inline: 'nearest'
           })
@@ -259,26 +488,110 @@ function Home() {
     }
   }, [result])
 
-  // Progress message helper
-  const getProgressMessage = (progress: number) => {
-    if (progress < 5) {
-      return lang === 'es' ? 'Cargando archivo...' : 'Loading file...'
-    } else if (progress < 10) {
-      return compressing 
-        ? (lang === 'es' ? 'Comprimiendo archivo...' : 'Compressing file...')
-        : (lang === 'es' ? 'Preparando análisis...' : 'Preparing analysis...')
-    } else if (progress < 70) {
-      return lang === 'es' ? 'Analizando audio...' : 'Analyzing audio...'
-    } else {
-      return lang === 'es' ? 'Generando reportes...' : 'Generating reports...'
+  // Quota guard: clear results immediately when user logs in
+  // "Guilty until proven innocent" — results from anonymous analysis are cleared
+  // on login, then quota is checked directly to determine follow-up:
+  //   has quota → AuthProvider signal → redirect to dashboard
+  //   no quota → FreeLimitModal immediately
+  const prevUserRef = useRef<typeof user | 'init'>('init')
+  useEffect(() => {
+    const prevUser = prevUserRef.current
+    prevUserRef.current = user
+
+    // Skip initial render
+    if (prevUser === 'init') return
+
+    // User just logged in (was null, now has value)
+    if (prevUser === null && user !== null) {
+      // Clean up OAuth flow marker (if any)
+      localStorage.removeItem('authModalFlow')
+
+      if (result) {
+        console.log('[QuotaGuard] User logged in with pending results — clearing immediately')
+        setResult(null)
+        setIsUnlocking(false)
+
+        // Check quota directly — don't rely solely on AuthProvider signal
+        // (pendingAnalysis in localStorage may already be consumed)
+        checkCanAnalyze().then((status) => {
+          setUserAnalysisStatus(status)
+          if (!status.can_analyze) {
+            console.log('[QuotaGuard] No quota — showing FreeLimitModal')
+            setShowFreeLimitModal(true)
+          }
+          // If can_analyze is true, AuthProvider's pendingAnalysisSaved signal
+          // will handle the unlock animation + redirect to dashboard
+        }).catch(() => {
+          // On error, show FreeLimitModal as safety fallback
+          setShowFreeLimitModal(true)
+        })
+      }
     }
-  }
+  }, [user, result])
+
+  // React to pending analysis save success (from AuthProvider after login)
+  // Play unlock animation briefly, then redirect to dashboard
+  useEffect(() => {
+    if (pendingAnalysisSaved) {
+      clearPendingAnalysisSaved()
+      // Brief unlock animation → redirect to dashboard
+      setIsUnlocking(true)
+      setTimeout(() => {
+        setIsUnlocking(false)
+        window.location.href = `/dashboard?lang=${lang}`
+      }, 800)
+    }
+  }, [pendingAnalysisSaved, clearPendingAnalysisSaved])
+
+  // React to pending analysis quota exceeded (from AuthProvider after login)
+  // Clear results so user can't see the analysis for free
+  useEffect(() => {
+    if (pendingAnalysisQuotaExceeded) {
+      setResult(null)
+      setIsUnlocking(false)
+      setShowFreeLimitModal(true)
+      clearPendingAnalysisQuotaExceeded()
+    }
+  }, [pendingAnalysisQuotaExceeded, clearPendingAnalysisQuotaExceeded])
+
+  // Proactive quota cache — pre-fetch quota status so handleAnalyze can use cached check
+  // Modal is NOT shown here; it only appears when user clicks Analyze (conversion-friendly UX)
+  useEffect(() => {
+    if (authLoading || !isLoggedIn || result || loading) return
+    checkCanAnalyze().then((status) => {
+      setUserAnalysisStatus(status)
+    }).catch(() => {
+      // Don't block page load on failed quota check
+    })
+  }, [isLoggedIn, authLoading])
+
+  // Detect offline during analysis
+  useEffect(() => {
+    const handleOffline = () => {
+      if (loading) {
+        setLoading(false)
+        setError(ERROR_MESSAGES.offline[lang])
+      }
+    }
+    window.addEventListener('offline', handleOffline)
+    return () => window.removeEventListener('offline', handleOffline)
+  }, [loading, lang])
+
+  // Loading messages: anchor (index 0) always first, then 1-5 rotate randomly
+  const loadingMessages = [
+    { es: '🎧 Aplicando la metodología Mastering Ready…', en: '🎧 Applying Mastering Ready methodology…' },
+    { es: '🎧 Evaluando headroom y dinámica…', en: '🎧 Evaluating headroom and dynamics…' },
+    { es: '🎧 Analizando balance tonal y frecuencias…', en: '🎧 Analyzing tonal and frequency balance…' },
+    { es: '🎧 Revisando picos reales y margen técnico…', en: '🎧 Reviewing true peaks and technical margin…' },
+    { es: '🎧 Evaluando imagen estéreo y coherencia mono…', en: '🎧 Evaluating stereo image and mono coherence…' },
+    { es: '🎧 Preparando métricas para el mastering…', en: '🎧 Preparing metrics for mastering…' }
+  ]
 
   // File validation helper
   const validateFile = (file: File): { valid: boolean; error?: string } => {
-    const maxSize = 500 * 1024 * 1024 // 500MB
-    const allowedTypes = ['audio/wav', 'audio/mpeg', 'audio/mp3', 'audio/aiff', 'audio/x-aiff', 'audio/aac', 'audio/mp4', 'audio/x-m4a']
-    const allowedExtensions = ['.wav', '.mp3', '.aiff', '.aac', '.m4a']
+    const maxSize = 200 * 1024 * 1024 // 200MB
+    const allowedTypes = ['audio/wav', 'audio/mpeg', 'audio/mp3', 'audio/aiff', 'audio/x-aiff', 'audio/aac', 'audio/mp4', 'audio/x-m4a', 'audio/ogg', 'audio/opus', 'audio/flac', 'audio/x-flac']
+    const allowedExtensions = ['.wav', '.mp3', '.aiff', '.aif', '.aac', '.m4a', '.ogg', '.flac']
     
     const fileName = file.name.toLowerCase()
     const hasValidExtension = allowedExtensions.some(ext => fileName.endsWith(ext))
@@ -287,19 +600,14 @@ function Home() {
     if (!hasValidType) {
       return {
         valid: false,
-        error: lang === 'es'
-          ? `Formato no soportado. Por favor, usa archivos WAV, MP3 o AIFF.`
-          : `Unsupported format. Please use WAV, MP3 or AIFF files.`
+        error: ERROR_MESSAGES.format_not_supported[lang]
       }
     }
-    
+
     if (file.size > maxSize) {
-      const sizeMB = (file.size / (1024 * 1024)).toFixed(1)
       return {
         valid: false,
-        error: lang === 'es'
-          ? `Archivo muy grande (${sizeMB}MB). El tamaño máximo es 500MB.`
-          : `File too large (${sizeMB}MB). Maximum size is 500MB.`
+        error: ERROR_MESSAGES.file_too_large[lang]
       }
     }
     
@@ -308,15 +616,108 @@ function Home() {
 
 const handleAnalyze = async () => {
   if (!file) return
+  // Wait for auth state to be determined — prevents treating a logged-in user
+  // as anonymous when navigating back (auth re-initializing)
+  if (authLoading) return
+
+  // Snapshot auth state at start — used to skip redundant post-analysis re-check
+  const wasLoggedInAtStart = isLoggedIn
+
+  // Quick check: if cached status already says quota is exhausted, block immediately
+  // (prevents re-click after closing FreeLimitModal with file still loaded)
+  if (isLoggedIn && userAnalysisStatus && !userAnalysisStatus.can_analyze) {
+    setShowFreeLimitModal(true)
+    return
+  }
+
   setLoading(true)
   setProgress(0)
   setError(null)
   try {
+    // ============================================================
+    // IP RATE LIMITING CHECK (for anonymous users only)
+    // ============================================================
+    if (!isLoggedIn) {
+      try {
+        const ipCheck = await checkIpLimit(false)
+
+        if (!ipCheck.can_analyze) {
+          setLoading(false)
+
+          if (ipCheck.reason === 'VPN_DETECTED') {
+            setVpnServiceName(ipCheck.vpn_service || null)
+            setShowVpnModal(true)
+            return
+          }
+
+          if (ipCheck.reason === 'LIMIT_REACHED') {
+            setShowIpLimitModal(true)
+            return
+          }
+        }
+      } catch (ipError) {
+        console.warn('IP check failed, DENYING analysis:', ipError)
+        setLoading(false)
+        setError(lang === 'es'
+          ? 'No se pudo verificar el acceso. Intenta de nuevo en unos segundos.'
+          : 'Could not verify access. Please try again in a few seconds.')
+        return
+      }
+    } else {
+      // ============================================================
+      // USER LIMIT CHECK (for logged-in users)
+      // Use cached status if available and positive — skip RPC round-trip
+      // ============================================================
+      try {
+        const analysisStatus = (userAnalysisStatus?.can_analyze && userAnalysisStatus.reason !== 'ANONYMOUS')
+          ? userAnalysisStatus
+          : await checkCanAnalyze()
+        setUserAnalysisStatus(analysisStatus)
+
+        // Defensive: if user is logged in but checkCanAnalyze returns ANONYMOUS,
+        // the Supabase session may have expired — deny analysis rather than bypass quota
+        if (analysisStatus.reason === 'ANONYMOUS') {
+          setLoading(false)
+          setError(lang === 'es'
+            ? 'No se pudo verificar tu sesión. Recarga la página e intenta de nuevo.'
+            : 'Could not verify your session. Please reload the page and try again.')
+          return
+        }
+
+        // Check failed (network/RPC error) — show retry message, not FreeLimitModal
+        if (analysisStatus.reason === 'ERROR' || analysisStatus.reason === 'NO_DATA') {
+          setLoading(false)
+          setError(lang === 'es'
+            ? 'No se pudo verificar tu plan. Intenta de nuevo en unos segundos.'
+            : 'Could not verify your plan. Please try again in a few seconds.')
+          return
+        }
+
+        if (!analysisStatus.can_analyze) {
+          setLoading(false)
+
+          // Show the free limit modal with upgrade options
+          setShowFreeLimitModal(true)
+          return
+        }
+      } catch (statusError) {
+        console.warn('User status check failed, DENYING analysis:', statusError)
+        setLoading(false)
+        setError(lang === 'es'
+          ? 'No se pudo verificar tu plan. Intenta de nuevo en unos segundos.'
+          : 'Could not verify your plan. Please try again in a few seconds.')
+        return
+      }
+    }
+    // ============================================================
+
     let fileToAnalyze = file
     let originalMetadata = undefined
-    
+
     // Check if file needs compression
-    const maxSize = 30 * 1024 * 1024  // 30MB threshold
+    // API accepts up to 200MB — only compress very large files to avoid
+    // losing stereo info or bit depth through Web Audio API re-encoding
+    const maxSize = 100 * 1024 * 1024  // 100MB threshold
     if (file.size > maxSize) {
       setCompressing(true)
       setCompressionProgress(0)
@@ -338,29 +739,24 @@ const handleAnalyze = async () => {
         
         fileToAnalyze = compressedFile
         originalMetadata = metadata
-        
-        // Wait a moment to show completion
-        await new Promise(resolve => setTimeout(resolve, 500))
+
         setCompressing(false)
         setCompressionProgress(0)
       } catch (compressionError) {
         clearInterval(compressionInterval)
         setCompressing(false)
         setCompressionProgress(0)
-        throw new Error(
-          lang === 'es'
-            ? 'Error al comprimir el archivo. Por favor, intenta con un archivo más pequeño.'
-            : 'Error compressing file. Please try a smaller file.'
-        )
+        throw new Error(ERROR_MESSAGES.corrupt_file[lang])
       }
     }
     
     // START ANALYSIS (returns job_id immediately)
-    const startData = await startAnalysisPolling(fileToAnalyze, { 
-      lang, 
-      mode, 
+    const startData = await startAnalysisPolling(fileToAnalyze, {
+      lang,
+      mode,
       strict,
-      originalMetadata
+      originalMetadata,
+      isAuthenticated: isLoggedIn
     })
     const jobId = startData.job_id
     
@@ -379,7 +775,7 @@ const handleAnalyze = async () => {
           pollAttempts++
           
           try {
-            const statusData = await getAnalysisStatus(jobId)
+            const statusData = await getAnalysisStatus(jobId, lang)
             
             
             // Update progress bar (don't allow it to go backwards)
@@ -397,11 +793,7 @@ const handleAnalyze = async () => {
             } else if (pollAttempts >= maxPollAttempts) {
               clearInterval(pollInterval)
               console.error('Polling timeout')
-              reject(new Error(
-                lang === 'es'
-                  ? 'El análisis está tardando más de lo esperado. Por favor, intenta de nuevo.'
-                  : 'Analysis is taking longer than expected. Please try again.'
-              ))
+              reject(new Error(ERROR_MESSAGES.timeout[lang]))
             }
             
           } catch (pollError: any) {
@@ -416,10 +808,69 @@ const handleAnalyze = async () => {
     
     // Wait for result
     const data = await pollForResult()
-    
+
     setProgress(100)
-    setResult(data)
-    
+
+    // Save analysis — quota must be verified before showing results.
+    // DB save runs in background to prevent UI from hanging on slow Supabase calls.
+    if (data) {
+      if (isLoggedIn && user) {
+        // If user was logged in at start, quota was already verified by pre-check RPC.
+        // Only re-check if user logged in DURING analysis (wasLoggedInAtStart=false).
+        if (!wasLoggedInAtStart) {
+          try {
+            const quotaCheck = await checkCanAnalyze()
+            if (!quotaCheck.can_analyze || quotaCheck.reason === 'ANONYMOUS') {
+              console.log('[Analysis] User quota exhausted at save time, blocking save + display:', quotaCheck.reason)
+              setUserAnalysisStatus(quotaCheck)
+              setShowFreeLimitModal(true)
+              // Do NOT show results — analysis is lost
+              setProgress(0)
+              setLoading(false)
+              return
+            }
+          } catch (quotaErr) {
+            console.error('[Analysis] Quota re-check failed, blocking display:', quotaErr)
+            setShowFreeLimitModal(true)
+            setProgress(0)
+            setLoading(false)
+            return
+          }
+        }
+        // Quota verified — show results immediately
+        setResult(data)
+        // Save to database in background (non-blocking)
+        console.log('[Analysis] Saving to database for logged-in user:', user.id)
+        saveAnalysisToDatabase(user.id, {
+          ...data,
+          filename: file.name,
+          created_at: new Date().toISOString(),
+          lang,
+          strict
+        }, file, geo?.countryCode, isAdmin)
+          .then(savedData => {
+            setSavedAnalysisId(savedData?.[0]?.id || null)
+            // Refresh quota cache after successful save
+            checkCanAnalyze().then(s => setUserAnalysisStatus(s)).catch(() => {})
+          })
+          .catch(saveErr => {
+            console.error('[Analysis] Failed to save to database:', saveErr)
+            // Results already shown — save failure is non-blocking
+          })
+      } else {
+        // Anonymous: show results immediately and save to localStorage
+        setResult(data)
+        const pendingAnalysis = {
+          ...data,
+          filename: file.name,
+          created_at: new Date().toISOString(),
+          lang,
+          strict
+        }
+        localStorage.setItem('pendingAnalysis', JSON.stringify(pendingAnalysis))
+      }
+    }
+
     // Scroll to results
     setTimeout(() => {
       const resultsElement = document.getElementById('results')
@@ -430,7 +881,7 @@ const handleAnalyze = async () => {
     
   } catch (err: any) {
     console.error('Analysis error:', err)
-    setError(err.message || (lang === 'es' ? 'Error al analizar' : 'Analysis error'))
+    setError(getErrorMessage(err, lang))
   } finally {
     setLoading(false)
     setProgress(0)
@@ -440,25 +891,62 @@ const handleAnalyze = async () => {
 }
 
   const handleReset = () => {
+    // Check quota before allowing new upload — don't let user waste time uploading
+    if (isLoggedIn && userAnalysisStatus && !userAnalysisStatus.can_analyze) {
+      setShowFreeLimitModal(true)
+      return
+    }
+
     setFile(null)
     setResult(null)
     setError(null)
     setLoading(false)
     setProgress(0)
+    setSavedAnalysisId(null)
+    setAnalysisRating(null)
+    setAnalysisComment('')
+    setRatingSubmitted(false)
+    setShowRatingWidget(false)
+    setCtaSource(null)
   }
 
-  /**
-   * Helper function to find metrics flexibly by partial name match
-   * Works for both ES and EN, normal and chunked modes
-   * FIX v7.3.51: Resolves N/A bug in quick analysis .txt download
-   */
-  const findMetric = (metrics: any[], ...searchTerms: string[]) => {
-    if (!metrics || !Array.isArray(metrics)) return null
-    return metrics.find((m: any) => 
-      searchTerms.some(term => 
-        m.name?.toLowerCase().includes(term.toLowerCase())
-      )
-    )
+  // CTA click tracking (fire-and-forget)
+  const trackCtaClick = (ctaType: string) => {
+    supabase.from('cta_clicks').insert({
+      analysis_id: savedAnalysisId,
+      user_id: user?.id || null,
+      cta_type: ctaType,
+      score_at_click: result?.score || null,
+      client_country: geo?.countryCode || null
+    }).then(() => {})
+  }
+
+  // Contact request logging (fire-and-forget)
+  const logContactRequest = (contactMethod: string) => {
+    supabase.from('contact_requests').insert({
+      analysis_id: savedAnalysisId,
+      user_id: user?.id || null,
+      cta_source: ctaSource,
+      contact_method: contactMethod,
+      client_country: geo?.countryCode || null
+    }).then(() => {})
+  }
+
+  // Analysis rating submission
+  const submitAnalysisRating = async () => {
+    if (analysisRating === null) return
+    await supabase.from('user_feedback').insert({
+      user_id: user?.id || null,
+      analysis_id: savedAnalysisId,
+      feedback_type: 'analysis_rating',
+      rating_bool: analysisRating,
+      message: analysisComment || '',
+      subject: analysisRating ? 'Thumbs up' : 'Thumbs down',
+      category: 'other',
+      lang: lang,
+      client_country: geo?.countryCode || null
+    })
+    setRatingSubmitted(true)
   }
 
   const handleDownload = () => {
@@ -480,11 +968,12 @@ ${lang === 'es' ? 'Veredicto' : 'Verdict'}: ${result.verdict}
 
 ${lang === 'es' ? 'MÉTRICAS PRINCIPALES' : 'MAIN METRICS'}
 ${'─'.repeat(50)}
-Headroom:              ${findMetric(result.metrics, 'headroom')?.value || 'N/A'}
-True Peak:             ${findMetric(result.metrics, 'true peak', 'peak')?.value || 'N/A'}
-LUFS:                  ${findMetric(result.metrics, 'lufs')?.value || 'N/A'}
-PLR:                   ${findMetric(result.metrics, 'plr')?.value || 'N/A'}
-${lang === 'es' ? 'Ancho Estéreo' : 'Stereo Width'}:        ${findMetric(result.metrics, 'stereo', 'ancho', 'width')?.value || 'N/A'}
+Headroom:              ${result.metrics?.find((m: any) => m.name === 'Headroom')?.value || 'N/A'}
+True Peak:             ${result.metrics?.find((m: any) => m.name === 'True Peak')?.value || 'N/A'}
+${lang === 'es' ? 'Balance Estéreo' : 'Stereo Balance'}:       ${result.metrics?.find((m: any) => m.name === 'Stereo Balance' || m.name === 'Balance Estéreo')?.value || 'N/A'}
+LUFS:                  ${result.metrics?.find((m: any) => m.name === 'LUFS')?.value || 'N/A'}
+PLR:                   ${result.metrics?.find((m: any) => m.name === 'PLR')?.value || 'N/A'}
+${lang === 'es' ? 'Correlación' : 'Correlation'}:           ${result.metrics?.find((m: any) => m.name === 'Correlation' || m.name === 'Correlación')?.value || 'N/A'}
 
 ${lang === 'es' ? 'ANÁLISIS DETALLADO' : 'DETAILED ANALYSIS'}
 ${'─'.repeat(50)}
@@ -685,21 +1174,27 @@ ${new Date().toLocaleDateString()}
     try {
       // Try PDF first if endpoint is available
       if (requestIdRef.current) {
-        
+
         try {
           const formData = new FormData()
           formData.append('request_id', requestIdRef.current)
           formData.append('lang', lang)
 
-          // Use full backend URL instead of relative path
-          const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'https://masteringready.onrender.com'
+          // Use full backend URL — guard against placeholder values
+          const envUrl = process.env.NEXT_PUBLIC_API_URL
+          const backendUrl = (envUrl && !envUrl.includes('your-backend'))
+            ? envUrl
+            : 'https://masteringready.onrender.com'
           const pdfUrl = `${backendUrl}/api/download/pdf`
-          
+
+          console.log('[PDF Download] Requesting:', pdfUrl, 'request_id:', requestIdRef.current)
+
           const response = await fetch(pdfUrl, {
             method: 'POST',
             body: formData
           })
 
+          console.log('[PDF Download] Response status:', response.status)
 
           if (response.ok) {
             // PDF download successful
@@ -713,16 +1208,17 @@ ${new Date().toLocaleDateString()}
             a.click()
             document.body.removeChild(a)
             URL.revokeObjectURL(url)
-            
+
             return
           } else {
             const errorText = await response.text()
-            console.error('PDF error response:', errorText)
+            console.error('[PDF Download] Error response:', response.status, errorText)
           }
         } catch (pdfError) {
-          console.error('PDF exception:', pdfError)
+          console.error('[PDF Download] Exception:', pdfError)
         }
       } else {
+        console.warn('[PDF Download] No request_id available, falling back to TXT')
       }
       
       // Fallback to TXT download
@@ -823,8 +1319,8 @@ by Matías Carvajal
       .trim()
   }
 
-  const isFileTooLarge = file && file.size > 500 * 1024 * 1024 // 500MB hard limit
-  const needsCompression = file && file.size > 30 * 1024 * 1024 && file.size <= 500 * 1024 * 1024  // 30MB threshold
+  const isFileTooLarge = file && file.size > 200 * 1024 * 1024 // 200MB hard limit
+  const needsCompression = file && file.size > 100 * 1024 * 1024 && file.size <= 200 * 1024 * 1024
 
   const getScoreColor = (score: number) => {
     if (score >= 85) return '#10b981'
@@ -855,52 +1351,68 @@ by Matías Carvajal
         <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 1rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', minHeight: '64px', gap: '0.5rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0, flex: '1 1 auto', overflow: 'hidden' }}>
-              <span style={{
-                fontSize: 'clamp(1rem, 4vw, 1.5rem)',
-                fontWeight: 'bold',
+              <div style={{
+                width: '32px',
+                height: '32px',
                 background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text',
-                whiteSpace: 'nowrap',
-                display: 'inline-flex',
+                borderRadius: '0.5rem',
+                display: 'flex',
                 alignItems: 'center',
-                gap: '0.5rem',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis'
+                justifyContent: 'center',
+                flexShrink: 0
               }}>
-                <Music size={24} style={{ color: '#667eea', flexShrink: 0 }} /> Mastering Ready
+                <Music size={18} color="white" />
+              </div>
+              {!isMobile && (
                 <span style={{
-                  fontSize: '0.5em',
                   fontWeight: '700',
-                  color: '#ffffff',
-                  WebkitTextFillColor: '#ffffff',
-                  backgroundColor: '#667eea',
-                  padding: '0.2em 0.5em',
-                  borderRadius: '0.3em',
-                  verticalAlign: 'middle',
-                  letterSpacing: '0.05em',
-                  textTransform: 'uppercase'
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
+                  whiteSpace: 'nowrap'
                 }}>
-                  BETA
+                  Mastering Ready
                 </span>
-              </span>
+              )}
             </div>
-            <div style={{ display: 'flex', gap: 'clamp(0.25rem, 1.5vw, 1rem)', alignItems: 'center', flexShrink: 0 }}>
+            <div style={{ display: 'flex', gap: isMobile ? '0.5rem' : '0.75rem', alignItems: 'center', flexShrink: 0 }}>
+              {/* Language Toggle */}
               <button
-                onClick={() => setLang(lang === 'es' ? 'en' : 'es')}
-                style={{
-                  fontSize: 'clamp(0.75rem, 2vw, 0.875rem)',
-                  fontWeight: '500',
-                  color: '#6b7280',
-                  cursor: 'pointer',
-                  border: 'none',
-                  background: 'none',
-                  padding: 'clamp(0.25rem, 1vw, 0.5rem) clamp(0.5rem, 2vw, 1rem)'
+                onClick={() => {
+                  const newLang = lang === 'es' ? 'en' : 'es'
+                  setLang(newLang)
+                  setLanguageCookie(newLang)
+                  if (user) {
+                    supabase
+                      .from('profiles')
+                      .update({ preferred_language: newLang })
+                      .eq('id', user.id)
+                      .then(({ error }) => {
+                        if (error) console.error('Error saving language preference:', error)
+                      })
+                  }
                 }}
+                style={{
+                  padding: '0.375rem 0.75rem',
+                  minWidth: '2.5rem',
+                  textAlign: 'center',
+                  background: 'transparent',
+                  color: '#6b7280',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontWeight: '500',
+                  fontSize: '0.875rem'
+                }}
+                aria-label={lang === 'es' ? 'Switch to English' : 'Cambiar a Español'}
               >
                 {lang === 'es' ? 'EN' : 'ES'}
               </button>
+
+              {/* User Menu — hidden on mobile when not logged in (hamburger handles it) */}
+              <UserMenu lang={lang} isMobile={isMobile} />
+
+              {/* Analyze CTA — always visible */}
               <button
                 onClick={scrollToAnalyzer}
                 style={{
@@ -913,7 +1425,8 @@ by Matías Carvajal
                   border: 'none',
                   cursor: 'pointer',
                   transition: 'transform 0.2s, box-shadow 0.2s',
-                  whiteSpace: 'nowrap'
+                  whiteSpace: 'nowrap',
+                  minHeight: '44px'
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.transform = 'translateY(-2px)'
@@ -926,6 +1439,81 @@ by Matías Carvajal
               >
                 {lang === 'es' ? 'Analizar' : 'Analyze'}
               </button>
+
+              {/* Hamburger menu — mobile only, when not logged in and auth resolved */}
+              {isMobile && !user && !authLoading && (
+                <div ref={mobileMenuRef} style={{ position: 'relative' }}>
+                  <button
+                    onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: '44px',
+                      height: '44px',
+                      background: 'none',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '0.5rem',
+                      cursor: 'pointer',
+                      color: '#374151'
+                    }}
+                    aria-label={mobileMenuOpen ? (lang === 'es' ? 'Cerrar menú' : 'Close menu') : (lang === 'es' ? 'Abrir menú' : 'Open menu')}
+                  >
+                    {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+                  </button>
+
+                  {mobileMenuOpen && (
+                    <div style={{
+                      position: 'absolute',
+                      top: 'calc(100% + 0.5rem)',
+                      right: 0,
+                      background: 'white',
+                      borderRadius: '0.75rem',
+                      boxShadow: '0 10px 40px rgba(0,0,0,0.15)',
+                      minWidth: '200px',
+                      overflow: 'hidden',
+                      zIndex: 50
+                    }}>
+                      {/* Auth links */}
+                      <div style={{ padding: '0.5rem 0' }}>
+                        <Link
+                          href={`/auth/login?lang=${lang}`}
+                          onClick={() => setMobileMenuOpen(false)}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.75rem',
+                            padding: '0.75rem 1rem',
+                            color: '#374151',
+                            textDecoration: 'none',
+                            fontSize: '0.95rem',
+                            transition: 'background 0.2s'
+                          }}
+                        >
+                          {lang === 'es' ? 'Iniciar Sesión' : 'Sign In'}
+                        </Link>
+                        <Link
+                          href={`/auth/signup?lang=${lang}`}
+                          onClick={() => setMobileMenuOpen(false)}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.75rem',
+                            padding: '0.75rem 1rem',
+                            color: '#667eea',
+                            textDecoration: 'none',
+                            fontSize: '0.95rem',
+                            fontWeight: '600',
+                            transition: 'background 0.2s'
+                          }}
+                        >
+                          {lang === 'es' ? 'Registrarse' : 'Sign Up'}
+                        </Link>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -941,7 +1529,7 @@ by Matías Carvajal
         <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+            gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)',
             gap: '3rem',
             alignItems: 'center'
           }}>
@@ -968,8 +1556,8 @@ by Matías Carvajal
                 lineHeight: '1.2'
               }}>
                 {lang === 'es'
-                  ? '¿Tu mezcla está lista para el mastering?'
-                  : 'Is your mix ready for mastering?'}
+                  ? 'No adivines si tu mezcla está lista'
+                  : "Don't guess if your mix is ready"}
               </h1>
               
               <p className="hero-subtitle" style={{
@@ -978,8 +1566,8 @@ by Matías Carvajal
                 color: '#e9d5ff'
               }}>
                 {lang === 'es'
-                  ? 'Análisis técnico en 60 segundos + recomendaciones basadas en metodologías profesionales'
-                  : 'Technical analysis in 60 seconds + recommendations based on professional methodologies'}
+                  ? <>Te decimos qué debes revisar <span style={{ whiteSpace: 'nowrap' }}>antes de</span> <span style={{ whiteSpace: 'nowrap' }}>enviarla a master</span></>
+                  : <>We tell you what to check <span style={{ whiteSpace: 'nowrap' }}>before sending it</span> <span style={{ whiteSpace: 'nowrap' }}>to master</span></>}
               </p>
               
               <button
@@ -996,7 +1584,8 @@ by Matías Carvajal
                   cursor: 'pointer',
                   marginBottom: '1.5rem',
                   transition: 'all 0.3s',
-                  boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+                  minHeight: '44px'
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.transform = 'scale(1.05)'
@@ -1007,12 +1596,12 @@ by Matías Carvajal
                   e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.1)'
                 }}
               >
-                {lang === 'es' ? 'Pruébalo sin costo' : 'Try it free'}
+                {lang === 'es' ? 'Analiza tu mezcla gratis' : 'Analyze your mix free'}
               </button>
               
               <div className="hero-checks" style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem', fontSize: '0.875rem' }}>
                 {[
-                  'Privacy-first',
+                  lang === 'es' ? 'Privacidad primero' : 'Privacy-first',
                   lang === 'es' ? 'Inglés y Español' : 'English & Spanish'
                 ].map((text, i) => (
                   <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -1021,8 +1610,20 @@ by Matías Carvajal
                   </div>
                 ))}
               </div>
+
+              <p style={{
+                marginTop: '1.25rem',
+                fontSize: 'clamp(0.85rem, 1.8vw, 1rem)',
+                color: 'rgba(255, 255, 255, 0.7)',
+                fontStyle: 'italic',
+                textAlign: 'center'
+              }}>
+                {lang === 'es'
+                  ? 'No reemplazamos al ingeniero de mastering. Te ayudamos a llegar preparado.'
+                  : "We don't replace your mastering engineer. We help you arrive prepared."}
+              </p>
             </div>
-            
+
             {/* Right: Demo Card */}
             <div className="demo-card-container">
               <div style={{
@@ -1117,38 +1718,38 @@ by Matías Carvajal
             </h2>
             <p style={{ fontSize: '1.25rem', color: '#6b7280' }}>
               {lang === 'es'
-                ? 'Metodología profesional basada en 300+ producciones'
-                : 'Professional methodology based on 300+ productions'}
+                ? 'Criterio técnico aplicado a tu mezcla'
+                : 'Technical judgment applied to your mix'}
             </p>
           </div>
 
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+            gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(250px, 1fr))',
             gap: '1.5rem'
           }}>
             {[
               {
                 icon: <Zap size={48} color="#667eea" />,
-                title: lang === 'es' ? 'Análisis en 60 segundos o menos' : 'Analysis in 60 seconds or less',
+                title: lang === 'es' ? 'Análisis profesional en 60 segundos' : 'Professional analysis in 60 seconds',
                 desc: lang === 'es'
-                  ? 'Headroom, LUFS, True Peak, balance de frecuencias, estéreo y más.'
-                  : 'Headroom, LUFS, True Peak, frequency balance, stereo and more.'
+                  ? 'LUFS, True Peak, headroom, correlación estéreo, balance frecuencial y más.'
+                  : 'LUFS, True Peak, headroom, stereo correlation, frequency balance and more.'
               },
               {
                 icon: <Shield size={48} color="#667eea" />,
-                title: 'Privacy-First',
+                title: lang === 'es' ? 'Privacidad garantizada' : 'Privacy guaranteed',
                 desc: lang === 'es'
-                  ? 'Tu audio se analiza solo en memoria y se elimina inmediatamente.'
-                  : 'Your audio is analyzed in-memory only and deleted immediately.'
+                  ? 'Tu audio nunca se almacena. Análisis en memoria, eliminación inmediata.'
+                  : 'Your audio is never stored. In-memory analysis, immediate deletion.'
               },
               {
                 icon: <TrendingUp size={48} color="#667eea" />,
-                title: lang === 'es' ? 'Metodología Profesional' : 'Professional Methodology',
+                title: lang === 'es' ? 'Recomendaciones específicas' : 'Specific recommendations',
                 desc: lang === 'es'
-                  ? 'Basado en técnicas de ingenieros top.'
-                  : 'Based on techniques from top engineers.'
-              }
+                  ? 'No solo números, te decimos qué ajustar y por qué.'
+                  : "Not just numbers. We tell you what to adjust and why."
+              },
             ].map((feature, i) => (
               <div key={i} style={{
                 background: 'white',
@@ -1186,12 +1787,12 @@ by Matías Carvajal
             <>
               <div className="analyzer-title-container" style={{ textAlign: 'center' }}>
                 <h2 style={{ fontSize: '2.25rem', fontWeight: 'bold', marginBottom: '1rem' }}>
-                  {lang === 'es' ? 'Analiza Tu Mezcla Ahora' : 'Analyze Your Mix Now'}
+                  {lang === 'es' ? 'Analiza tu mezcla ahora' : 'Analyze your mix now'}
                 </h2>
                 <p style={{ fontSize: '1.25rem', color: '#6b7280' }}>
                   {lang === 'es'
-                    ? 'Sube tu archivo y obtén un reporte profesional en 60 segundos o menos'
-                    : 'Upload your file and get a professional report in 60 seconds or less'}
+                    ? 'Sube tu archivo y obtén un reporte profesional en 60 segundos'
+                    : 'Upload your file and get a professional report in 60 seconds'}
                 </p>
               </div>
 
@@ -1206,7 +1807,7 @@ by Matías Carvajal
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
                   <Shield size={20} color="#059669" />
                   <span style={{ fontWeight: '600', color: '#064e3b' }}>
-                    🔒 Privacy-First Analyzer
+                    {lang === 'es' ? 'Analizador con Privacidad' : 'Privacy-First Analyzer'}
                   </span>
                 </div>
                 <p style={{ fontSize: '0.875rem', color: '#065f46' }}>
@@ -1225,6 +1826,10 @@ by Matías Carvajal
                 marginBottom: '1.5rem'
               }}>
                 <div
+                  role="button"
+                  tabIndex={0}
+                  aria-label={lang === 'es' ? 'Subir archivo de audio para analizar' : 'Upload audio file to analyze'}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); !loading && document.getElementById('file-input')?.click() } }}
                   onClick={() => !loading && document.getElementById('file-input')?.click()}
                   onDragOver={(e) => {
                     e.preventDefault()
@@ -1274,7 +1879,7 @@ by Matías Carvajal
                   style={{
                     border: '2px dashed #d1d5db',
                     borderRadius: '0.75rem',
-                    padding: '3rem',
+                    padding: 'clamp(1.25rem, 4vw, 3rem)',
                     textAlign: 'center',
                     cursor: loading ? 'not-allowed' : 'pointer',
                     opacity: loading ? 0.5 : 1,
@@ -1294,7 +1899,8 @@ by Matías Carvajal
                   <input
                     id="file-input"
                     type="file"
-                    accept=".wav,.mp3,.aiff,.aac,.m4a"
+                    aria-label={lang === 'es' ? 'Seleccionar archivo de audio' : 'Select audio file'}
+                    accept=".wav,.mp3,.aiff,.aif,.aac,.m4a,.ogg,.flac"
                     onChange={(e) => {
                       const selectedFile = e.target.files?.[0] || null
                       
@@ -1326,36 +1932,18 @@ by Matías Carvajal
                     disabled={loading}
                   />
                   
-                  <Upload size={64} color="#9ca3af" style={{ margin: '0 auto 1rem' }} />
-                  <p style={{ fontSize: '1.125rem', fontWeight: '500', marginBottom: '0.5rem' }}>
-                    {lang === 'es' ? 'Sube tu mezcla' : 'Upload your mix'}
+                  <Upload size={isMobile ? 48 : 64} color="#9ca3af" style={{ margin: '0 auto 1rem' }} />
+                  <p style={{ fontSize: 'clamp(0.9375rem, 2.5vw, 1.125rem)', fontWeight: '500', marginBottom: '0.5rem' }}>
+                    {lang === 'es' ? 'Arrastra y suelta tu archivo aquí' : 'Drag and drop your file here'}
                   </p>
-                  <p style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+                  <p style={{ fontSize: 'clamp(0.8125rem, 2vw, 0.875rem)', color: '#6b7280' }}>
                     {lang === 'es'
-                      ? 'Arrastra y suelta o haz click para seleccionar'
-                      : 'Drag and drop or click to select'}
+                      ? 'o haz click para seleccionar'
+                      : 'or click to select'}
                   </p>
                   <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.5rem' }}>
-                    {lang === 'es' ? 'WAV, MP3 o AIFF (máx 500MB)' : 'WAV, MP3 or AIFF (max 500MB)'}
+                    {lang === 'es' ? 'WAV, MP3, AIFF, FLAC, AAC, M4A u OGG • Máximo 200MB' : 'WAV, MP3, AIFF, FLAC, AAC, M4A or OGG • Max 200MB'}
                   </p>
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '0.5rem',
-                    marginTop: '1rem',
-                    padding: '0.75rem',
-                    background: '#f0fdf4',
-                    borderRadius: '0.5rem',
-                    border: '1px solid #86efac'
-                  }}>
-                    <span style={{ fontSize: '1rem' }}>🔒</span>
-                    <p style={{ fontSize: '0.75rem', color: '#166534', margin: 0 }}>
-                      {lang === 'es'
-                        ? 'Tus archivos se borran automáticamente de nuestros servidores después del análisis'
-                        : 'Your files are automatically deleted from our servers after analysis'}
-                    </p>
-                  </div>
                 </div>
               </div>
 
@@ -1376,9 +1964,13 @@ by Matías Carvajal
                     {lang === 'es' ? 'Archivo seleccionado:' : 'Selected file:'}
                   </p>
                   <p style={{
-                    fontSize: '1.125rem',
+                    fontSize: 'clamp(0.9375rem, 2.5vw, 1.125rem)',
                     fontWeight: 'bold',
-                    color: isFileTooLarge ? '#7f1d1d' : needsCompression ? '#78350f' : '#1e3a8a'
+                    color: isFileTooLarge ? '#7f1d1d' : needsCompression ? '#78350f' : '#1e3a8a',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    maxWidth: '100%'
                   }}>
                     {file.name}
                   </p>
@@ -1403,8 +1995,8 @@ by Matías Carvajal
                       </p>
                       <p style={{ fontSize: '0.75rem', color: '#92400e' }}>
                         {lang === 'es'
-                          ? `Tu archivo será comprimido automáticamente de ${(file.size / 1024 / 1024).toFixed(1)}MB a ~${Math.min(35, (file.size / 1024 / 1024) * 0.3).toFixed(1)}MB antes del análisis. Esto toma ~10-15 segundos.`
-                          : `Your file will be automatically compressed from ${(file.size / 1024 / 1024).toFixed(1)}MB to ~${Math.min(35, (file.size / 1024 / 1024) * 0.3).toFixed(1)}MB before analysis. Takes ~10-15 seconds.`}
+                          ? `Tu archivo será comprimido automáticamente de ${(file.size / 1024 / 1024).toFixed(1)}MB a ~${Math.min(35, (file.size / 1024 / 1024) * 0.3).toFixed(1)}MB antes del análisis. Esto no afecta la fidelidad del análisis. Toma ~10-15 segundos.`
+                          : `Your file will be automatically compressed from ${(file.size / 1024 / 1024).toFixed(1)}MB to ~${Math.min(35, (file.size / 1024 / 1024) * 0.3).toFixed(1)}MB before analysis. This does not affect analysis fidelity. Takes ~10-15 seconds.`}
                       </p>
                     </div>
                   )}
@@ -1423,8 +2015,8 @@ by Matías Carvajal
                       </p>
                       <p style={{ fontSize: '0.75rem', color: '#991b1b' }}>
                         {lang === 'es'
-                          ? `El límite máximo es 500MB. Tu archivo tiene ${(file.size / 1024 / 1024).toFixed(1)}MB. Por favor, usa un archivo más pequeño.`
-                          : `Maximum limit is 500MB. Your file is ${(file.size / 1024 / 1024).toFixed(1)}MB. Please use a smaller file.`}
+                          ? `El límite máximo es 200MB. Tu archivo tiene ${(file.size / 1024 / 1024).toFixed(1)}MB. Por favor, usa un archivo más pequeño.`
+                          : `Maximum limit is 200MB. Your file is ${(file.size / 1024 / 1024).toFixed(1)}MB. Please use a smaller file.`}
                       </p>
                     </div>
                   )}
@@ -1451,7 +2043,7 @@ by Matías Carvajal
                     <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem' }}>
                       {lang === 'es' ? 'Modo de Reporte' : 'Report Mode'}
                     </label>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr', gap: '0.5rem' }}>
                       {['visual', 'short', 'write'].map((m) => (
                         <button
                           key={m}
@@ -1462,14 +2054,15 @@ by Matías Carvajal
                             }
                           }}
                           style={{
-                            padding: '0.5rem 1rem',
+                            padding: 'clamp(0.5rem, 1.5vw, 0.625rem) 1rem',
+                            minHeight: '44px',
                             borderRadius: '0.5rem',
                             border: 'none',
                             background: reportView === m ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : '#f3f4f6',
                             color: reportView === m ? 'white' : '#111827',
                             cursor: 'pointer',
                             transition: 'all 0.2s',
-                            fontSize: '0.875rem'
+                            fontSize: 'clamp(0.8125rem, 2vw, 0.875rem)'
                           }}
                         >
                           {m === 'visual' ? (lang === 'es' ? '⚡ Rápido' : '⚡ Quick') :
@@ -1510,10 +2103,11 @@ by Matías Carvajal
                     width: '100%',
                     background: (loading || compressing) ? '#d1d5db' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                     color: (loading || compressing) ? '#6b7280' : 'white',
-                    padding: '1rem',
+                    padding: 'clamp(0.75rem, 2vw, 1rem)',
                     borderRadius: '0.75rem',
                     fontWeight: '600',
-                    fontSize: '1.125rem',
+                    fontSize: 'clamp(0.9375rem, 2.5vw, 1.125rem)',
+                    minHeight: '48px',
                     border: 'none',
                     cursor: (loading || compressing) ? 'not-allowed' : 'pointer',
                     transition: 'all 0.3s',
@@ -1576,16 +2170,22 @@ by Matías Carvajal
                       </div>
                     </div>
                   ) : loading ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', width: '100%' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                        <svg style={{ animation: 'spin 1s linear infinite', height: '1.5rem', width: '1.5rem' }} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                          <circle style={{ opacity: 0.25 }} cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path style={{ opacity: 0.75 }} fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        <span style={{ fontSize: '1.125rem', fontWeight: '600' }}>
-                          {lang === 'es' ? 'Analizando...' : 'Analyzing...'}
-                        </span>
-                      </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.25rem', width: '100%' }}>
+                      {/* Rotating methodology message */}
+                      <p
+                        key={loadingMsgIndex}
+                        style={{
+                          textAlign: 'center',
+                          fontSize: '1.05rem',
+                          fontWeight: '500',
+                          color: '#374151',
+                          animation: 'fadeInMsg 0.5s ease-in-out'
+                        }}
+                      >
+                        {loadingMessages[loadingMsgIndex][lang]}
+                      </p>
+
+                      {/* Progress bar + percentage */}
                       <div style={{ width: '100%' }}>
                         <div style={{
                           width: '100%',
@@ -1603,20 +2203,17 @@ by Matías Carvajal
                             boxShadow: '0 2px 8px rgba(102, 126, 234, 0.4)'
                           }} />
                         </div>
-                        <p style={{ textAlign: 'center', color: '#6b7280', marginTop: '0.5rem', fontSize: '0.875rem' }}>
-                          {getProgressMessage(progress)}
-                        </p>
-                        <p style={{ textAlign: 'center', color: '#9ca3af', fontSize: '0.75rem', marginTop: '0.25rem' }}>
-                          {lang === 'es' ? 'Puede tardar hasta 60 segundos' : 'May take up to 60 seconds'}
-                        </p>
-                        <div style={{ 
-                          display: 'flex', 
-                          justifyContent: 'space-between', 
-                          marginTop: '0.75rem',
+                        <div style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          marginTop: '0.5rem',
                           fontSize: '0.875rem',
                           opacity: 0.9
                         }}>
                           <span style={{ fontWeight: '600' }}>{progress}%</span>
+                          <span style={{ color: '#9ca3af', fontSize: '0.75rem' }}>
+                            {lang === 'es' ? 'Puede tardar hasta 60 segundos' : 'May take up to 60 seconds'}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -1638,7 +2235,7 @@ by Matías Carvajal
                 </button>
               )}
 
-              {/* Message when file is too large (>500MB) */}
+              {/* Message when file is too large (>200MB) */}
               {file && isFileTooLarge && (
                 <div style={{
                   width: '100%',
@@ -1658,8 +2255,8 @@ by Matías Carvajal
                   </p>
                   <p style={{ fontSize: '0.875rem', color: '#991b1b' }}>
                     {lang === 'es'
-                      ? `El límite máximo es 500MB. Tu archivo tiene ${(file.size / 1024 / 1024).toFixed(1)}MB.`
-                      : `Maximum limit is 500MB. Your file is ${(file.size / 1024 / 1024).toFixed(1)}MB.`}
+                      ? `El límite máximo es 200MB. Tu archivo tiene ${(file.size / 1024 / 1024).toFixed(1)}MB.`
+                      : `Maximum limit is 200MB. Your file is ${(file.size / 1024 / 1024).toFixed(1)}MB.`}
                   </p>
                   <p style={{ fontSize: '0.75rem', color: '#991b1b', marginTop: '0.5rem' }}>
                     {lang === 'es'
@@ -1676,7 +2273,8 @@ by Matías Carvajal
                   border: '1px solid #fca5a5',
                   borderRadius: '0.5rem',
                   padding: '1rem',
-                  marginTop: '1rem'
+                  marginTop: '1rem',
+                  animation: 'errorSlideIn 0.35s ease-out'
                 }}>
                   <p style={{ color: '#7f1d1d', fontWeight: '500' }}>Error:</p>
                   <p style={{ color: '#991b1b' }}>{error}</p>
@@ -1742,7 +2340,7 @@ by Matías Carvajal
                         fontWeight: 'bold',
                         color: getScoreColor(result.score)
                       }}>
-                        {result.score}/100
+                        {displayScore}/100
                       </span>
                     </div>
                   </div>
@@ -1757,22 +2355,58 @@ by Matías Carvajal
                       background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                       height: '0.75rem',
                       borderRadius: '9999px',
-                      width: `${result.score}%`,
-                      transition: 'width 0.5s'
+                      width: `${displayScore}%`,
+                      transition: 'width 0.08s linear'
                     }} />
                   </div>
                   <p style={{ fontSize: '1.125rem', fontWeight: '600' }}>{result.verdict}</p>
-                  <p style={{ 
-                    fontSize: '0.7rem', 
-                    color: '#6b7280', 
+                  <p style={{
+                    fontSize: '0.7rem',
+                    color: '#6b7280',
                     fontStyle: 'italic',
-                    marginTop: '0.5rem'
+                    marginTop: '0.5rem',
+                    filter: (!isLoggedIn && !isUnlocking) ? 'blur(3px)' : 'none',
+                    transition: 'filter 0.6s ease-out',
+                    userSelect: (!isLoggedIn && !isUnlocking) ? 'none' : 'auto'
                   }}>
-                    {lang === 'es' 
-                      ? 'Este índice evalúa margen técnico para procesamiento, no calidad artística.' 
+                    {lang === 'es'
+                      ? 'Este índice evalúa margen técnico para procesamiento, no calidad artística.'
                       : 'This index evaluates technical margin for processing, not artistic quality.'}
                   </p>
                 </div>
+
+                {/* File Technical Info Strip */}
+                {(result as any).file && (
+                  <div style={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: isMobile ? '0.375rem 0.75rem' : '1.25rem',
+                    background: '#f8fafc',
+                    borderRadius: '0.75rem',
+                    padding: isMobile ? '0.625rem 0.75rem' : '0.75rem 1rem',
+                    marginBottom: '1.5rem',
+                    border: '1px solid #e2e8f0',
+                    fontSize: 'clamp(0.6875rem, 1.8vw, 0.8rem)',
+                    color: '#475569'
+                  }}>
+                    {(result as any).file.duration != null && (
+                      <span>{lang === 'es' ? 'Duración' : 'Duration'}: <strong>{Math.floor((result as any).file.duration / 60)}:{String(Math.round((result as any).file.duration % 60)).padStart(2, '0')}</strong></span>
+                    )}
+                    {(result as any).file.sample_rate != null && (
+                      <span>Sample Rate: <strong>{((result as any).file.sample_rate / 1000).toFixed((result as any).file.sample_rate % 1000 === 0 ? 0 : 1)} kHz</strong></span>
+                    )}
+                    {(result as any).file.bit_depth != null && (
+                      <span>Bit Depth: <strong>{(result as any).file.bit_depth}-bit</strong></span>
+                    )}
+                    {(result as any).file.channels != null && (
+                      <span>{(result as any).file.channels === 2 ? (lang === 'es' ? 'Estéreo' : 'Stereo') : (result as any).file.channels === 1 ? 'Mono' : `${(result as any).file.channels}ch`}</span>
+                    )}
+                    {file && (
+                      <span>{lang === 'es' ? 'Tamaño' : 'Size'}: <strong>{file.size >= 1048576 ? `${(file.size / 1048576).toFixed(1)} MB` : `${(file.size / 1024).toFixed(0)} KB`}</strong></span>
+                    )}
+                    <span>{lang === 'es' ? 'Formato' : 'Format'}: <strong>{(result.filename || '').split('.').pop()?.toUpperCase() || 'N/A'}</strong></span>
+                  </div>
+                )}
 
                 {/* Report View Toggle */}
                 <div style={{
@@ -1787,7 +2421,24 @@ by Matías Carvajal
                   {(['visual', 'short', 'write'] as const).map((view) => (
                     <button
                       key={view}
-                      onClick={() => setReportView(view)}
+                      onClick={() => {
+                        // Check if user is logged in for Resumen/Completo tabs
+                        if ((view === 'short' || view === 'write') && !isLoggedIn) {
+                          setShowAuthModal(true)
+                          return
+                        }
+                        // Completo requires paid access (Pro or Single purchase)
+                        if (view === 'write' && isLoggedIn && !hasPaidAccess) {
+                          setShowUpgradeModal(true)
+                          return
+                        }
+                        if (view === reportView) return
+                        setTabTransition(true)
+                        setTimeout(() => {
+                          setReportView(view)
+                          setTabTransition(false)
+                        }, 150)
+                      }}
                       style={{
                         flex: '1 1 calc(33.333% - 0.5rem)',
                         minWidth: '90px',
@@ -1800,15 +2451,32 @@ by Matías Carvajal
                         fontSize: 'clamp(0.75rem, 2vw, 0.875rem)',
                         cursor: 'pointer',
                         transition: 'all 0.2s',
-                        boxShadow: reportView === view ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+                        boxShadow: reportView === view ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                        position: 'relative'
                       }}
                     >
+                      {/* Crown icon for non-logged users on Resumen, unpaid on Completo */}
+                      {((view === 'short' && !isLoggedIn) || (view === 'write' && (!isLoggedIn || !hasPaidAccess))) && (
+                        <Crown size={12} style={{
+                          position: 'absolute',
+                          top: '4px',
+                          right: '4px',
+                          color: '#d97706'
+                        }} />
+                      )}
                       {view === 'visual' ? (lang === 'es' ? '⚡ Rápido' : '⚡ Quick') :
                        view === 'short' ? (lang === 'es' ? '📝 Resumen' : '📝 Summary') :
                        (lang === 'es' ? '📄 Completo' : '📄 Complete')}
                     </button>
                   ))}
                 </div>
+
+                {/* Tab Content Wrapper with cross-fade */}
+                <div style={{
+                  opacity: tabTransition ? 0 : 1,
+                  transform: tabTransition ? 'translateY(4px)' : 'translateY(0)',
+                  transition: 'opacity 0.15s ease, transform 0.15s ease'
+                }}>
 
                 {/* Visual Mode */}
                 {reportView === 'visual' && (
@@ -1853,7 +2521,7 @@ by Matías Carvajal
                           📊 {lang === 'es' ? 'Áreas de Atención Prioritaria' : 'Priority Attention Areas'}
                         </h4>
                         
-                        {/* Subtexto explicativo - Mastering Ready philosophy */}
+                        {/* Subtexto explicativo - MasteringReady philosophy */}
                         <p style={{
                           fontSize: '0.7rem',
                           color: '#6b7280',
@@ -1910,20 +2578,20 @@ by Matías Carvajal
                                   style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}
                                   title={tooltip}
                                 >
-                                  <div style={{ 
-                                    minWidth: '100px', 
-                                    maxWidth: '120px',
-                                    fontSize: '0.75rem', 
-                                    fontWeight: '500', 
+                                  <div style={{
+                                    minWidth: 'clamp(70px, 18vw, 120px)',
+                                    maxWidth: 'clamp(80px, 20vw, 120px)',
+                                    fontSize: 'clamp(0.6875rem, 1.5vw, 0.75rem)',
+                                    fontWeight: '500',
                                     color: '#4b5563',
                                     textAlign: 'right'
                                   }}>
                                     {lang === 'es' ? label.es : label.en}
                                   </div>
-                                  <div style={{ 
-                                    flex: 1, 
-                                    background: '#e5e7eb', 
-                                    borderRadius: '9999px', 
+                                  <div style={{
+                                    flex: 1,
+                                    background: '#e5e7eb',
+                                    borderRadius: '9999px',
                                     height: '0.5rem',
                                     overflow: 'hidden'
                                   }}>
@@ -1935,9 +2603,9 @@ by Matías Carvajal
                                       transition: 'width 0.5s ease-out'
                                     }} />
                                   </div>
-                                  <div style={{ 
-                                    minWidth: '45px',
-                                    fontSize: '0.75rem', 
+                                  <div style={{
+                                    minWidth: 'clamp(38px, 10vw, 45px)',
+                                    fontSize: 'clamp(0.6875rem, 1.5vw, 0.75rem)', 
                                     fontWeight: '600', 
                                     color: color,
                                     textAlign: 'right'
@@ -1950,7 +2618,7 @@ by Matías Carvajal
                           })()}
                         </div>
                         
-                        {/* Legend - Mastering Ready philosophy: margin, not judgment */}
+                        {/* Legend - MasteringReady philosophy: margin, not judgment */}
                         <div style={{ 
                           display: 'flex', 
                           flexWrap: 'wrap',
@@ -1984,28 +2652,79 @@ by Matías Carvajal
                           fontSize: '0.6rem',
                           color: '#9ca3af',
                           marginTop: '0.5rem',
-                          textAlign: 'center'
+                          textAlign: 'center',
+                          filter: (!isLoggedIn && !isUnlocking) ? 'blur(3px)' : 'none',
+                          transition: 'filter 0.6s ease-out',
+                          userSelect: (!isLoggedIn && !isUnlocking) ? 'none' : 'auto'
                         }}>
-                          {lang === 'es' 
+                          {lang === 'es'
                             ? 'Basado en criterios de Mastering Ready para compatibilidad, margen y traducción.'
                             : 'Based on Mastering Ready criteria for compatibility, margin and translation.'}
                         </p>
                       </div>
                     )}
                     
-                    <pre style={{
-                      whiteSpace: 'pre-wrap',
-                      wordBreak: 'break-word',
-                      overflowWrap: 'break-word',
-                      fontSize: 'clamp(0.8rem, 2vw, 0.875rem)',
-                      lineHeight: '1.6',
-                      fontFamily: 'Inter, system-ui, sans-serif',
-                      overflowX: 'auto',
-                      maxWidth: '100%',
-                      margin: 0
-                    }}>
-                      {cleanReportText((result as any).report_visual || result.report_short || result.report)}
-                    </pre>
+                    {/* Report content with blur for non-logged users */}
+                    <div
+                      style={{ position: 'relative' }}
+                      onClick={() => {
+                        if (!isLoggedIn) setShowAuthModal(true)
+                      }}
+                    >
+                      <pre style={{
+                        whiteSpace: 'pre-wrap',
+                        wordBreak: 'break-word',
+                        overflowWrap: 'break-word',
+                        fontSize: 'clamp(0.8rem, 2vw, 0.875rem)',
+                        lineHeight: '1.6',
+                        fontFamily: 'Inter, system-ui, sans-serif',
+                        overflowX: 'auto',
+                        maxWidth: '100%',
+                        margin: 0,
+                        filter: (!isLoggedIn && !isUnlocking) ? 'blur(4px)' : 'none',
+                        transition: 'filter 0.6s ease-out',
+                        userSelect: (!isLoggedIn && !isUnlocking) ? 'none' : 'auto',
+                        cursor: !isLoggedIn ? 'pointer' : 'auto'
+                      }}>
+                        {cleanReportText((result as any).report_visual || result.report_short || result.report)}
+                      </pre>
+                      {/* Unlock overlay for non-logged users */}
+                      {!isLoggedIn && (
+                        <div style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          background: 'rgba(255, 255, 255, 0.3)',
+                          borderRadius: '0.5rem',
+                          cursor: 'pointer',
+                          opacity: isUnlocking ? 0 : 1,
+                          transition: 'opacity 0.4s ease-out',
+                          pointerEvents: isUnlocking ? 'none' : 'auto'
+                        }}>
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            padding: '0.75rem 1.25rem',
+                            background: 'white',
+                            borderRadius: '9999px',
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                            color: isUnlocking ? '#10b981' : '#667eea',
+                            fontWeight: '600',
+                            fontSize: '0.875rem',
+                            transition: 'color 0.3s ease'
+                          }}>
+                            {isUnlocking ? <Headphones size={16} /> : <Crown size={16} />}
+                            {lang === 'es' ? 'Obtener análisis completo' : 'Get complete analysis'}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
 
@@ -2145,11 +2864,19 @@ by Matías Carvajal
                   </>
                 )}
 
+                </div>{/* End tab content cross-fade wrapper */}
+
                 {/* Download Buttons */}
                 <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
                   {/* Download Current View */}
                   <button
-                    onClick={handleDownload}
+                    onClick={() => {
+                      if (!isLoggedIn) {
+                        setShowAuthModal(true)
+                        return
+                      }
+                      handleDownload()
+                    }}
                     style={{
                       flex: 1,
                       minWidth: '160px',
@@ -2159,8 +2886,8 @@ by Matías Carvajal
                       gap: '0.5rem',
                       padding: '0.875rem 1.25rem',
                       background: 'white',
-                      color: '#667eea',
-                      border: '2px solid #667eea',
+                      color: !isLoggedIn ? '#9ca3af' : '#667eea',
+                      border: `2px solid ${!isLoggedIn ? '#d1d5db' : '#667eea'}`,
                       borderRadius: '0.75rem',
                       fontWeight: '600',
                       fontSize: 'clamp(0.8rem, 2vw, 0.9rem)',
@@ -2176,15 +2903,25 @@ by Matías Carvajal
                       e.currentTarget.style.transform = 'translateY(0)'
                     }}
                   >
-                    <Download size={18} />
-                    {lang === 'es' 
+                    {!isLoggedIn ? <Crown size={18} style={{ color: '#d97706' }} /> : <Download size={18} />}
+                    {lang === 'es'
                       ? `Descargar ${reportView === 'visual' ? 'Rápido' : reportView === 'short' ? 'Resumen' : 'Completo'}`
                       : `Download ${reportView === 'visual' ? 'Quick' : reportView === 'short' ? 'Summary' : 'Complete'}`}
                   </button>
 
-                  {/* Download Full Report */}
+                  {/* Download Full Report — Pro only */}
                   <button
-                    onClick={handleDownloadFull}
+                    onClick={() => {
+                      if (!isLoggedIn) {
+                        setShowAuthModal(true)
+                        return
+                      }
+                      if (!hasPaidAccess) {
+                        setShowUpgradeModal(true)
+                        return
+                      }
+                      handleDownloadFull()
+                    }}
                     style={{
                       flex: 1,
                       minWidth: '160px',
@@ -2193,37 +2930,41 @@ by Matías Carvajal
                       justifyContent: 'center',
                       gap: '0.5rem',
                       padding: '0.875rem 1.25rem',
-                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                      color: 'white',
+                      background: (!isLoggedIn || !hasPaidAccess) ? '#e5e7eb' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      color: (!isLoggedIn || !hasPaidAccess) ? '#6b7280' : 'white',
                       border: 'none',
                       borderRadius: '0.75rem',
                       fontWeight: '600',
                       fontSize: 'clamp(0.8rem, 2vw, 0.9rem)',
                       cursor: 'pointer',
                       transition: 'all 0.2s',
-                      boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)'
+                      boxShadow: (!isLoggedIn || !hasPaidAccess) ? 'none' : '0 4px 12px rgba(102, 126, 234, 0.3)'
                     }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.transform = 'translateY(-2px)'
-                      e.currentTarget.style.boxShadow = '0 6px 20px rgba(102, 126, 234, 0.4)'
+                      if (isLoggedIn && hasPaidAccess) {
+                        e.currentTarget.style.boxShadow = '0 6px 20px rgba(102, 126, 234, 0.4)'
+                      }
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.transform = 'translateY(0)'
-                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.3)'
+                      if (isLoggedIn && hasPaidAccess) {
+                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.3)'
+                      }
                     }}
                   >
-                    <Download size={18} />
+                    {(!isLoggedIn || !hasPaidAccess) ? <Crown size={18} style={{ color: '#d97706' }} /> : <Download size={18} />}
                     {lang === 'es' ? 'Análisis Detallado' : 'Detailed Analysis'}
                   </button>
                 </div>
               </div>
 
-              {/* CTA for Mastering Service - Dynamic from backend */}
+              {/* CTA for Mastering Service — dynamic from backend based on score */}
               {result.cta_message && result.cta_button && (
                 <div style={{
                   background: 'linear-gradient(to bottom right, #818cf8 0%, #6366f1 100%)',
                   borderRadius: '1.5rem',
-                  padding: '2.5rem 2rem',
+                  padding: isMobile ? '1.5rem' : '2.5rem 2rem',
                   color: 'white',
                   boxShadow: '0 20px 40px rgba(99, 102, 241, 0.2)'
                 }}>
@@ -2233,7 +2974,7 @@ by Matías Carvajal
                     gap: '1rem',
                     marginBottom: '1.5rem'
                   }}>
-                    {/* Icon circle - dynamic based on score */}
+                    {/* Icon circle — dynamic based on score */}
                     <div style={{
                       width: '4rem',
                       height: '4rem',
@@ -2246,58 +2987,57 @@ by Matías Carvajal
                       flexShrink: 0
                     }}>
                       <span style={{ fontSize: '2rem' }}>
-                        {result.score >= 85 ? '🎧' : 
-                         result.score >= 60 ? '🔧' : 
-                         result.score >= 40 ? '🔍' : 
-                         result.score >= 20 ? '🔧' : '💬'}
+                        {result.score >= 85 ? '🎧' :
+                         result.score >= 60 ? '🔧' :
+                         result.score >= 40 ? '🔍' :
+                         result.score >= 20 ? '🔍' : '💬'}
                       </span>
                     </div>
-                    
+
                     {/* Message */}
                     <div style={{ flex: 1 }}>
-                      {/* Title - clean, no extra icons */}
                       <h3 style={{
-                        fontSize: '1.375rem',
+                        fontSize: isMobile ? '1.125rem' : '1.375rem',
                         lineHeight: '1.3',
                         fontWeight: '600',
                         marginBottom: '1rem',
                         marginTop: '0.25rem'
                       }}>
                         {(() => {
-                          let title = result.cta_message.split('\n')[0];
-                          // Remove ALL emojis, symbols, and special characters from the start
-                          // This regex removes: emojis, symbols, punctuation, whitespace at the start
-                          title = title.replace(/^[\p{Emoji}\p{Symbol}\p{Punctuation}\s]+/gu, '');
-                          return title;
+                          let title = result.cta_message.split('\n')[0]
+                          title = title.replace(/^[\p{Emoji}\p{Symbol}\p{Punctuation}\s]+/gu, '')
+                          return title
                         })()}
                       </h3>
-                      
-                      {/* Description - full on desktop, shortened on mobile */}
                       <p style={{
-                        fontSize: window.innerWidth >= 768 ? '1.0625rem' : '1rem',
+                        fontSize: isMobile ? '0.9rem' : '1.0625rem',
                         lineHeight: '1.5',
-                        opacity: '0.95',
+                        opacity: 0.95,
                         margin: 0
                       }}>
                         {(() => {
-                          const fullText = result.cta_message.split('\n').slice(1).join(' ');
-                          // On mobile, shorten to first sentence or ~80 chars
-                          if (window.innerWidth < 768) {
-                            const firstSentence = fullText.split('.')[0];
-                            return firstSentence.length > 80 
+                          const fullText = result.cta_message.split('\n').slice(1).join(' ')
+                          if (isMobile) {
+                            const firstSentence = fullText.split('.')[0]
+                            return firstSentence.length > 80
                               ? firstSentence.substring(0, 77) + '...'
-                              : firstSentence + '.';
+                              : firstSentence + '.'
                           }
-                          return fullText;
+                          return fullText
                         })()}
                       </p>
                     </div>
                   </div>
-                  
+
                   {/* CTA Button */}
-                  <div style={{ paddingLeft: window.innerWidth >= 768 ? '5rem' : '0' }}>
+                  <div style={{ paddingLeft: isMobile ? '0' : '5rem' }}>
                     <button
-                      onClick={() => setShowContactModal(true)}
+                      onClick={() => {
+                        const action = (result as any).cta_action || 'mastering'
+                        trackCtaClick(action)
+                        setCtaSource(action)
+                        setShowContactModal(true)
+                      }}
                       style={{
                         background: 'white',
                         color: '#6366f1',
@@ -2309,7 +3049,7 @@ by Matías Carvajal
                         fontSize: '1.125rem',
                         boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
                         transition: 'all 0.2s',
-                        width: window.innerWidth < 768 ? '100%' : 'auto'
+                        width: isMobile ? '100%' : 'auto'
                       }}
                       onMouseEnter={(e) => {
                         e.currentTarget.style.transform = 'translateY(-2px)'
@@ -2326,46 +3066,112 @@ by Matías Carvajal
                 </div>
               )}
 
-              {/* Feedback Button - SECOND */}
-              {!feedbackSubmitted && (
+              {/* Analysis Rating Widget — appears with fade-in after 4s */}
+              {!ratingSubmitted && (
                 <div style={{
                   textAlign: 'center',
-                  marginBottom: '1.5rem'
+                  marginBottom: '1.5rem',
+                  opacity: showRatingWidget ? 1 : 0,
+                  transform: showRatingWidget ? 'translateY(0)' : 'translateY(10px)',
+                  transition: 'opacity 0.6s ease, transform 0.6s ease',
+                  pointerEvents: showRatingWidget ? 'auto' : 'none'
                 }}>
                   <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.75rem' }}>
                     {lang === 'es'
-                      ? 'Estamos en beta. ¿Cómo te fue con el análisis?'
-                      : 'We\'re in beta. How was your analysis experience?'}
+                      ? '¿Te resultó útil el análisis?'
+                      : 'Was the analysis useful?'}
                   </p>
-                  <button
-                    onClick={() => setShowFeedbackModal(true)}
-                    style={{
-                      background: 'white',
-                      color: '#667eea',
-                      padding: '0.75rem 2rem',
-                      borderRadius: '9999px',
-                      fontWeight: '600',
-                      border: '2px solid #667eea',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s',
-                      fontSize: '0.95rem'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = '#f3f4f6'
-                      e.currentTarget.style.transform = 'translateY(-2px)'
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = 'white'
-                      e.currentTarget.style.transform = 'translateY(0)'
-                    }}
-                  >
-                    💬 {lang === 'es' ? 'Dejarnos Feedback' : 'Give Feedback'}
-                  </button>
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', marginBottom: analysisRating !== null ? '0.75rem' : '0' }}>
+                    <button
+                      onClick={() => setAnalysisRating(true)}
+                      style={{
+                        width: '3.25rem',
+                        height: '3.25rem',
+                        borderRadius: '50%',
+                        border: analysisRating === true ? '2px solid #10b981' : '2px solid #e5e7eb',
+                        background: analysisRating === true ? '#ecfdf5' : 'white',
+                        cursor: 'pointer',
+                        fontSize: '1.25rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        transition: 'all 0.2s'
+                      }}
+                      title={lang === 'es' ? 'Me fue bien' : 'Good experience'}
+                      aria-label={lang === 'es' ? 'Me fue bien' : 'Good experience'}
+                    >
+                      👍
+                    </button>
+                    <button
+                      onClick={() => setAnalysisRating(false)}
+                      style={{
+                        width: '3.25rem',
+                        height: '3.25rem',
+                        borderRadius: '50%',
+                        border: analysisRating === false ? '2px solid #ef4444' : '2px solid #e5e7eb',
+                        background: analysisRating === false ? '#fef2f2' : 'white',
+                        cursor: 'pointer',
+                        fontSize: '1.25rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        transition: 'all 0.2s'
+                      }}
+                      title={lang === 'es' ? 'Podría mejorar' : 'Could be better'}
+                      aria-label={lang === 'es' ? 'Podría mejorar' : 'Could be better'}
+                    >
+                      👎
+                    </button>
+                  </div>
+                  {analysisRating !== null && (
+                    <div style={{
+                      opacity: 1,
+                      transition: 'opacity 0.3s ease'
+                    }}>
+                      <input
+                        type="text"
+                        placeholder={lang === 'es' ? 'Comentario opcional...' : 'Optional comment...'}
+                        value={analysisComment}
+                        onChange={(e) => setAnalysisComment(e.target.value)}
+                        style={{
+                          width: '100%',
+                          maxWidth: '320px',
+                          padding: '0.5rem 0.75rem',
+                          borderRadius: '0.5rem',
+                          border: '1px solid #e5e7eb',
+                          fontSize: '0.875rem',
+                          marginBottom: '0.5rem',
+                          outline: 'none'
+                        }}
+                        onFocus={(e) => e.currentTarget.style.borderColor = '#667eea'}
+                        onBlur={(e) => e.currentTarget.style.borderColor = '#e5e7eb'}
+                      />
+                      <br />
+                      <button
+                        onClick={submitAnalysisRating}
+                        style={{
+                          background: '#667eea',
+                          color: 'white',
+                          padding: '0.5rem 1.5rem',
+                          borderRadius: '9999px',
+                          border: 'none',
+                          fontWeight: '600',
+                          cursor: 'pointer',
+                          fontSize: '0.875rem',
+                          transition: 'all 0.2s'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.background = '#5a6fd6'}
+                        onMouseLeave={(e) => e.currentTarget.style.background = '#667eea'}
+                      >
+                        {lang === 'es' ? 'Enviar' : 'Submit'}
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
 
-              {/* Thank you message after feedback */}
-              {feedbackSubmitted && (
+              {/* Thank you message after rating */}
+              {ratingSubmitted && (
                 <div style={{
                   background: '#f0fdf4',
                   borderRadius: '1rem',
@@ -2374,17 +3180,175 @@ by Matías Carvajal
                   border: '1px solid #86efac',
                   textAlign: 'center'
                 }}>
-                  <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>🙏</div>
-                  <h3 style={{ fontSize: '1.25rem', fontWeight: '600', color: '#166534', marginBottom: '0.5rem' }}>
+                  <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>
+                    {analysisRating ? '👍' : '👎'}
+                  </div>
+                  <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#166534', marginBottom: '0.25rem' }}>
                     {lang === 'es' ? '¡Gracias por tu feedback!' : 'Thank you for your feedback!'}
                   </h3>
-                  <p style={{ fontSize: '0.875rem', color: '#15803d' }}>
+                  <p style={{ fontSize: '0.8125rem', color: '#15803d' }}>
                     {lang === 'es'
-                      ? 'Tu opinión nos ayuda a mejorar Mastering Ready para todos.'
-                      : 'Your input helps us improve Mastering Ready for everyone.'}
+                      ? 'Tu opinión nos ayuda a mejorar Mastering Ready.'
+                      : 'Your input helps us improve Mastering Ready.'}
                   </p>
                 </div>
               )}
+
+              {/* Mini-Glossary (per spec Section 12) */}
+              <div style={{
+                background: '#f8fafc',
+                borderRadius: '0.75rem',
+                border: '1px solid #e2e8f0',
+                overflow: 'hidden'
+              }}>
+                <button
+                  onClick={() => setGlossaryOpen(!glossaryOpen)}
+                  style={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '1rem 1.25rem',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    textAlign: 'left'
+                  }}
+                >
+                  <span style={{ fontSize: '1rem', fontWeight: '600', color: '#1e293b' }}>
+                    {lang === 'es' ? '📘 ¿Qué significan estos términos?' : '📘 What do these terms mean?'}
+                  </span>
+                  <span style={{
+                    transform: glossaryOpen ? 'rotate(180deg)' : 'rotate(0)',
+                    transition: 'transform 0.2s',
+                    fontSize: '1.25rem',
+                    color: '#64748b'
+                  }}>
+                    ▾
+                  </span>
+                </button>
+
+                <div style={{
+                  maxHeight: glossaryOpen ? 'min(600px, 70vh)' : '0',
+                  opacity: glossaryOpen ? 1 : 0,
+                  overflow: 'hidden',
+                  transition: 'max-height 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease'
+                }}>
+                  <div style={{ padding: '0 1.25rem 1.25rem' }}>
+                    <p style={{ fontSize: '0.875rem', color: '#64748b', marginBottom: '1rem' }}>
+                      {lang === 'es'
+                        ? 'Algunos conceptos técnicos usados en este análisis están explicados brevemente aquí.'
+                        : 'Some technical concepts used in this analysis are briefly explained here.'}
+                    </p>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                      {/* Headroom */}
+                      <div>
+                        <span style={{ fontWeight: '600', color: '#334155', fontSize: '0.9rem' }}>Headroom</span>
+                        <p style={{ fontSize: '0.825rem', color: '#64748b', margin: '0.125rem 0 0' }}>
+                          {lang === 'es'
+                            ? 'Espacio dinámico disponible antes del clipping. Permite al ingeniero de mastering trabajar sin distorsión.'
+                            : 'Dynamic space available before clipping. Allows the mastering engineer to work without distortion.'}
+                        </p>
+                      </div>
+
+                      {/* True Peak */}
+                      <div>
+                        <span style={{ fontWeight: '600', color: '#334155', fontSize: '0.9rem' }}>True Peak</span>
+                        <p style={{ fontSize: '0.825rem', color: '#64748b', margin: '0.125rem 0 0' }}>
+                          {lang === 'es'
+                            ? 'Nivel real máximo considerando la reconstrucción digital. Importante para evitar distorsión en conversión.'
+                            : 'Actual maximum level considering digital reconstruction. Important to avoid distortion during conversion.'}
+                        </p>
+                      </div>
+
+                      {/* LUFS */}
+                      <div>
+                        <span style={{ fontWeight: '600', color: '#334155', fontSize: '0.9rem' }}>LUFS (Integrated)</span>
+                        <p style={{ fontSize: '0.825rem', color: '#64748b', margin: '0.125rem 0 0' }}>
+                          {lang === 'es'
+                            ? 'Medida del volumen percibido. Es informativo: el volumen final se ajusta en mastering.'
+                            : 'Measure of perceived loudness. Informative only: final loudness is adjusted in mastering.'}
+                        </p>
+                      </div>
+
+                      {/* PLR */}
+                      <div>
+                        <span style={{ fontWeight: '600', color: '#334155', fontSize: '0.9rem' }}>PLR (Peak-to-Loudness Ratio)</span>
+                        <p style={{ fontSize: '0.825rem', color: '#64748b', margin: '0.125rem 0 0' }}>
+                          {lang === 'es'
+                            ? 'Relación entre el pico y el nivel promedio. Indica cuánta dinámica tiene tu mezcla.'
+                            : 'Ratio between peak and average level. Indicates how much dynamics your mix has.'}
+                        </p>
+                      </div>
+
+                      {/* Stereo Image */}
+                      <div>
+                        <span style={{ fontWeight: '600', color: '#334155', fontSize: '0.9rem' }}>
+                          {lang === 'es' ? 'Imagen Estéreo' : 'Stereo Image'}
+                        </span>
+                        <p style={{ fontSize: '0.825rem', color: '#64748b', margin: '0.125rem 0 0' }}>
+                          {lang === 'es'
+                            ? 'Distribución espacial del contenido entre izquierda y derecha. Afecta la amplitud y compatibilidad mono.'
+                            : 'Spatial distribution of content between left and right. Affects width and mono compatibility.'}
+                        </p>
+                      </div>
+
+                      {/* Frequency Balance */}
+                      <div>
+                        <span style={{ fontWeight: '600', color: '#334155', fontSize: '0.9rem' }}>
+                          {lang === 'es' ? 'Balance de Frecuencias' : 'Frequency Balance'}
+                        </span>
+                        <p style={{ fontSize: '0.825rem', color: '#64748b', margin: '0.125rem 0 0' }}>
+                          {lang === 'es'
+                            ? 'Distribución tonal entre graves, medios y agudos. Un balance saludable facilita el mastering.'
+                            : 'Tonal distribution between lows, mids, and highs. A healthy balance makes mastering easier.'}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* eBook link */}
+                    <div style={{
+                      marginTop: '1.25rem',
+                      paddingTop: '1rem',
+                      borderTop: '1px solid #e2e8f0'
+                    }}>
+                      <p style={{ fontSize: '0.825rem', color: '#64748b', marginBottom: '0.75rem' }}>
+                        {lang === 'es'
+                          ? 'Para un glosario completo y la metodología completa de Mastering Ready, puedes profundizar en el eBook.'
+                          : 'For a complete glossary and the full Mastering Ready methodology, you can dive deeper in the eBook.'}
+                      </p>
+                      <a
+                        href="https://masteringready.com/ebook"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          display: 'inline-block',
+                          fontSize: '0.875rem',
+                          fontWeight: '500',
+                          color: '#667eea',
+                          textDecoration: 'none',
+                          padding: '0.5rem 1rem',
+                          border: '1px solid #667eea',
+                          borderRadius: '0.5rem',
+                          transition: 'all 0.2s'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = '#667eea'
+                          e.currentTarget.style.color = 'white'
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = 'transparent'
+                          e.currentTarget.style.color = '#667eea'
+                        }}
+                      >
+                        {lang === 'es' ? 'Ver metodología completa en el eBook' : 'See full methodology in the eBook'}
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
             </div>
           )}
         </div>
@@ -2582,9 +3546,9 @@ by Matías Carvajal
                   color: '#64748b',
                   margin: 0
                 }}>
-                  {lang === 'es' 
-                    ? '15 USD hasta el 31 de enero con código READY15'
-                    : '15 USD until January 31 with code READY15'}
+                  {lang === 'es'
+                    ? '15 USD con código READY15'
+                    : '15 USD with code READY15'}
                 </p>
                 <p style={{
                   fontSize: '0.75rem',
@@ -2614,9 +3578,9 @@ by Matías Carvajal
         borderTop: '1px solid rgba(255, 255, 255, 0.1)'
       }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-          <div className="footer-grid" style={{ 
-            display: 'grid', 
-            gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+          <div className="footer-grid" style={{
+            display: 'grid',
+            gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(250px, 1fr))',
             textAlign: 'left'
           }}>
             {/* Brand */}
@@ -2626,8 +3590,8 @@ by Matías Carvajal
               </div>
               <p style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.875rem', lineHeight: '1.6' }}>
                 {lang === 'es'
-                  ? 'Prepara tu mezcla para el mastering. Análisis técnico claro y rápido.'
-                  : 'Prepare your mix for mastering. Clear and fast technical analysis.'}
+                  ? 'Analiza tu mezcla antes de masterizar.'
+                  : 'Analyze your mix before mastering.'}
               </p>
             </div>
 
@@ -2731,12 +3695,12 @@ by Matías Carvajal
                   <span>📖</span>
                   <span>{lang === 'es' ? 'Profundiza en el eBook' : 'Learn more in the eBook'}</span>
                 </a>
-                <a 
+                <a
                   href="https://www.masteringready.com"
                   target="_blank"
                   rel="noopener noreferrer"
-                  style={{ 
-                    color: 'rgba(255, 255, 255, 0.7)', 
+                  style={{
+                    color: 'rgba(255, 255, 255, 0.7)',
                     textDecoration: 'none',
                     fontSize: '0.875rem',
                     transition: 'color 0.2s',
@@ -2749,17 +3713,65 @@ by Matías Carvajal
                 </a>
               </div>
             </div>
+
+            {/* Legal */}
+            <div>
+              <h4 className="footer-heading" style={{
+                fontWeight: '600',
+                color: '#ffffff'
+              }}>
+                {lang === 'es' ? 'Legal' : 'Legal'}
+              </h4>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <Link
+                  href="/terms"
+                  style={{
+                    color: 'rgba(255, 255, 255, 0.7)',
+                    textDecoration: 'none',
+                    fontSize: '0.875rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    transition: 'color 0.2s'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.color = '#ffffff'}
+                  onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)'}
+                >
+                  <span>📄</span>
+                  <span>{lang === 'es' ? 'Términos de Servicio' : 'Terms of Service'}</span>
+                </Link>
+                <Link
+                  href="/privacy"
+                  style={{
+                    color: 'rgba(255, 255, 255, 0.7)',
+                    textDecoration: 'none',
+                    fontSize: '0.875rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    transition: 'color 0.2s'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.color = '#ffffff'}
+                  onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)'}
+                >
+                  <span>🛡️</span>
+                  <span>{lang === 'es' ? 'Política de Privacidad' : 'Privacy Policy'}</span>
+                </Link>
+              </div>
+            </div>
           </div>
-          
+
           <div className="footer-copyright" style={{ 
             borderTop: '1px solid rgba(255, 255, 255, 0.1)', 
             textAlign: 'center' 
           }}>
             <p style={{ color: 'rgba(255, 255, 255, 0.8)', marginBottom: '0.5rem' }}>
-              © 2026 Mastering Ready by Matías Carvajal.
+              {lang === 'es'
+                ? '© 2026 Mastering Ready. Todos los derechos reservados.'
+                : '© 2026 Mastering Ready. All rights reserved.'}
             </p>
             <p style={{ fontSize: '0.875rem', color: 'rgba(255, 255, 255, 0.6)' }}>
-              {lang === 'es' 
+              {lang === 'es'
                 ? 'Basado en la metodología "Mastering Ready"'
                 : 'Based on the "Mastering Ready" methodology'}
             </p>
@@ -2769,7 +3781,7 @@ by Matías Carvajal
 
       {/* Contact Modal */}
       {showContactModal && (
-        <div 
+        <div
           onClick={() => setShowContactModal(false)}
           style={{
             position: 'fixed',
@@ -2782,19 +3794,22 @@ by Matías Carvajal
             alignItems: 'center',
             justifyContent: 'center',
             zIndex: 100,
-            padding: '1.5rem'
+            padding: 'clamp(0.75rem, 3vw, 1.5rem)',
+            animation: 'modalBackdropIn 0.25s ease-out',
+            overscrollBehavior: 'contain'
           }}
         >
-          <div 
+          <div
             onClick={(e) => e.stopPropagation()}
             style={{
               background: 'white',
               borderRadius: '1rem',
-              padding: '2rem',
+              padding: 'clamp(1.25rem, 4vw, 2rem)',
               maxWidth: '500px',
-              width: '100%',
+              width: 'calc(100% - 1rem)',
               boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
-              position: 'relative'
+              position: 'relative',
+              animation: 'modalContentIn 0.25s cubic-bezier(0.16, 1, 0.3, 1)'
             }}
           >
             {/* Close button */}
@@ -2806,39 +3821,25 @@ by Matías Carvajal
                 right: '1rem',
                 background: 'none',
                 border: 'none',
-                fontSize: '1.5rem',
                 cursor: 'pointer',
                 color: '#6b7280',
-                width: '2rem',
-                height: '2rem',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderRadius: '0.5rem',
-                transition: 'all 0.2s'
+                padding: '0.75rem'
               }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = '#f3f4f6'
-                e.currentTarget.style.color = '#111827'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'none'
-                e.currentTarget.style.color = '#6b7280'
-              }}
+              aria-label={lang === 'es' ? 'Cerrar' : 'Close'}
             >
-              ✕
+              <X size={20} />
             </button>
 
             {/* Header */}
             <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
               <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>🎧</div>
               <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>
-                {lang === 'es' ? '¡Trabajemos juntos!' : 'Let\'s work together!'}
+                {lang === 'es' ? 'Hablemos de tu track' : 'Let\u2019s talk about your track'}
               </h3>
               <p style={{ color: '#6b7280' }}>
-                {lang === 'es' 
-                  ? 'Elige cómo prefieres contactarme:'
-                  : 'Choose how you prefer to contact me:'}
+                {lang === 'es'
+                  ? 'Elige cómo contactarme:'
+                  : 'Choose how to reach me:'}
               </p>
             </div>
 
@@ -2848,11 +3849,12 @@ by Matías Carvajal
               <a
                 href={`https://wa.me/573155576115?text=${encodeURIComponent(
                   lang === 'es'
-                    ? `Hola! Acabo de analizar mi mezcla en Mastering Ready y me gustaría hablar sobre el mastering.\n\nPuntuación obtenida: ${result?.score || 'N/A'}/100`
-                    : `Hi! I just analyzed my mix on Mastering Ready and would like to talk about mastering.\n\nScore obtained: ${result?.score || 'N/A'}/100`
+                    ? `Hola Matías, acabo de analizar "${result?.filename || 'mi mezcla'}" en Mastering Ready (${result?.score || 'N/A'}/100). ${ctaSource === 'mastering' ? 'Me interesa el mastering.' : 'Me gustaría revisar algunos puntos de la mezcla.'}`
+                    : `Hi Matías, I just analyzed "${result?.filename || 'my mix'}" on Mastering Ready (${result?.score || 'N/A'}/100). ${ctaSource === 'mastering' ? 'I\'m interested in mastering.' : 'I\'d like to review some mix points.'}`
                 )}`}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={() => logContactRequest('whatsapp')}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -2889,14 +3891,15 @@ by Matías Carvajal
               {/* Email */}
               <a
                 href={`mailto:mat@matcarvy.com?subject=${encodeURIComponent(
-                  lang === 'es' 
-                    ? 'Solicitud de Mastering - Mastering Ready'
-                    : 'Mastering Request - Mastering Ready'
+                  lang === 'es'
+                    ? `${ctaSource === 'mastering' ? 'Mastering' : 'Revisión de mezcla'}: ${result?.filename || 'Mi track'}`
+                    : `${ctaSource === 'mastering' ? 'Mastering' : 'Mix review'}: ${result?.filename || 'My track'}`
                 )}&body=${encodeURIComponent(
                   lang === 'es'
-                    ? `Hola Matías,\n\nAcabo de analizar mi mezcla en Mastering Ready y me gustaría hablar sobre el proceso de mastering.\n\nPuntuación obtenida: ${result?.score || 'N/A'}/100\nArchivo: ${result?.filename || 'N/A'}\n\nGracias!`
-                    : `Hi Matías,\n\nI just analyzed my mix on Mastering Ready and would like to discuss the mastering process.\n\nScore obtained: ${result?.score || 'N/A'}/100\nFile: ${result?.filename || 'N/A'}\n\nThanks!`
+                    ? `Hola Matías,\n\nAnalicé "${result?.filename || 'mi mezcla'}" en Mastering Ready.\nPuntuación: ${result?.score || 'N/A'}/100\n\n${ctaSource === 'mastering' ? 'Me interesa el mastering de este track.' : 'Me gustaría revisar algunos aspectos técnicos de la mezcla.'}\n\nGracias.`
+                    : `Hi Matías,\n\nI analyzed "${result?.filename || 'my mix'}" on Mastering Ready.\nScore: ${result?.score || 'N/A'}/100\n\n${ctaSource === 'mastering' ? 'I\'m interested in mastering this track.' : 'I\'d like to review some technical aspects of the mix.'}\n\nThanks.`
                 )}`}
+                onClick={() => logContactRequest('email')}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -2933,6 +3936,7 @@ by Matías Carvajal
                 href="https://instagram.com/matcarvy"
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={() => logContactRequest('instagram')}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -2970,7 +3974,7 @@ by Matías Carvajal
 
       {/* Feedback Modal */}
       {showFeedbackModal && (
-        <div 
+        <div
           onClick={() => {
             setShowFeedbackModal(false)
             setFeedback({ rating: 0, liked: '', change: '', add: '' })
@@ -2986,21 +3990,24 @@ by Matías Carvajal
             alignItems: 'center',
             justifyContent: 'center',
             zIndex: 100,
-            padding: '1.5rem'
+            padding: 'clamp(0.75rem, 3vw, 1.5rem)',
+            animation: 'modalBackdropIn 0.25s ease-out',
+            overscrollBehavior: 'contain'
           }}
         >
-          <div 
+          <div
             onClick={(e) => e.stopPropagation()}
             style={{
               background: 'white',
               borderRadius: '1rem',
-              padding: '2rem',
+              padding: 'clamp(1.25rem, 4vw, 2rem)',
               maxWidth: '500px',
-              width: '100%',
+              width: 'calc(100% - 1rem)',
               boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
               position: 'relative',
               maxHeight: '90vh',
-              overflowY: 'auto'
+              overflowY: 'auto',
+              animation: 'modalContentIn 0.25s cubic-bezier(0.16, 1, 0.3, 1)'
             }}
           >
             {/* Close button */}
@@ -3060,7 +4067,7 @@ by Matías Carvajal
                 </label>
                 <div style={{ 
                   display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(2rem, 1fr))',
+                  gridTemplateColumns: 'repeat(10, 1fr)',
                   gap: 'clamp(0.25rem, 1vw, 0.5rem)', 
                   justifyContent: 'center',
                   marginBottom: '0.5rem',
@@ -3072,8 +4079,8 @@ by Matías Carvajal
                       onClick={() => setFeedback({...feedback, rating: num})}
                       style={{
                         width: '100%',
-                        minWidth: '2rem',
-                        height: 'clamp(2rem, 8vw, 2.5rem)',
+                        minWidth: '1.75rem',
+                        height: 'clamp(2.75rem, 10vw, 3rem)',
                         borderRadius: '0.5rem',
                         border: feedback.rating === num ? '2px solid #667eea' : '1px solid #d1d5db',
                         background: feedback.rating === num ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'white',
@@ -3181,7 +4188,7 @@ by Matías Carvajal
 
               <button
                 onClick={() => {
-                  const feedbackText = `FEEDBACK BETA - Mastering Ready\n\n⭐ Utilidad: ${feedback.rating}/10\n\n✅ Qué gustó:\n${feedback.liked}\n\n🔄 Qué cambiaría:\n${feedback.change || 'N/A'}\n\n➕ Qué agregaría:\n${feedback.add || 'N/A'}\n\nScore obtenido: ${result?.score || 'N/A'}/100`
+                  const feedbackText = `FEEDBACK - Mastering Ready\n\n⭐ Utilidad: ${feedback.rating}/10\n\n✅ Qué gustó:\n${feedback.liked}\n\n🔄 Qué cambiaría:\n${feedback.change || 'N/A'}\n\n➕ Qué agregaría:\n${feedback.add || 'N/A'}\n\nScore obtenido: ${result?.score || 'N/A'}/100`
                   window.open(`https://wa.me/573155576115?text=${encodeURIComponent(feedbackText)}`, '_blank')
                   setFeedbackSubmitted(true)
                   setShowFeedbackModal(false)
@@ -3217,10 +4224,775 @@ by Matías Carvajal
         </div>
       )}
 
+      {/* Auth Modal - Inline login/signup with unlock animation */}
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        onSuccess={() => {
+          setShowAuthModal(false)
+          // Don't trigger unlock animation here — wait for AuthProvider to signal
+          // either pendingAnalysisSaved (→ unlock) or pendingAnalysisQuotaExceeded (→ paywall)
+        }}
+        lang={lang}
+      />
+
+      {/* Unlock Animation Overlay - Ripple effect when auth succeeds */}
+      {isUnlocking && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          pointerEvents: 'none',
+          zIndex: 99,
+          overflow: 'hidden'
+        }}>
+          {/* Multiple ripples - purple theme matching the page */}
+          <div style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            width: '80px',
+            height: '80px',
+            background: 'radial-gradient(circle, rgba(102, 126, 234, 0.5) 0%, rgba(118, 75, 162, 0.2) 50%, transparent 70%)',
+            borderRadius: '50%',
+            animation: 'unlockRipple 1.4s ease-out forwards'
+          }} />
+          <div style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            width: '80px',
+            height: '80px',
+            background: 'radial-gradient(circle, rgba(118, 75, 162, 0.4) 0%, rgba(102, 126, 234, 0.15) 50%, transparent 70%)',
+            borderRadius: '50%',
+            animation: 'unlockRipple 1.4s ease-out 0.2s forwards'
+          }} />
+          <div style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            width: '80px',
+            height: '80px',
+            background: 'radial-gradient(circle, rgba(102, 126, 234, 0.3) 0%, rgba(118, 75, 162, 0.1) 50%, transparent 70%)',
+            borderRadius: '50%',
+            animation: 'unlockRipple 1.4s ease-out 0.4s forwards'
+          }} />
+          {/* Center unlock icon - purple gradient */}
+          <div style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: '64px',
+            height: '64px',
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            borderRadius: '50%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 4px 20px rgba(102, 126, 234, 0.5)',
+            animation: 'unlockPop 0.7s ease-out forwards'
+          }}>
+            <Headphones size={28} style={{ color: 'white' }} />
+          </div>
+        </div>
+      )}
+
+      {/* CSS for unlock animation */}
+      <style jsx global>{`
+        @keyframes unlockRipple {
+          0% {
+            transform: translate(-50%, -50%) scale(0);
+            opacity: 1;
+          }
+          100% {
+            transform: translate(-50%, -50%) scale(30);
+            opacity: 0;
+          }
+        }
+        @keyframes unlockPop {
+          0% {
+            transform: translate(-50%, -50%) scale(0);
+            opacity: 0;
+          }
+          40% {
+            transform: translate(-50%, -50%) scale(1.15);
+            opacity: 1;
+          }
+          70% {
+            transform: translate(-50%, -50%) scale(1);
+            opacity: 1;
+          }
+          100% {
+            transform: translate(-50%, -50%) scale(0.9);
+            opacity: 0;
+          }
+        }
+      `}</style>
+
+      {/* IP Limit Reached Modal - Anonymous user already used free analysis */}
+      {showIpLimitModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 100,
+          padding: 'clamp(0.75rem, 3vw, 1rem)',
+          animation: 'modalBackdropIn 0.25s ease-out',
+          overscrollBehavior: 'contain'
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '1rem',
+            padding: 'clamp(1.25rem, 4vw, 2rem)',
+            maxWidth: '420px',
+            width: 'calc(100% - 1rem)',
+            position: 'relative',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            animation: 'modalContentIn 0.25s cubic-bezier(0.16, 1, 0.3, 1)'
+          }}>
+            {/* Close button */}
+            <button
+              onClick={() => setShowIpLimitModal(false)}
+              style={{
+                position: 'absolute',
+                top: '1rem',
+                right: '1rem',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                color: '#6b7280',
+                padding: '0.75rem'
+              }}
+              aria-label={lang === 'es' ? 'Cerrar' : 'Close'}
+            >
+              <X size={20} />
+            </button>
+
+            {/* Warning Icon */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'center',
+              marginBottom: '1rem'
+            }}>
+              <div style={{
+                width: '48px',
+                height: '48px',
+                background: 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <AlertTriangle size={24} style={{ color: '#dc2626' }} />
+              </div>
+            </div>
+
+            {/* Title */}
+            <h3 style={{
+              fontSize: '1.375rem',
+              fontWeight: '700',
+              textAlign: 'center',
+              marginBottom: '0.75rem',
+              color: '#111827'
+            }}>
+              {lang === 'es' ? 'Ya usaste tus análisis gratis' : 'You already used your free analyses'}
+            </h3>
+
+            {/* Description */}
+            <p style={{
+              fontSize: '1rem',
+              color: '#6b7280',
+              textAlign: 'center',
+              marginBottom: '1.5rem',
+              lineHeight: '1.5'
+            }}>
+              {lang === 'es'
+                ? 'Cada dispositivo tiene 2 análisis gratis. Crea una cuenta para continuar analizando tus mixes.'
+                : 'Each device gets 2 free analyses. Create an account to continue analyzing your mixes.'}
+            </p>
+
+            {/* Benefits reminder */}
+            <div style={{
+              background: '#f3f4f6',
+              borderRadius: '0.75rem',
+              padding: '1rem',
+              marginBottom: '1.5rem'
+            }}>
+              <p style={{
+                fontSize: '0.875rem',
+                color: '#374151',
+                fontWeight: '600',
+                marginBottom: '0.5rem'
+              }}>
+                {lang === 'es' ? 'Con una cuenta gratis obtienes:' : 'With a free account you get:'}
+              </p>
+              <ul style={{
+                margin: 0,
+                paddingLeft: '1.25rem',
+                fontSize: '0.875rem',
+                color: '#6b7280',
+                lineHeight: '1.6'
+              }}>
+                <li>{lang === 'es' ? '2 análisis adicionales gratis' : '2 additional free analyses'}</li>
+                <li>{lang === 'es' ? 'Historial de análisis' : 'Analysis history'}</li>
+                <li>{lang === 'es' ? 'Descargas en .txt' : '.txt downloads'}</li>
+              </ul>
+            </div>
+
+            {/* CTA Buttons */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              <a
+                href={`/auth/signup?lang=${lang}`}
+                style={{
+                  display: 'block',
+                  width: '100%',
+                  padding: '0.875rem',
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  color: 'white',
+                  textAlign: 'center',
+                  textDecoration: 'none',
+                  borderRadius: '0.5rem',
+                  fontWeight: '600',
+                  fontSize: '1rem',
+                  boxSizing: 'border-box'
+                }}
+              >
+                {lang === 'es' ? 'Crear cuenta gratis' : 'Create free account'}
+              </a>
+
+              <a
+                href={`/auth/login?lang=${lang}`}
+                style={{
+                  display: 'block',
+                  width: '100%',
+                  padding: '0.875rem',
+                  background: 'transparent',
+                  color: '#667eea',
+                  textAlign: 'center',
+                  textDecoration: 'none',
+                  borderRadius: '0.5rem',
+                  fontWeight: '600',
+                  fontSize: '1rem',
+                  border: '2px solid #667eea',
+                  boxSizing: 'border-box'
+                }}
+              >
+                {lang === 'es' ? 'Ya tengo cuenta' : 'I have an account'}
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Free Limit Reached Modal - Logged-in user used all free analyses */}
+      {showFreeLimitModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 100,
+          padding: 'clamp(0.75rem, 3vw, 1rem)',
+          animation: 'modalBackdropIn 0.25s ease-out',
+          overscrollBehavior: 'contain'
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '1rem',
+            padding: 'clamp(1.25rem, 4vw, 2rem)',
+            maxWidth: '420px',
+            width: 'calc(100% - 1rem)',
+            position: 'relative',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            animation: 'modalContentIn 0.25s cubic-bezier(0.16, 1, 0.3, 1)'
+          }}>
+            {/* Close button */}
+            <button
+              onClick={() => setShowFreeLimitModal(false)}
+              style={{
+                position: 'absolute',
+                top: '1rem',
+                right: '1rem',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                color: '#6b7280',
+                padding: '0.75rem'
+              }}
+              aria-label={lang === 'es' ? 'Cerrar' : 'Close'}
+            >
+              <X size={20} />
+            </button>
+
+            {/* Crown Icon */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'center',
+              marginBottom: '1rem'
+            }}>
+              <div style={{
+                width: '48px',
+                height: '48px',
+                background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <Crown size={24} style={{ color: '#d97706' }} />
+              </div>
+            </div>
+
+            {/* Title */}
+            <h3 style={{
+              fontSize: '1.375rem',
+              fontWeight: '700',
+              textAlign: 'center',
+              marginBottom: '0.75rem',
+              color: '#111827'
+            }}>
+              {lang === 'es' ? 'Has usado tus 2 análisis gratuitos' : "You've used your 2 free analyses"}
+            </h3>
+
+            {/* Description */}
+            <p style={{
+              fontSize: '1rem',
+              color: '#6b7280',
+              textAlign: 'center',
+              marginBottom: '1.5rem',
+              lineHeight: '1.5'
+            }}>
+              {lang === 'es'
+                ? '¿Trabajando en más canciones? Elige cómo continuar:'
+                : 'Working on more songs? Choose how to continue:'}
+            </p>
+
+            {/* Pro Plan Highlight */}
+            <div style={{
+              background: 'linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%)',
+              borderRadius: '0.75rem',
+              padding: '1rem',
+              marginBottom: '1rem',
+              border: '1px solid #c4b5fd'
+            }}>
+              <p style={{
+                fontSize: '0.875rem',
+                color: '#5b21b6',
+                fontWeight: '600',
+                marginBottom: '0.5rem'
+              }}>
+                Mastering Ready Pro · {prices.pro_monthly}/{lang === 'es' ? 'mes' : 'mo'}
+              </p>
+              <ul style={{
+                margin: 0,
+                paddingLeft: '1.25rem',
+                fontSize: '0.875rem',
+                color: '#7c3aed',
+                lineHeight: '1.6'
+              }}>
+                <li>{lang === 'es' ? '30 análisis al mes' : '30 analyses per month'}</li>
+                <li>{lang === 'es' ? 'Reportes PDF completos' : 'Full PDF reports'}</li>
+                <li>{lang === 'es' ? 'Procesamiento prioritario' : 'Priority processing'}</li>
+              </ul>
+            </div>
+
+            {/* CTA Buttons */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              <a
+                href={`/dashboard?upgrade=pro&lang=${lang}`}
+                style={{
+                  display: 'block',
+                  width: '100%',
+                  padding: '0.875rem',
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  color: 'white',
+                  textAlign: 'center',
+                  textDecoration: 'none',
+                  borderRadius: '0.5rem',
+                  fontWeight: '600',
+                  fontSize: '1rem',
+                  boxSizing: 'border-box'
+                }}
+              >
+                {lang === 'es' ? 'Actualizar a Pro' : 'Upgrade to Pro'}
+              </a>
+
+              <a
+                href={`/dashboard?upgrade=single&lang=${lang}`}
+                style={{
+                  display: 'block',
+                  width: '100%',
+                  padding: '0.875rem',
+                  background: 'transparent',
+                  color: '#667eea',
+                  textAlign: 'center',
+                  textDecoration: 'none',
+                  borderRadius: '0.5rem',
+                  fontWeight: '600',
+                  fontSize: '1rem',
+                  border: '2px solid #667eea',
+                  boxSizing: 'border-box'
+                }}
+              >
+                {lang === 'es' ? 'Comprar 1 análisis' : 'Buy 1 analysis'} ({prices.single})
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* VPN Detected Modal */}
+      {showVpnModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 100,
+          padding: 'clamp(0.75rem, 3vw, 1rem)',
+          animation: 'modalBackdropIn 0.25s ease-out',
+          overscrollBehavior: 'contain'
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '1rem',
+            padding: 'clamp(1.25rem, 4vw, 2rem)',
+            maxWidth: '420px',
+            width: 'calc(100% - 1rem)',
+            position: 'relative',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            animation: 'modalContentIn 0.25s cubic-bezier(0.16, 1, 0.3, 1)'
+          }}>
+            {/* Close button */}
+            <button
+              onClick={() => setShowVpnModal(false)}
+              style={{
+                position: 'absolute',
+                top: '1rem',
+                right: '1rem',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                color: '#6b7280',
+                padding: '0.75rem'
+              }}
+              aria-label={lang === 'es' ? 'Cerrar' : 'Close'}
+            >
+              <X size={20} />
+            </button>
+
+            {/* Globe Icon */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'center',
+              marginBottom: '1rem'
+            }}>
+              <div style={{
+                width: '48px',
+                height: '48px',
+                background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <Globe size={24} style={{ color: '#d97706' }} />
+              </div>
+            </div>
+
+            {/* Title */}
+            <h3 style={{
+              fontSize: '1.375rem',
+              fontWeight: '700',
+              textAlign: 'center',
+              marginBottom: '0.75rem',
+              color: '#111827'
+            }}>
+              {lang === 'es' ? 'VPN o Proxy detectado' : 'VPN or Proxy detected'}
+            </h3>
+
+            {/* Description */}
+            <p style={{
+              fontSize: '1rem',
+              color: '#6b7280',
+              textAlign: 'center',
+              marginBottom: '1rem',
+              lineHeight: '1.5'
+            }}>
+              {lang === 'es'
+                ? 'Para usar el análisis gratuito, desactiva tu VPN o proxy y recarga la página.'
+                : 'To use the free analysis, please disable your VPN or proxy and reload the page.'}
+            </p>
+
+            {vpnServiceName && (
+              <p style={{
+                fontSize: '0.875rem',
+                color: '#9ca3af',
+                textAlign: 'center',
+                marginBottom: '1.5rem'
+              }}>
+                {lang === 'es' ? 'Servicio detectado: ' : 'Detected service: '}{vpnServiceName}
+              </p>
+            )}
+
+            {/* Alternative */}
+            <div style={{
+              background: '#f3f4f6',
+              borderRadius: '0.75rem',
+              padding: '1rem',
+              marginBottom: '1.5rem',
+              textAlign: 'center'
+            }}>
+              <p style={{
+                fontSize: '0.875rem',
+                color: '#374151',
+                marginBottom: '0'
+              }}>
+                {lang === 'es'
+                  ? 'Alternativamente, crea una cuenta para analizar sin restricciones.'
+                  : 'Alternatively, create an account to analyze without restrictions.'}
+              </p>
+            </div>
+
+            {/* CTA Buttons */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              <button
+                onClick={() => {
+                  setShowVpnModal(false)
+                  window.location.reload()
+                }}
+                style={{
+                  width: '100%',
+                  padding: '0.875rem',
+                  background: '#374151',
+                  color: 'white',
+                  textAlign: 'center',
+                  borderRadius: '0.5rem',
+                  fontWeight: '600',
+                  fontSize: '1rem',
+                  border: 'none',
+                  cursor: 'pointer'
+                }}
+              >
+                {lang === 'es' ? 'Recargar página' : 'Reload page'}
+              </button>
+
+              <a
+                href={`/auth/signup?lang=${lang}`}
+                style={{
+                  display: 'block',
+                  width: '100%',
+                  padding: '0.875rem',
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  color: 'white',
+                  textAlign: 'center',
+                  textDecoration: 'none',
+                  borderRadius: '0.5rem',
+                  fontWeight: '600',
+                  fontSize: '1rem',
+                  boxSizing: 'border-box'
+                }}
+              >
+                {lang === 'es' ? 'Crear cuenta gratis' : 'Create free account'}
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Upgrade to Pro Modal */}
+      {showUpgradeModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 100,
+          padding: 'clamp(0.75rem, 3vw, 1rem)',
+          animation: 'modalBackdropIn 0.25s ease-out',
+          overscrollBehavior: 'contain'
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '1rem',
+            padding: 'clamp(1.25rem, 4vw, 2rem)',
+            maxWidth: '420px',
+            width: 'calc(100% - 1rem)',
+            position: 'relative',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            animation: 'modalContentIn 0.25s cubic-bezier(0.16, 1, 0.3, 1)'
+          }}>
+            <button
+              onClick={() => setShowUpgradeModal(false)}
+              style={{
+                position: 'absolute',
+                top: '1rem',
+                right: '1rem',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                color: '#6b7280',
+                padding: '0.75rem'
+              }}
+              aria-label={lang === 'es' ? 'Cerrar' : 'Close'}
+            >
+              <X size={20} />
+            </button>
+
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
+              <div style={{
+                width: '56px',
+                height: '56px',
+                background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <Crown size={28} style={{ color: '#d97706' }} />
+              </div>
+            </div>
+
+            <h3 style={{
+              fontSize: '1.375rem',
+              fontWeight: '700',
+              textAlign: 'center',
+              marginBottom: '0.5rem',
+              color: '#111827'
+            }}>
+              {lang === 'es' ? 'Desbloquea el Análisis Completo' : 'Unlock Complete Analysis'}
+            </h3>
+
+            <p style={{
+              textAlign: 'center',
+              color: '#6b7280',
+              fontSize: '0.875rem',
+              marginBottom: '1.5rem'
+            }}>
+              {lang === 'es'
+                ? 'Accede al análisis completo, descarga de PDFs y más con Mastering Ready Pro'
+                : 'Access complete analysis, PDF downloads and more with Mastering Ready Pro'}
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.5rem' }}>
+              {[
+                lang === 'es' ? '30 análisis al mes' : '30 analyses per month',
+                lang === 'es' ? 'Análisis Completo y Detallado' : 'Complete & Detailed Analysis',
+                lang === 'es' ? 'Descarga de PDFs profesionales' : 'Professional PDF downloads',
+                lang === 'es' ? 'Procesamiento prioritario' : 'Priority processing'
+              ].map((benefit, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <div style={{
+                    width: '20px',
+                    height: '20px',
+                    borderRadius: '50%',
+                    background: '#dcfce7',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0
+                  }}>
+                    <TrendingUp size={12} style={{ color: '#16a34a' }} />
+                  </div>
+                  <span style={{ fontSize: '0.9rem', color: '#374151' }}>{benefit}</span>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
+              <span style={{ fontSize: '2rem', fontWeight: '700', color: '#111827' }}>
+                {prices.pro_monthly}/{lang === 'es' ? 'mes' : 'month'}
+              </span>
+            </div>
+
+            <a
+              href={`/subscription?lang=${lang}`}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.5rem',
+                width: '100%',
+                padding: '1rem',
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '0.5rem',
+                fontSize: '1rem',
+                fontWeight: '600',
+                cursor: 'pointer',
+                textDecoration: 'none',
+                boxSizing: 'border-box'
+              }}
+            >
+              <Crown size={18} />
+              {lang === 'es' ? 'Obtener Pro' : 'Get Pro'}
+            </a>
+          </div>
+        </div>
+      )}
+
       <style jsx global>{`
         @keyframes spin {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
+        }
+
+        @keyframes fadeInMsg {
+          0% { opacity: 0; transform: translateY(4px); }
+          100% { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes modalBackdropIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+
+        @keyframes modalContentIn {
+          from { opacity: 0; transform: scale(0.96) translateY(10px); }
+          to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        @keyframes errorSlideIn {
+          0% { opacity: 0; transform: translateY(-10px); }
+          60% { opacity: 1; transform: translateY(2px); }
+          100% { opacity: 1; transform: translateY(0); }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          *, *::before, *::after {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
+          }
         }
 
         /* ============================================
@@ -3285,7 +5057,7 @@ by Matías Carvajal
           margin-top: 0.25rem;
         }
         
-        /* Mastering Ready baja para alinearse */
+        /* MasteringReady baja para alinearse */
         .footer-grid > div:first-child > div:first-child {
           margin-bottom: 0.75rem;
           margin-top: 0.25rem;

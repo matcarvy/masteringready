@@ -238,7 +238,7 @@ git push
 
 ## 💰 COSTOS ESTIMADOS
 
-### Free Tier (Beta Testing)
+### Free Tier
 
 | Service | Plan | Cost |
 |---------|------|------|
@@ -289,7 +289,7 @@ Tu aplicación **MasteringReady** está ahora en producción.
 - Frontend: `https://masteringready.vercel.app`
 
 **Next Steps:**
-- [ ] Testear con usuarios beta
+- [ ] Testear con usuarios
 - [ ] Configurar analytics
 - [ ] Implementar límites de uso
 - [ ] Agregar autenticación

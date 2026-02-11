@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next'
+import { AuthProvider } from '@/components/auth'
 
 // =============================================================================
 // SEO METADATA - MasteringReady
@@ -26,10 +27,10 @@ export const metadata: Metadata = {
   // BASIC META
   // ─────────────────────────────────────────────────────────────────────────────
   title: {
-    default: 'Is your mix ready for mastering? | Mastering Ready',
+    default: 'Mastering Ready | Analyze your mix before mastering',
     template: '%s | Mastering Ready'
   },
-  description: 'Analyze your mix in 60 seconds. Detect headroom, LUFS, true peak and balance issues before sending to mastering. Methodology proven in 300+ professional productions.',
+  description: "Upload your mix and find out if it's ready for mastering. 0-100 score, professional metrics and specific recommendations in 60 seconds. 2 free analyses.",
   keywords: [
     'mix analysis',
     'prepare mix for mastering',
@@ -69,8 +70,8 @@ export const metadata: Metadata = {
     alternateLocale: siteConfig.locale.alternate,
     url: siteConfig.url,
     siteName: siteConfig.name,
-    title: 'Is your mix ready for mastering?',
-    description: 'Technical analysis in 60 seconds. Headroom, LUFS, True Peak, stereo balance and more. Methodology proven in 300+ productions.',
+    title: 'Is your mix ready for mastering? Find out in 60 seconds',
+    description: 'Professional technical analysis: LUFS, True Peak, headroom, frequency balance. 0-100 score with specific recommendations. 2 free analyses.',
     images: [
       {
         url: '/og-image.png',
@@ -87,8 +88,8 @@ export const metadata: Metadata = {
   // ─────────────────────────────────────────────────────────────────────────────
   twitter: {
     card: 'summary_large_image',
-    title: 'Is your mix ready for mastering?',
-    description: 'Technical analysis in 60 seconds. Headroom, LUFS, True Peak and more. Methodology proven in 300+ productions.',
+    title: 'Is your mix ready for mastering? Find out in 60 seconds',
+    description: 'Professional technical analysis: LUFS, True Peak, headroom, frequency balance. 0-100 score with specific recommendations. 2 free analyses.',
     site: siteConfig.twitter,
     creator: siteConfig.twitter,
     images: ['/og-image.png']
@@ -153,15 +154,9 @@ const structuredData = {
       price: '0',
       priceCurrency: 'USD',
       availability: 'https://schema.org/InStock',
-      priceValidUntil: '2026-02-01' // Ajustar cuando termine beta
+      priceValidUntil: '2026-12-31'
     },
-    aggregateRating: {
-      '@type': 'AggregateRating',
-      ratingValue: '4.8',
-      ratingCount: '50',
-      bestRating: '5',
-      worstRating: '1'
-    },
+    // aggregateRating removed — will add when real reviews exist
     author: {
       '@type': 'Person',
       name: 'Matías Carvajal',
@@ -190,14 +185,14 @@ const structuredData = {
     tool: [
       {
         '@type': 'HowToTool',
-        name: 'Audio file (WAV, MP3 or AIFF)'
+        name: 'Audio file (WAV, MP3, AIFF, FLAC, AAC, M4A or OGG)'
       }
     ],
     step: [
       {
         '@type': 'HowToStep',
         name: 'Upload your mix',
-        text: 'Drag and drop your audio file (WAV, MP3 or AIFF, max 50MB) into the analyzer.',
+        text: 'Drag and drop your audio file (WAV, MP3, AIFF, FLAC, AAC, M4A or OGG, max 200MB) into the analyzer.',
         position: 1
       },
       {
@@ -244,7 +239,7 @@ const structuredData = {
   product: {
     '@context': 'https://schema.org',
     '@type': 'Book',
-    name: 'Mastering Ready — Ensure mastering success from the mix',
+    name: 'Mastering Ready: Ensure mastering success from the mix',
     author: {
       '@type': 'Person',
       name: 'Matías Carvajal'
@@ -276,6 +271,9 @@ export default function RootLayout({
         {/* Prevent Safari text inflation on iOS accessibility text scaling */}
         <style dangerouslySetInnerHTML={{ __html: `
           html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+          @supports (-webkit-touch-callout: none) {
+            input, textarea, select { font-size: 16px !important; }
+          }
         `}} />
 
         {/* Structured Data */}
@@ -317,7 +315,11 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       </head>
-      <body>{children}</body>
+      <body>
+        <AuthProvider>
+          {children}
+        </AuthProvider>
+      </body>
     </html>
   )
 }

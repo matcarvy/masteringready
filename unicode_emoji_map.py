@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-UNICODE EMOJI MAP for MasteringReady PDF Generation  
+UNICODE EMOJI MAP for Mastering Ready PDF Generation  
 ====================================================
 Version: 7.3.5-UNICODE-DEJAVU
 Date: 2025-12-29

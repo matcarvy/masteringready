@@ -1,0 +1,86 @@
+# MasteringReady - Supabase Configuration
+# Configuración de Supabase para MasteringReady
+
+[project]
+id = "masteringready"
+name = "MasteringReady"
+
+[api]
+# Port to use for the API URL / Puerto para la URL de API
+port = 54321
+# Schemas to expose in the API / Esquemas a exponer en la API
+schemas = ["public", "storage"]
+# Extra schemas to include in the migration / Esquemas extra para migraciones
+extra_search_path = ["public", "extensions"]
+# Maximum number of rows returned / Máximo de filas retornadas
+max_rows = 1000
+
+[db]
+# Port to use for the database URL / Puerto para la URL de base de datos
+port = 54322
+# Password for the postgres user / Contraseña para el usuario postgres
+# Keep this secure / Mantén esto seguro
+password = "postgres"
+
+[studio]
+# Port for Supabase Studio / Puerto para Supabase Studio
+port = 54323
+# API URL for the Studio / URL de API para Studio
+api_url = "http://localhost"
+
+[auth]
+# Site URL for redirects / URL del sitio para redirecciones
+site_url = "http://localhost:3000"
+# Additional redirect URLs / URLs de redirección adicionales
+additional_redirect_urls = [
+  "https://masteringready.vercel.app",
+  "https://masteringready.com"
+]
+# JWT expiry time / Tiempo de expiración de JWT
+jwt_expiry = 3600
+# Enable signup / Habilitar registro
+enable_signup = true
+# Email confirmation / Confirmación por email
+enable_confirmations = false
+
+[auth.email]
+# Enable email auth / Habilitar auth por email
+enable_signup = true
+# Double confirm email changes / Confirmar cambios de email dos veces
+double_confirm_changes = true
+# Enable email confirmations / Habilitar confirmaciones por email
+enable_confirmations = false
+
+[auth.external.google]
+# Enable Google OAuth / Habilitar OAuth de Google
+enabled = true
+# Google OAuth client ID (set in environment)
+# ID de cliente OAuth de Google (configurar en entorno)
+client_id = "env(GOOGLE_CLIENT_ID)"
+# Google OAuth client secret (set in environment)
+# Secreto de cliente OAuth de Google (configurar en entorno)
+secret = "env(GOOGLE_CLIENT_SECRET)"
+# Redirect URL after Google auth / URL de redirección después de auth de Google
+redirect_uri = "http://localhost:54321/auth/v1/callback"
+
+[storage]
+# Enable storage / Habilitar almacenamiento
+enabled = true
+# File size limit (10MB) / Límite de tamaño de archivo
+file_size_limit = "10MiB"
+
+[realtime]
+# Enable realtime / Habilitar tiempo real
+enabled = true
+# Publish frequency / Frecuencia de publicación
+poll_interval_ms = 100
+# Max rows changed per publication
+poll_max_changes = 100
+
+[analytics]
+# Enable analytics / Habilitar analíticas
+enabled = true
+# Port for analytics / Puerto para analíticas
+port = 54327
+# Backend to use / Backend a usar
+backend = "postgres"

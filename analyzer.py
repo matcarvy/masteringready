@@ -489,7 +489,7 @@ class ScoringThresholds:
             "critical": lambda peak: peak >= -1.0,
             "warning": lambda peak: -2.0 < peak < -1.0,
             "perfect": lambda peak: -6.0 <= peak <= -3.0,
-            "pass": lambda peak: -9.0 <= peak < -3.0,
+            "pass": lambda peak: (-9.0 <= peak < -3.0) or (-3.0 < peak <= -2.0),
             "conservative": lambda peak: -12.0 <= peak < -9.0,
         }
     }
@@ -1320,7 +1320,7 @@ def calculate_tonal_balance_percentage(bass_pct: float, mids_pct: float, highs_p
     }
 
 
-def calculate_metrics_bars_percentages(metrics: List[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
+def calculate_metrics_bars_percentages(metrics: List[Dict[str, Any]], strict: bool = False) -> Dict[str, Dict[str, Any]]:
     """
     Calculate percentage bars for quick view tab using Mastering Ready methodology.
     
@@ -1407,32 +1407,54 @@ def calculate_metrics_bars_percentages(metrics: List[Dict[str, Any]]) -> Dict[st
         # HEADROOM (dBFS) - Mastering Ready ranges
         # ============================================
         if "headroom" in key:
-            # 🟢 Verde: ≤ -6 dBFS (Perfecto)
-            # 🔵 Azul: -6 a -4 dBFS (Totalmente funcional)
-            # 🟡 Amarillo: -4 a -2 dBFS (Margen reducido)
-            # 🔴 Rojo: > -2 dBFS (Limita el máster)
             headroom_tooltip_override = None  # For contextual headroom messages
-            
-            if value <= -6.0:
-                percentage = 100
-                bar_status = "excellent"
-            elif -6.0 < value <= -4.0:
-                percentage = 85
-                bar_status = "good"
-            elif -4.0 < value <= -2.0:
-                percentage = 65
-                bar_status = "warning"
-                warnings_count += 1
-            else:  # > -2
-                percentage = 40
-                bar_status = "critical"
-                # Micro-ajuste 1: If Headroom is red but LUFS is green, soften the message
-                # This indicates "compromised margin" not "bad mix"
-                if lufs_val <= -14:  # LUFS is in green/excellent range
-                    headroom_tooltip_override = {
-                        "es": "Headroom comprometido, pero nivel general adecuado. Baja el nivel antes de exportar para dar margen al máster.",
-                        "en": "Compromised headroom, but overall level is adequate. Lower the level before export to give margin for mastering."
-                    }
+
+            if strict:
+                # 🟢 Verde: ≤ -5 dBFS (Perfecto)
+                # 🔵 Azul: -5 a -4 dBFS (Funcional)
+                # 🟡 Amarillo: -4 a -1 dBFS (Margen reducido)
+                # 🔴 Rojo: > -1 dBFS (Limita el máster)
+                if value <= -5.0:
+                    percentage = 100
+                    bar_status = "excellent"
+                elif -5.0 < value <= -4.0:
+                    percentage = 85
+                    bar_status = "good"
+                elif -4.0 < value <= -1.0:
+                    percentage = 65
+                    bar_status = "warning"
+                    warnings_count += 1
+                else:  # > -1.0
+                    percentage = 40
+                    bar_status = "critical"
+                    if lufs_val <= -14:
+                        headroom_tooltip_override = {
+                            "es": "Headroom comprometido, pero nivel general adecuado. Baja el nivel antes de exportar para dar margen al máster.",
+                            "en": "Compromised headroom, but overall level is adequate. Lower the level before export to give margin for mastering."
+                        }
+            else:
+                # 🟢 Verde: ≤ -3 dBFS (Perfecto)
+                # 🔵 Azul: -3 a -2 dBFS (Funcional)
+                # 🟡 Amarillo: -2 a -1 dBFS (Margen reducido)
+                # 🔴 Rojo: > -1 dBFS (Limita el máster)
+                if value <= -3.0:
+                    percentage = 100
+                    bar_status = "excellent"
+                elif -3.0 < value <= -2.0:
+                    percentage = 85
+                    bar_status = "good"
+                elif -2.0 < value <= -1.0:
+                    percentage = 65
+                    bar_status = "warning"
+                    warnings_count += 1
+                else:  # > -1.0
+                    percentage = 40
+                    bar_status = "critical"
+                    if lufs_val <= -14:
+                        headroom_tooltip_override = {
+                            "es": "Headroom comprometido, pero nivel general adecuado. Baja el nivel antes de exportar para dar margen al máster.",
+                            "en": "Compromised headroom, but overall level is adequate. Lower the level before export to give margin for mastering."
+                        }
             
             # Apply headroom-specific tooltip if available
             if headroom_tooltip_override:
@@ -2031,7 +2053,7 @@ def analyze_correlation_temporal(y: np.ndarray, sr: int, threshold: float = 0.5)
                         values = [bc[band] for bc in band_corrs if band in bc and bc[band] is not None]
                         if values:
                             avg_band_corr[band] = sum(values) / len(values)
-
+                
                 # v7.3.51: Classify issue type - only < 0.5 is reported
                 # High correlation is NOT a problem
                 if avg_corr >= 0.5:
@@ -2070,7 +2092,7 @@ def analyze_correlation_temporal(y: np.ndarray, sr: int, threshold: float = 0.5)
                 values = [bc[band] for bc in band_corrs if band in bc and bc[band] is not None]
                 if values:
                     avg_band_corr[band] = sum(values) / len(values)
-
+        
         # v7.3.51: Classify issue type - only < 0.5 is reported
         if avg_corr >= 0.5:
             issue_type = 'healthy'  # Won't be included in report
@@ -2180,8 +2202,9 @@ def analyze_lr_balance_temporal(y: np.ndarray, sr: int, threshold: float = 3.0) 
             else:
                 # Save previous region and start new one
                 avg_balance = sum(w['balance_db'] for w in current_region_windows) / len(current_region_windows)
-                max_severity = max(w['severity'] for w in current_region_windows)
-                
+                _sev_rank = {'ok': 0, 'warning': 1, 'critical': 2}
+                max_severity = max((w['severity'] for w in current_region_windows), key=lambda s: _sev_rank.get(s, 0))
+
                 problem_regions.append({
                     "start": format_timestamp(current_region_start),
                     "end": format_timestamp(current_region_end),
@@ -2194,10 +2217,10 @@ def analyze_lr_balance_temporal(y: np.ndarray, sr: int, threshold: float = 3.0) 
                 current_region_start = curr_time
                 current_region_end = curr_time
                 current_region_windows = [problem_windows[i]]
-        
+
         # Don't forget the last region
         avg_balance = sum(w['balance_db'] for w in current_region_windows) / len(current_region_windows)
-        max_severity = max(w['severity'] for w in current_region_windows)
+        max_severity = max((w['severity'] for w in current_region_windows), key=lambda s: _sev_rank.get(s, 0))
         
         problem_regions.append({
             "start": format_timestamp(current_region_start),
@@ -2690,7 +2713,7 @@ def _status_headroom_en(peak_db: float, strict: bool = False) -> Tuple[str, str,
         },
         "perfect": {
             "strict": "Ideal headroom for commercial mastering delivery.",
-            "normal": f"Headroom of {abs(peak_db):.1f} dB is exactly what I'm looking for - gives me room to work with EQ, compression and limiting without compromising quality.",
+            "normal": f"Headroom of {abs(peak_db):.1f} dB is what I'm looking for - gives me room to work with EQ, compression and limiting without compromising quality.",
         },
         "pass": {
             "strict": "Headroom is acceptable for mastering delivery.",
@@ -2924,7 +2947,7 @@ def _status_headroom_es(peak_db: float, strict: bool = False) -> Tuple[str, str,
         },
         "perfect": {
             "strict": "Headroom perfecto para entrega comercial profesional.",
-            "normal": f"El headroom de {abs(peak_db):.1f} dB es exactamente lo que busco - me da espacio para trabajar EQ, compresión y limiting sin comprometer la calidad.",
+            "normal": f"El headroom de {abs(peak_db):.1f} dB es lo que busco - me da espacio para trabajar EQ, compresión y limiting sin comprometer la calidad.",
         },
         "pass": {
             "strict": "Headroom aceptable, pero -6 a -4 dBFS es ideal para clientes/labels.",
@@ -3206,8 +3229,8 @@ def score_report(metrics: List[Dict[str, Any]], hard_fail: bool, strict: bool = 
     # v7.4.0 FIX: Minimum score is 5, never 0
     if hard_fail:
         if lang == 'es':
-            return 5, "❌ Requiere revisión antes del mastering"
-        return 5, "❌ Requires review before mastering"
+            return 5, "❌ Requiere revisión - tu archivo necesita trabajo antes del mastering"
+        return 5, "❌ Requires review - your file needs work before mastering"
 
     # v7.4.0: Added "poor" status for correlation 0.1-0.3
     mult = {"perfect": 1.0, "pass": 0.9, "warning": 0.7, "poor": 0.4, "critical": 0.0, "catastrophic": 0.0, "info": 1.0}
@@ -3302,11 +3325,14 @@ def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, s
     channels = int(info.channels)
     duration = float(info.duration)
     
-    # Extract file size
-    file_size = path.stat().st_size
-    
+    # Extract file size — prefer original file size if compression happened
+    disk_file_size = path.stat().st_size
+    file_size = disk_file_size
+    if original_metadata and original_metadata.get('original_file_size', 0) > 0:
+        file_size = original_metadata['original_file_size']
+
     # Extract bit depth - USE ORIGINAL METADATA if provided
-    if original_metadata and original_metadata.get('bit_depth'):
+    if original_metadata and original_metadata.get('bit_depth', 0) > 0:
         bit_depth = original_metadata['bit_depth']
         sr = original_metadata.get('sample_rate', sr)  # Also use original sample rate
     else:
@@ -3780,7 +3806,7 @@ def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, s
             "auto_oversample": oversample == 0,
             "clipping_detected": clipping
         },
-        "metrics_bars": calculate_metrics_bars_percentages(metrics),  # NEW v7.3.50: Quick view bars
+        "metrics_bars": calculate_metrics_bars_percentages(metrics, strict=strict),  # NEW v7.3.50: Quick view bars
         "analysis_time_seconds": round(time.time() - start_time, 1),  # Time elapsed
         # v1.5: New data capture fields
         "spectral_6band": fb.get("spectral_6band", {}),
@@ -3876,172 +3902,172 @@ def generate_cta(score: int, strict: bool, lang: str, mode: str = "write") -> Di
         return {"message": "", "button": "", "action": ""}
     
     if lang == 'es':
-        # Spanish CTAs - Español Colombiano
+        # Spanish CTAs - ES LATAM Neutro (sounds like an engineer, not an app)
         if score >= 95:
-            # Perfect for mastering
+            # Perfect — offer mastering directly
             return {
                 "message": (
-                    "🎧 ¿Quieres darle el toque final?\n"
-                    "Tu mezcla está bien balanceada. Puedo masterizarla para que suene coherente "
-                    "y competitiva en plataformas de streaming."
+                    "🎧 Tu mezcla tiene buen balance técnico.\n"
+                    "Puedo trabajar el mastering con espacio suficiente: loudness competitivo, "
+                    "imagen estéreo definida y translate consistente en cualquier sistema de reproducción."
                 ),
-                "button": "Masterizar mi canción",
+                "button": "Masterizar este track",
                 "action": "mastering"
             }
-        
+
         elif score >= 85:
             # Ready for mastering
             return {
                 "message": (
-                    "🎧 ¿Quieres que masterice tu canción?\n"
-                    "Tu mezcla está bien preparada. Puedo trabajar con libertad para que suene "
-                    "coherente y competitiva en plataformas de streaming."
+                    "🎧 Tu mezcla está técnicamente lista.\n"
+                    "Tienes buen headroom y dinámica para trabajar. Puedo llevarla al nivel "
+                    "de distribución manteniendo la intención de la mezcla."
                 ),
-                "button": "Masterizar mi canción",
+                "button": "Masterizar este track",
                 "action": "mastering"
             }
-        
+
         elif score >= 75:
-            # Acceptable - needs minor tweaks before mastering
+            # Needs some prep before mastering
             return {
                 "message": (
-                    "🔧 ¿Necesitas ajustar algunos detalles antes del mastering?\n"
-                    "Tu mezcla está cerca, pero hay algunos puntos técnicos por revisar. "
-                    "Puedo ayudarte a prepararla correctamente, y luego hablamos del mastering."
+                    "🔧 Hay algunos aspectos técnicos por ajustar antes del mastering.\n"
+                    "Si entro a masterizar así, voy a tener que compensar cosas que se resuelven "
+                    "mejor desde la mezcla. Puedo revisar contigo qué ajustes harían la diferencia."
                 ),
                 "button": "Preparar mi mezcla",
                 "action": "preparation"
             }
-        
+
         elif score >= 60:
-            # Minor adjustments needed
+            # Needs more work
             return {
                 "message": (
-                    "🔧 ¿Te ayudo a preparar tu mezcla?\n"
-                    "Hay varios aspectos técnicos por ajustar antes del mastering. "
-                    "Puedo revisar tu sesión y hacer los cambios necesarios para dejarla lista."
+                    "🔧 Tu mezcla necesita trabajo antes del mastering.\n"
+                    "Hay problemas técnicos que no se corrigen en mastering, se corrigen en la mezcla. "
+                    "Puedo ayudarte a identificar qué ajustar."
                 ),
-                "button": "Realizar mis ajustes",
+                "button": "Revisar mi mezcla",
                 "action": "preparation"
             }
-        
+
         elif score >= 40:
             # Significant work needed
             return {
                 "message": (
-                    "🔧 ¿Revisamos tu mezcla juntos?\n"
-                    "El mastering no es una varita mágica - tu mezcla necesita trabajo técnico primero. "
-                    "Puedo ayudarte a corregir los problemas desde la sesión."
+                    "🔧 Tu mezcla necesita atención en varios puntos.\n"
+                    "El mastering no corrige problemas de mezcla, los expone. Antes de pensar "
+                    "en mastering, hay que resolver lo que el análisis señala."
                 ),
                 "button": "Revisar mi mezcla",
                 "action": "review"
             }
-        
+
         elif score >= 20:
             # Urgent correction required
             return {
                 "message": (
-                    "🔧 ¿Necesitas ayuda con tu sesión de mezcla?\n"
-                    "Tu mezcla requiere atención en varios aspectos técnicos. "
-                    "Puedo revisar tu proyecto y trabajar contigo para resolver los problemas detectados."
+                    "🔧 Tu mezcla tiene problemas técnicos importantes.\n"
+                    "No te recomiendo masterizar en este estado, el resultado no va a ser competitivo. "
+                    "Puedo ayudarte a trabajar los puntos críticos desde la sesión."
                 ),
-                "button": "Revisar mi mezcla",
+                "button": "Trabajar mi mezcla",
                 "action": "review"
             }
-        
+
         else:
             # Critical - multiple issues
             return {
                 "message": (
-                    "🔧 ¿Hablamos de tu proyecto?\n"
-                    "Detecté varios problemas críticos que necesitan resolverse en la etapa de mezcla. "
-                    "Puedo ayudarte a corregirlos paso a paso."
+                    "🔧 El análisis detectó problemas en varias áreas del mix.\n"
+                    "Antes de cualquier proceso, tu mezcla necesita revisión estructural. "
+                    "Puedo ayudarte a planificar los pasos para llevarla a un nivel profesional."
                 ),
                 "button": "Revisar mi proyecto",
                 "action": "review"
             }
-    
+
     else:
-        # English CTAs - American English
+        # English CTAs - US English (sounds like an engineer, not an app)
         if score >= 95:
-            # Perfect for mastering
+            # Perfect — offer mastering directly
             return {
                 "message": (
-                    "🎧 Ready for the final touch?\n"
-                    "Your mix is well balanced. I can master it to sound coherent and competitive "
-                    "on streaming platforms."
+                    "🎧 Your mix has solid technical balance.\n"
+                    "I can handle the mastering with plenty of headroom: competitive loudness, "
+                    "defined stereo image, and consistent translation across playback systems."
                 ),
-                "button": "Master my song",
+                "button": "Master this track",
                 "action": "mastering"
             }
-        
+
         elif score >= 85:
             # Ready for mastering
             return {
                 "message": (
-                    "🎧 Want me to master your song?\n"
-                    "Your mix is well prepared. I can work freely to make it sound coherent and "
-                    "competitive on streaming platforms."
+                    "🎧 Your mix is technically ready.\n"
+                    "You've got good headroom and dynamics to work with. I can bring it to "
+                    "distribution level while preserving the intent of the mix."
                 ),
-                "button": "Master my song",
+                "button": "Master this track",
                 "action": "mastering"
             }
-        
+
         elif score >= 75:
-            # Acceptable - needs minor tweaks before mastering
+            # Needs some prep before mastering
             return {
                 "message": (
-                    "🔧 Need to adjust some details before mastering?\n"
-                    "Your mix is close, but there are some technical points to review. "
-                    "I can help you prepare it correctly, then we'll talk about mastering."
+                    "🔧 There are some technical aspects to address before mastering.\n"
+                    "If I master it as-is, I'll have to compensate for things that are better "
+                    "resolved in the mix. I can review with you what adjustments would make the difference."
                 ),
                 "button": "Prepare my mix",
                 "action": "preparation"
             }
-        
+
         elif score >= 60:
-            # Minor adjustments needed
+            # Needs more work
             return {
                 "message": (
-                    "🔧 Need help preparing your mix?\n"
-                    "There are several technical aspects to adjust before mastering. "
-                    "I can review your session and make the necessary changes to get it ready."
+                    "🔧 Your mix needs work before mastering.\n"
+                    "There are technical issues that mastering can't fix. They need to be addressed "
+                    "in the mix. I can help you identify what to adjust."
                 ),
-                "button": "Make my adjustments",
+                "button": "Review my mix",
                 "action": "preparation"
             }
-        
+
         elif score >= 40:
             # Significant work needed
             return {
                 "message": (
-                    "🔧 Let's review your mix together?\n"
-                    "Mastering isn't a magic wand - your mix needs technical work first. "
-                    "I can help you fix the issues from the session."
+                    "🔧 Your mix needs attention in several areas.\n"
+                    "Mastering doesn't fix mix problems, it exposes them. Before thinking about "
+                    "mastering, the issues flagged in the analysis need to be resolved."
                 ),
                 "button": "Review my mix",
                 "action": "review"
             }
-        
+
         elif score >= 20:
             # Urgent correction required
             return {
                 "message": (
-                    "🔧 Need help with your mix session?\n"
-                    "Your mix requires attention to several technical aspects. "
-                    "I can review your project and work with you to solve the detected issues."
+                    "🔧 Your mix has significant technical issues.\n"
+                    "I wouldn't recommend mastering in this state, the result won't be competitive. "
+                    "I can help you work through the critical points from the session."
                 ),
-                "button": "Review my mix",
+                "button": "Work on my mix",
                 "action": "review"
             }
-        
+
         else:
             # Critical - multiple issues
             return {
                 "message": (
-                    "🔧 Let's talk about your project?\n"
-                    "I detected several critical issues that need to be resolved in the mixing stage. "
-                    "I can help you fix them step by step."
+                    "🔧 The analysis flagged problems across multiple areas of the mix.\n"
+                    "Before any processing, your mix needs structural review. "
+                    "I can help you plan the steps to bring it to a professional level."
                 ),
                 "button": "Review my project",
                 "action": "review"
@@ -4701,11 +4727,15 @@ def analyze_file_chunked(
     sr = file_info.samplerate
     channels = file_info.channels
     duration = file_info.duration
-    file_size = path.stat().st_size
-    
-    
+
+    # Extract file size — prefer original file size if compression happened
+    disk_file_size = path.stat().st_size
+    file_size = disk_file_size
+    if original_metadata and original_metadata.get('original_file_size', 0) > 0:
+        file_size = original_metadata['original_file_size']
+
     # Extract bit depth - USE ORIGINAL METADATA if provided
-    if original_metadata and original_metadata.get('bit_depth'):
+    if original_metadata and original_metadata.get('bit_depth', 0) > 0:
         bit_depth = original_metadata['bit_depth']
         sr = original_metadata.get('sample_rate', sr)  # Also use original sample rate
         print(f"✅ Using ORIGINAL metadata: {sr} Hz, {bit_depth}-bit")
@@ -5108,10 +5138,11 @@ def analyze_file_chunked(
         weighted_lufs = -23.0
         lufs_reliable = False
     
-    # PLR: difference between peak and LUFS
+    # PLR: difference between TRUE PEAK and LUFS
     # v7.4.0 FIX: Only calculate PLR if LUFS is reliable
+    # v7.4.2 FIX: Use final_tp (true peak) not final_peak (sample peak) — PLR is Peak-to-Loudness Ratio using True Peak
     if lufs_reliable:
-        final_plr = final_peak - weighted_lufs
+        final_plr = final_tp - weighted_lufs
         plr_reliable = True
     else:
         final_plr = None
@@ -5468,6 +5499,12 @@ def analyze_file_chunked(
         strict
     )
     
+    # v7.4.2 FIX: Severity ranking for correct max() comparison
+    # String max() is alphabetical ("warning" > "critical") which is wrong
+    _SEVERITY_RANK = {'ok': 0, 'warning': 1, 'critical': 2}
+    def _max_severity(chunks):
+        return max((c['severity'] for c in chunks), key=lambda s: _SEVERITY_RANK.get(s, 0))
+
     # Build comprehensive stereo temporal analysis
     stereo_temporal = None
     has_stereo_problems = (
@@ -5506,7 +5543,7 @@ def analyze_file_chunked(
                     'duration': r['end'] - r['start'],
                     'avg_correlation': avg_corr,
                     'issue': _classify_correlation_issue(avg_corr),  # FIX: Reclassify based on average
-                    'severity': max(c['severity'] for c in r['chunks']),
+                    'severity': _max_severity(r['chunks']),
                     'band_correlation': avg_band_corr  # v7.3.35: Per-band analysis
                 })
             
@@ -5527,7 +5564,7 @@ def analyze_file_chunked(
                         'duration': r['end'] - r['start'],
                         'avg_ms_ratio': sum(c['ms_ratio'] for c in r['chunks']) / len(r['chunks']),
                         'issue': r['chunks'][0]['issue'],  # 'mono' or 'too_wide'
-                        'severity': max(c['severity'] for c in r['chunks'])
+                        'severity': _max_severity(r['chunks'])
                     }
                     for r in ms_regions[:25]
                 ]
@@ -5545,7 +5582,7 @@ def analyze_file_chunked(
                         'duration': r['end'] - r['start'],
                         'avg_balance_db': sum(c['lr_balance_db'] for c in r['chunks']) / len(r['chunks']),
                         'side': r['chunks'][0]['side'],  # 'left' or 'right'
-                        'severity': max(c['severity'] for c in r['chunks'])
+                        'severity': _max_severity(r['chunks'])
                     }
                     for r in lr_regions[:25]
                 ]
@@ -5828,7 +5865,7 @@ def analyze_file_chunked(
             "auto_oversample": True,
             "clipping_detected": bool(results['clipping_chunks'])
         },
-        "metrics_bars": calculate_metrics_bars_percentages(metrics),  # NEW v7.3.50: Quick view bars
+        "metrics_bars": calculate_metrics_bars_percentages(metrics, strict=strict),  # NEW v7.3.50: Quick view bars
         "analysis_time_seconds": round(time.time() - analysis_start_time, 1),  # Time elapsed (uses renamed variable)
         # v1.5: New data capture fields
         "spectral_6band": fb.get("spectral_6band", {}),
@@ -6516,7 +6553,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                 message += "📊 Technical observations of this master:\n"
                 message += "\n".join(observations)
                 message += "\n\n"
-                message += "💡 These observations do NOT invalidate the master—they simply contextualize the technical decisions made during the process.\n\n"
+                message += "💡 These observations do NOT invalidate the master, they simply contextualize the technical decisions made during the process.\n\n"
             
             # SECTION 4: Bifurcation - If Mix
             # Calculate how much to reduce (correct formula)
@@ -7425,7 +7462,7 @@ def generate_complete_pdf(
         )
         
         # Header
-        story.append(Paragraph("MASTERING READY", title_style))
+        story.append(Paragraph("MASTERINGREADY", title_style))
         story.append(Paragraph(
             "Reporte Completo de Análisis" if lang == 'es' else "Complete Analysis Report",
             header_subtitle_style
@@ -7468,17 +7505,12 @@ def generate_complete_pdf(
         # Format bit depth
         bit_depth_str = f"{bit_depth}-bit" if bit_depth > 0 else "N/A"
         
-        # NEW v7.3.50: Format analysis time
-        analysis_time = report.get('analysis_time_seconds', 0)
-        analysis_time_str = f"{analysis_time:.1f}s" if analysis_time > 0 else "N/A"
-        
         file_info_data = [
             ["Archivo" if lang == 'es' else "File", clean_filename],
             ["Fecha" if lang == 'es' else "Date", datetime.now().strftime('%d/%m/%Y %H:%M')],
             ["Duración" if lang == 'es' else "Duration", duration_str],
             ["Sample Rate" if lang == 'es' else "Sample Rate", sample_rate_str],
             ["Bit Depth" if lang == 'es' else "Bit Depth", bit_depth_str],
-            ["Tiempo de análisis" if lang == 'es' else "Analysis time", analysis_time_str],  # v7.3.50 (no emoji for PDF compatibility)
             ["Puntuación MR" if lang == 'es' else "MR Score", f"{report.get('score', 0)}/100"],
             ["Veredicto" if lang == 'es' else "Verdict", verdict_text]
         ]
@@ -7612,7 +7644,7 @@ def generate_complete_pdf(
             story.append(Spacer(1, 0.05*inch))
             
             # Subtexto explicativo - Mastering Ready philosophy
-            subtext = "Estos indicadores no significan que tu mezcla esté mal, sino que hay decisiones técnicas que vale la pena revisar antes del máster final." if lang == 'es' else "These indicators don't mean your mix is wrong, but there are technical decisions worth reviewing before the final master."
+            subtext = "Estos indicadores no significan que tu mezcla esté mal, sino que hay decisiones técnicas que conviene revisar antes del máster final." if lang == 'es' else "These indicators don't mean your mix is wrong, but there are technical decisions worth reviewing before the final master."
             story.append(Paragraph(
                 clean_text_for_pdf(subtext),
                 ParagraphStyle('Subtext', parent=body_style, fontSize=8, textColor=colors.HexColor('#6b7280'), fontStyle='italic')

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Interpretative Texts Generator for MasteringReady
+Interpretative Texts Generator for Mastering Ready
 =================================================
 
 CORRECTED VERSION - Aligned with analyzer.py v7.3.30 thresholds
@@ -13,7 +13,7 @@ Key fixes:
 4. Added M/S ratio consideration to stereo evaluation
 5. LUFS text adjusted to reflect "informative" nature
 
-Author: MasteringReady Team
+Author: Mastering Ready Team
 Version: 1.1.0 (corrected)
 """
 
@@ -47,7 +47,7 @@ def generate_interpretative_texts(
     ms_ratio = metrics.get('ms_ratio', 0.5)  # ADDED: M/S ratio support
     
     # Determine status for each metric (considering strict mode)
-    headroom_status = _get_headroom_status(headroom, true_peak, strict)
+    headroom_status = _get_headroom_status(headroom, strict)
     dr_status = _get_dr_status(dr_value, strict)
     level_status = _get_level_status(lufs, strict)
     stereo_status = _get_stereo_status(stereo_balance, stereo_correlation, ms_ratio, strict)
@@ -72,45 +72,35 @@ def generate_interpretative_texts(
 # STATUS DETERMINATION FUNCTIONS - ALIGNED WITH analyzer.py v7.3.30
 # ============================================================================
 
-def _get_headroom_status(headroom: float, true_peak: float, strict: bool = False) -> str:
+def _get_headroom_status(headroom: float, strict: bool = False) -> str:
     """
-    Determine headroom status - CORRECTED to match analyzer.py
-    
-    analyzer.py thresholds:
-    - NORMAL: perfect = -6 to -3, pass = -9 to -3, warning = -2 to -1, critical >= -1
-    - STRICT: perfect = -6 to -5, warning = -4 to -1, critical >= -1
-    
+    Determine headroom status - aligned with bar thresholds in analyzer.py
+
+    Headroom-only thresholds (true_peak has its own metric):
+    - NORMAL: excellent ≤ -3, good -3 to -2, warning -2 to -1, error ≥ -1
+    - STRICT: excellent ≤ -5, good -5 to -4, warning -4 to -1, error ≥ -1
+
     Note: In digital audio (dBFS), headroom is NEGATIVE.
     -6 dBFS means 6 dB of space below the 0 dBFS ceiling.
     More negative = more headroom (better).
     """
     if strict:
-        # Strict mode: more conservative requirements
-        # Perfect: headroom -6 to -5 AND true peak <= -3
-        if -6.0 <= headroom <= -5.0 and true_peak <= -3.0:
+        if headroom <= -5.0:
             return "excellent"
-        # Pass: acceptable but not ideal
-        elif headroom <= -4.0 and true_peak <= -2.0:
+        elif -5.0 < headroom <= -4.0:
             return "good"
-        # Warning: hot mix, -4 to -1
-        elif -4.0 <= headroom < -1.0:
+        elif -4.0 < headroom <= -1.0:
             return "warning"
-        # Critical: >= -1 dBFS
-        else:
+        else:  # > -1.0
             return "error"
     else:
-        # Normal mode - CORRECTED thresholds
-        # Perfect: -6 to -3 dBFS (analyzer's perfect range)
-        if -6.0 <= headroom <= -3.0 and true_peak <= -3.0:
+        if headroom <= -3.0:
             return "excellent"
-        # Good/Pass: -9 to -3 OR slightly above -3
-        elif headroom <= -3.0 and true_peak <= -1.0:
+        elif -3.0 < headroom <= -2.0:
             return "good"
-        # Warning: -2 to -1 (hot but not clipping)
-        elif -2.0 < headroom < -1.0:
+        elif -2.0 < headroom <= -1.0:
             return "warning"
-        # Error: >= -1 dBFS (critical/clipping risk)
-        else:
+        else:  # > -1.0
             return "error"
 
 
@@ -963,10 +953,7 @@ def format_for_api_response(
             "metrics": {
                 "headroom_dbfs": metrics.get('headroom', 0),
                 "true_peak_dbtp": metrics.get('true_peak', 0),
-                "status": _get_headroom_status(
-                    metrics.get('headroom', 0),
-                    metrics.get('true_peak', 0)
-                )
+                "status": _get_headroom_status(metrics.get('headroom', 0))
             }
         },
         "dynamic_range": {
@@ -1024,10 +1011,7 @@ def format_for_api_response_v2(
                 "metrics": {
                     "headroom_dbfs": metrics.get('headroom', 0),
                     "true_peak_dbtp": metrics.get('true_peak', 0),
-                    "status": _get_headroom_status(
-                        metrics.get('headroom', 0),
-                        metrics.get('true_peak', 0)
-                    )
+                    "status": _get_headroom_status(metrics.get('headroom', 0))
                 },
                 "interpretation": interpretations["headroom"]["interpretation"],
                 "recommendation": interpretations["headroom"]["recommendation"]
