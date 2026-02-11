@@ -107,13 +107,15 @@ export async function POST(request: NextRequest) {
 type SupabaseAdmin = SupabaseClient
 
 /**
- * Insert a payment record only if the stripe_payment_intent_id hasn't been recorded yet.
- * Prevents duplicate records when Stripe replays webhook events.
+ * Insert a payment record only if it hasn't been recorded yet.
+ * Deduplicates on stripe_payment_intent_id OR stripe_invoice_id (subscriptions use invoices, not payment intents).
+ * Prevents duplicate records when Stripe replays webhook events or fires multiple events for the same payment.
  */
 async function insertPaymentIfNew(
   supabase: SupabaseAdmin,
   payment: Record<string, any>
 ) {
+  // Check payment intent dedup
   if (payment.stripe_payment_intent_id) {
     const { data: existing } = await supabase
       .from('payments')
@@ -122,6 +124,18 @@ async function insertPaymentIfNew(
       .maybeSingle()
     if (existing) {
       console.log(`Payment already recorded for intent ${payment.stripe_payment_intent_id}, skipping`)
+      return
+    }
+  }
+  // Check invoice dedup (subscription payments route through invoices, payment_intent may be null)
+  if (payment.stripe_invoice_id) {
+    const { data: existing } = await supabase
+      .from('payments')
+      .select('id')
+      .eq('stripe_invoice_id', payment.stripe_invoice_id)
+      .maybeSingle()
+    if (existing) {
+      console.log(`Payment already recorded for invoice ${payment.stripe_invoice_id}, skipping`)
       return
     }
   }
