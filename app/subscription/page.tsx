@@ -202,12 +202,13 @@ export default function SubscriptionPage() {
       setLoading(true)
 
       try {
-        // Parallel fetch: profile + subscription + status + payments (all use user.id directly, no redundant auth call)
-        const [profileResult, subResult, statusResult, paymentsResult] = await Promise.all([
+        // Parallel fetch: profile + subscription + status + payments + addon check (all in one batch, no sequential calls)
+        const [profileResult, subResult, statusResult, paymentsResult, addonResult] = await Promise.all([
           supabase.from('profiles').select('preferred_language').eq('id', user.id).single(),
           supabase.from('subscriptions').select('*, plan:plans(type, name)').eq('user_id', user.id).eq('status', 'active').single(),
           supabase.rpc('get_user_analysis_status', { p_user_id: user.id }),
-          supabase.from('payments').select('id, amount, currency, status, description, receipt_url, created_at').eq('user_id', user.id).order('created_at', { ascending: false }).limit(20)
+          supabase.from('payments').select('id, amount, currency, status, description, receipt_url, created_at').eq('user_id', user.id).order('created_at', { ascending: false }).limit(20),
+          supabase.rpc('can_buy_addon', { p_user_id: user.id })
         ])
 
         if (cancelled) return
@@ -231,10 +232,10 @@ export default function SubscriptionPage() {
         if (status) {
           setUserStatus(status)
 
+          // Use addon result from parallel batch
           if (!cancelled && status.plan_type === 'pro') {
-            const { data: addonData } = await supabase.rpc('can_buy_addon', { p_user_id: user.id })
-            const addonResult = addonData ? (Array.isArray(addonData) ? addonData[0] : addonData) : null
-            if (!cancelled) setCanBuyAddon(addonResult?.can_buy ?? false)
+            const addon = addonResult.data ? (Array.isArray(addonResult.data) ? addonResult.data[0] : addonResult.data) : null
+            setCanBuyAddon(addon?.can_buy ?? false)
           }
         }
       } catch (error) {
