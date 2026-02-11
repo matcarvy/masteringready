@@ -411,6 +411,10 @@ function DashboardContent() {
       setLoading(true)
 
       try {
+        // Force fresh auth session — clears stale Supabase client state after SPA navigation
+        // (e.g. navigating here from analyzer where multiple requests + fire-and-forget calls ran)
+        await supabase.auth.getSession()
+
         // Parallel fetch: profile + subscription + analyses + status + addon check (all use user.id directly, no redundant auth call)
         const [profileResult, subResult, analysesResult, statusResult, addonResult] = await Promise.all([
           supabase.from('profiles').select('*').eq('id', user.id).single(),

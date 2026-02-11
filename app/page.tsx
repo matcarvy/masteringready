@@ -883,8 +883,17 @@ const handleAnalyze = async () => {
             api_request_id: requestIdRef.current || null
           }, file, geo?.countryCode, isAdmin)
           setSavedAnalysisId(savedData?.[0]?.id || null)
-          // Refresh quota cache after successful save
-          checkCanAnalyze().then(s => setUserAnalysisStatus(s)).catch(() => {})
+          // Optimistically update quota cache — avoids fire-and-forget network call
+          // that can leave stale Supabase connections interfering with dashboard navigation
+          if (userAnalysisStatus) {
+            const newUsed = userAnalysisStatus.analyses_used + 1
+            const limit = userAnalysisStatus.analyses_limit
+            setUserAnalysisStatus({
+              ...userAnalysisStatus,
+              analyses_used: newUsed,
+              can_analyze: limit < 0 ? true : newUsed < limit // limit < 0 = admin (unlimited)
+            })
+          }
         } catch (saveErr) {
           console.error('[Analysis] Failed to save to database:', saveErr)
           // Results already shown — save failure doesn't hide them
