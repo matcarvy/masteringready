@@ -10,7 +10,7 @@ import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth, UserMenu } from '@/components/auth'
-import { supabase, UserDashboardStatus } from '@/lib/supabase'
+import { supabase, createFreshQueryClient, UserDashboardStatus } from '@/lib/supabase'
 import { useGeo } from '@/lib/useGeo'
 import { getAllPricesForCountry } from '@/lib/pricing-config'
 import { detectLanguage, setLanguageCookie } from '@/lib/language'
@@ -411,17 +411,18 @@ function DashboardContent() {
       setLoading(true)
 
       try {
-        // Force fresh auth session — clears stale Supabase client state after SPA navigation
-        // (e.g. navigating here from analyzer where multiple requests + fire-and-forget calls ran)
-        await supabase.auth.getSession()
+        // Use a fresh Supabase client — the shared singleton can have stale internal state
+        // (auth locks, pending requests) after SPA navigation from the analyzer page
+        const client = await createFreshQueryClient()
+        if (!client) return // No session — redirect guard will handle
 
-        // Parallel fetch: profile + subscription + analyses + status + addon check (all use user.id directly, no redundant auth call)
+        // Parallel fetch: profile + subscription + analyses + status + addon check
         const [profileResult, subResult, analysesResult, statusResult, addonResult] = await Promise.all([
-          supabase.from('profiles').select('*').eq('id', user.id).single(),
-          supabase.from('subscriptions').select('*, plan:plans(type, name)').eq('user_id', user.id).eq('status', 'active').single(),
-          supabase.from('analyses').select('*').eq('user_id', user.id).is('deleted_at', null).order('created_at', { ascending: false }).limit(50),
-          supabase.rpc('get_user_analysis_status', { p_user_id: user.id }),
-          supabase.rpc('can_buy_addon', { p_user_id: user.id })
+          client.from('profiles').select('*').eq('id', user.id).single(),
+          client.from('subscriptions').select('*, plan:plans(type, name)').eq('user_id', user.id).eq('status', 'active').single(),
+          client.from('analyses').select('*').eq('user_id', user.id).is('deleted_at', null).order('created_at', { ascending: false }).limit(50),
+          client.rpc('get_user_analysis_status', { p_user_id: user.id }),
+          client.rpc('can_buy_addon', { p_user_id: user.id })
         ])
 
         if (cancelled) return

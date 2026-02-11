@@ -10,7 +10,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth, UserMenu } from '@/components/auth'
-import { supabase, UserDashboardStatus } from '@/lib/supabase'
+import { supabase, createFreshQueryClient, UserDashboardStatus } from '@/lib/supabase'
 import { useGeo } from '@/lib/useGeo'
 import { getAllPricesForCountry } from '@/lib/pricing-config'
 import { detectLanguage, setLanguageCookie } from '@/lib/language'
@@ -202,16 +202,17 @@ export default function SubscriptionPage() {
       setLoading(true)
 
       try {
-        // Force fresh auth session — clears stale Supabase client state after SPA navigation
-        await supabase.auth.getSession()
+        // Use a fresh Supabase client — avoids stale state from analyzer page
+        const client = await createFreshQueryClient()
+        if (!client) return
 
         // Parallel fetch: profile + subscription + status + payments + addon check (all in one batch, no sequential calls)
         const [profileResult, subResult, statusResult, paymentsResult, addonResult] = await Promise.all([
-          supabase.from('profiles').select('preferred_language').eq('id', user.id).single(),
-          supabase.from('subscriptions').select('*, plan:plans(type, name)').eq('user_id', user.id).eq('status', 'active').single(),
-          supabase.rpc('get_user_analysis_status', { p_user_id: user.id }),
-          supabase.from('payments').select('id, amount, currency, status, description, receipt_url, created_at').eq('user_id', user.id).order('created_at', { ascending: false }).limit(20),
-          supabase.rpc('can_buy_addon', { p_user_id: user.id })
+          client.from('profiles').select('preferred_language').eq('id', user.id).single(),
+          client.from('subscriptions').select('*, plan:plans(type, name)').eq('user_id', user.id).eq('status', 'active').single(),
+          client.rpc('get_user_analysis_status', { p_user_id: user.id }),
+          client.from('payments').select('id, amount, currency, status, description, receipt_url, created_at').eq('user_id', user.id).order('created_at', { ascending: false }).limit(20),
+          client.rpc('can_buy_addon', { p_user_id: user.id })
         ])
 
         if (cancelled) return
