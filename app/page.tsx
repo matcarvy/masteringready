@@ -765,8 +765,10 @@ const handleAnalyze = async () => {
         setCompressionProgress(100)
 
         fileToAnalyze = compressedFile
-        // compressAudioFile captures full metadata including duration — prefer its result
-        originalMetadata = metadata
+        // Only use compression metadata if pre-compression header parse didn't capture it
+        if (!originalMetadata) {
+          originalMetadata = metadata
+        }
 
         setCompressing(false)
         setCompressionProgress(0)
