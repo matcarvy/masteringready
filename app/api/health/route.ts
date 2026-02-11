@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@supabase/supabase-js'
+
+// Force dynamic — never evaluate at build time
+export const dynamic = 'force-dynamic'
 
 /**
  * Health check endpoint
@@ -15,7 +18,21 @@ import { supabase } from '@/lib/supabase'
 export async function GET() {
   const start = Date.now()
 
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  if (!url || !key) {
+    return NextResponse.json({
+      status: 'error',
+      service: 'supabase',
+      error: 'Missing environment variables',
+      timestamp: new Date().toISOString()
+    }, { status: 503 })
+  }
+
   try {
+    const supabase = createClient(url, key)
+
     // Simple query to keep Supabase active
     const { data, error } = await supabase
       .from('profiles')
