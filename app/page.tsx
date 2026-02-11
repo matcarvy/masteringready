@@ -871,25 +871,24 @@ const handleAnalyze = async () => {
         }
         // Quota verified — show results immediately
         setResult(data)
-        // Save to database in background (non-blocking)
+        // Save to database (awaited to ensure it completes before user navigates away)
         console.log('[Analysis] Saving to database for logged-in user:', user.id)
-        saveAnalysisToDatabase(user.id, {
-          ...data,
-          filename: file.name,
-          created_at: new Date().toISOString(),
-          lang,
-          strict,
-          api_request_id: requestIdRef.current || null
-        }, file, geo?.countryCode, isAdmin)
-          .then(savedData => {
-            setSavedAnalysisId(savedData?.[0]?.id || null)
-            // Refresh quota cache after successful save
-            checkCanAnalyze().then(s => setUserAnalysisStatus(s)).catch(() => {})
-          })
-          .catch(saveErr => {
-            console.error('[Analysis] Failed to save to database:', saveErr)
-            // Results already shown — save failure is non-blocking
-          })
+        try {
+          const savedData = await saveAnalysisToDatabase(user.id, {
+            ...data,
+            filename: file.name,
+            created_at: new Date().toISOString(),
+            lang,
+            strict,
+            api_request_id: requestIdRef.current || null
+          }, file, geo?.countryCode, isAdmin)
+          setSavedAnalysisId(savedData?.[0]?.id || null)
+          // Refresh quota cache after successful save
+          checkCanAnalyze().then(s => setUserAnalysisStatus(s)).catch(() => {})
+        } catch (saveErr) {
+          console.error('[Analysis] Failed to save to database:', saveErr)
+          // Results already shown — save failure doesn't hide them
+        }
       } else {
         // Anonymous: show results immediately and save to localStorage
         setResult(data)
