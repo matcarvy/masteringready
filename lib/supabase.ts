@@ -17,15 +17,15 @@ import { createClient } from '@supabase/supabase-js'
 // ENVIRONMENT VARIABLES / VARIABLES DE ENTORNO
 // ============================================================================
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+// Use placeholder values at build time to prevent "supabaseUrl is required" error.
+// createClient only validates non-empty strings — it doesn't connect at creation time.
+// At runtime, real env vars are always available.
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key'
 
-// Warn at build time, fail at runtime if env vars are truly missing
-if (!supabaseUrl || !supabaseAnonKey) {
-  if (typeof window !== 'undefined') {
-    console.error('Missing Supabase environment variables.')
-  }
-}
+// Lazy getters for factory functions (read env vars at call time, not module load)
+const getSupabaseUrl = () => process.env.NEXT_PUBLIC_SUPABASE_URL || supabaseUrl
+const getSupabaseAnonKey = () => process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || supabaseAnonKey
 
 // ============================================================================
 // CLIENT-SIDE SUPABASE CLIENT / CLIENTE SUPABASE PARA NAVEGADOR
@@ -34,16 +34,6 @@ if (!supabaseUrl || !supabaseAnonKey) {
 /**
  * Supabase client for browser usage (React components)
  * Cliente Supabase para uso en navegador (componentes React)
- *
- * Use this in:
- * - React components
- * - Client-side hooks
- * - Browser-only code
- *
- * Usar esto en:
- * - Componentes React
- * - Hooks del lado del cliente
- * - Código solo para navegador
  */
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
@@ -72,7 +62,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
  * - getServerSideProps
  */
 export function createServerSupabaseClient() {
-  return createClient(supabaseUrl, supabaseAnonKey, {
+  return createClient(getSupabaseUrl(), getSupabaseAnonKey(), {
     auth: {
       persistSession: false,
       autoRefreshToken: false
@@ -101,7 +91,7 @@ export function createAdminSupabaseClient() {
     )
   }
 
-  return createClient(supabaseUrl, serviceRoleKey, {
+  return createClient(getSupabaseUrl(), serviceRoleKey, {
     auth: {
       persistSession: false,
       autoRefreshToken: false
