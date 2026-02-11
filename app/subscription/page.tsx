@@ -231,9 +231,13 @@ export default function SubscriptionPage() {
   // Handle checkout
   const handleCheckout = async (productType: 'pro_monthly' | 'single' | 'addon') => {
     try {
+      const { data: { session } } = await supabase.auth.getSession()
       const response = await fetch('/api/checkout', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(session?.access_token && { 'Authorization': `Bearer ${session.access_token}` })
+        },
         body: JSON.stringify({ productType, countryCode: geo.countryCode })
       })
       const data = await response.json()
@@ -250,7 +254,13 @@ export default function SubscriptionPage() {
   // Handle manage subscription (Stripe portal)
   const handleManageSubscription = async () => {
     try {
-      const response = await fetch('/api/customer-portal', { method: 'POST' })
+      const { data: { session } } = await supabase.auth.getSession()
+      const response = await fetch('/api/customer-portal', {
+        method: 'POST',
+        headers: {
+          ...(session?.access_token && { 'Authorization': `Bearer ${session.access_token}` })
+        }
+      })
       const data = await response.json()
       if (data.url) {
         window.location.href = data.url
