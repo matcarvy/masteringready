@@ -10,7 +10,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth, UserMenu } from '@/components/auth'
-import { supabase, checkCanBuyAddon, UserDashboardStatus } from '@/lib/supabase'
+import { supabase, UserDashboardStatus } from '@/lib/supabase'
 import { useGeo } from '@/lib/useGeo'
 import { getAllPricesForCountry } from '@/lib/pricing-config'
 import { detectLanguage, setLanguageCookie } from '@/lib/language'
@@ -23,7 +23,10 @@ import {
   X,
   AlertTriangle,
   Star,
-  Package
+  Package,
+  ExternalLink,
+  CheckCircle,
+  XCircle
 } from 'lucide-react'
 
 // ============================================================================
@@ -77,6 +80,10 @@ const translations = {
     colDescription: 'Descripción',
     colAmount: 'Monto',
     colStatus: 'Estado',
+    statusSucceeded: 'Exitoso',
+    statusFailed: 'Fallido',
+    statusPending: 'Pendiente',
+    viewReceipt: 'Ver recibo',
     manageSubscription: 'Administrar suscripción',
     perMonth: '/mes'
   },
@@ -126,6 +133,10 @@ const translations = {
     colDescription: 'Description',
     colAmount: 'Amount',
     colStatus: 'Status',
+    statusSucceeded: 'Succeeded',
+    statusFailed: 'Failed',
+    statusPending: 'Pending',
+    viewReceipt: 'View receipt',
     manageSubscription: 'Manage subscription',
     perMonth: '/month'
   }
@@ -147,6 +158,15 @@ export default function SubscriptionPage() {
   const [canBuyAddon, setCanBuyAddon] = useState(false)
   const [hasStripe, setHasStripe] = useState(false)
   const [showCancelModal, setShowCancelModal] = useState(false)
+  const [payments, setPayments] = useState<Array<{
+    id: string
+    amount: number
+    currency: string
+    status: string
+    description: string | null
+    receipt_url: string | null
+    created_at: string
+  }>>([])
 
   const { geo } = useGeo()
   const t = translations[lang]
@@ -182,11 +202,12 @@ export default function SubscriptionPage() {
       setLoading(true)
 
       try {
-        // Parallel fetch: profile + subscription + status (all use user.id directly, no redundant auth call)
-        const [profileResult, subResult, statusResult] = await Promise.all([
+        // Parallel fetch: profile + subscription + status + payments (all use user.id directly, no redundant auth call)
+        const [profileResult, subResult, statusResult, paymentsResult] = await Promise.all([
           supabase.from('profiles').select('preferred_language').eq('id', user.id).single(),
           supabase.from('subscriptions').select('*, plan:plans(type, name)').eq('user_id', user.id).eq('status', 'active').single(),
-          supabase.rpc('get_user_analysis_status', { p_user_id: user.id })
+          supabase.rpc('get_user_analysis_status', { p_user_id: user.id }),
+          supabase.from('payments').select('id, amount, currency, status, description, receipt_url, created_at').eq('user_id', user.id).order('created_at', { ascending: false }).limit(20)
         ])
 
         if (cancelled) return
@@ -202,13 +223,18 @@ export default function SubscriptionPage() {
           setHasStripe(true)
         }
 
+        if (paymentsResult.data && !cancelled) {
+          setPayments(paymentsResult.data)
+        }
+
         const status = statusResult.data ? (Array.isArray(statusResult.data) ? statusResult.data[0] : statusResult.data) : null
         if (status) {
           setUserStatus(status)
 
           if (!cancelled && status.plan_type === 'pro') {
-            const addonCheck = await checkCanBuyAddon()
-            if (!cancelled) setCanBuyAddon(addonCheck.can_buy)
+            const { data: addonData } = await supabase.rpc('can_buy_addon', { p_user_id: user.id })
+            const addonResult = addonData ? (Array.isArray(addonData) ? addonData[0] : addonData) : null
+            if (!cancelled) setCanBuyAddon(addonResult?.can_buy ?? false)
           }
         }
       } catch (error) {
@@ -776,7 +802,7 @@ export default function SubscriptionPage() {
           <div style={{
             background: 'white',
             borderRadius: '1rem',
-            padding: '1.5rem',
+            padding: isMobile ? '1rem' : '1.5rem',
             boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
             marginBottom: '2rem'
           }}>
@@ -789,14 +815,127 @@ export default function SubscriptionPage() {
               {t.paymentHistory}
             </h2>
 
-            <div style={{
-              textAlign: 'center',
-              padding: '2rem 1rem',
-              color: '#9ca3af',
-              fontSize: '0.875rem'
-            }}>
-              {t.noPayments}
-            </div>
+            {payments.length === 0 ? (
+              <div style={{
+                textAlign: 'center',
+                padding: '2rem 1rem',
+                color: '#9ca3af',
+                fontSize: '0.875rem'
+              }}>
+                {t.noPayments}
+              </div>
+            ) : isMobile ? (
+              /* Mobile: card layout */
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {payments.map((p) => (
+                  <div key={p.id} style={{
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '0.5rem',
+                    padding: '0.75rem'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.375rem' }}>
+                      <span style={{ fontSize: '0.8125rem', color: '#6b7280' }}>
+                        {new Date(p.created_at).toLocaleDateString(lang === 'es' ? 'es-CO' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                      </span>
+                      <span style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.25rem',
+                        fontSize: '0.75rem',
+                        fontWeight: '500',
+                        color: p.status === 'succeeded' ? '#059669' : p.status === 'failed' ? '#dc2626' : '#d97706',
+                        background: p.status === 'succeeded' ? '#ecfdf5' : p.status === 'failed' ? '#fef2f2' : '#fffbeb',
+                        padding: '0.125rem 0.5rem',
+                        borderRadius: '9999px'
+                      }}>
+                        {p.status === 'succeeded' ? <CheckCircle size={12} /> : p.status === 'failed' ? <XCircle size={12} /> : null}
+                        {p.status === 'succeeded' ? t.statusSucceeded : p.status === 'failed' ? t.statusFailed : t.statusPending}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: '0.875rem', fontWeight: '500', color: '#111827', marginBottom: '0.25rem' }}>
+                      {p.description || '—'}
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '0.9375rem', fontWeight: '600', color: '#111827' }}>
+                        ${p.amount.toFixed(2)} {p.currency}
+                      </span>
+                      {p.receipt_url && (
+                        <a href={p.receipt_url} target="_blank" rel="noopener noreferrer" style={{
+                          fontSize: '0.8125rem',
+                          color: '#6366f1',
+                          textDecoration: 'none',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.25rem'
+                        }}>
+                          {t.viewReceipt} <ExternalLink size={12} />
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              /* Desktop: table layout */
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid #e5e7eb' }}>
+                      <th style={{ textAlign: 'left', padding: '0.5rem 0.75rem', color: '#6b7280', fontWeight: '500' }}>{t.colDate}</th>
+                      <th style={{ textAlign: 'left', padding: '0.5rem 0.75rem', color: '#6b7280', fontWeight: '500' }}>{t.colDescription}</th>
+                      <th style={{ textAlign: 'right', padding: '0.5rem 0.75rem', color: '#6b7280', fontWeight: '500' }}>{t.colAmount}</th>
+                      <th style={{ textAlign: 'center', padding: '0.5rem 0.75rem', color: '#6b7280', fontWeight: '500' }}>{t.colStatus}</th>
+                      <th style={{ padding: '0.5rem 0.75rem' }}></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {payments.map((p) => (
+                      <tr key={p.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                        <td style={{ padding: '0.625rem 0.75rem', color: '#374151' }}>
+                          {new Date(p.created_at).toLocaleDateString(lang === 'es' ? 'es-CO' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                        </td>
+                        <td style={{ padding: '0.625rem 0.75rem', color: '#374151' }}>
+                          {p.description || '—'}
+                        </td>
+                        <td style={{ padding: '0.625rem 0.75rem', color: '#111827', fontWeight: '600', textAlign: 'right' }}>
+                          ${p.amount.toFixed(2)} {p.currency}
+                        </td>
+                        <td style={{ padding: '0.625rem 0.75rem', textAlign: 'center' }}>
+                          <span style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.25rem',
+                            fontSize: '0.75rem',
+                            fontWeight: '500',
+                            color: p.status === 'succeeded' ? '#059669' : p.status === 'failed' ? '#dc2626' : '#d97706',
+                            background: p.status === 'succeeded' ? '#ecfdf5' : p.status === 'failed' ? '#fef2f2' : '#fffbeb',
+                            padding: '0.125rem 0.5rem',
+                            borderRadius: '9999px'
+                          }}>
+                            {p.status === 'succeeded' ? <CheckCircle size={12} /> : p.status === 'failed' ? <XCircle size={12} /> : null}
+                            {p.status === 'succeeded' ? t.statusSucceeded : p.status === 'failed' ? t.statusFailed : t.statusPending}
+                          </span>
+                        </td>
+                        <td style={{ padding: '0.625rem 0.75rem', textAlign: 'right' }}>
+                          {p.receipt_url && (
+                            <a href={p.receipt_url} target="_blank" rel="noopener noreferrer" style={{
+                              fontSize: '0.8125rem',
+                              color: '#6366f1',
+                              textDecoration: 'none',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.25rem'
+                            }}>
+                              {t.viewReceipt} <ExternalLink size={12} />
+                            </a>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         )}
       </main>

@@ -10,7 +10,7 @@ import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth, UserMenu } from '@/components/auth'
-import { supabase, checkCanBuyAddon, UserDashboardStatus } from '@/lib/supabase'
+import { supabase, UserDashboardStatus } from '@/lib/supabase'
 import { useGeo } from '@/lib/useGeo'
 import { getAllPricesForCountry } from '@/lib/pricing-config'
 import { detectLanguage, setLanguageCookie } from '@/lib/language'
@@ -469,10 +469,11 @@ function DashboardContent() {
             }
           }
 
-          // Check if Pro user can buy addon (only extra call, runs after parallel batch)
+          // Check if Pro user can buy addon (inline RPC to skip redundant auth call)
           if (!cancelled && status.plan_type === 'pro') {
-            const addonCheck = await checkCanBuyAddon()
-            if (!cancelled) setCanBuyAddon(addonCheck.can_buy)
+            const { data: addonData } = await supabase.rpc('can_buy_addon', { p_user_id: user.id })
+            const addonResult = addonData ? (Array.isArray(addonData) ? addonData[0] : addonData) : null
+            if (!cancelled) setCanBuyAddon(addonResult?.can_buy ?? false)
           }
         }
       } catch (error) {
