@@ -251,6 +251,7 @@ interface Analysis {
   processing_time_seconds: number | null
   file_format: string | null
   channels: number | null
+  api_request_id: string | null
 }
 
 interface Profile {
@@ -400,64 +401,49 @@ function DashboardContent() {
     }
   }, [authLoading, user, lang])
 
-  // Fetch data
+  // Fetch data — parallelized to avoid hitting safety timeout
   useEffect(() => {
+    let cancelled = false
+
     async function fetchData() {
       if (!user) return
 
       setLoading(true)
 
       try {
-        // Fetch profile
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .single()
+        // Parallel fetch: profile + subscription + analyses + status
+        const [profileResult, subResult, analysesResult, status] = await Promise.all([
+          supabase.from('profiles').select('*').eq('id', user.id).single(),
+          supabase.from('subscriptions').select('*, plan:plans(type, name)').eq('user_id', user.id).eq('status', 'active').single(),
+          supabase.from('analyses').select('*').eq('user_id', user.id).is('deleted_at', null).order('created_at', { ascending: false }).limit(50),
+          getUserAnalysisStatus()
+        ])
 
-        if (profileError) console.error('[Dashboard] Profile error:', profileError.message)
+        if (cancelled) return
 
-        if (profileData) {
-          setProfile(profileData)
-          if (profileData.preferred_language === 'en' || profileData.preferred_language === 'es') {
-            setLang(profileData.preferred_language as 'es' | 'en')
+        // Profile
+        if (profileResult.error) console.error('[Dashboard] Profile error:', profileResult.error.message)
+        if (profileResult.data) {
+          setProfile(profileResult.data)
+          if (profileResult.data.preferred_language === 'en' || profileResult.data.preferred_language === 'es') {
+            setLang(profileResult.data.preferred_language as 'es' | 'en')
           }
         }
 
-        // Fetch subscription
-        const { data: subData, error: subError } = await supabase
-          .from('subscriptions')
-          .select(`
-            *,
-            plan:plans(type, name)
-          `)
-          .eq('user_id', user.id)
-          .eq('status', 'active')
-          .single()
-
-        if (subError && subError.code !== 'PGRST116') console.error('[Dashboard] Subscription error:', subError.message)
-
-        if (subData) {
-          setSubscription(subData)
+        // Subscription
+        if (subResult.error && subResult.error.code !== 'PGRST116') console.error('[Dashboard] Subscription error:', subResult.error.message)
+        if (subResult.data) {
+          setSubscription(subResult.data)
         }
 
-        // Fetch analyses
-        const { data: analysesData, error: analysesError } = await supabase
-          .from('analyses')
-          .select('*')
-          .eq('user_id', user.id)
-          .is('deleted_at', null)
-          .order('created_at', { ascending: false })
-          .limit(50)
-
-        if (analysesError) console.error('[Dashboard] Analyses error:', analysesError.message)
-
+        // Analyses
+        const analysesData = analysesResult.data
+        if (analysesResult.error) console.error('[Dashboard] Analyses error:', analysesResult.error.message)
         if (analysesData) {
           setAnalyses(analysesData)
         }
 
-        // Fetch user analysis status
-        const status = await getUserAnalysisStatus()
+        // User analysis status
         if (status) {
           setUserStatus(status)
 
@@ -481,22 +467,24 @@ function DashboardContent() {
             }
           }
 
-          // Check if Pro user can buy addon
-          if (status.plan_type === 'pro') {
+          // Check if Pro user can buy addon (only extra call, runs after parallel batch)
+          if (!cancelled && status.plan_type === 'pro') {
             const addonCheck = await checkCanBuyAddon()
-            setCanBuyAddon(addonCheck.can_buy)
+            if (!cancelled) setCanBuyAddon(addonCheck.can_buy)
           }
         }
       } catch (error) {
         console.error('Error fetching dashboard data:', error)
       } finally {
-        setLoading(false)
+        if (!cancelled) setLoading(false)
       }
     }
 
     if (user) {
       fetchData()
     }
+
+    return () => { cancelled = true }
   }, [user])
 
   // Get score color
@@ -920,7 +908,7 @@ function DashboardContent() {
             <p style={{ fontSize: '1.5rem', fontWeight: '700', color: '#111827' }}>
               {isPro ? (
                 <>
-                  {userStatus ? Math.max(0, 30 - userStatus.analyses_used + userStatus.addon_remaining) : 30}
+                  {userStatus ? Math.min(30, Math.max(0, 30 - userStatus.analyses_used + userStatus.addon_remaining)) : 30}
                   <span style={{ fontSize: '0.875rem', fontWeight: '400', color: '#6b7280' }}>
                     {' '}{t.proLimit}
                   </span>
@@ -1786,6 +1774,55 @@ function DashboardContent() {
                   >
                     <Download size={16} />
                     {lang === 'es' ? 'Descargar Completo' : 'Download Complete'}
+                  </button>
+                )}
+
+                {/* Download PDF - Pro only, requires api_request_id */}
+                {isPro && selectedAnalysis.api_request_id && (
+                  <button
+                    onClick={async () => {
+                      try {
+                        const formData = new FormData()
+                        formData.append('request_id', selectedAnalysis.api_request_id)
+                        formData.append('lang', lang)
+                        const envUrl = process.env.NEXT_PUBLIC_API_URL
+                        const backendUrl = (envUrl && !envUrl.includes('your-backend')) ? envUrl : 'https://masteringready.onrender.com'
+                        const response = await fetch(`${backendUrl}/api/download/pdf`, { method: 'POST', body: formData })
+                        if (response.ok) {
+                          const blob = await response.blob()
+                          const url = URL.createObjectURL(blob)
+                          const a = document.createElement('a')
+                          a.href = url
+                          a.download = `masteringready-${lang === 'es' ? 'detallado' : 'detailed'}-${selectedAnalysis.filename.replace(/\.[^/.]+$/, '')}.pdf`
+                          document.body.appendChild(a)
+                          a.click()
+                          document.body.removeChild(a)
+                          URL.revokeObjectURL(url)
+                        } else {
+                          alert(lang === 'es' ? 'El PDF no está disponible. Intenta ejecutar el análisis de nuevo.' : 'PDF not available. Try running the analysis again.')
+                        }
+                      } catch {
+                        alert(lang === 'es' ? 'Error al descargar el PDF.' : 'Error downloading PDF.')
+                      }
+                    }}
+                    style={{
+                      flex: 1,
+                      padding: '0.75rem',
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      border: 'none',
+                      borderRadius: '0.5rem',
+                      fontSize: '0.875rem',
+                      fontWeight: '600',
+                      color: 'white',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.5rem'
+                    }}
+                  >
+                    <Download size={16} />
+                    {lang === 'es' ? 'Descargar PDF' : 'Download PDF'}
                   </button>
                 )}
 

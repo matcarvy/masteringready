@@ -269,6 +269,7 @@ export interface Database {
           scheduled_deletion_at: string | null
           deleted_at: string | null
           is_test_analysis: boolean
+          api_request_id: string | null
         }
         Insert: {
           id?: string
@@ -296,6 +297,7 @@ export interface Database {
           scheduled_deletion_at?: string | null
           deleted_at?: string | null
           is_test_analysis?: boolean
+          api_request_id?: string | null
         }
         Update: {
           id?: string
@@ -323,6 +325,7 @@ export interface Database {
           scheduled_deletion_at?: string | null
           deleted_at?: string | null
           is_test_analysis?: boolean
+          api_request_id?: string | null
         }
       }
       usage_tracking: {
