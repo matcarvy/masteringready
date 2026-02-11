@@ -202,6 +202,9 @@ export default function SubscriptionPage() {
       setLoading(true)
 
       try {
+        // Force fresh auth session — clears stale Supabase client state after SPA navigation
+        await supabase.auth.getSession()
+
         // Parallel fetch: profile + subscription + status + payments + addon check (all in one batch, no sequential calls)
         const [profileResult, subResult, statusResult, paymentsResult, addonResult] = await Promise.all([
           supabase.from('profiles').select('preferred_language').eq('id', user.id).single(),
