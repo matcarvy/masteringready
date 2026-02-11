@@ -805,14 +805,14 @@ const handleAnalyze = async () => {
 
     setProgress(100)
 
-    // Save analysis — results are only shown AFTER confirming quota (logged-in)
-    // or immediately (anonymous). Never show results before quota is verified.
+    // Save analysis — quota must be verified before showing results.
+    // DB save runs in background to prevent UI from hanging on slow Supabase calls.
     if (data) {
       if (isLoggedIn && user) {
         // If user was logged in at start, quota was already verified by pre-check RPC.
         // Only re-check if user logged in DURING analysis (wasLoggedInAtStart=false).
-        try {
-          if (!wasLoggedInAtStart) {
+        if (!wasLoggedInAtStart) {
+          try {
             const quotaCheck = await checkCanAnalyze()
             if (!quotaCheck.can_analyze || quotaCheck.reason === 'ANONYMOUS') {
               console.log('[Analysis] User quota exhausted at save time, blocking save + display:', quotaCheck.reason)
@@ -823,22 +823,34 @@ const handleAnalyze = async () => {
               setLoading(false)
               return
             }
+          } catch (quotaErr) {
+            console.error('[Analysis] Quota re-check failed, blocking display:', quotaErr)
+            setShowFreeLimitModal(true)
+            setProgress(0)
+            setLoading(false)
+            return
           }
-          console.log('[Analysis] Saving to database for logged-in user:', user.id)
-          const savedData = await saveAnalysisToDatabase(user.id, {
-            ...data,
-            filename: file.name,
-            created_at: new Date().toISOString(),
-            lang,
-            strict
-          }, file, geo?.countryCode, isAdmin)
-          setSavedAnalysisId(savedData?.[0]?.id || null)
-          setResult(data) // Only show results after confirmed save
-        } catch (saveErr) {
-          console.error('[Analysis] Failed to save to database:', saveErr)
-          // On save error, still show results (the analysis ran successfully)
-          setResult(data)
         }
+        // Quota verified — show results immediately
+        setResult(data)
+        // Save to database in background (non-blocking)
+        console.log('[Analysis] Saving to database for logged-in user:', user.id)
+        saveAnalysisToDatabase(user.id, {
+          ...data,
+          filename: file.name,
+          created_at: new Date().toISOString(),
+          lang,
+          strict
+        }, file, geo?.countryCode, isAdmin)
+          .then(savedData => {
+            setSavedAnalysisId(savedData?.[0]?.id || null)
+            // Refresh quota cache after successful save
+            checkCanAnalyze().then(s => setUserAnalysisStatus(s)).catch(() => {})
+          })
+          .catch(saveErr => {
+            console.error('[Analysis] Failed to save to database:', saveErr)
+            // Results already shown — save failure is non-blocking
+          })
       } else {
         // Anonymous: show results immediately and save to localStorage
         setResult(data)

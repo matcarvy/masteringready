@@ -1616,3 +1616,96 @@ Comprehensive security penetration test covering 7 attack vectors with 6 paralle
 - `npx next build` → clean, all 22 routes compiled, zero errors
 
 **Git state**: dev branch, build clean. All changes uncommitted (commit scheduled for Feb 11).
+
+### Session 2026-02-10 (Part 6) — Pre-Launch Commit + is_test_analysis Flag
+
+**What was done:**
+
+1. **Pre-launch audit commit + push** (`6d34380`)
+   - Staged 16 modified files from Parts 4 & 5 (brand name corrections, security fixes, analyzer v7.4.2, accent fixes)
+   - Pushed to `origin/dev`
+
+2. **PDF endpoint bilingual error fix** (`9079285`)
+   - Fixed 4 spots in `main.py` where raw Python exceptions were exposed to users
+   - Replaced with `bilingual_error()` calls (server logs still capture full exception)
+   - Pushed to `origin/dev`
+
+3. **Final 4-agent audit** — ALL LAUNCH READY
+   - 0 blockers, 0 high, 0 medium, 3 LOW
+   - LOW #1: Google Search Console (deferred post-launch, deal with user)
+   - LOW #2: NPM deps pinning (skipped, ^ is standard)
+   - LOW #3: PDF raw exception (fixed in commit above)
+
+4. **`is_test_analysis` flag — COMPLETE** (`9ec5a72`)
+   - **Purpose**: Admin can test analyzer without polluting real analytics data
+   - **SQL executed**: `ALTER TABLE analyses ADD COLUMN IF NOT EXISTS is_test_analysis BOOLEAN NOT NULL DEFAULT FALSE;`
+   - **Changes (5 files)**:
+     - `lib/database.types.ts` — Added `is_test_analysis` to Row/Insert/Update interfaces
+     - `components/auth/AuthProvider.tsx` — Added `isAdmin` to context (from `profiles.is_admin`), flags pending analyses with `is_test_analysis: userIsAdmin`, resets on sign out
+     - `app/page.tsx` — Added `isTestAnalysis` param to `saveAnalysisToDatabase()`, passes `isAdmin` from `useAuth()`
+     - `app/api/admin/stats/route.ts` — Added `.eq('is_test_analysis', false)` to all 12 analyses queries
+     - `app/api/admin/leads/route.ts` — Added `.eq('is_test_analysis', false)` to 1 analyses query
+   - `npx next build` → clean, all 22 routes compiled
+
+**Commits to dev (Part 6):**
+1. `6d34380` - fix: pre-launch audit — analyzer v7.4.2, brand name, security, accents
+2. `9079285` - fix: bilingual error messages on PDF endpoint, hide raw exceptions
+3. `9ec5a72` - feat: is_test_analysis flag — admin analyses excluded from stats
+
+**Git state**: dev on `9ec5a72`, pushed. Build clean.
+
+### Session 2026-02-10 (Part 7) — Data Erasure, Pricing Fix, Admin Bypass
+
+**What was done:**
+
+#### 1. Supabase Data Erasure — COMPLETE
+- Truncated all transactional tables: `user_feedback`, `cta_clicks`, `contact_requests`, `anonymous_sessions`, `aggregate_stats`, `analyses`, `payments`, `purchases`, `subscriptions`, `usage_tracking`, `api_keys`, `deleted_accounts`
+- Deleted non-admin profiles
+- Reset admin profile counters to zero
+- Note: `feedback_votes` table doesn't exist in actual DB (defined in types but migration never applied)
+- Cleaned up test users from Supabase Authentication > Users
+- Admin account preserved: `matcarvy@gmail.com` (id: `7a9ced11-b0ac-4afc-90ec-ca028e9929ab`)
+
+#### 2. Pricing Display Fix — FreeLimitModal + UpgradeModal (3 files)
+- **Problem**: Modals used `geoip.ts` exchange rate conversion ($9.99 × 0.847 = ~€8.46) while Stripe checkout used `pricing-config.ts` flat prices (€10). User saw one price, got charged another.
+- **Fix**: All 3 pages now use `getAllPricesForCountry()` from `pricing-config.ts` as single source of truth.
+- **Files changed**:
+  - `app/page.tsx` — FreeLimitModal + UpgradeModal
+  - `app/dashboard/page.tsx` — UpgradeModal + addon/single buttons
+  - `app/subscription/page.tsx` — Pro/Single/Addon price display
+- **Result**: Tier 1 shows exact local price (€10, £9, $13.99 CAD, $14.99 AUD). Tier 2-6 shows exact PPP USD ($5.49 for CO). No more `~` approximation prefix.
+- Removed `getPlanDisplayPrice`/`PRICING` imports from all 3 files
+- `geoip.ts` still used for `useGeo()` hook (country detection for checkout + analytics)
+
+#### 3. Admin Unlimited Analyses — COMPLETE (SQL)
+- **Problem**: `can_user_analyze` RPC treated admin as free user (2 lifetime limit). Admin couldn't test without hitting quota.
+- **Fix**: Added admin bypass at top of `can_user_analyze` function in Supabase:
+  ```sql
+  IF EXISTS (SELECT 1 FROM profiles WHERE id = p_user_id AND is_admin = true) THEN
+      RETURN QUERY SELECT TRUE, 'ADMIN'::TEXT, v_lifetime_used, -1, FALSE;
+      RETURN;
+  END IF;
+  ```
+- Full `CREATE OR REPLACE FUNCTION` executed in Supabase SQL Editor — replaces entire function
+- No frontend changes needed — all 6 defense layers pass when RPC returns `can_analyze: true`
+- Combined with existing `is_test_analysis` flag: admin analyses are unlimited AND excluded from stats
+
+#### 4. GeoIP Cache Issue — User Action
+- Vercel preview detecting European country instead of Colombia
+- Likely stale `mr_geo_country` localStorage cache from previous testing
+- User to clear from DevTools > Application > Local Storage and reload
+
+**Changes NOT yet committed** (pending user request):
+- `app/page.tsx` — pricing display fix
+- `app/dashboard/page.tsx` — pricing display fix
+- `app/subscription/page.tsx` — pricing display fix
+
+**Build**: Clean, all 22 routes compiled, zero errors.
+
+**Still pending for launch (Feb 11):**
+- User to clear geo cache and verify Colombia detection
+- User to test analyzer as admin (unlimited, flagged as test)
+- Commit pricing fixes to dev
+- Merge `dev` → `main` (triggers Vercel auto-deploy)
+- Post-deploy 10-step verification
+- Google Search Console (post-launch)
