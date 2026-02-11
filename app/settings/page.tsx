@@ -208,7 +208,8 @@ export default function SettingsPage() {
     if (user) {
       fetchData()
     }
-  }, [user])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id])
 
   // Save profile name
   const handleSaveProfile = async () => {

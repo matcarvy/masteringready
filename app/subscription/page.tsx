@@ -250,7 +250,8 @@ export default function SubscriptionPage() {
     }
 
     return () => { cancelled = true }
-  }, [user])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id])
 
   // Handle checkout
   const handleCheckout = async (productType: 'pro_monthly' | 'single' | 'addon') => {

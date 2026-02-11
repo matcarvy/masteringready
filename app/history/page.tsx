@@ -275,7 +275,8 @@ export default function HistoryPage() {
     if (user) {
       fetchData()
     }
-  }, [user])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id])
 
   // Reset page when filters change
   useEffect(() => {

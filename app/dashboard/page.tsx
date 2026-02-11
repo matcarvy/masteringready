@@ -488,7 +488,8 @@ function DashboardContent() {
     }
 
     return () => { cancelled = true }
-  }, [user])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id])
 
   // Get score color
   const getScoreColor = (score: number) => {
