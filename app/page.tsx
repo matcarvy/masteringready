@@ -99,7 +99,9 @@ async function saveAnalysisToDatabase(userId: string, analysis: any, fileObj?: F
       client_country: countryCode || null,
       client_timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || null,
       // Admin test flag
-      is_test_analysis: isTestAnalysis || false
+      is_test_analysis: isTestAnalysis || false,
+      // Request ID for PDF download from dashboard
+      api_request_id: analysis.api_request_id || null
     })
     .select()
 
@@ -876,7 +878,8 @@ const handleAnalyze = async () => {
           filename: file.name,
           created_at: new Date().toISOString(),
           lang,
-          strict
+          strict,
+          api_request_id: requestIdRef.current || null
         }, file, geo?.countryCode, isAdmin)
           .then(savedData => {
             setSavedAnalysisId(savedData?.[0]?.id || null)

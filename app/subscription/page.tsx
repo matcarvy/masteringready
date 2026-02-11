@@ -173,59 +173,55 @@ export default function SubscriptionPage() {
     }
   }, [authLoading, user, lang])
 
-  // Fetch data
+  // Fetch data — parallelized to avoid hitting safety timeout
   useEffect(() => {
+    let cancelled = false
+
     async function fetchData() {
       if (!user) return
       setLoading(true)
 
       try {
-        // Check language preference
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('preferred_language')
-          .eq('id', user.id)
-          .single()
+        // Parallel fetch: profile + subscription + status
+        const [profileResult, subResult, status] = await Promise.all([
+          supabase.from('profiles').select('preferred_language').eq('id', user.id).single(),
+          supabase.from('subscriptions').select('*, plan:plans(type, name)').eq('user_id', user.id).eq('status', 'active').single(),
+          getUserAnalysisStatus()
+        ])
 
-        if (profileData?.preferred_language === 'en' || profileData?.preferred_language === 'es') {
-          setLang(profileData.preferred_language as 'es' | 'en')
+        if (cancelled) return
+
+        if (profileResult.data?.preferred_language === 'en' || profileResult.data?.preferred_language === 'es') {
+          setLang(profileResult.data.preferred_language as 'es' | 'en')
         }
 
-        // Check subscription
-        const { data: subData } = await supabase
-          .from('subscriptions')
-          .select('*, plan:plans(type, name)')
-          .eq('user_id', user.id)
-          .eq('status', 'active')
-          .single()
-
-        if (subData?.plan?.type === 'pro' || subData?.plan?.type === 'studio') {
+        if (subResult.data?.plan?.type === 'pro' || subResult.data?.plan?.type === 'studio') {
           setIsPro(true)
         }
-        if (subData?.stripe_subscription_id) {
+        if (subResult.data?.stripe_subscription_id) {
           setHasStripe(true)
         }
 
-        // Get usage status
-        const status = await getUserAnalysisStatus()
         if (status) {
           setUserStatus(status)
 
-          if (status.plan_type === 'pro') {
+          if (!cancelled && status.plan_type === 'pro') {
             const addonCheck = await checkCanBuyAddon()
-            setCanBuyAddon(addonCheck.can_buy)
+            if (!cancelled) setCanBuyAddon(addonCheck.can_buy)
           }
         }
       } catch (error) {
         console.error('Error fetching subscription data:', error)
       } finally {
-        setLoading(false)
+        if (!cancelled) setLoading(false)
       }
     }
 
     if (user) {
       fetchData()
     }
+
+    return () => { cancelled = true }
   }, [user])
 
   // Handle checkout
@@ -273,10 +269,9 @@ export default function SubscriptionPage() {
   // Calculate usage
   const usedAnalyses = userStatus?.analyses_used || 0
   const maxAnalyses = isPro ? 30 : 2
-  const remaining = Math.max(0, isPro
-    ? (30 - usedAnalyses + (userStatus?.addon_remaining || 0))
-    : (2 - usedAnalyses)
-  )
+  const remaining = isPro
+    ? Math.min(30, Math.max(0, 30 - usedAnalyses + (userStatus?.addon_remaining || 0)))
+    : Math.max(0, 2 - usedAnalyses)
 
   // Safety timeout — if loading hangs for more than 10s, force stop
   useEffect(() => {
@@ -508,7 +503,7 @@ export default function SubscriptionPage() {
               marginBottom: '0.5rem'
             }}>
               <span style={{ color: '#374151', fontWeight: '600' }}>
-                {remaining} / {maxAnalyses + (userStatus?.addon_remaining || 0)}
+                {remaining} / {maxAnalyses}
               </span>
               <span style={{ color: '#6b7280' }}>
                 {isPro ? (lang === 'es' ? 'restantes' : 'remaining') : t.lifetimeAnalyses}
@@ -524,7 +519,7 @@ export default function SubscriptionPage() {
                 background: remaining === 0 ? '#ef4444' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                 height: '100%',
                 borderRadius: '9999px',
-                width: `${Math.min(100, (usedAnalyses / (maxAnalyses + (userStatus?.addon_remaining || 0))) * 100)}%`,
+                width: `${Math.min(100, (usedAnalyses / maxAnalyses) * 100)}%`,
                 transition: 'width 0.5s ease-out'
               }} />
             </div>
