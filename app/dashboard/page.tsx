@@ -582,13 +582,13 @@ function DashboardContent() {
     }
   }
 
-  // Safety timeout — if loading hangs for more than 30s, force stop
+  // Safety timeout — if fetch hangs (stale connections from SPA navigation), auto-reload
   useEffect(() => {
     if (!loading) return
     const timeout = setTimeout(() => {
-      console.warn('[Dashboard] Loading safety timeout reached (30s)')
-      setLoading(false)
-    }, 30000)
+      console.warn('[Dashboard] Fetch stalled — reloading page')
+      window.location.reload()
+    }, 8000)
     return () => clearTimeout(timeout)
   }, [loading])
 
