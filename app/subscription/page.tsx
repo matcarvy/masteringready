@@ -10,7 +10,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth, UserMenu } from '@/components/auth'
-import { supabase, getUserAnalysisStatus, checkCanBuyAddon, UserDashboardStatus } from '@/lib/supabase'
+import { supabase, checkCanBuyAddon, UserDashboardStatus } from '@/lib/supabase'
 import { useGeo } from '@/lib/useGeo'
 import { getAllPricesForCountry } from '@/lib/pricing-config'
 import { detectLanguage, setLanguageCookie } from '@/lib/language'
@@ -182,11 +182,11 @@ export default function SubscriptionPage() {
       setLoading(true)
 
       try {
-        // Parallel fetch: profile + subscription + status
-        const [profileResult, subResult, status] = await Promise.all([
+        // Parallel fetch: profile + subscription + status (all use user.id directly, no redundant auth call)
+        const [profileResult, subResult, statusResult] = await Promise.all([
           supabase.from('profiles').select('preferred_language').eq('id', user.id).single(),
           supabase.from('subscriptions').select('*, plan:plans(type, name)').eq('user_id', user.id).eq('status', 'active').single(),
-          getUserAnalysisStatus()
+          supabase.rpc('get_user_analysis_status', { p_user_id: user.id })
         ])
 
         if (cancelled) return
@@ -202,6 +202,7 @@ export default function SubscriptionPage() {
           setHasStripe(true)
         }
 
+        const status = statusResult.data ? (Array.isArray(statusResult.data) ? statusResult.data[0] : statusResult.data) : null
         if (status) {
           setUserStatus(status)
 
@@ -273,13 +274,13 @@ export default function SubscriptionPage() {
     ? Math.max(0, 30 - usedAnalyses)
     : Math.max(0, 2 - usedAnalyses)
 
-  // Safety timeout — if loading hangs for more than 10s, force stop
+  // Safety timeout — if loading hangs for more than 30s, force stop
   useEffect(() => {
     if (!loading) return
     const timeout = setTimeout(() => {
-      console.warn('[Subscription] Loading safety timeout reached (10s)')
+      console.warn('[Subscription] Loading safety timeout reached (30s)')
       setLoading(false)
-    }, 10000)
+    }, 30000)
     return () => clearTimeout(timeout)
   }, [loading])
 
