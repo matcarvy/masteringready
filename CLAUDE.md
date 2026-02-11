@@ -5,7 +5,7 @@
 - **Description**: Professional audio analysis platform for musicians/producers to evaluate mixes before mastering. Privacy-first (no audio storage, only derived metrics).
 - **Stack**: Next.js, Supabase, Stripe (Tier 1 + ROW payments), DLocal (LATAM payments — Phase 2)
 - **Spec file (FINAL — source of truth)**: ~/Downloads/mastering-ready-launch-spec-FINAL.xml
-- **Phase**: Pre-Launch / MVP — **Code complete, pending configuration**
+- **Phase**: Pre-Launch / MVP — **Code complete, configuration done, ready to merge**
 - **Codebase**: /Users/matcarvy/masteringready
 - **Deployed on**: Vercel (prod: masteringready.com, dev: masteringready-git-dev-*.vercel.app)
 - **Analyzer API (prod)**: https://masteringready.onrender.com
@@ -1703,9 +1703,63 @@ Comprehensive security penetration test covering 7 attack vectors with 6 paralle
 **Build**: Clean, all 22 routes compiled, zero errors.
 
 **Still pending for launch (Feb 11):**
-- User to clear geo cache and verify Colombia detection
-- User to test analyzer as admin (unlimited, flagged as test)
-- Commit pricing fixes to dev
 - Merge `dev` → `main` (triggers Vercel auto-deploy)
 - Post-deploy 10-step verification
 - Google Search Console (post-launch)
+
+### Session 2026-02-10 (Part 8) — Final Bug Fixes + Admin Access + Launch Ready
+
+**What was done:**
+
+#### 1. Stuck-at-100% Bug Fix (`9473cdc`)
+- **Problem**: Analysis completed on backend but frontend stuck at 100% with "Preparando métricas..."
+- **Root cause**: `saveAnalysisToDatabase()` was `await`ed before `setResult(data)`. If Supabase INSERT or RPC hung, UI never showed results.
+- **Fix**: Made DB save non-blocking. `setResult(data)` runs immediately after quota verification. Save runs in background via `.then()/.catch()`. Security preserved (quota check still synchronous).
+
+#### 2. Local Currency Display + Exchange Rates + GBP Fix (`908109f`)
+- **LATAM local currency**: Tier 2-6 countries now show prices in local currency (e.g., `20.100 COP/mes` for Colombia)
+- **Implementation**: Added `COUNTRY_TO_LOCAL_CURRENCY` mapping in `pricing-config.ts`. Modified `getAllPricesForCountry()` to convert USD cents to local currency using `formatLocalCurrencyPrice()` from `geoip.ts`.
+- **GBP corrected**: £9 → £10 (pro_monthly: 1000, pro_yearly: 9900, single: 600, addon: 400) to match EUR at €10
+- **Exchange rates updated** to February 10, 2026: COP 3660, BRL 5.80, ARS 1074, CLP 955, PEN 3.66, UYU 43.34, EUR 0.841, GBP 0.732, CAD 1.436, AUD 1.594 (added), and 10 more currencies
+
+#### 3. Admin Completo + PDF Access — 3 fixes for race condition (`02e87a3`, `08461e1`, `7ebf905`)
+- **Problem**: Admin couldn't see Completo tab or download PDF despite being logged in
+- **Root cause 1** (`02e87a3`): `hasPaidAccess` useEffect didn't check `isAdmin`. Added early return: `if (isAdmin) { setHasPaidAccess(true); return }`
+- **Root cause 2** (`08461e1`): `isAdmin` was only set on `SIGNED_IN`/`USER_UPDATED` auth events, NOT on initial page load with existing session. `getSession()` now queries `profiles.is_admin` on load.
+- **Root cause 3** (`7ebf905`): Race condition — `setUser()` triggers useEffect with `isAdmin=false` (starts async queries), then `setIsAdmin(true)` triggers re-run (sets `hasPaidAccess=true`), but first run's async queries complete later and overwrite to `false`. Added `cancelled` flag cleanup pattern to prevent stale async invocations from overwriting state.
+
+#### 4. Admin Password Security
+- Supabase Dashboard password reset via email failed (`otp_expired`) because production (main) doesn't have `/auth/reset-password` page yet (only on dev)
+- **Fix**: Updated password directly via Supabase SQL Editor: `UPDATE auth.users SET encrypted_password = crypt('...', gen_salt('bf'))`
+- Admin login verified working with new strong password
+
+#### 5. Data Cleanup
+- Deleted test analyses from DB: `DELETE FROM analyses WHERE user_id = '7a9ced11-...'`
+- Reset admin profile counters: `UPDATE profiles SET analyses_lifetime_used = 0, total_analyses = 0`
+- Re-tested: admin analysis correctly flagged `is_test_analysis = true`, excluded from dashboard stats
+
+#### Admin Access Audit — ALL VERIFIED
+- `isAdmin` only set when `profiles.is_admin === true` (3 call sites, strict equality)
+- `is_test_analysis` correctly passed from `isAdmin` → `saveAnalysisToDatabase`
+- All 13 analytics queries (12 stats + 1 leads) have `.eq('is_test_analysis', false)`
+- No privilege escalation path for non-admin users
+- `can_user_analyze` RPC returns `'ADMIN'` with unlimited quota
+- 6-layer quota defense intact for non-admin users
+
+#### Commits to dev (Part 8)
+1. `9473cdc` - fix: non-blocking DB save prevents UI stuck at 100% after analysis
+2. `908109f` - fix: admin full access to Completo/PDF, local currency display, exchange rates
+3. `02e87a3` - fix: admin hasPaidAccess early return prevents async overwrite
+4. `08461e1` - fix: load admin status on page load for existing sessions
+5. `7ebf905` - fix: cancel stale async access check when isAdmin changes
+
+**Git state**: dev on `7ebf905`, pushed. Build clean. All 22 routes compiled.
+
+**LAUNCH STATUS: READY TO MERGE**
+- All code complete and tested
+- Admin tested: Completo + PDF + unlimited analyses + is_test_analysis flag
+- Pricing verified: COP local currency display correct
+- Stripe configured (live keys + webhook)
+- Google OAuth published, Facebook hidden
+- Supabase URLs configured, data erased, admin password secured
+- Only remaining: `git merge dev` → main → Vercel auto-deploy → 10-step verification
