@@ -319,7 +319,7 @@ function Home() {
   useEffect(() => {
     if (!user) { setIsPro(false); setHasPaidAccess(false); return }
     // Admin always has full access
-    if (isAdmin) { setHasPaidAccess(true) }
+    if (isAdmin) { setHasPaidAccess(true); return }
     const checkAccess = async () => {
       // Check Pro subscription
       const { data: subData } = await supabase
