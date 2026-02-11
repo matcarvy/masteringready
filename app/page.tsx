@@ -62,62 +62,62 @@ async function saveAnalysisToDatabase(userId: string, analysis: any, fileObj?: F
   const fileInfo = analysis.file || {}
   const fileExtension = (analysis.filename || '').split('.').pop()?.toLowerCase() || null
 
-  // Insert to analyses table
-  const { data: insertedData, error } = await supabase
-    .from('analyses')
-    .insert({
-      user_id: userId,
-      filename: analysis.filename || 'Unknown',
-      score: analysis.score,
-      verdict: mappedVerdict,
-      lang: analysis.lang || 'es',
-      strict_mode: analysis.strict || false,
-      report_mode: 'write',
-      metrics: metricsData,
-      interpretations: analysis.interpretations || null,
-      report_short: reportShort,
-      report_write: reportWrite,
-      report_visual: reportVisual,
-      created_at: analysis.created_at || new Date().toISOString(),
-      // File metadata
-      file_size_bytes: fileObj?.size || fileInfo.size || null,
-      file_format: fileExtension,
-      duration_seconds: fileInfo.duration || null,
-      sample_rate: fileInfo.sample_rate || null,
-      bit_depth: fileInfo.bit_depth || null,
-      channels: fileInfo.channels || null,
-      // Analysis metadata
-      processing_time_seconds: analysis.analysis_time_seconds || null,
-      analysis_version: analysis.analysis_version || null,
-      is_chunked_analysis: analysis.is_chunked_analysis || false,
-      chunk_count: analysis.chunk_count || null,
-      // v1.5: New data capture fields
-      spectral_6band: analysis.spectral_6band || null,
-      energy_analysis: analysis.energy_analysis || null,
-      categorical_flags: analysis.categorical_flags || null,
-      // v1.6: Country + timezone for admin analytics
-      client_country: countryCode || null,
-      client_timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || null,
-      // Admin test flag
-      is_test_analysis: isTestAnalysis || false,
-      // Request ID for PDF download from dashboard
-      api_request_id: analysis.api_request_id || null
-    })
-    .select()
+  // Run INSERT + increment counter in PARALLEL (both are independent operations)
+  // This halves save time and frees Supabase client faster for dashboard navigation
+  const [insertResult, incrementResult] = await Promise.all([
+    supabase
+      .from('analyses')
+      .insert({
+        user_id: userId,
+        filename: analysis.filename || 'Unknown',
+        score: analysis.score,
+        verdict: mappedVerdict,
+        lang: analysis.lang || 'es',
+        strict_mode: analysis.strict || false,
+        report_mode: 'write',
+        metrics: metricsData,
+        interpretations: analysis.interpretations || null,
+        report_short: reportShort,
+        report_write: reportWrite,
+        report_visual: reportVisual,
+        created_at: analysis.created_at || new Date().toISOString(),
+        // File metadata
+        file_size_bytes: fileObj?.size || fileInfo.size || null,
+        file_format: fileExtension,
+        duration_seconds: fileInfo.duration || null,
+        sample_rate: fileInfo.sample_rate || null,
+        bit_depth: fileInfo.bit_depth || null,
+        channels: fileInfo.channels || null,
+        // Analysis metadata
+        processing_time_seconds: analysis.analysis_time_seconds || null,
+        analysis_version: analysis.analysis_version || null,
+        is_chunked_analysis: analysis.is_chunked_analysis || false,
+        chunk_count: analysis.chunk_count || null,
+        // v1.5: New data capture fields
+        spectral_6band: analysis.spectral_6band || null,
+        energy_analysis: analysis.energy_analysis || null,
+        categorical_flags: analysis.categorical_flags || null,
+        // v1.6: Country + timezone for admin analytics
+        client_country: countryCode || null,
+        client_timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || null,
+        // Admin test flag
+        is_test_analysis: isTestAnalysis || false,
+        // Request ID for PDF download from dashboard
+        api_request_id: analysis.api_request_id || null
+      })
+      .select(),
+    supabase.rpc('increment_analysis_count', { p_user_id: userId })
+  ])
 
-  if (error) {
-    console.error('[SaveAnalysis] INSERT ERROR:', error.message)
-    throw error
+  if (insertResult.error) {
+    console.error('[SaveAnalysis] INSERT ERROR:', insertResult.error.message)
+    throw insertResult.error
   }
 
-  console.log('[SaveAnalysis] Insert successful:', insertedData)
+  console.log('[SaveAnalysis] Insert successful:', insertResult.data)
+  console.log('[SaveAnalysis] Analysis count incremented:', incrementResult.data)
 
-  // Call increment function which handles all plan-specific counter logic
-  // (updates analyses_lifetime_used for free, analyses_used_this_cycle for pro, etc.)
-  const { data: incrementResult } = await supabase.rpc('increment_analysis_count', { p_user_id: userId })
-  console.log('[SaveAnalysis] Analysis count incremented:', incrementResult)
-
-  return insertedData
+  return insertResult.data
 }
 
 // Interpretative Section Component
@@ -871,33 +871,34 @@ const handleAnalyze = async () => {
         }
         // Quota verified — show results immediately
         setResult(data)
-        // Save to database (awaited to ensure it completes before user navigates away)
-        console.log('[Analysis] Saving to database for logged-in user:', user.id)
-        try {
-          const savedData = await saveAnalysisToDatabase(user.id, {
-            ...data,
-            filename: file.name,
-            created_at: new Date().toISOString(),
-            lang,
-            strict,
-            api_request_id: requestIdRef.current || null
-          }, file, geo?.countryCode, isAdmin)
-          setSavedAnalysisId(savedData?.[0]?.id || null)
-          // Optimistically update quota cache — avoids fire-and-forget network call
-          // that can leave stale Supabase connections interfering with dashboard navigation
-          if (userAnalysisStatus) {
-            const newUsed = userAnalysisStatus.analyses_used + 1
-            const limit = userAnalysisStatus.analyses_limit
-            setUserAnalysisStatus({
-              ...userAnalysisStatus,
-              analyses_used: newUsed,
-              can_analyze: limit < 0 ? true : newUsed < limit // limit < 0 = admin (unlimited)
-            })
-          }
-        } catch (saveErr) {
-          console.error('[Analysis] Failed to save to database:', saveErr)
-          // Results already shown — save failure doesn't hide them
+        // Optimistically update quota cache (no network call)
+        if (userAnalysisStatus) {
+          const newUsed = userAnalysisStatus.analyses_used + 1
+          const limit = userAnalysisStatus.analyses_limit
+          setUserAnalysisStatus({
+            ...userAnalysisStatus,
+            analyses_used: newUsed,
+            can_analyze: limit < 0 ? true : newUsed < limit // limit < 0 = admin (unlimited)
+          })
         }
+        // Save to database — non-blocking so Supabase client is free for dashboard navigation.
+        // SPA navigation does NOT kill JS promises, so the save completes in background.
+        console.log('[Analysis] Saving to database for logged-in user:', user.id)
+        saveAnalysisToDatabase(user.id, {
+          ...data,
+          filename: file.name,
+          created_at: new Date().toISOString(),
+          lang,
+          strict,
+          api_request_id: requestIdRef.current || null
+        }, file, geo?.countryCode, isAdmin)
+          .then(savedData => {
+            setSavedAnalysisId(savedData?.[0]?.id || null)
+            console.log('[Analysis] Saved to database successfully')
+          })
+          .catch(saveErr => {
+            console.error('[Analysis] Failed to save to database:', saveErr)
+          })
       } else {
         // Anonymous: show results immediately and save to localStorage
         setResult(data)
