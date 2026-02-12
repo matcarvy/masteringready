@@ -7360,7 +7360,7 @@ def generate_complete_pdf(
         from reportlab.lib.pagesizes import letter
         from reportlab.lib.units import inch
         from reportlab.lib import colors
-        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak, HRFlowable
+        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak, HRFlowable, KeepTogether
         from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
         from reportlab.lib.enums import TA_CENTER, TA_LEFT
         from reportlab.pdfbase import pdfmetrics
@@ -7512,6 +7512,8 @@ def generate_complete_pdf(
         
         # Clean filename - handle Unicode characters like "Paraíso"
         clean_filename = clean_text_for_pdf(filename or report.get('filename', 'Unknown')).strip()
+        # Strip _compressed suffix (added by browser-side compression, not user's original name)
+        clean_filename = clean_filename.replace('_compressed', '')
         
         # Extract audio file information
         file_dict = report.get('file', {})
@@ -7896,23 +7898,26 @@ def generate_complete_pdf(
                             story.append(table)
                     
                     story.append(Spacer(1, 0.05*inch))  # Reducido de 0.1 a 0.05
-                    
-                    # 2. INTERPRETATION
+
+                    # 2. INTERPRETATION + 3. RECOMMENDATION (KeepTogether prevents orphan lines on new page)
+                    interp_rec_elements = []
                     if 'interpretation' in section_data:
                         interp_text = clean_text_for_pdf(section_data['interpretation'])
                         for line in interp_text.split('\n'):
                             if line.strip():
-                                story.append(Paragraph(line.strip(), body_style))
-                    
-                    story.append(Spacer(1, 0.05*inch))  # Reducido de 0.1 a 0.05
-                    
-                    # 3. RECOMMENDATION
+                                interp_rec_elements.append(Paragraph(line.strip(), body_style))
+
+                    interp_rec_elements.append(Spacer(1, 0.05*inch))
+
                     if 'recommendation' in section_data:
                         rec_text = clean_text_for_pdf(section_data['recommendation'])
                         for line in rec_text.split('\n'):
                             if line.strip():
-                                story.append(Paragraph(line.strip(), body_style))
-                    
+                                interp_rec_elements.append(Paragraph(line.strip(), body_style))
+
+                    if interp_rec_elements:
+                        story.append(KeepTogether(interp_rec_elements))
+
                     story.append(Spacer(1, 0.1*inch))
                     
                     # Add separator line between sections (except after last section)
@@ -7944,6 +7949,8 @@ def generate_complete_pdf(
                 
                 # Clean text - use Unicode symbols
                 text = report[mode_key]
+                # Strip _compressed suffix from embedded filenames
+                text = text.replace('_compressed', '')
                 
                 import sys
                 sample_before = text[:200] if len(text) > 200 else text

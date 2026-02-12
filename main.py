@@ -524,8 +524,10 @@ async def analyze_mix_endpoint(
             
             # GENERATE BOTH REPORTS - Frontend decides which to show
             logger.info("📝 Generating both report modes...")
-            report_write = write_report(result, strict=strict, lang=lang, filename=file.filename)
-            report_short = generate_short_mode_report(result, strict=strict, lang=lang, filename=file.filename)
+            # Strip _compressed suffix (added by browser-side compression)
+            display_filename = file.filename.replace('_compressed', '') if file.filename else file.filename
+            report_write = write_report(result, strict=strict, lang=lang, filename=display_filename)
+            report_short = generate_short_mode_report(result, strict=strict, lang=lang, filename=display_filename)
             
             # For backward compatibility, use mode to set primary report
             if mode == "short":
@@ -543,7 +545,7 @@ async def analyze_mix_endpoint(
                 "metrics": result.get("metrics", []),
                 "interpretations": result.get("interpretations"),
                 "file": result.get("file", {}),
-                "filename": file.filename,
+                "filename": display_filename,
                 "mode": mode,
                 "lang": lang,
                 "strict": strict,
@@ -844,33 +846,36 @@ async def start_analysis(
                 # Import report generators
                 from analyzer import generate_short_mode_report, generate_visual_report
                 
+                # Strip _compressed suffix (added by browser-side compression)
+                display_filename = file.filename.replace('_compressed', '') if file.filename else file.filename
+
                 # Generate WRITE report (full with technical details)
                 write_func = functools.partial(
                     write_report,
                     result,
                     strict=strict,
                     lang=lang,
-                    filename=file.filename
+                    filename=display_filename
                 )
                 report_write = await loop.run_in_executor(None, write_func)
-                
+
                 # Generate SHORT report (summary without technical details)
                 short_func = functools.partial(
                     generate_short_mode_report,
                     result,
                     strict=strict,
                     lang=lang,
-                    filename=file.filename
+                    filename=display_filename
                 )
                 report_short = await loop.run_in_executor(None, short_func)
-                
+
                 # Generate VISUAL report (bullets only)
                 visual_func = functools.partial(
                     generate_visual_report,
                     result,
                     strict,
                     lang,
-                    file.filename  # Add filename
+                    display_filename
                 )
                 report_visual = await loop.run_in_executor(None, visual_func)
                 
@@ -916,7 +921,7 @@ async def start_analysis(
                         "metrics": result.get("metrics", []),
                         "interpretations": result.get("interpretations"),
                         "file": result.get("file", {}),
-                        "filename": file.filename,
+                        "filename": display_filename,
                         "mode": mode,
                         "lang": lang,
                         "strict": strict,
