@@ -156,6 +156,8 @@ export default function SubscriptionPage() {
   const [canBuyAddon, setCanBuyAddon] = useState(false)
   const [hasStripe, setHasStripe] = useState(false)
   const [showCancelModal, setShowCancelModal] = useState(false)
+  const [cancelling, setCancelling] = useState(false)
+  const [cancelError, setCancelError] = useState('')
   const [payments, setPayments] = useState<Array<{
     id: string
     amount: number
@@ -295,6 +297,33 @@ export default function SubscriptionPage() {
       }
     } catch (error) {
       console.error('Portal error:', error)
+    }
+  }
+
+  // Handle direct cancellation (no portal redirect)
+  const handleCancelSubscription = async () => {
+    setCancelling(true)
+    setCancelError('')
+    try {
+      const response = await fetch('/api/cancel-subscription', {
+        method: 'POST',
+        headers: {
+          ...(session?.access_token && { 'Authorization': `Bearer ${session.access_token}` })
+        }
+      })
+      const data = await response.json()
+      if (!response.ok) {
+        setCancelError(data.error || (lang === 'es' ? 'Error al cancelar' : 'Cancellation failed'))
+        setCancelling(false)
+        return
+      }
+      // Success — reload to reflect new state
+      setShowCancelModal(false)
+      window.location.reload()
+    } catch (error) {
+      console.error('Cancel error:', error)
+      setCancelError(lang === 'es' ? 'Error de conexión' : 'Connection error')
+      setCancelling(false)
     }
   }
 
@@ -995,28 +1024,36 @@ export default function SubscriptionPage() {
               </p>
             </div>
 
+            {cancelError && (
+              <p style={{ color: '#dc2626', fontSize: '0.8rem', marginBottom: '0.75rem', textAlign: 'center' }}>
+                {cancelError}
+              </p>
+            )}
+
             <div style={{ display: 'flex', gap: '0.75rem' }}>
               <button
-                onClick={() => {
-                  setShowCancelModal(false)
-                  handleManageSubscription()
-                }}
+                onClick={handleCancelSubscription}
+                disabled={cancelling}
                 style={{
                   flex: 1,
                   padding: '0.75rem',
-                  background: '#dc2626',
+                  background: cancelling ? '#9ca3af' : '#dc2626',
                   color: 'white',
                   border: 'none',
                   borderRadius: '0.5rem',
                   fontSize: '0.875rem',
                   fontWeight: '600',
-                  cursor: 'pointer'
+                  cursor: cancelling ? 'not-allowed' : 'pointer',
+                  opacity: cancelling ? 0.7 : 1
                 }}
               >
-                {t.yesCancel}
+                {cancelling
+                  ? (lang === 'es' ? 'Cancelando...' : 'Cancelling...')
+                  : t.yesCancel}
               </button>
               <button
-                onClick={() => setShowCancelModal(false)}
+                onClick={() => { setShowCancelModal(false); setCancelError('') }}
+                disabled={cancelling}
                 style={{
                   flex: 1,
                   padding: '0.75rem',
@@ -1026,7 +1063,7 @@ export default function SubscriptionPage() {
                   borderRadius: '0.5rem',
                   fontSize: '0.875rem',
                   fontWeight: '500',
-                  cursor: 'pointer'
+                  cursor: cancelling ? 'not-allowed' : 'pointer'
                 }}
               >
                 {t.goBack}
