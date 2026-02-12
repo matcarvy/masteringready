@@ -1060,60 +1060,100 @@ async def get_analysis_status(job_id: str, lang: str = "es"):
 
 @app.post("/api/download/pdf")
 async def download_pdf(
-    request_id: str = Form(...),
+    request_id: str = Form(None),
     lang: str = Form('es'),
+    analysis_data: str = Form(None),
     background_tasks: BackgroundTasks = None
 ):
     """
     Generate and download complete PDF report.
-    
+
+    Supports two modes:
+    1. request_id: Look up analysis from in-memory jobs (fresh analyses)
+    2. analysis_data: JSON with full analysis data from DB (persistent PDFs)
+
     Args:
-        request_id: The analysis request ID
+        request_id: The analysis request ID (optional if analysis_data provided)
         lang: Language ('es' or 'en')
+        analysis_data: JSON string with analysis data from database (optional)
         background_tasks: FastAPI background tasks
-    
+
     Returns:
         FileResponse with PDF file
     """
-    logger.info(f"📄 PDF download request: {request_id}, lang: {lang}")
-    
-    # Check if request_id exists in jobs
-    async with jobs_lock:
-        if request_id not in jobs:
-            logger.error(f"❌ Request ID not found: {request_id}")
-            raise HTTPException(status_code=404, detail=bilingual_error('timeout', lang))
-        
-        job = jobs[request_id]
-        
-        # Accept both 'complete' and 'completed' for compatibility
-        if job['status'] not in ['complete', 'completed']:
-            logger.error(f"❌ Analysis not completed: {request_id} (status: {job['status']})")
-            raise HTTPException(
-                status_code=400,
-                detail="El análisis aún no ha terminado. Intenta de nuevo en unos segundos." if lang == 'es' else "Analysis not completed yet. Please try again in a few seconds."
-            )
-        
-        result = job['result']
-    
+    logger.info(f"📄 PDF download request: request_id={request_id}, lang={lang}, has_analysis_data={analysis_data is not None}")
+
+    result = None
+    strict = False
+
+    # Mode 1: Reconstruct report from DB analysis data (persistent PDFs)
+    if analysis_data:
+        import json
+        try:
+            data = json.loads(analysis_data)
+            # DB stores metrics as {metrics: [...], metrics_bars: {...}}
+            metrics_obj = data.get("metrics") or {}
+            result = {
+                "score": data.get("score", 0),
+                "verdict": data.get("verdict", ""),
+                "filename": data.get("filename", "análisis"),
+                "file": {
+                    "duration": data.get("duration_seconds"),
+                    "sample_rate": data.get("sample_rate"),
+                    "bit_depth": data.get("bit_depth"),
+                },
+                "metrics": metrics_obj.get("metrics", []) if isinstance(metrics_obj, dict) else metrics_obj,
+                "metrics_bars": metrics_obj.get("metrics_bars", {}) if isinstance(metrics_obj, dict) else {},
+                "interpretations": data.get("interpretations"),
+                "report_visual": data.get("report_visual"),
+                "report_short": data.get("report_short"),
+                "report_write": data.get("report_write"),
+            }
+            strict = data.get("strict_mode", False)
+            logger.info(f"📄 Reconstructed report from analysis_data: score={result['score']}, verdict={result['verdict']}")
+        except (json.JSONDecodeError, KeyError) as e:
+            logger.error(f"❌ Invalid analysis_data JSON: {e}")
+            raise HTTPException(status_code=400, detail=bilingual_error('server_error', lang))
+
+    # Mode 2: Look up from in-memory jobs (fresh analyses)
+    elif request_id:
+        async with jobs_lock:
+            if request_id not in jobs:
+                logger.error(f"❌ Request ID not found: {request_id}")
+                raise HTTPException(status_code=404, detail=bilingual_error('timeout', lang))
+
+            job = jobs[request_id]
+
+            if job['status'] not in ['complete', 'completed']:
+                logger.error(f"❌ Analysis not completed: {request_id} (status: {job['status']})")
+                raise HTTPException(
+                    status_code=400,
+                    detail="El análisis aún no ha terminado. Intenta de nuevo en unos segundos." if lang == 'es' else "Analysis not completed yet. Please try again in a few seconds."
+                )
+
+            result = job['result']
+    else:
+        raise HTTPException(status_code=400, detail=bilingual_error('server_error', lang))
+
     # Create temporary PDF file
     pdf_file = tempfile.NamedTemporaryFile(delete=False, suffix='.pdf')
     pdf_path = pdf_file.name
     pdf_file.close()
-    
+
     try:
         # Generate PDF using analyzer function
         logger.info(f"🔨 Generating PDF: {pdf_path}")
-        
+
         success = generate_complete_pdf(
             report=result,
             output_path=pdf_path,
-            strict=False,  # Could be passed from frontend if needed
+            strict=strict,
             lang=lang,
-            filename=result.get('filename', 'analisis')
+            filename=result.get('filename', 'análisis')
         )
-        
+
         if not success:
-            logger.error(f"❌ PDF generation failed for {request_id}")
+            logger.error(f"❌ PDF generation failed")
             raise HTTPException(status_code=500, detail=bilingual_error('server_error', lang))
         
         # Prepare filename

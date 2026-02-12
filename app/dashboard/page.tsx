@@ -242,6 +242,8 @@ interface Analysis {
   report_short: string | null
   report_write: string | null
   metrics: any
+  interpretations: any
+  strict_mode: boolean
   created_at: string
   lang: string
   duration_seconds: number | null
@@ -346,7 +348,7 @@ const cleanReportText = (text: string): string => {
 function DashboardContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { user, loading: authLoading } = useAuth()
+  const { user, session, loading: authLoading } = useAuth()
 
   const [lang, setLang] = useState<'es' | 'en'>('es')
   const [analyses, setAnalyses] = useState<Analysis[]>([])
@@ -413,7 +415,11 @@ function DashboardContent() {
       try {
         // Use a fresh Supabase client — the shared singleton can have stale internal state
         // (auth locks, pending requests) after SPA navigation from the analyzer page
-        const client = await createFreshQueryClient()
+        // Pass session tokens directly from AuthProvider — avoids touching the shared
+        // Supabase singleton which can have stale internal state after SPA navigation
+        const client = await createFreshQueryClient(
+          session ? { access_token: session.access_token, refresh_token: session.refresh_token } : undefined
+        )
         if (!client) return // No session — redirect guard will handle
 
         // Parallel fetch: profile + subscription + analyses + status + addon check
@@ -1786,14 +1792,29 @@ function DashboardContent() {
                   </button>
                 )}
 
-                {/* Download PDF - Pro only, requires api_request_id */}
-                {isPro && selectedAnalysis.api_request_id && (
+                {/* Download PDF - Pro only, always available from DB data */}
+                {isPro && (
                   <button
                     onClick={async () => {
                       try {
                         const formData = new FormData()
-                        formData.append('request_id', selectedAnalysis.api_request_id)
                         formData.append('lang', lang)
+                        // Send full analysis data from DB — PDF generates on-demand,
+                        // no dependency on in-memory jobs (survives deploys + expiry)
+                        formData.append('analysis_data', JSON.stringify({
+                          score: selectedAnalysis.score,
+                          verdict: selectedAnalysis.verdict,
+                          filename: selectedAnalysis.filename,
+                          duration_seconds: selectedAnalysis.duration_seconds,
+                          sample_rate: selectedAnalysis.sample_rate,
+                          bit_depth: selectedAnalysis.bit_depth,
+                          metrics: selectedAnalysis.metrics,
+                          interpretations: selectedAnalysis.interpretations,
+                          strict_mode: selectedAnalysis.strict_mode,
+                          report_visual: selectedAnalysis.report_visual,
+                          report_short: selectedAnalysis.report_short,
+                          report_write: selectedAnalysis.report_write,
+                        }))
                         const envUrl = process.env.NEXT_PUBLIC_API_URL
                         const backendUrl = (envUrl && !envUrl.includes('your-backend')) ? envUrl : 'https://masteringready.onrender.com'
                         const response = await fetch(`${backendUrl}/api/download/pdf`, { method: 'POST', body: formData })
@@ -1808,7 +1829,7 @@ function DashboardContent() {
                           document.body.removeChild(a)
                           URL.revokeObjectURL(url)
                         } else {
-                          alert(lang === 'es' ? 'El PDF no está disponible. Intenta ejecutar el análisis de nuevo.' : 'PDF not available. Try running the analysis again.')
+                          alert(lang === 'es' ? 'Error al generar el PDF. Intenta de nuevo.' : 'Error generating PDF. Please try again.')
                         }
                       } catch {
                         alert(lang === 'es' ? 'Error al descargar el PDF.' : 'Error downloading PDF.')

@@ -49,17 +49,19 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
  * can have stale internal state (auth locks, pending requests) that causes
  * queries to hang on SPA navigation.
  */
-export async function createFreshQueryClient() {
-  const { data: { session } } = await supabase.auth.getSession()
-  if (!session) return null
+export async function createFreshQueryClient(sessionTokens?: { access_token: string; refresh_token: string }) {
+  let tokens = sessionTokens
+  if (!tokens) {
+    // Fallback: read from shared singleton (backward compat for callers that don't have session)
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) return null
+    tokens = { access_token: session.access_token, refresh_token: session.refresh_token }
+  }
 
   const fresh = createClient(supabaseUrl, supabaseAnonKey, {
     auth: { persistSession: false, autoRefreshToken: false }
   })
-  await fresh.auth.setSession({
-    access_token: session.access_token,
-    refresh_token: session.refresh_token
-  })
+  await fresh.auth.setSession(tokens)
   return fresh
 }
 

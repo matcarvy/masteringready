@@ -148,7 +148,7 @@ const translations = {
 
 export default function SubscriptionPage() {
   const router = useRouter()
-  const { user, loading: authLoading } = useAuth()
+  const { user, session, loading: authLoading } = useAuth()
 
   const [lang, setLang] = useState<'es' | 'en'>('es')
   const [isMobile, setIsMobile] = useState(false)
@@ -202,8 +202,11 @@ export default function SubscriptionPage() {
       setLoading(true)
 
       try {
-        // Use a fresh Supabase client — avoids stale state from analyzer page
-        const client = await createFreshQueryClient()
+        // Pass session tokens directly from AuthProvider — avoids touching the shared
+        // Supabase singleton which can have stale internal state after SPA navigation
+        const client = await createFreshQueryClient(
+          session ? { access_token: session.access_token, refresh_token: session.refresh_token } : undefined
+        )
         if (!client) return
 
         // Parallel fetch: profile + subscription + status + payments + addon check (all in one batch, no sequential calls)
