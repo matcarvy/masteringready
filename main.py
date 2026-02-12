@@ -1158,10 +1158,9 @@ async def download_pdf(
             filename=result.get('filename', 'análisis')
         )
 
-        if success is not True:
-            error_detail = success if isinstance(success, str) else "Unknown error"
-            logger.error(f"❌ PDF generation failed: {error_detail}")
-            raise HTTPException(status_code=500, detail=f"PDF_ERROR: {error_detail}")
+        if not success:
+            logger.error(f"❌ PDF generation failed")
+            raise HTTPException(status_code=500, detail=bilingual_error('server_error', lang))
         
         # Prepare filename
         filename_base = result.get('filename', 'analisis').replace('.wav', '').replace('.mp3', '')
@@ -1202,7 +1201,6 @@ async def download_pdf(
         )
         
     except HTTPException:
-        # Re-raise HTTP exceptions (including our debug errors) without swallowing
         raise
     except Exception as e:
         # Clean up on error
@@ -1215,7 +1213,7 @@ async def download_pdf(
         logger.error(f"❌ Error generating PDF: {e}")
         import traceback
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"PDF_ERROR: {e}")
+        raise HTTPException(status_code=500, detail=bilingual_error('server_error', lang))
 
 
 # ============== STATS ENDPOINTS ==============

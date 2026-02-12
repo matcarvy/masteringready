@@ -7310,6 +7310,7 @@ def generate_visual_report(report: Dict[str, Any], strict: bool = False, lang: s
 
 def _format_analysis_date(report: Dict[str, Any]) -> str:
     """Format analysis date from created_at (DB) or fall back to server time."""
+    from datetime import datetime
     created_at = report.get('created_at')
     if created_at:
         try:
@@ -8047,11 +8048,10 @@ def generate_complete_pdf(
         return True
         
     except Exception as e:
+        print(f"❌ Error generando PDF: {e}")
         import traceback
-        error_msg = f"❌ Error generando PDF: {e}\n{traceback.format_exc()}"
-        print(error_msg)
-        # Return error string so caller can log it
-        return error_msg
+        traceback.print_exc()
+        return False
 
 
 def main() -> None:
