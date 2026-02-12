@@ -139,8 +139,16 @@ interface Analysis {
   report_short: string | null
   report_write: string | null
   metrics: any
+  interpretations: any
+  strict_mode: boolean
   created_at: string
   lang: string
+  duration_seconds: number | null
+  sample_rate: number | null
+  bit_depth: number | null
+  file_size_bytes: number | null
+  file_format: string | null
+  channels: number | null
 }
 
 type SortOption = 'newest' | 'oldest' | 'score_high' | 'score_low'
@@ -1302,6 +1310,69 @@ export default function HistoryPage() {
                   >
                     <Crown size={16} />
                     {lang === 'es' ? 'Ver con Pro' : 'View with Pro'}
+                  </button>
+                )}
+
+                {/* Download PDF - Pro only */}
+                {isPro && (
+                  <button
+                    onClick={async () => {
+                      try {
+                        const formData = new FormData()
+                        formData.append('lang', lang)
+                        formData.append('analysis_data', JSON.stringify({
+                          score: selectedAnalysis.score,
+                          verdict: selectedAnalysis.verdict,
+                          filename: selectedAnalysis.filename,
+                          created_at: selectedAnalysis.created_at,
+                          duration_seconds: selectedAnalysis.duration_seconds,
+                          sample_rate: selectedAnalysis.sample_rate,
+                          bit_depth: selectedAnalysis.bit_depth,
+                          metrics: selectedAnalysis.metrics,
+                          interpretations: selectedAnalysis.interpretations,
+                          strict_mode: selectedAnalysis.strict_mode,
+                          report_visual: selectedAnalysis.report_visual,
+                          report_short: selectedAnalysis.report_short,
+                          report_write: selectedAnalysis.report_write,
+                        }))
+                        const envUrl = process.env.NEXT_PUBLIC_API_URL
+                        const backendUrl = (envUrl && !envUrl.includes('your-backend')) ? envUrl : 'https://masteringready.onrender.com'
+                        const response = await fetch(`${backendUrl}/api/download/pdf`, { method: 'POST', body: formData })
+                        if (response.ok) {
+                          const blob = await response.blob()
+                          const url = URL.createObjectURL(blob)
+                          const a = document.createElement('a')
+                          a.href = url
+                          a.download = `masteringready-${lang === 'es' ? 'detallado' : 'detailed'}-${selectedAnalysis.filename.replace(/\.[^/.]+$/, '')}.pdf`
+                          document.body.appendChild(a)
+                          a.click()
+                          document.body.removeChild(a)
+                          URL.revokeObjectURL(url)
+                        } else {
+                          alert(lang === 'es' ? 'Error al generar el PDF. Intenta de nuevo.' : 'Error generating PDF. Please try again.')
+                        }
+                      } catch {
+                        alert(lang === 'es' ? 'Error al descargar el PDF.' : 'Error downloading PDF.')
+                      }
+                    }}
+                    style={{
+                      flex: 1,
+                      padding: '0.75rem',
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      border: 'none',
+                      borderRadius: '0.5rem',
+                      fontSize: '0.875rem',
+                      fontWeight: '600',
+                      color: 'white',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.5rem'
+                    }}
+                  >
+                    <Download size={16} />
+                    {lang === 'es' ? 'Descargar PDF' : 'Download PDF'}
                   </button>
                 )}
               </div>
