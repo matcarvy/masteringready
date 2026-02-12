@@ -90,6 +90,19 @@ interface StatsData {
     totalAnonymous: number
     converted: number
     conversionRate: number
+    recentRecords?: Array<{
+      id: string
+      session_id: string
+      filename: string | null
+      score: number | null
+      verdict: string | null
+      format: string | null
+      lang: string | null
+      client_country: string | null
+      is_chunked: boolean
+      converted_to_user: boolean
+      created_at: string
+    }>
   }
 }
 
@@ -1438,6 +1451,84 @@ export default function AdminPage() {
                 <p style={{ fontSize: '0.8rem', color: '#6b7280', margin: 0 }}>{t.kpi.anonConversionRate}</p>
               </div>
             </div>
+
+            {/* Recent anonymous analyses table */}
+            {statsData.anonymousFunnel.recentRecords && statsData.anonymousFunnel.recentRecords.length > 0 && (
+              <div style={{ marginTop: '1.25rem', borderTop: '1px solid #e5e7eb', paddingTop: '1.25rem' }}>
+                <h4 style={{ margin: '0 0 0.75rem', fontSize: '0.875rem', fontWeight: '600', color: '#374151' }}>
+                  {lang === 'es' ? 'Análisis recientes' : 'Recent analyses'}
+                </h4>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '1px solid #e5e7eb' }}>
+                        <th style={{ textAlign: 'left', padding: '0.5rem 0.75rem', color: '#6b7280', fontWeight: '500' }}>
+                          {lang === 'es' ? 'Archivo' : 'File'}
+                        </th>
+                        <th style={{ textAlign: 'center', padding: '0.5rem 0.75rem', color: '#6b7280', fontWeight: '500' }}>Score</th>
+                        <th style={{ textAlign: 'center', padding: '0.5rem 0.75rem', color: '#6b7280', fontWeight: '500' }}>
+                          {lang === 'es' ? 'Formato' : 'Format'}
+                        </th>
+                        <th style={{ textAlign: 'center', padding: '0.5rem 0.75rem', color: '#6b7280', fontWeight: '500' }}>
+                          {lang === 'es' ? 'País' : 'Country'}
+                        </th>
+                        <th style={{ textAlign: 'center', padding: '0.5rem 0.75rem', color: '#6b7280', fontWeight: '500' }}>
+                          {lang === 'es' ? 'Convirtió' : 'Converted'}
+                        </th>
+                        <th style={{ textAlign: 'right', padding: '0.5rem 0.75rem', color: '#6b7280', fontWeight: '500' }}>
+                          {lang === 'es' ? 'Fecha' : 'Date'}
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {statsData.anonymousFunnel.recentRecords.map((record) => (
+                        <tr key={record.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                          <td style={{ padding: '0.5rem 0.75rem', color: '#111827', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {record.filename || '—'}
+                          </td>
+                          <td style={{ textAlign: 'center', padding: '0.5rem 0.75rem' }}>
+                            {record.score != null ? (
+                              <span style={{
+                                fontWeight: '600',
+                                color: record.score >= 80 ? '#10b981' : record.score >= 60 ? '#f59e0b' : '#ef4444'
+                              }}>
+                                {record.score}
+                              </span>
+                            ) : '—'}
+                          </td>
+                          <td style={{ textAlign: 'center', padding: '0.5rem 0.75rem', color: '#6b7280' }}>
+                            {record.format || '—'}
+                          </td>
+                          <td style={{ textAlign: 'center', padding: '0.5rem 0.75rem', color: '#6b7280' }}>
+                            {record.client_country || '—'}
+                          </td>
+                          <td style={{ textAlign: 'center', padding: '0.5rem 0.75rem' }}>
+                            <span style={{
+                              display: 'inline-block',
+                              padding: '0.125rem 0.5rem',
+                              borderRadius: '9999px',
+                              fontSize: '0.7rem',
+                              fontWeight: '500',
+                              background: record.converted_to_user ? '#d1fae5' : '#fef3c7',
+                              color: record.converted_to_user ? '#065f46' : '#92400e'
+                            }}>
+                              {record.converted_to_user
+                                ? (lang === 'es' ? 'Sí' : 'Yes')
+                                : 'No'}
+                            </span>
+                          </td>
+                          <td style={{ textAlign: 'right', padding: '0.5rem 0.75rem', color: '#6b7280', whiteSpace: 'nowrap' }}>
+                            {new Date(record.created_at).toLocaleDateString(lang === 'es' ? 'es-CO' : 'en-US', {
+                              month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+                            })}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
           </div>
         )}
 

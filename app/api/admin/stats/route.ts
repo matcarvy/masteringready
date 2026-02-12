@@ -88,7 +88,8 @@ export async function GET(request: NextRequest) {
       engagementResult,
       profileAnalysesResult,
       anonTotalResult,
-      anonConvertedResult
+      anonConvertedResult,
+      anonRecentResult
     ] = await Promise.all([
       // Total users
       adminClient.from('profiles').select('id', { count: 'exact', head: true }),
@@ -233,7 +234,13 @@ export async function GET(request: NextRequest) {
       // Anonymous funnel: converted to user
       adminClient.from('anonymous_analyses')
         .select('id', { count: 'exact', head: true })
-        .eq('converted_to_user', true)
+        .eq('converted_to_user', true),
+
+      // Anonymous funnel: recent individual records
+      adminClient.from('anonymous_analyses')
+        .select('id, session_id, filename, score, verdict, format, lang, client_country, is_chunked, converted_to_user, created_at')
+        .order('created_at', { ascending: false })
+        .limit(50)
     ])
 
     // Calculate KPIs
@@ -509,7 +516,20 @@ export async function GET(request: NextRequest) {
         converted: anonConvertedResult.count || 0,
         conversionRate: (anonTotalResult.count || 0) > 0
           ? Math.round(((anonConvertedResult.count || 0) / (anonTotalResult.count || 1)) * 1000) / 10
-          : 0
+          : 0,
+        recentRecords: (anonRecentResult.data || []) as Array<{
+          id: string
+          session_id: string
+          filename: string | null
+          score: number | null
+          verdict: string | null
+          format: string | null
+          lang: string | null
+          client_country: string | null
+          is_chunked: boolean
+          converted_to_user: boolean
+          created_at: string
+        }>
       },
       technicalInsights: {
         spectral: {
