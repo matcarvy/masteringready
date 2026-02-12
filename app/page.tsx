@@ -2809,11 +2809,11 @@ by Matías Carvajal
                               fontWeight: '600',
                               fontSize: '0.875rem'
                             }}>
-                              {isUnlocking ? <Headphones size={16} /> : <Crown size={16} />}
+                              {isUnlocking ? <Headphones size={16} /> : <Headphones size={16} />}
                               {lang === 'es' ? 'Ver mi análisis' : 'View my analysis'}
                             </span>
                             <span style={{ fontSize: '0.7rem', color: '#9ca3af', fontWeight: '400' }}>
-                              {lang === 'es' ? 'Gratis. Sin tarjeta de crédito.' : 'Free. No credit card required.'}
+                              {lang === 'es' ? 'Gratis. Sin tarjeta.' : 'Free. No credit card.'}
                             </span>
                           </div>
                         </div>
@@ -2979,32 +2979,41 @@ by Matías Carvajal
                       justifyContent: 'center',
                       gap: '0.5rem',
                       padding: '0.875rem 1.25rem',
-                      background: 'white',
-                      color: !isLoggedIn ? '#9ca3af' : '#667eea',
-                      border: `2px solid ${!isLoggedIn ? '#d1d5db' : '#667eea'}`,
+                      background: !isLoggedIn ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'white',
+                      color: !isLoggedIn ? 'white' : '#667eea',
+                      border: !isLoggedIn ? 'none' : '2px solid #667eea',
                       borderRadius: '0.75rem',
                       fontWeight: '600',
                       fontSize: 'clamp(0.8rem, 2vw, 0.9rem)',
                       cursor: 'pointer',
-                      transition: 'all 0.2s'
+                      transition: 'all 0.2s',
+                      boxShadow: !isLoggedIn ? '0 4px 12px rgba(102, 126, 234, 0.3)' : 'none'
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.background = '#f3f4f6'
+                      if (!isLoggedIn) {
+                        e.currentTarget.style.boxShadow = '0 6px 20px rgba(102, 126, 234, 0.4)'
+                      } else {
+                        e.currentTarget.style.background = '#f3f4f6'
+                      }
                       e.currentTarget.style.transform = 'translateY(-1px)'
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.background = 'white'
+                      if (!isLoggedIn) {
+                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.3)'
+                      } else {
+                        e.currentTarget.style.background = 'white'
+                      }
                       e.currentTarget.style.transform = 'translateY(0)'
                     }}
                   >
                     {!isLoggedIn ? (
                       <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem' }}>
                         <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <Crown size={18} style={{ color: '#d97706' }} />
+                          <Headphones size={18} />
                           {lang === 'es' ? 'Ver mi análisis' : 'View my analysis'}
                         </span>
-                        <span style={{ fontSize: '0.7rem', fontWeight: '400', color: '#9ca3af' }}>
-                          {lang === 'es' ? 'Gratis. Sin tarjeta de crédito.' : 'Free. No credit card required.'}
+                        <span style={{ fontSize: '0.7rem', fontWeight: '400', color: 'rgba(255,255,255,0.8)' }}>
+                          {lang === 'es' ? 'Gratis. Sin tarjeta.' : 'Free. No credit card.'}
                         </span>
                       </span>
                     ) : (
@@ -3038,26 +3047,30 @@ by Matías Carvajal
                       justifyContent: 'center',
                       gap: '0.5rem',
                       padding: '0.875rem 1.25rem',
-                      background: (!isLoggedIn || !hasPaidAccess) ? '#e5e7eb' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                      color: (!isLoggedIn || !hasPaidAccess) ? '#6b7280' : 'white',
-                      border: 'none',
+                      background: (isLoggedIn && hasPaidAccess) ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'white',
+                      color: (isLoggedIn && hasPaidAccess) ? 'white' : '#6b7280',
+                      border: (isLoggedIn && hasPaidAccess) ? 'none' : '2px solid #d1d5db',
                       borderRadius: '0.75rem',
                       fontWeight: '600',
                       fontSize: 'clamp(0.8rem, 2vw, 0.9rem)',
                       cursor: 'pointer',
                       transition: 'all 0.2s',
-                      boxShadow: (!isLoggedIn || !hasPaidAccess) ? 'none' : '0 4px 12px rgba(102, 126, 234, 0.3)'
+                      boxShadow: (isLoggedIn && hasPaidAccess) ? '0 4px 12px rgba(102, 126, 234, 0.3)' : 'none'
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = 'translateY(-2px)'
+                      e.currentTarget.style.transform = 'translateY(-1px)'
                       if (isLoggedIn && hasPaidAccess) {
                         e.currentTarget.style.boxShadow = '0 6px 20px rgba(102, 126, 234, 0.4)'
+                      } else {
+                        e.currentTarget.style.background = '#f3f4f6'
                       }
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.transform = 'translateY(0)'
                       if (isLoggedIn && hasPaidAccess) {
                         e.currentTarget.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.3)'
+                      } else {
+                        e.currentTarget.style.background = 'white'
                       }
                     }}
                   >
