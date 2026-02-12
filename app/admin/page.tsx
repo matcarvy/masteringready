@@ -956,7 +956,15 @@ export default function AdminPage() {
   const fetchFeedback = useCallback(async () => {
     setFeedbackLoading(true)
     try {
-      let query = supabase
+      const client = await createFreshQueryClient(
+        session ? { access_token: session.access_token, refresh_token: session.refresh_token } : undefined
+      )
+      if (!client) {
+        setFeedbackLoading(false)
+        return
+      }
+
+      let query = client
         .from('user_feedback')
         .select(`
           id, category, subject, message, lang, satisfaction, status,
