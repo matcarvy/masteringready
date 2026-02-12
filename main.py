@@ -1201,6 +1201,9 @@ async def download_pdf(
             }
         )
         
+    except HTTPException:
+        # Re-raise HTTP exceptions (including our debug errors) without swallowing
+        raise
     except Exception as e:
         # Clean up on error
         try:
@@ -1208,11 +1211,11 @@ async def download_pdf(
             os.unlink(pdf_path)
         except:
             pass
-        
+
         logger.error(f"❌ Error generating PDF: {e}")
         import traceback
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=bilingual_error('server_error', lang))
+        raise HTTPException(status_code=500, detail=f"PDF_ERROR: {e}")
 
 
 # ============== STATS ENDPOINTS ==============
