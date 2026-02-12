@@ -1805,6 +1805,7 @@ function DashboardContent() {
                           score: selectedAnalysis.score,
                           verdict: selectedAnalysis.verdict,
                           filename: selectedAnalysis.filename,
+                          created_at: selectedAnalysis.created_at,
                           duration_seconds: selectedAnalysis.duration_seconds,
                           sample_rate: selectedAnalysis.sample_rate,
                           bit_depth: selectedAnalysis.bit_depth,

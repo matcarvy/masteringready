@@ -7308,6 +7308,21 @@ def generate_visual_report(report: Dict[str, Any], strict: bool = False, lang: s
         return report_text.strip()
 
 
+def _format_analysis_date(report: Dict[str, Any]) -> str:
+    """Format analysis date from created_at (DB) or fall back to server time."""
+    created_at = report.get('created_at')
+    if created_at:
+        try:
+            # Parse ISO 8601 from Supabase (e.g. "2026-02-12T00:29:15.123456+00:00")
+            # Strip fractional seconds and timezone for simple parsing
+            date_str = created_at.replace('T', ' ')[:16]  # "2026-02-12 00:29"
+            dt = datetime.strptime(date_str, '%Y-%m-%d %H:%M')
+            return dt.strftime('%d/%m/%Y %H:%M')
+        except Exception:
+            pass
+    return datetime.now().strftime('%d/%m/%Y %H:%M')
+
+
 def generate_complete_pdf(
     report: Dict[str, Any],
     output_path: str,
@@ -7475,8 +7490,24 @@ def generate_complete_pdf(
             section_style
         ))
         
-        # Clean verdict text - use Unicode symbols
-        verdict_text = report.get('verdict', 'N/A')
+        # Map verdict enum to localized label (DB stores short enum, analyzer stores full text)
+        raw_verdict = report.get('verdict', 'N/A')
+        VERDICT_LABELS = {
+            'es': {
+                'ready': 'Listo para mastering',
+                'almost_ready': 'Casi listo',
+                'needs_work': 'Necesita trabajo',
+                'critical': 'Margen comprometido',
+            },
+            'en': {
+                'ready': 'Ready for mastering',
+                'almost_ready': 'Almost ready',
+                'needs_work': 'Needs work',
+                'critical': 'Compromised margin',
+            }
+        }
+        verdict_labels = VERDICT_LABELS.get(lang, VERDICT_LABELS['en'])
+        verdict_text = verdict_labels.get(raw_verdict, raw_verdict)
         verdict_text = clean_text_for_pdf(verdict_text).strip()
         
         # Clean filename - handle Unicode characters like "Paraíso"
@@ -7507,7 +7538,7 @@ def generate_complete_pdf(
         
         file_info_data = [
             ["Archivo" if lang == 'es' else "File", clean_filename],
-            ["Fecha" if lang == 'es' else "Date", datetime.now().strftime('%d/%m/%Y %H:%M')],
+            ["Fecha" if lang == 'es' else "Date", _format_analysis_date(report)],
             ["Duración" if lang == 'es' else "Duration", duration_str],
             ["Sample Rate" if lang == 'es' else "Sample Rate", sample_rate_str],
             ["Bit Depth" if lang == 'es' else "Bit Depth", bit_depth_str],
