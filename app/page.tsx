@@ -4672,7 +4672,6 @@ by Matías Carvajal
               }}>
                 <li>{lang === 'es' ? '30 análisis al mes' : '30 analyses per month'}</li>
                 <li>{lang === 'es' ? 'Reportes PDF completos' : 'Full PDF reports'}</li>
-                <li>{lang === 'es' ? 'Procesamiento prioritario' : 'Priority processing'}</li>
               </ul>
             </div>
 
@@ -4974,8 +4973,7 @@ by Matías Carvajal
               {[
                 lang === 'es' ? '30 análisis al mes' : '30 analyses per month',
                 lang === 'es' ? 'Análisis Completo y Detallado' : 'Complete & Detailed Analysis',
-                lang === 'es' ? 'Descarga de PDFs profesionales' : 'Professional PDF downloads',
-                lang === 'es' ? 'Procesamiento prioritario' : 'Priority processing'
+                lang === 'es' ? 'Descarga de PDFs profesionales' : 'Professional PDF downloads'
               ].map((benefit, i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                   <div style={{

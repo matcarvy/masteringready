@@ -79,8 +79,7 @@ const translations = {
     unlockBenefits: [
       'Acceso a análisis Completo y Detallado',
       'Descargar PDFs completos',
-      '30 análisis al mes',
-      'Procesamiento prioritario'
+      '30 análisis al mes'
     ],
     monthlyPrice: '$9.99/mes',
     getProNow: 'Obtener Pro',
@@ -153,8 +152,7 @@ const translations = {
     unlockBenefits: [
       'Access to Complete and Detailed analysis',
       'Download complete PDFs',
-      '30 analyses per month',
-      'Priority processing'
+      '30 analyses per month'
     ],
     monthlyPrice: '$9.99/month',
     getProNow: 'Get Pro',

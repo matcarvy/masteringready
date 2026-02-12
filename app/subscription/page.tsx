@@ -49,7 +49,6 @@ const translations = {
     benefit1: '30 análisis al mes',
     benefit2: 'Análisis Completo y Detallado',
     benefit3: 'Descarga de PDFs',
-    benefit4: 'Procesamiento prioritario',
     upgradeToPro: 'Actualizar a Pro',
     cancelAnytime: 'Cancela cuando quieras',
     justNeedOne: '¿Solo necesitas un análisis?',
@@ -102,7 +101,6 @@ const translations = {
     benefit1: '30 analyses per month',
     benefit2: 'Complete and Detailed analysis',
     benefit3: 'PDF downloads',
-    benefit4: 'Priority processing',
     upgradeToPro: 'Upgrade to Pro',
     cancelAnytime: 'Cancel anytime',
     justNeedOne: 'Just need one analysis?',
@@ -639,7 +637,7 @@ export default function SubscriptionPage() {
               </h2>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.5rem' }}>
-                {[t.benefit1, t.benefit2, t.benefit3, t.benefit4].map((benefit, i) => (
+                {[t.benefit1, t.benefit2, t.benefit3].map((benefit, i) => (
                   <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                     <div style={{
                       width: '22px',
