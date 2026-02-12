@@ -84,7 +84,11 @@ const translations = {
     statusPending: 'Pendiente',
     viewReceipt: 'Ver recibo',
     manageSubscription: 'Administrar suscripción',
-    perMonth: '/mes'
+    perMonth: '/mes',
+    cancellationScheduled: 'Cancelación programada',
+    cancelsOn: 'Tu suscripción se cancelará el',
+    keepAccess: 'Mantendrás acceso Pro hasta esa fecha.',
+    reactivate: 'Reactivar suscripción'
   },
   en: {
     title: 'Your Subscription',
@@ -136,7 +140,11 @@ const translations = {
     statusPending: 'Pending',
     viewReceipt: 'View receipt',
     manageSubscription: 'Manage subscription',
-    perMonth: '/month'
+    perMonth: '/month',
+    cancellationScheduled: 'Cancellation scheduled',
+    cancelsOn: 'Your subscription will cancel on',
+    keepAccess: "You'll keep Pro access until that date.",
+    reactivate: 'Reactivate subscription'
   }
 }
 
@@ -158,6 +166,7 @@ export default function SubscriptionPage() {
   const [showCancelModal, setShowCancelModal] = useState(false)
   const [cancelling, setCancelling] = useState(false)
   const [cancelError, setCancelError] = useState('')
+  const [canceledAt, setCanceledAt] = useState<string | null>(null)
   const [payments, setPayments] = useState<Array<{
     id: string
     amount: number
@@ -229,6 +238,9 @@ export default function SubscriptionPage() {
         }
         if (subResult.data?.stripe_subscription_id) {
           setHasStripe(true)
+        }
+        if (subResult.data?.canceled_at) {
+          setCanceledAt(subResult.data.canceled_at)
         }
 
         if (paymentsResult.data && !cancelled) {
@@ -770,7 +782,33 @@ export default function SubscriptionPage() {
               {t.billingInfo}
             </h2>
 
-            {userStatus?.current_period_end && (
+            {canceledAt ? (
+              <div style={{
+                background: '#fef3c7',
+                border: '1px solid #fde68a',
+                borderRadius: '0.75rem',
+                padding: '1rem',
+                marginBottom: '0.75rem'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                  <AlertTriangle size={16} style={{ color: '#d97706' }} />
+                  <span style={{ fontWeight: '600', color: '#92400e', fontSize: '0.875rem' }}>
+                    {t.cancellationScheduled}
+                  </span>
+                </div>
+                <p style={{ color: '#92400e', fontSize: '0.8rem', margin: 0, lineHeight: '1.5' }}>
+                  {t.cancelsOn}{' '}
+                  <strong>
+                    {new Date(canceledAt).toLocaleDateString(lang === 'es' ? 'es-ES' : 'en-US', {
+                      day: 'numeric',
+                      month: 'long',
+                      year: 'numeric'
+                    })}
+                  </strong>
+                  . {t.keepAccess}
+                </p>
+              </div>
+            ) : userStatus?.current_period_end ? (
               <div style={{
                 display: 'flex',
                 justifyContent: 'space-between',
@@ -787,7 +825,7 @@ export default function SubscriptionPage() {
                   })}
                 </span>
               </div>
-            )}
+            ) : null}
 
             <div style={{
               display: 'flex',
@@ -811,22 +849,24 @@ export default function SubscriptionPage() {
               >
                 {t.manageSubscription}
               </button>
-              <button
-                onClick={() => setShowCancelModal(true)}
-                style={{
-                  padding: '0.625rem 1.25rem',
-                  background: 'white',
-                  color: '#dc2626',
-                  border: '1px solid #fecaca',
-                  borderRadius: '0.5rem',
-                  fontSize: '0.875rem',
-                  fontWeight: '500',
-                  cursor: 'pointer',
-                  textAlign: 'center'
-                }}
-              >
-                {t.cancelSubscription}
-              </button>
+              {!canceledAt && (
+                <button
+                  onClick={() => setShowCancelModal(true)}
+                  style={{
+                    padding: '0.625rem 1.25rem',
+                    background: 'white',
+                    color: '#dc2626',
+                    border: '1px solid #fecaca',
+                    borderRadius: '0.5rem',
+                    fontSize: '0.875rem',
+                    fontWeight: '500',
+                    cursor: 'pointer',
+                    textAlign: 'center'
+                  }}
+                >
+                  {t.cancelSubscription}
+                </button>
+              )}
             </div>
           </div>
         )}
