@@ -541,9 +541,10 @@ async function handleSubscriptionUpdated(
     .update({
       status,
       ...periodFields,
-      ...(subscription.cancel_at && {
-        canceled_at: new Date(subscription.cancel_at * 1000).toISOString()
-      })
+      // Set canceled_at when cancellation is scheduled, clear it when reactivated
+      canceled_at: subscription.cancel_at
+        ? new Date(subscription.cancel_at * 1000).toISOString()
+        : null
     })
     .eq('stripe_subscription_id', subscription.id)
 }
