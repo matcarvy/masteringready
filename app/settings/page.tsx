@@ -10,7 +10,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth, UserMenu } from '@/components/auth'
-import { supabase } from '@/lib/supabase'
+import { supabase, createFreshQueryClient } from '@/lib/supabase'
 import { detectLanguage, setLanguageCookie } from '@/lib/language'
 import {
   Music,
@@ -119,7 +119,7 @@ const translations = {
 
 export default function SettingsPage() {
   const router = useRouter()
-  const { user, loading: authLoading, signOut } = useAuth()
+  const { user, session, loading: authLoading, signOut } = useAuth()
 
   const [lang, setLang] = useState<'es' | 'en'>('es')
   const [isMobile, setIsMobile] = useState(false)
@@ -172,7 +172,7 @@ export default function SettingsPage() {
   // Fetch data
   useEffect(() => {
     async function fetchData() {
-      if (!user) return
+      if (!user || !session?.access_token) return
       setLoading(true)
 
       try {
@@ -188,8 +188,14 @@ export default function SettingsPage() {
         const displayName = user.user_metadata?.full_name || user.user_metadata?.name || ''
         setFullName(displayName)
 
+        // Use fresh client — avoids stale singleton after SPA navigation
+        const client = await createFreshQueryClient(
+          { access_token: session.access_token, refresh_token: session.refresh_token }
+        )
+        if (!client) return
+
         // Check profile for preferred language
-        const { data: profileData } = await supabase
+        const { data: profileData } = await client
           .from('profiles')
           .select('preferred_language')
           .eq('id', user.id)
@@ -205,11 +211,11 @@ export default function SettingsPage() {
       }
     }
 
-    if (user) {
+    if (user && session?.access_token) {
       fetchData()
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id])
+  }, [user?.id, session?.access_token])
 
   // Save profile name
   const handleSaveProfile = async () => {
@@ -218,13 +224,18 @@ export default function SettingsPage() {
     setProfileSaved(false)
 
     try {
+      const client = await createFreshQueryClient(
+        session ? { access_token: session.access_token, refresh_token: session.refresh_token } : undefined
+      )
+      if (!client) return
+
       // Update Supabase auth metadata
-      await supabase.auth.updateUser({
+      await client.auth.updateUser({
         data: { full_name: fullName }
       })
 
       // Update profile table
-      await supabase
+      await client
         .from('profiles')
         .update({ full_name: fullName })
         .eq('id', user.id)
@@ -244,7 +255,11 @@ export default function SettingsPage() {
     setLanguageCookie(newLang)
 
     if (user) {
-      await supabase
+      const client = await createFreshQueryClient(
+        session ? { access_token: session.access_token, refresh_token: session.refresh_token } : undefined
+      )
+      if (!client) return
+      await client
         .from('profiles')
         .update({ preferred_language: newLang })
         .eq('id', user.id)
@@ -268,7 +283,12 @@ export default function SettingsPage() {
     setPasswordLoading(true)
 
     try {
-      const { error } = await supabase.auth.updateUser({
+      const client = await createFreshQueryClient(
+        session ? { access_token: session.access_token, refresh_token: session.refresh_token } : undefined
+      )
+      if (!client) return
+
+      const { error } = await client.auth.updateUser({
         password: newPassword
       })
 
@@ -296,16 +316,21 @@ export default function SettingsPage() {
     setDeleteLoading(true)
 
     try {
+      const client = await createFreshQueryClient(
+        session ? { access_token: session.access_token, refresh_token: session.refresh_token } : undefined
+      )
+      if (!client) return
+
       // Anti-abuse: Record email + usage before deletion
       // This prevents users from deleting and re-creating accounts to get fresh free analyses
-      const { data: profileData } = await supabase
+      const { data: profileData } = await client
         .from('profiles')
         .select('email, total_analyses, analyses_lifetime_used')
         .eq('id', user!.id)
         .single()
 
       if (profileData) {
-        await supabase.from('deleted_accounts').insert({
+        await client.from('deleted_accounts').insert({
           email: profileData.email,
           analyses_lifetime_used: profileData.analyses_lifetime_used || 0,
           total_analyses: profileData.total_analyses || 0
@@ -313,19 +338,19 @@ export default function SettingsPage() {
       }
 
       // Delete analyses
-      await supabase
+      await client
         .from('analyses')
         .delete()
         .eq('user_id', user!.id)
 
       // Delete subscription
-      await supabase
+      await client
         .from('subscriptions')
         .delete()
         .eq('user_id', user!.id)
 
       // Delete profile
-      await supabase
+      await client
         .from('profiles')
         .delete()
         .eq('id', user!.id)
@@ -339,13 +364,13 @@ export default function SettingsPage() {
     }
   }
 
-  // Safety timeout — if loading hangs for more than 10s, force stop
+  // Safety timeout — if loading hangs, auto-reload (full reload always succeeds)
   useEffect(() => {
     if (!loading) return
     const timeout = setTimeout(() => {
-      console.warn('[Settings] Loading safety timeout reached (10s)')
-      setLoading(false)
-    }, 10000)
+      console.warn('[Settings] Fetch stalled — reloading page')
+      window.location.reload()
+    }, 8000)
     return () => clearTimeout(timeout)
   }, [loading])
 

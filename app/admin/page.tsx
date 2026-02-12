@@ -9,7 +9,7 @@
 import { useState, useEffect, useCallback, FormEvent } from 'react'
 import Link from 'next/link'
 import { useAuth } from '@/components/auth/AuthProvider'
-import { supabase } from '@/lib/supabase'
+import { supabase, createFreshQueryClient } from '@/lib/supabase'
 import { detectLanguage, setLanguageCookie } from '@/lib/language'
 import {
   Users, BarChart3, DollarSign, MessageSquare, Activity,
@@ -771,8 +771,14 @@ export default function AdminPage() {
 
     const checkAdmin = async () => {
       try {
+        // Use fresh client to avoid stale singleton after analysis
+        const client = await createFreshQueryClient(
+          session ? { access_token: session.access_token, refresh_token: session.refresh_token } : undefined
+        )
+      if (!client) return
+
         // Query own profile directly via browser client (RLS allows reading own row)
-        const { data: profile, error } = await supabase
+        const { data: profile, error } = await client
           .from('profiles')
           .select('*')
           .eq('id', user.id)
@@ -831,7 +837,12 @@ export default function AdminPage() {
   const fetchUsers = useCallback(async () => {
     setUsersLoading(true)
     try {
-      let query = supabase
+      const client = await createFreshQueryClient(
+        session ? { access_token: session.access_token, refresh_token: session.refresh_token } : undefined
+      )
+      if (!client) return
+
+      let query = client
         .from('profiles')
         .select(`
           id, email, full_name, total_analyses, analyses_this_month,
@@ -848,7 +859,7 @@ export default function AdminPage() {
       if (data) {
         // Fetch subscriptions for these users
         const userIds = data.map(u => u.id)
-        const { data: subs } = await supabase
+        const { data: subs } = await client
           .from('subscriptions')
           .select(`
             user_id, status, current_period_end, analyses_used_this_cycle,
@@ -879,13 +890,17 @@ export default function AdminPage() {
       setFetchError(t.fetchError)
     }
     setUsersLoading(false)
-  }, [userSearch, userSort.field, userSort.asc])
+  }, [userSearch, userSort.field, userSort.asc, session?.access_token])
 
   // Fetch analyses for a specific user
   const fetchUserAnalyses = useCallback(async (userId: string) => {
     setUserAnalysesLoading(true)
     try {
-      const { data } = await supabase
+      const client = await createFreshQueryClient(
+        session ? { access_token: session.access_token, refresh_token: session.refresh_token } : undefined
+      )
+      if (!client) return
+      const { data } = await client
         .from('analyses')
         .select('id, filename, score, verdict, file_format, sample_rate, bit_depth, duration_seconds, file_size_bytes, spectral_6band, categorical_flags, created_at, analysis_version')
         .eq('user_id', userId)
@@ -897,13 +912,17 @@ export default function AdminPage() {
       console.error('Failed to fetch user analyses:', err)
     }
     setUserAnalysesLoading(false)
-  }, [])
+  }, [session?.access_token])
 
   // Fetch payments
   const fetchPayments = useCallback(async () => {
     setPaymentsLoading(true)
     try {
-      const { data } = await supabase
+      const client = await createFreshQueryClient(
+        session ? { access_token: session.access_token, refresh_token: session.refresh_token } : undefined
+      )
+      if (!client) return
+      const { data } = await client
         .from('payments')
         .select(`
           id, amount, currency, status, description, created_at,

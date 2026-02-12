@@ -246,13 +246,14 @@ export default function HistoryPage() {
   // Fetch data (fresh client avoids stale singleton after SPA navigation)
   useEffect(() => {
     async function fetchData() {
-      if (!user) return
+      if (!user || !session?.access_token) return
       setLoading(true)
 
       try {
         const client = await createFreshQueryClient(
-          session ? { access_token: session.access_token, refresh_token: session.refresh_token } : undefined
-        ) || supabase
+          { access_token: session.access_token, refresh_token: session.refresh_token }
+        )
+        if (!client) return
 
         // Check subscription
         const { data: subData } = await client
@@ -284,11 +285,11 @@ export default function HistoryPage() {
       }
     }
 
-    if (user) {
+    if (user && session?.access_token) {
       fetchData()
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id])
+  }, [user?.id, session?.access_token])
 
   // Reset page when filters change
   useEffect(() => {
