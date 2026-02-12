@@ -8047,10 +8047,11 @@ def generate_complete_pdf(
         return True
         
     except Exception as e:
-        print(f"❌ Error generando PDF: {e}")
         import traceback
-        traceback.print_exc()
-        return False
+        error_msg = f"❌ Error generando PDF: {e}\n{traceback.format_exc()}"
+        print(error_msg)
+        # Return error string so caller can log it
+        return error_msg
 
 
 def main() -> None:

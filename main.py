@@ -1158,9 +1158,10 @@ async def download_pdf(
             filename=result.get('filename', 'análisis')
         )
 
-        if not success:
-            logger.error(f"❌ PDF generation failed")
-            raise HTTPException(status_code=500, detail=bilingual_error('server_error', lang))
+        if success is not True:
+            error_detail = success if isinstance(success, str) else "Unknown error"
+            logger.error(f"❌ PDF generation failed: {error_detail}")
+            raise HTTPException(status_code=500, detail=f"PDF_ERROR: {error_detail}")
         
         # Prepare filename
         filename_base = result.get('filename', 'analisis').replace('.wav', '').replace('.mp3', '')
