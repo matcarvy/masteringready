@@ -2766,19 +2766,29 @@ by Matías Carvajal
                         }}>
                           <div style={{
                             display: 'flex',
+                            flexDirection: 'column',
                             alignItems: 'center',
-                            gap: '0.5rem',
+                            gap: '0.25rem',
                             padding: '0.75rem 1.25rem',
                             background: 'white',
-                            borderRadius: '9999px',
+                            borderRadius: '1rem',
                             boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                            color: isUnlocking ? '#10b981' : '#667eea',
-                            fontWeight: '600',
-                            fontSize: '0.875rem',
                             transition: 'color 0.3s ease'
                           }}>
-                            {isUnlocking ? <Headphones size={16} /> : <Crown size={16} />}
-                            {lang === 'es' ? 'Obtener análisis completo' : 'Get complete analysis'}
+                            <span style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.5rem',
+                              color: isUnlocking ? '#10b981' : '#667eea',
+                              fontWeight: '600',
+                              fontSize: '0.875rem'
+                            }}>
+                              {isUnlocking ? <Headphones size={16} /> : <Crown size={16} />}
+                              {lang === 'es' ? 'Ver mi análisis' : 'View my analysis'}
+                            </span>
+                            <span style={{ fontSize: '0.7rem', color: '#9ca3af', fontWeight: '400' }}>
+                              {lang === 'es' ? 'Gratis. Sin tarjeta de crédito.' : 'Free. No credit card required.'}
+                            </span>
                           </div>
                         </div>
                       )}
@@ -2961,10 +2971,24 @@ by Matías Carvajal
                       e.currentTarget.style.transform = 'translateY(0)'
                     }}
                   >
-                    {!isLoggedIn ? <Crown size={18} style={{ color: '#d97706' }} /> : <Download size={18} />}
-                    {lang === 'es'
-                      ? `Descargar ${reportView === 'visual' ? 'Rápido' : reportView === 'short' ? 'Resumen' : 'Completo'}`
-                      : `Download ${reportView === 'visual' ? 'Quick' : reportView === 'short' ? 'Summary' : 'Complete'}`}
+                    {!isLoggedIn ? (
+                      <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem' }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <Crown size={18} style={{ color: '#d97706' }} />
+                          {lang === 'es' ? 'Ver mi análisis' : 'View my analysis'}
+                        </span>
+                        <span style={{ fontSize: '0.7rem', fontWeight: '400', color: '#9ca3af' }}>
+                          {lang === 'es' ? 'Gratis. Sin tarjeta de crédito.' : 'Free. No credit card required.'}
+                        </span>
+                      </span>
+                    ) : (
+                      <>
+                        <Download size={18} />
+                        {lang === 'es'
+                          ? `Descargar ${reportView === 'visual' ? 'Rápido' : reportView === 'short' ? 'Resumen' : 'Completo'}`
+                          : `Download ${reportView === 'visual' ? 'Quick' : reportView === 'short' ? 'Summary' : 'Complete'}`}
+                      </>
+                    )}
                   </button>
 
                   {/* Download Full Report — Pro only */}
@@ -3011,8 +3035,22 @@ by Matías Carvajal
                       }
                     }}
                   >
-                    {(!isLoggedIn || !hasPaidAccess) ? <Crown size={18} style={{ color: '#d97706' }} /> : <Download size={18} />}
-                    {lang === 'es' ? 'Análisis Detallado' : 'Detailed Analysis'}
+                    {(!isLoggedIn || !hasPaidAccess) ? (
+                      <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem' }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <Crown size={18} style={{ color: '#d97706' }} />
+                          {lang === 'es' ? 'Análisis detallado' : 'Detailed analysis'}
+                        </span>
+                        <span style={{ fontSize: '0.7rem', fontWeight: '400', color: '#9ca3af' }}>
+                          {lang === 'es' ? 'Desde $5.99' : 'From $5.99'}
+                        </span>
+                      </span>
+                    ) : (
+                      <>
+                        <Download size={18} />
+                        {lang === 'es' ? 'Análisis Detallado' : 'Detailed Analysis'}
+                      </>
+                    )}
                   </button>
                 </div>
               </div>

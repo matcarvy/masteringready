@@ -705,7 +705,7 @@ function AdminLoginForm({ lang }: { lang: 'es' | 'en' }) {
 // ============================================================================
 
 export default function AdminPage() {
-  const { user, session, loading: authLoading } = useAuth()
+  const { user, session, loading: authLoading, signOut } = useAuth()
 
   // UI state
   const [lang, setLang] = useState<'es' | 'en'>('es')
@@ -3486,7 +3486,9 @@ export default function AdminPage() {
             <button
               onClick={async () => {
                 try {
-                  await supabase.auth.signOut()
+                  setIsAdmin(false)
+                  setAdminChecked(false)
+                  await signOut()
                 } catch (err) {
                   console.error('Sign out error:', err)
                 }
