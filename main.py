@@ -793,11 +793,24 @@ async def start_analysis(
                     use_chunked = estimated_duration_min > 2.0  # Use chunked for files > 2 minutes
                     logger.info(f"📊 [{job_id}] Using ACTUAL duration: {estimated_duration_min:.1f} min")
                 elif is_compressed:
-                    # Compressed format - ALWAYS use chunked to avoid memory/timeout issues
-                    # MP3 files are much slower to decode fully than in chunks
-                    use_chunked = True
-                    estimated_duration_min = file_size_mb * 1.5  # Rough estimate: ~0.7 MB/min for MP3
-                    logger.info(f"🔄 [{job_id}] Compressed format ({file_ext}) - forcing CHUNKED analysis")
+                    # Compressed format - try to get duration before deciding
+                    # Short compressed files (< 2 min) can be analyzed without chunking
+                    try:
+                        probe_audio = AudioSegment.from_file(analysis_path)
+                        estimated_duration_min = len(probe_audio) / 60000.0  # pydub gives ms
+                        del probe_audio  # Free memory immediately
+                        logger.info(f"📊 [{job_id}] Compressed duration from pydub: {estimated_duration_min:.1f} min")
+                    except Exception as e:
+                        # Fallback: estimate from file size (conservative: ~0.7 MB/min for low bitrate)
+                        estimated_duration_min = file_size_mb * 1.5
+                        logger.info(f"📊 [{job_id}] Compressed duration estimated from size: {estimated_duration_min:.1f} min (probe failed: {e})")
+                    # Safety net: if duration is unknown/zero, default to chunked (safer than OOM)
+                    if estimated_duration_min <= 0:
+                        use_chunked = True
+                        logger.warning(f"⚠️ [{job_id}] Duration unknown/zero — defaulting to CHUNKED for safety")
+                    else:
+                        use_chunked = estimated_duration_min > 2.0
+                    logger.info(f"{'🔄' if use_chunked else '✅'} [{job_id}] Compressed format ({file_ext}) - {'CHUNKED' if use_chunked else 'NORMAL'} analysis ({estimated_duration_min:.1f} min)")
                 else:
                     # WAV/AIFF without known duration - try reading header directly
                     try:

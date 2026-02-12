@@ -274,6 +274,7 @@ function Home() {
   const [error, setError] = useState<string | null>(null)
   const [compressing, setCompressing] = useState(false)
   const [compressionProgress, setCompressionProgress] = useState(0)
+  const [fileDuration, setFileDuration] = useState<number | null>(null)
   const [showContactModal, setShowContactModal] = useState(false)
 
   // Mobile detection
@@ -751,6 +752,7 @@ const handleAnalyze = async () => {
           duration: decoded.duration,
           fileSize: file.size
         }
+        setFileDuration(decoded.duration)
         tempCtx.close()
       }
     } catch {
@@ -978,6 +980,7 @@ const handleAnalyze = async () => {
     setError(null)
     setLoading(false)
     setProgress(0)
+    setFileDuration(null)
     setSavedAnalysisId(null)
     setAnalysisRating(null)
     setAnalysisComment('')
@@ -2296,7 +2299,9 @@ by Matías Carvajal
                         }}>
                           <span style={{ fontWeight: '600' }}>{progress}%</span>
                           <span style={{ color: '#9ca3af', fontSize: '0.75rem' }}>
-                            {lang === 'es' ? 'Puede tardar hasta 60 segundos' : 'May take up to 60 seconds'}
+                            {(fileDuration !== null ? fileDuration >= 180 : file && file.size > 50 * 1024 * 1024)
+                              ? (lang === 'es' ? 'Generalmente menos de 90 segundos' : 'Usually under 90 seconds')
+                              : (lang === 'es' ? 'Generalmente menos de 30 segundos' : 'Usually under 30 seconds')}
                           </span>
                         </div>
                       </div>
