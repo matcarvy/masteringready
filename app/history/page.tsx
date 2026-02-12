@@ -802,7 +802,9 @@ export default function HistoryPage() {
 
       {/* Analysis Detail Modal */}
       {selectedAnalysis && (
-        <div style={{
+        <div
+          onClick={() => setSelectedAnalysis(null)}
+          style={{
           position: 'fixed',
           top: 0,
           left: 0,
@@ -817,7 +819,9 @@ export default function HistoryPage() {
           padding: '1rem',
           overscrollBehavior: 'contain'
         }}>
-          <div style={{
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
             background: 'white',
             borderRadius: '1rem',
             maxWidth: '600px',

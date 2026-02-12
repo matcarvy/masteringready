@@ -1188,7 +1188,9 @@ function DashboardContent() {
 
       {/* Analysis Detail Modal */}
       {selectedAnalysis && (
-        <div style={{
+        <div
+          onClick={() => setSelectedAnalysis(null)}
+          style={{
           position: 'fixed',
           top: 0,
           left: 0,
@@ -1204,7 +1206,9 @@ function DashboardContent() {
           animation: 'modalBackdropIn 0.25s ease-out',
           overscrollBehavior: 'contain'
         }}>
-          <div style={{
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
             background: 'white',
             borderRadius: isMobile ? '0.75rem' : '1rem',
             maxWidth: '600px',

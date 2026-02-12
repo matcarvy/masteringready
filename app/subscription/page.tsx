@@ -1017,7 +1017,6 @@ export default function SubscriptionPage() {
       {/* Cancel Subscription Modal */}
       {showCancelModal && (
         <div
-          onClick={() => setShowCancelModal(false)}
           style={{
             position: 'fixed',
             top: 0, left: 0, right: 0, bottom: 0,
