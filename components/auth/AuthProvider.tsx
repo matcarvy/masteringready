@@ -404,6 +404,23 @@ export function AuthProvider({ children }: AuthProviderProps) {
             // — never show unpaid analysis results on failure
             setPendingAnalysisQuotaExceeded(true)
           }
+
+          // Link anonymous analyses to this user (fire-and-forget)
+          try {
+            const anonSessionId = typeof window !== 'undefined' ? sessionStorage.getItem('mr_anon_session') : null
+            if (anonSessionId) {
+              supabase.from('anonymous_analyses')
+                .update({ converted_to_user: true, user_id: u.id })
+                .eq('session_id', anonSessionId)
+                .eq('converted_to_user', false)
+                .then(() => {
+                  sessionStorage.removeItem('mr_anon_session')
+                  console.log('[Anonymous] Linked to user:', u.id)
+                })
+            }
+          } catch {
+            // Non-blocking
+          }
         }
       }
     )

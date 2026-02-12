@@ -86,7 +86,9 @@ export async function GET(request: NextRequest) {
       performanceResult,
       filesResult,
       engagementResult,
-      profileAnalysesResult
+      profileAnalysesResult,
+      anonTotalResult,
+      anonConvertedResult
     ] = await Promise.all([
       // Total users
       adminClient.from('profiles').select('id', { count: 'exact', head: true }),
@@ -222,7 +224,16 @@ export async function GET(request: NextRequest) {
 
       // Engagement: users with >1 analysis
       adminClient.from('profiles')
-        .select('total_analyses')
+        .select('total_analyses'),
+
+      // Anonymous funnel: total anonymous analyses
+      adminClient.from('anonymous_analyses')
+        .select('id', { count: 'exact', head: true }),
+
+      // Anonymous funnel: converted to user
+      adminClient.from('anonymous_analyses')
+        .select('id', { count: 'exact', head: true })
+        .eq('converted_to_user', true)
     ])
 
     // Calculate KPIs
@@ -492,6 +503,13 @@ export async function GET(request: NextRequest) {
         usersWithMultiple,
         usersWithMultiplePct,
         totalProfiles: profileRows.length
+      },
+      anonymousFunnel: {
+        totalAnonymous: anonTotalResult.count || 0,
+        converted: anonConvertedResult.count || 0,
+        conversionRate: (anonTotalResult.count || 0) > 0
+          ? Math.round(((anonConvertedResult.count || 0) / (anonTotalResult.count || 1)) * 1000) / 10
+          : 0
       },
       technicalInsights: {
         spectral: {

@@ -918,6 +918,32 @@ const handleAnalyze = async () => {
           strict
         }
         localStorage.setItem('pendingAnalysis', JSON.stringify(pendingAnalysis))
+
+        // Track anonymous analysis for funnel analytics (fire-and-forget)
+        try {
+          let anonSessionId = sessionStorage.getItem('mr_anon_session')
+          if (!anonSessionId) {
+            anonSessionId = crypto.randomUUID()
+            sessionStorage.setItem('mr_anon_session', anonSessionId)
+          }
+          void supabase.from('anonymous_analyses').insert({
+            session_id: anonSessionId,
+            filename: file.name,
+            score: data.score,
+            verdict: data.verdict,
+            duration_seconds: data.file?.duration || null,
+            sample_rate: data.file?.sample_rate || null,
+            bit_depth: data.file?.bit_depth || null,
+            format: file.name.split('.').pop()?.toUpperCase() || null,
+            lang,
+            client_country: geo?.countryCode || null,
+            is_chunked: data.is_chunked_analysis || false
+          }).then(() => {
+            console.log('[Anonymous] Analysis tracked')
+          })
+        } catch {
+          // Silently ignore tracking errors
+        }
       }
     }
 

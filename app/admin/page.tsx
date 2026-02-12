@@ -86,6 +86,11 @@ interface StatsData {
       avgDistribution: { low: number; mid: number; high: number }
     }
   }
+  anonymousFunnel?: {
+    totalAnonymous: number
+    converted: number
+    conversionRate: number
+  }
 }
 
 interface UserRow {
@@ -182,7 +187,10 @@ const translations = {
       activeProSubs: 'Suscripciones Pro activas',
       revenueThisMonth: 'Ingresos este mes',
       analysesToday: 'Análisis hoy',
-      avgScore: 'Puntuación promedio'
+      avgScore: 'Puntuación promedio',
+      anonAnalyses: 'Análisis anónimos',
+      anonConverted: 'Convertidos a usuario',
+      anonConversionRate: 'Tasa de conversión'
     },
     users: {
       search: 'Buscar por correo o nombre...',
@@ -342,7 +350,10 @@ const translations = {
       activeProSubs: 'Active Pro Subscriptions',
       revenueThisMonth: 'Revenue This Month',
       analysesToday: 'Analyses Today',
-      avgScore: 'Average Score'
+      avgScore: 'Average Score',
+      anonAnalyses: 'Anonymous Analyses',
+      anonConverted: 'Converted to User',
+      anonConversionRate: 'Conversion Rate'
     },
     users: {
       search: 'Search by email or name...',
@@ -1383,6 +1394,48 @@ export default function AdminPage() {
                     </span>
                   </p>
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Anonymous Funnel */}
+        {statsData?.anonymousFunnel && statsData.anonymousFunnel.totalAnonymous > 0 && (
+          <div style={{
+            background: 'white',
+            borderRadius: '1rem',
+            padding: '1.5rem',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+            marginBottom: '2rem'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+              <Eye size={18} style={{ color: '#8b5cf6' }} />
+              <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: '600', color: '#111827' }}>
+                {lang === 'es' ? 'Embudo de conversión' : 'Conversion Funnel'}
+              </h3>
+            </div>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr',
+              gap: '1rem'
+            }}>
+              <div style={{ textAlign: 'center' }}>
+                <p style={{ fontSize: '1.75rem', fontWeight: '700', color: '#8b5cf6', margin: '0 0 0.25rem' }}>
+                  {statsData.anonymousFunnel.totalAnonymous}
+                </p>
+                <p style={{ fontSize: '0.8rem', color: '#6b7280', margin: 0 }}>{t.kpi.anonAnalyses}</p>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <p style={{ fontSize: '1.75rem', fontWeight: '700', color: '#10b981', margin: '0 0 0.25rem' }}>
+                  {statsData.anonymousFunnel.converted}
+                </p>
+                <p style={{ fontSize: '0.8rem', color: '#6b7280', margin: 0 }}>{t.kpi.anonConverted}</p>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <p style={{ fontSize: '1.75rem', fontWeight: '700', color: '#f59e0b', margin: '0 0 0.25rem' }}>
+                  {statsData.anonymousFunnel.conversionRate}%
+                </p>
+                <p style={{ fontSize: '0.8rem', color: '#6b7280', margin: 0 }}>{t.kpi.anonConversionRate}</p>
               </div>
             </div>
           </div>
