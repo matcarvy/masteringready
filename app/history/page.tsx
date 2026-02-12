@@ -10,7 +10,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth, UserMenu } from '@/components/auth'
-import { supabase } from '@/lib/supabase'
+import { supabase, createFreshQueryClient } from '@/lib/supabase'
 import { detectLanguage, setLanguageCookie } from '@/lib/language'
 import {
   Music,
@@ -196,7 +196,7 @@ const cleanReportText = (text: string): string => {
 
 export default function HistoryPage() {
   const router = useRouter()
-  const { user, loading: authLoading } = useAuth()
+  const { user, session, loading: authLoading } = useAuth()
 
   const [lang, setLang] = useState<'es' | 'en'>('es')
   const [isMobile, setIsMobile] = useState(false)
@@ -235,15 +235,19 @@ export default function HistoryPage() {
     }
   }, [authLoading, user, lang])
 
-  // Fetch data
+  // Fetch data (fresh client avoids stale singleton after SPA navigation)
   useEffect(() => {
     async function fetchData() {
       if (!user) return
       setLoading(true)
 
       try {
+        const client = await createFreshQueryClient(
+          session ? { access_token: session.access_token, refresh_token: session.refresh_token } : undefined
+        ) || supabase
+
         // Check subscription
-        const { data: subData } = await supabase
+        const { data: subData } = await client
           .from('subscriptions')
           .select('*, plan:plans(type, name)')
           .eq('user_id', user.id)
@@ -255,7 +259,7 @@ export default function HistoryPage() {
         }
 
         // Fetch ALL analyses (no limit for history)
-        const { data: analysesData } = await supabase
+        const { data: analysesData } = await client
           .from('analyses')
           .select('*')
           .eq('user_id', user.id)
@@ -343,13 +347,13 @@ export default function HistoryPage() {
     setReportTab(tab)
   }
 
-  // Safety timeout — if loading hangs for more than 10s, force stop
+  // Safety timeout — if fetch hangs (stale connections from SPA navigation), auto-reload
   useEffect(() => {
     if (!loading) return
     const timeout = setTimeout(() => {
-      console.warn('[History] Loading safety timeout reached (10s)')
-      setLoading(false)
-    }, 10000)
+      console.warn('[History] Fetch stalled — reloading page')
+      window.location.reload()
+    }, 8000)
     return () => clearTimeout(timeout)
   }, [loading])
 

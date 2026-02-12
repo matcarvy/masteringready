@@ -258,10 +258,9 @@ export default function SubscriptionPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id])
 
-  // Handle checkout
+  // Handle checkout (uses session from context, not stale singleton)
   const handleCheckout = async (productType: 'pro_monthly' | 'single' | 'addon') => {
     try {
-      const { data: { session } } = await supabase.auth.getSession()
       const response = await fetch('/api/checkout', {
         method: 'POST',
         headers: {
@@ -281,10 +280,9 @@ export default function SubscriptionPage() {
     }
   }
 
-  // Handle manage subscription (Stripe portal)
+  // Handle manage subscription (uses session from context, not stale singleton)
   const handleManageSubscription = async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession()
       const response = await fetch('/api/customer-portal', {
         method: 'POST',
         headers: {
