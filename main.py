@@ -49,6 +49,7 @@ import sys
 import uuid
 import asyncio
 import functools
+import gc
 import unicodedata
 import urllib.parse
 from typing import Optional, Dict, Any
@@ -164,6 +165,9 @@ except ImportError as e:
 jobs: Dict[str, dict] = {}
 jobs_lock = asyncio.Lock()
 
+# Semaphore to limit concurrent analyses to 1 (512MB Render Starter tier)
+analysis_semaphore = asyncio.Semaphore(1)
+
 async def cleanup_old_jobs():
     """Remove jobs older than 10 minutes"""
     async with jobs_lock:
@@ -175,6 +179,8 @@ async def cleanup_old_jobs():
         for job_id in expired:
             logger.info(f"🗑️ Cleaning up expired job: {job_id}")
             del jobs[job_id]
+        if expired:
+            gc.collect()
 
 # Create FastAPI app
 app = FastAPI(
@@ -185,9 +191,21 @@ app = FastAPI(
     redoc_url=None
 )
 
+async def periodic_job_cleanup():
+    """Background task: clean expired jobs every 5 minutes."""
+    while True:
+        await asyncio.sleep(300)
+        try:
+            await cleanup_old_jobs()
+        except Exception as e:
+            logger.warning(f"⚠️ Periodic cleanup error: {e}")
+
 @app.on_event("startup")
 async def startup_validation():
     """Validate critical dependencies are available at startup."""
+    # Start periodic job cleanup (every 5 minutes)
+    asyncio.create_task(periodic_job_cleanup())
+
     # Check ffmpeg (required for AAC/M4A conversion)
     try:
         import imageio_ffmpeg
@@ -680,6 +698,11 @@ async def start_analysis(
     
     # Start analysis in background asyncio task
     async def analyze_in_background():
+        # Serialize analyses: only 1 at a time on 512MB Render Starter
+        async with analysis_semaphore:
+            await _run_analysis()
+
+    async def _run_analysis():
         # Capture metadata from outer scope
         metadata_from_frontend = original_metadata_from_frontend
         logger.info(f"🔍 [{job_id}] Captured frontend metadata: {metadata_from_frontend}")
@@ -1014,6 +1037,8 @@ async def start_analysis(
                     logger.info(f"🗑️ [{job_id}] Converted WAV cleaned up: {wav_converted}")
                 except Exception:
                     pass
+            # Force garbage collection after analysis to free numpy arrays
+            gc.collect()
 
     # Start asyncio task (non-blocking)
     asyncio.create_task(analyze_in_background())

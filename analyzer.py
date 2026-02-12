@@ -265,6 +265,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import gc
 import json
 import math
 import sys
@@ -4817,6 +4818,7 @@ def analyze_file_chunked(
         
         # Load only this chunk (STEREO)
         # Using res_type='kaiser_fast' for faster resampling (requires resampy)
+        y = None
         y, _ = librosa.load(
             str(path),
             sr=sr,
@@ -4825,7 +4827,7 @@ def analyze_file_chunked(
             mono=False,  # ← CRITICAL: Keep stereo
             res_type='kaiser_fast'  # ← Faster resampling for chunked analysis
         )
-        
+
         # Ensure correct format (channels, samples)
         if y.ndim == 1:
             # Mono file - convert to pseudo-stereo
@@ -4833,9 +4835,9 @@ def analyze_file_chunked(
         elif y.shape[0] > y.shape[1]:
             # Transpose if needed
             y = y.T
-        
+
         print(f"   Loaded: {y.shape[0]} channels, {y.shape[1]} samples (~{y.nbytes / (1024*1024):.1f} MB)")
-        
+
         # Calculate metrics for this chunk
         try:
             # Peak
@@ -5099,7 +5101,12 @@ def analyze_file_chunked(
             results['lr_balances'].append(0.0)
             results['ms_ratios'].append(0.3)
             results['chunk_durations'].append(actual_chunk_duration)
-    
+        finally:
+            # Free numpy arrays between chunks to keep memory low on 512MB Render Starter
+            del y
+            if (i + 1) % 3 == 0 or i == num_chunks - 1:
+                gc.collect()
+
     print("Aggregating results...")
     
     # 4. Aggregate results using weighted average
