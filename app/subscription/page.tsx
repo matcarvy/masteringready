@@ -961,7 +961,8 @@ export default function SubscriptionPage() {
             alignItems: 'center',
             justifyContent: 'center',
             zIndex: 110,
-            padding: '1.5rem'
+            padding: '1.5rem',
+            overscrollBehavior: 'contain'
           }}
         >
           <div
@@ -972,6 +973,8 @@ export default function SubscriptionPage() {
               padding: '2rem',
               maxWidth: '440px',
               width: '100%',
+              maxHeight: '90vh',
+              overflowY: 'auto',
               boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
             }}
           >

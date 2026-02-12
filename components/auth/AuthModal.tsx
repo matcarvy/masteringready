@@ -302,7 +302,8 @@ export function AuthModal({ isOpen, onClose, onSuccess, lang }: AuthModalProps) 
           background: 'rgba(0, 0, 0, 0.5)',
           backdropFilter: 'blur(4px)',
           zIndex: 100,
-          animation: 'fadeIn 0.2s ease-out'
+          animation: 'fadeIn 0.2s ease-out',
+          overscrollBehavior: 'contain'
         }}
       />
 

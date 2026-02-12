@@ -7,7 +7,7 @@ import { UserMenu, useAuth, AuthModal } from '@/components/auth'
 import { analyzeFile, checkIpLimit, IpCheckResult } from '@/lib/api'
 import { startAnalysisPolling, getAnalysisStatus } from '@/lib/api'
 import { compressAudioFile, parseFileHeader } from '@/lib/audio-compression'
-import { supabase, checkCanAnalyze, AnalysisStatus } from '@/lib/supabase'
+import { supabase, createFreshQueryClient, checkCanAnalyze, AnalysisStatus } from '@/lib/supabase'
 import { useGeo } from '@/lib/useGeo'
 import { getAllPricesForCountry } from '@/lib/pricing-config'
 import { detectLanguage, setLanguageCookie } from '@/lib/language'
@@ -37,7 +37,7 @@ function mapVerdictToEnum(verdict: string): 'ready' | 'almost_ready' | 'needs_wo
 // ============================================================================
 // Helper: Save analysis directly to database for logged-in users
 // ============================================================================
-async function saveAnalysisToDatabase(userId: string, analysis: any, fileObj?: File, countryCode?: string, isTestAnalysis?: boolean) {
+async function saveAnalysisToDatabase(userId: string, analysis: any, fileObj?: File, countryCode?: string, isTestAnalysis?: boolean, sessionTokens?: { access_token: string; refresh_token: string }) {
   console.log('[SaveAnalysis] Saving for logged-in user:', userId, 'file:', analysis.filename)
   console.log('[SaveAnalysis] API response keys:', Object.keys(analysis).join(', '))
   console.log('[SaveAnalysis] Report fields:', {
@@ -46,6 +46,14 @@ async function saveAnalysisToDatabase(userId: string, analysis: any, fileObj?: F
     report_write: analysis.report_write ? `${analysis.report_write.substring(0, 50)}...` : null,
     report_visual: analysis.report_visual ? `${analysis.report_visual.substring(0, 50)}...` : null
   })
+
+  // Use a fresh client to avoid stale singleton state after analysis
+  // (analysis makes multiple auth/quota checks that can leave the singleton locked)
+  let client = supabase
+  if (sessionTokens) {
+    const fresh = await createFreshQueryClient(sessionTokens)
+    if (fresh) client = fresh
+  }
 
   const mappedVerdict = mapVerdictToEnum(analysis.verdict)
   const reportShort = analysis.report_short || analysis.report || null
@@ -65,7 +73,7 @@ async function saveAnalysisToDatabase(userId: string, analysis: any, fileObj?: F
   // Run INSERT + increment counter in PARALLEL (both are independent operations)
   // This halves save time and frees Supabase client faster for dashboard navigation
   const [insertResult, incrementResult] = await Promise.all([
-    supabase
+    client
       .from('analyses')
       .insert({
         user_id: userId,
@@ -106,7 +114,7 @@ async function saveAnalysisToDatabase(userId: string, analysis: any, fileObj?: F
         api_request_id: analysis.api_request_id || null
       })
       .select(),
-    supabase.rpc('increment_analysis_count', { p_user_id: userId })
+    client.rpc('increment_analysis_count', { p_user_id: userId })
   ])
 
   if (insertResult.error) {
@@ -250,7 +258,7 @@ function InterpretativeSection({ title, interpretation, recommendation, metrics,
 
 function Home() {
   // Auth state - check if user is logged in
-  const { user, loading: authLoading, isAdmin, savePendingAnalysis, pendingAnalysisQuotaExceeded, clearPendingAnalysisQuotaExceeded, pendingAnalysisSaved, clearPendingAnalysisSaved } = useAuth()
+  const { user, session, loading: authLoading, isAdmin, savePendingAnalysis, pendingAnalysisQuotaExceeded, clearPendingAnalysisQuotaExceeded, pendingAnalysisSaved, clearPendingAnalysisSaved } = useAuth()
   const isLoggedIn = !!user
 
   const [file, setFile] = useState<File | null>(null)
@@ -891,7 +899,7 @@ const handleAnalyze = async () => {
           lang,
           strict,
           api_request_id: requestIdRef.current || null
-        }, file, geo?.countryCode, isAdmin)
+        }, file, geo?.countryCode, isAdmin, session ? { access_token: session.access_token, refresh_token: session.refresh_token } : undefined)
           .then(savedData => {
             setSavedAnalysisId(savedData?.[0]?.id || null)
             console.log('[Analysis] Saved to database successfully')
@@ -3859,6 +3867,8 @@ by Matías Carvajal
               width: 'calc(100% - 1rem)',
               boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
               position: 'relative',
+              maxHeight: '90vh',
+              overflowY: 'auto',
               animation: 'modalContentIn 0.25s cubic-bezier(0.16, 1, 0.3, 1)'
             }}
           >
@@ -4072,17 +4082,17 @@ by Matías Carvajal
                 right: '1rem',
                 background: 'none',
                 border: 'none',
-                fontSize: '1.5rem',
                 cursor: 'pointer',
                 color: '#6b7280',
-                width: '2rem',
-                height: '2rem',
+                width: '2.75rem',
+                height: '2.75rem',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 borderRadius: '0.5rem',
                 transition: 'all 0.2s'
               }}
+              aria-label={lang === 'es' ? 'Cerrar' : 'Close'}
               onMouseEnter={(e) => {
                 e.currentTarget.style.background = '#f3f4f6'
                 e.currentTarget.style.color = '#111827'
@@ -4092,7 +4102,7 @@ by Matías Carvajal
                 e.currentTarget.style.color = '#6b7280'
               }}
             >
-              ✕
+              <X size={20} />
             </button>
 
             {/* Header */}
@@ -4407,6 +4417,8 @@ by Matías Carvajal
             maxWidth: '420px',
             width: 'calc(100% - 1rem)',
             position: 'relative',
+            maxHeight: '90vh',
+            overflowY: 'auto',
             boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
             animation: 'modalContentIn 0.25s cubic-bezier(0.16, 1, 0.3, 1)'
           }}>
@@ -4569,6 +4581,8 @@ by Matías Carvajal
             maxWidth: '420px',
             width: 'calc(100% - 1rem)',
             position: 'relative',
+            maxHeight: '90vh',
+            overflowY: 'auto',
             boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
             animation: 'modalContentIn 0.25s cubic-bezier(0.16, 1, 0.3, 1)'
           }}>
@@ -4732,6 +4746,8 @@ by Matías Carvajal
             maxWidth: '420px',
             width: 'calc(100% - 1rem)',
             position: 'relative',
+            maxHeight: '90vh',
+            overflowY: 'auto',
             boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
             animation: 'modalContentIn 0.25s cubic-bezier(0.16, 1, 0.3, 1)'
           }}>
@@ -4897,6 +4913,8 @@ by Matías Carvajal
             maxWidth: '420px',
             width: 'calc(100% - 1rem)',
             position: 'relative',
+            maxHeight: '90vh',
+            overflowY: 'auto',
             boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
             animation: 'modalContentIn 0.25s cubic-bezier(0.16, 1, 0.3, 1)'
           }}>

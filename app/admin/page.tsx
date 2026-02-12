@@ -705,7 +705,7 @@ function AdminLoginForm({ lang }: { lang: 'es' | 'en' }) {
 // ============================================================================
 
 export default function AdminPage() {
-  const { user, loading: authLoading } = useAuth()
+  const { user, session, loading: authLoading } = useAuth()
 
   // UI state
   const [lang, setLang] = useState<'es' | 'en'>('es')
@@ -794,11 +794,10 @@ export default function AdminPage() {
     }
 
     checkAdmin()
-  }, [user, authLoading])
+  }, [user?.id, authLoading])
 
-  // Helper: get auth headers for API calls
-  const getAuthHeaders = useCallback(async (): Promise<Record<string, string>> => {
-    const { data: { session } } = await supabase.auth.getSession()
+  // Helper: get auth headers for API calls (uses session from context, not singleton)
+  const getAuthHeaders = useCallback((): Record<string, string> => {
     if (session?.access_token) {
       return {
         'Authorization': `Bearer ${session.access_token}`,
@@ -806,13 +805,13 @@ export default function AdminPage() {
       }
     }
     return { 'Content-Type': 'application/json' }
-  }, [])
+  }, [session?.access_token])
 
   // Fetch stats
   const fetchStats = useCallback(async () => {
     setStatsLoading(true)
     try {
-      const headers = await getAuthHeaders()
+      const headers = getAuthHeaders()
       const res = await fetch('/api/admin/stats', { headers })
       if (res.ok) {
         const data = await res.json()
@@ -880,7 +879,7 @@ export default function AdminPage() {
       setFetchError(t.fetchError)
     }
     setUsersLoading(false)
-  }, [userSearch, userSort])
+  }, [userSearch, userSort.field, userSort.asc])
 
   // Fetch analyses for a specific user
   const fetchUserAnalyses = useCallback(async (userId: string) => {
@@ -990,7 +989,7 @@ export default function AdminPage() {
   const fetchLeads = useCallback(async () => {
     setLeadsLoading(true)
     try {
-      const headers = await getAuthHeaders()
+      const headers = getAuthHeaders()
       const res = await fetch('/api/admin/leads', { headers })
       if (res.ok) {
         const data = await res.json()
@@ -1035,7 +1034,7 @@ export default function AdminPage() {
       const timer = setTimeout(() => fetchUsers(), 300)
       return () => clearTimeout(timer)
     }
-  }, [userSearch, userSort, isAdmin, activeTab, fetchUsers])
+  }, [userSearch, userSort.field, userSort.asc, isAdmin, activeTab, fetchUsers])
 
   // Refetch feedback when filter changes
   useEffect(() => {
@@ -1044,10 +1043,20 @@ export default function AdminPage() {
     }
   }, [feedbackFilter, isAdmin, activeTab, fetchFeedback])
 
+  // Safety timeout — if initial fetch hangs (stale connections from SPA navigation), auto-reload
+  useEffect(() => {
+    if (!statsLoading) return
+    const timeout = setTimeout(() => {
+      console.warn('[Admin] Fetch stalled — reloading page')
+      window.location.reload()
+    }, 8000)
+    return () => clearTimeout(timeout)
+  }, [statsLoading])
+
   // Handle feedback update
   const handleFeedbackUpdate = async (feedbackId: string, updates: Record<string, unknown>) => {
     try {
-      const headers = await getAuthHeaders()
+      const headers = getAuthHeaders()
       const res = await fetch('/api/admin/feedback', {
         method: 'PATCH',
         headers,

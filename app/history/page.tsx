@@ -801,7 +801,8 @@ export default function HistoryPage() {
           alignItems: 'center',
           justifyContent: 'center',
           zIndex: 100,
-          padding: '1rem'
+          padding: '1rem',
+          overscrollBehavior: 'contain'
         }}>
           <div style={{
             background: 'white',

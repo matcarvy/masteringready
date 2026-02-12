@@ -1912,6 +1912,8 @@ function DashboardContent() {
             maxWidth: '420px',
             width: '100%',
             position: 'relative',
+            maxHeight: '90vh',
+            overflowY: 'auto',
             boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
             animation: 'modalContentIn 0.25s cubic-bezier(0.16, 1, 0.3, 1)'
           }}>
@@ -2104,6 +2106,8 @@ function DashboardContent() {
               width: '100%',
               boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
               position: 'relative',
+              maxHeight: '90vh',
+              overflowY: 'auto',
               animation: 'modalContentIn 0.25s cubic-bezier(0.16, 1, 0.3, 1)'
             }}
           >

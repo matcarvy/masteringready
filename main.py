@@ -1052,7 +1052,7 @@ async def get_analysis_status(job_id: str, lang: str = "es"):
         "job_id": job_id,
         "status": job['status'],
         "progress": job['progress'],
-        "filename": job['filename']
+        "filename": job['filename'].replace('_compressed', '') if job.get('filename') else job.get('filename')
     }
     
     if job['status'] == 'complete':
