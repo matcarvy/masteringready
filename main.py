@@ -885,7 +885,7 @@ async def start_analysis(
                         Path(analysis_path),
                         lang=lang,
                         strict=strict,
-                        chunk_duration=45.0,  # 45s chunks — balance between speed and memory (512MB limit)
+                        chunk_duration=30.0,  # 30s optimal for 512MB Render (larger chunks are superlinearly slower)
                         progress_callback=update_progress,  # ← Pass callback
                         original_metadata=original_metadata  # ← Pass original metadata
                     )
