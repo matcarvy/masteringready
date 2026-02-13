@@ -885,7 +885,7 @@ async def start_analysis(
                         Path(analysis_path),
                         lang=lang,
                         strict=strict,
-                        chunk_duration=60.0,  # 60 second chunks — halves overhead vs 30s
+                        chunk_duration=45.0,  # 45s chunks — balance between speed and memory (512MB limit)
                         progress_callback=update_progress,  # ← Pass callback
                         original_metadata=original_metadata  # ← Pass original metadata
                     )
