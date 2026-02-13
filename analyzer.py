@@ -7487,7 +7487,7 @@ def generate_complete_pdf(
         )
         
         # Header
-        story.append(Paragraph("MASTERINGREADY", title_style))
+        story.append(Paragraph("MASTERING READY", title_style))
         story.append(Paragraph(
             "Reporte Completo de Análisis" if lang == 'es' else "Complete Analysis Report",
             header_subtitle_style

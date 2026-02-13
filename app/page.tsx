@@ -733,14 +733,17 @@ const handleAnalyze = async () => {
 
     // Always capture original metadata from file header (before any compression)
     // This ensures correct bit depth/sample rate even if backend reads compressed file
+    // Wrapped in 5s timeout — decodeAudioData can hang on repeat analyses in some browsers
     try {
       const headerBuffer = await file.slice(0, 1024).arrayBuffer()
       const headerInfo = parseFileHeader(headerBuffer, file.name)
       if (headerInfo.sampleRate || headerInfo.bitDepth > 16) {
-        // Create a temporary AudioContext just to get duration
         const tempCtx = new (window.AudioContext || (window as any).webkitAudioContext)()
         const fullBuffer = await file.arrayBuffer()
-        const decoded = await tempCtx.decodeAudioData(fullBuffer)
+        const decoded = await Promise.race([
+          tempCtx.decodeAudioData(fullBuffer),
+          new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000))
+        ])
         originalMetadata = {
           sampleRate: headerInfo.sampleRate || decoded.sampleRate,
           bitDepth: headerInfo.bitDepth,
@@ -752,7 +755,7 @@ const handleAnalyze = async () => {
         tempCtx.close()
       }
     } catch {
-      // Header parsing failed — backend will read from file directly
+      // Header parsing failed or timed out — backend will read from file directly
     }
 
     // Compress files over 50MB to prevent Render OOM (512MB RAM limit)
