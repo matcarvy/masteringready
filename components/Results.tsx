@@ -241,20 +241,8 @@ export default function Results({ data, onReset, lang: parentLang }: ResultsProp
 
       {/* CTA for Mastering Service - Dynamic with WhatsApp */}
       {(() => {
-        // Debug logging
-        console.log('🔍 CTA Debug:', {
-          has_cta_message: !!data.cta_message,
-          has_cta_button: !!data.cta_button,
-          has_cta_object: !!data.cta,
-          cta_message_value: data.cta_message,
-          cta_button_value: data.cta_button,
-          cta_object: data.cta,
-          full_data_keys: Object.keys(data)
-        })
-        
         const shouldShow = (data.cta_message && data.cta_button) || (data.cta && data.cta.message)
-        console.log('🔍 Should show CTA:', shouldShow)
-        
+
         return shouldShow ? (
           <div className="bg-gradient-purple text-white rounded-lg p-4 sm:p-6">
             <div className="whitespace-pre-line mb-4 text-base sm:text-lg leading-relaxed">

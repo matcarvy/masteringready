@@ -184,7 +184,6 @@ export async function detectCountry(forceRefresh = false): Promise<GeoData> {
   if (!forceRefresh) {
     const cached = getCachedGeo()
     if (cached) {
-      console.log('[Geo] Using cached:', cached.countryCode, cached.currency)
       return cached
     }
   }
@@ -194,12 +193,10 @@ export async function detectCountry(forceRefresh = false): Promise<GeoData> {
 
   // Method 1: Vercel edge header (fast, reliable on all devices)
   countryCode = await fetchFromVercelGeo()
-  console.log('[Geo] Vercel header detected country:', countryCode)
 
   // Method 2: ipinfo.io fallback (for local dev or if Vercel header missing)
   if (!countryCode) {
     countryCode = await fetchFromIpInfo()
-    console.log('[Geo] ipinfo.io fallback detected country:', countryCode)
   }
 
   // Fallback to US if detection fails
@@ -210,7 +207,6 @@ export async function detectCountry(forceRefresh = false): Promise<GeoData> {
 
   // Get pricing data for this country
   const pricing = await getRegionalPricing(countryCode)
-  console.log('[Geo] Regional pricing for', countryCode, ':', pricing)
 
   const geoData: GeoData = {
     countryCode,
@@ -223,7 +219,6 @@ export async function detectCountry(forceRefresh = false): Promise<GeoData> {
 
   // Cache the result
   setCachedGeo(geoData)
-  console.log('[Geo] Final geo data:', geoData)
 
   return geoData
 }

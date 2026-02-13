@@ -157,6 +157,31 @@ type StatusFilter = 'all' | 'ready' | 'needs_work' | 'review'
 const PAGE_SIZE = 20
 
 // ============================================================================
+// HELPER: Score-based verdict (matches analyzer score_report exactly)
+// ============================================================================
+
+function scoreToVerdictLabel(score: number, lang: 'es' | 'en'): string {
+  if (lang === 'es') {
+    if (score >= 95) return '✅ Margen óptimo para mastering'
+    if (score >= 85) return '✅ Lista para mastering'
+    if (score >= 75) return '⚠️ Margen suficiente (revisar sugerencias)'
+    if (score >= 60) return '⚠️ Margen reducido - revisar antes de mastering'
+    if (score >= 40) return '⚠️ Margen limitado - ajustes recomendados'
+    if (score >= 20) return '❌ Margen comprometido para mastering'
+    if (score >= 5) return '❌ Requiere revisión'
+    return '❌ Sin margen para procesamiento adicional'
+  }
+  if (score >= 95) return '✅ Optimal margin for mastering'
+  if (score >= 85) return '✅ Ready for mastering'
+  if (score >= 75) return '⚠️ Sufficient margin (review suggestions)'
+  if (score >= 60) return '⚠️ Reduced margin - review before mastering'
+  if (score >= 40) return '⚠️ Limited margin - adjustments recommended'
+  if (score >= 20) return '❌ Compromised margin for mastering'
+  if (score >= 5) return '❌ Requires review'
+  return '❌ No margin for additional processing'
+}
+
+// ============================================================================
 // HELPER: Clean report text
 // ============================================================================
 
@@ -360,7 +385,6 @@ export default function HistoryPage() {
   useEffect(() => {
     if (!loading) return
     const timeout = setTimeout(() => {
-      console.warn('[History] Fetch stalled — reloading page')
       window.location.reload()
     }, 8000)
     return () => clearTimeout(timeout)
@@ -723,7 +747,7 @@ export default function HistoryPage() {
                               color: getVerdictColor(analysis.verdict),
                               fontWeight: '500'
                             }}>
-                              {t.verdicts[analysis.verdict as keyof typeof t.verdicts]}
+                              {scoreToVerdictLabel(analysis.score, lang)}
                             </span>
                             <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                               <Calendar size={12} />
@@ -902,7 +926,7 @@ export default function HistoryPage() {
                   color: getVerdictColor(selectedAnalysis.verdict),
                   marginBottom: '0.25rem'
                 }}>
-                  {t.verdicts[selectedAnalysis.verdict as keyof typeof t.verdicts]}
+                  {scoreToVerdictLabel(selectedAnalysis.score, lang)}
                 </p>
                 <p style={{ fontSize: '0.875rem', color: '#6b7280' }}>
                   {t.score}: {selectedAnalysis.score}/100

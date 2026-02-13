@@ -48,20 +48,32 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
  * Use this in pages that navigate from the analyzer — the shared singleton
  * can have stale internal state (auth locks, pending requests) that causes
  * queries to hang on SPA navigation.
+ *
+ * Cached per access_token to prevent Multiple GoTrueClient instances.
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let _cachedFreshClient: any = null
+let _cachedAccessToken: string | null = null
+
 export async function createFreshQueryClient(sessionTokens?: { access_token: string; refresh_token: string }) {
   let tokens = sessionTokens
   if (!tokens) {
-    // Fallback: read from shared singleton (backward compat for callers that don't have session)
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) return null
     tokens = { access_token: session.access_token, refresh_token: session.refresh_token }
+  }
+
+  // Reuse cached client if same access_token (prevents GoTrueClient accumulation)
+  if (_cachedFreshClient && _cachedAccessToken === tokens.access_token) {
+    return _cachedFreshClient
   }
 
   const fresh = createClient(supabaseUrl, supabaseAnonKey, {
     auth: { persistSession: false, autoRefreshToken: false }
   })
   await fresh.auth.setSession(tokens)
+  _cachedFreshClient = fresh
+  _cachedAccessToken = tokens.access_token
   return fresh
 }
 

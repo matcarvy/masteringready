@@ -7500,24 +7500,43 @@ def generate_complete_pdf(
             section_style
         ))
         
-        # Map verdict enum to localized label (DB stores short enum, analyzer stores full text)
+        # Derive verdict from score (matches analyzer score_report exactly)
         raw_verdict = report.get('verdict', 'N/A')
-        VERDICT_LABELS = {
-            'es': {
-                'ready': 'Listo para mastering',
-                'almost_ready': 'Casi listo',
-                'needs_work': 'Necesita trabajo',
-                'critical': 'Margen comprometido',
-            },
-            'en': {
-                'ready': 'Ready for mastering',
-                'almost_ready': 'Almost ready',
-                'needs_work': 'Needs work',
-                'critical': 'Compromised margin',
-            }
-        }
-        verdict_labels = VERDICT_LABELS.get(lang, VERDICT_LABELS['en'])
-        verdict_text = verdict_labels.get(raw_verdict, raw_verdict)
+        pdf_score = report.get('score', 0)
+        if lang == 'es':
+            if pdf_score >= 95:
+                verdict_text = "Margen óptimo para mastering"
+            elif pdf_score >= 85:
+                verdict_text = "Lista para mastering"
+            elif pdf_score >= 75:
+                verdict_text = "Margen suficiente (revisar sugerencias)"
+            elif pdf_score >= 60:
+                verdict_text = "Margen reducido - revisar antes de mastering"
+            elif pdf_score >= 40:
+                verdict_text = "Margen limitado - ajustes recomendados"
+            elif pdf_score >= 20:
+                verdict_text = "Margen comprometido para mastering"
+            elif pdf_score >= 5:
+                verdict_text = "Requiere revisión"
+            else:
+                verdict_text = "Sin margen para procesamiento adicional"
+        else:
+            if pdf_score >= 95:
+                verdict_text = "Optimal margin for mastering"
+            elif pdf_score >= 85:
+                verdict_text = "Ready for mastering"
+            elif pdf_score >= 75:
+                verdict_text = "Sufficient margin (review suggestions)"
+            elif pdf_score >= 60:
+                verdict_text = "Reduced margin - review before mastering"
+            elif pdf_score >= 40:
+                verdict_text = "Limited margin - adjustments recommended"
+            elif pdf_score >= 20:
+                verdict_text = "Compromised margin for mastering"
+            elif pdf_score >= 5:
+                verdict_text = "Requires review"
+            else:
+                verdict_text = "No margin for additional processing"
         verdict_text = clean_text_for_pdf(verdict_text).strip()
         
         # Clean filename - handle Unicode characters like "Paraíso"

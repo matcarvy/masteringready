@@ -66,7 +66,6 @@ async function savePendingAnalysisForUser(userId: string, userIsAdmin: boolean =
   try {
     const pendingData = localStorage.getItem('pendingAnalysis')
     if (!pendingData) {
-      console.log('[SaveAnalysis] No pending analysis in localStorage')
       return 'no_pending'
     }
 
@@ -76,22 +75,8 @@ async function savePendingAnalysisForUser(userId: string, userIsAdmin: boolean =
     localStorage.removeItem('pendingAnalysis')
 
     const analysis = JSON.parse(pendingData)
-    console.log('[SaveAnalysis] Found pending analysis (claimed from localStorage):', {
-      userId,
-      filename: analysis.filename,
-      score: analysis.score,
-      verdict: analysis.verdict,
-      hasMetrics: !!analysis.metrics,
-      hasInterpretations: !!analysis.interpretations,
-      hasReportShort: !!analysis.report_short,
-      hasReportWrite: !!analysis.report_write,
-      hasReportVisual: !!analysis.report_visual,
-      hasReport: !!analysis.report,
-      allKeys: Object.keys(analysis).join(', ')
-    })
 
     // QUOTA CHECK: Verify user has remaining analyses before saving
-    console.log('[SaveAnalysis] Checking user quota before saving...')
     const { data: quotaData, error: quotaError } = await supabase.rpc('can_user_analyze', {
       p_user_id: userId
     })
@@ -103,15 +88,11 @@ async function savePendingAnalysisForUser(userId: string, userIsAdmin: boolean =
 
     const quotaResult = Array.isArray(quotaData) ? quotaData[0] : quotaData
     if (!quotaResult || !quotaResult.can_analyze) {
-      console.log('[SaveAnalysis] User has no quota remaining:', quotaResult?.reason)
       return 'quota_exceeded'
     }
 
-    console.log('[SaveAnalysis] Quota check passed:', quotaResult.reason)
-
     // Prepare the insert data
     const mappedVerdict = scoreToVerdictEnum(analysis.score)
-    console.log('[SaveAnalysis] Mapped verdict from score:', analysis.score, '->', mappedVerdict)
 
     // Handle report fields - API might return 'report' or specific fields
     const reportShort = analysis.report_short || analysis.report || null
@@ -161,14 +142,6 @@ async function savePendingAnalysisForUser(userId: string, userIsAdmin: boolean =
       is_test_analysis: userIsAdmin
     }
 
-    console.log('[SaveAnalysis] Report fields:', {
-      report_short: reportShort ? reportShort.substring(0, 50) + '...' : null,
-      report_write: reportWrite ? reportWrite.substring(0, 50) + '...' : null,
-      report_visual: reportVisual ? reportVisual.substring(0, 50) + '...' : null
-    })
-
-    console.log('[SaveAnalysis] Inserting to analyses table...')
-
     // Save to analyses table
     const { data: insertedData, error } = await supabase
       .from('analyses')
@@ -180,17 +153,13 @@ async function savePendingAnalysisForUser(userId: string, userIsAdmin: boolean =
       return 'error'
     }
 
-    console.log('[SaveAnalysis] Insert successful:', insertedData)
-
     // Update profile counters
-    console.log('[SaveAnalysis] Calling increment_analysis_count RPC...')
     const { data: rpcData, error: rpcError } = await supabase.rpc('increment_analysis_count', { p_user_id: userId })
 
     if (rpcError) {
       console.error('[SaveAnalysis] RPC ERROR:', rpcError.message, rpcError.details)
 
       // Fallback: Direct profile update if RPC doesn't exist
-      console.log('[SaveAnalysis] Trying direct profile update as fallback...')
 
       // First get current values
       const { data: profile, error: fetchError } = await supabase
@@ -200,7 +169,7 @@ async function savePendingAnalysisForUser(userId: string, userIsAdmin: boolean =
         .single()
 
       if (fetchError) {
-        console.error('[SaveAnalysis] Could not fetch profile:', fetchError.message)
+        console.error('[SaveAnalysis] Profile fetch error:', fetchError.message)
       } else if (profile) {
         const { error: updateError } = await supabase
           .from('profiles')
@@ -214,15 +183,10 @@ async function savePendingAnalysisForUser(userId: string, userIsAdmin: boolean =
 
         if (updateError) {
           console.error('[SaveAnalysis] Profile update failed:', updateError.message)
-        } else {
-          console.log('[SaveAnalysis] Profile updated successfully via fallback')
         }
       }
-    } else {
-      console.log('[SaveAnalysis] RPC success:', rpcData)
     }
 
-    console.log('[SaveAnalysis] Complete!')
     return 'saved'
 
   } catch (err) {
@@ -244,8 +208,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   // Exposed function to save pending analysis (can be called from components)
   const savePendingAnalysis = async (): Promise<SaveAnalysisResult> => {
-    console.log('savePendingAnalysis called, current user state:', user?.id)
-
     // Small delay to ensure auth state is settled after login
     await new Promise(resolve => setTimeout(resolve, 500))
 
@@ -258,9 +220,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
 
     if (freshUser) {
-      console.log('Saving analysis for fresh user:', freshUser.id)
       const result = await savePendingAnalysisForUser(freshUser.id, isAdmin)
-      console.log('Analysis save result:', result)
 
       if (result === 'saved') {
         setPendingAnalysisSaved(true)
@@ -270,7 +230,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       return result
     } else {
-      console.error('No user available to save pending analysis')
       return 'error'
     }
   }
@@ -362,7 +321,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
               .single()
 
             if (deletedRecord && deletedRecord.analyses_lifetime_used > 0) {
-              console.log('[AntiAbuse] Carrying over usage for re-registered email:', u.email, deletedRecord)
               await supabase
                 .from('profiles')
                 .update({
@@ -412,7 +370,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
                 .eq('converted_to_user', false)
                 .then(() => {
                   sessionStorage.removeItem('mr_anon_session')
-                  console.log('[Anonymous] Linked to user:', u.id)
                 })
             }
           } catch {

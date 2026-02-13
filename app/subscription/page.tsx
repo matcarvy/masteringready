@@ -350,7 +350,6 @@ export default function SubscriptionPage() {
   useEffect(() => {
     if (!loading) return
     const timeout = setTimeout(() => {
-      console.warn('[Subscription] Fetch stalled — reloading page')
       window.location.reload()
     }, 8000)
     return () => clearTimeout(timeout)

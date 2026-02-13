@@ -27,15 +27,6 @@ function scoreToVerdictEnum(score: number): 'ready' | 'almost_ready' | 'needs_wo
 // Helper: Save analysis directly to database for logged-in users
 // ============================================================================
 async function saveAnalysisToDatabase(userId: string, analysis: any, fileObj?: File, countryCode?: string, isTestAnalysis?: boolean, sessionTokens?: { access_token: string; refresh_token: string }) {
-  console.log('[SaveAnalysis] Saving for logged-in user:', userId, 'file:', analysis.filename)
-  console.log('[SaveAnalysis] API response keys:', Object.keys(analysis).join(', '))
-  console.log('[SaveAnalysis] Report fields:', {
-    report: analysis.report ? `${analysis.report.substring(0, 50)}...` : null,
-    report_short: analysis.report_short ? `${analysis.report_short.substring(0, 50)}...` : null,
-    report_write: analysis.report_write ? `${analysis.report_write.substring(0, 50)}...` : null,
-    report_visual: analysis.report_visual ? `${analysis.report_visual.substring(0, 50)}...` : null
-  })
-
   // Use a fresh client to avoid stale singleton state after analysis
   // (analysis makes multiple auth/quota checks that can leave the singleton locked)
   let client = supabase
@@ -110,9 +101,6 @@ async function saveAnalysisToDatabase(userId: string, analysis: any, fileObj?: F
     console.error('[SaveAnalysis] INSERT ERROR:', insertResult.error.message)
     throw insertResult.error
   }
-
-  console.log('[SaveAnalysis] Insert successful:', insertResult.data)
-  console.log('[SaveAnalysis] Analysis count incremented:', incrementResult.data)
 
   return insertResult.data
 }
@@ -523,7 +511,6 @@ function Home() {
       localStorage.removeItem('authModalFlow')
 
       if (result) {
-        console.log('[QuotaGuard] User logged in with pending results — clearing immediately')
         setResult(null)
         setIsUnlocking(false)
 
@@ -532,7 +519,6 @@ function Home() {
         checkCanAnalyze().then((status) => {
           setUserAnalysisStatus(status)
           if (!status.can_analyze) {
-            console.log('[QuotaGuard] No quota — showing FreeLimitModal')
             setShowFreeLimitModal(true)
           }
           // If can_analyze is true, AuthProvider's pendingAnalysisSaved signal
@@ -681,8 +667,7 @@ const handleAnalyze = async () => {
             return
           }
         }
-      } catch (ipError) {
-        console.warn('IP check failed, DENYING analysis:', ipError)
+      } catch {
         setLoading(false)
         setError(lang === 'es'
           ? 'No se pudo verificar el acceso. Intenta de nuevo en unos segundos.'
@@ -726,8 +711,7 @@ const handleAnalyze = async () => {
           setShowFreeLimitModal(true)
           return
         }
-      } catch (statusError) {
-        console.warn('User status check failed, DENYING analysis:', statusError)
+      } catch {
         setLoading(false)
         setError(lang === 'es'
           ? 'No se pudo verificar tu plan. Intenta de nuevo en unos segundos.'
@@ -871,7 +855,6 @@ const handleAnalyze = async () => {
           try {
             const quotaCheck = await checkCanAnalyze()
             if (!quotaCheck.can_analyze || quotaCheck.reason === 'ANONYMOUS') {
-              console.log('[Analysis] User quota exhausted at save time, blocking save + display:', quotaCheck.reason)
               setUserAnalysisStatus(quotaCheck)
               setShowFreeLimitModal(true)
               // Do NOT show results — analysis is lost
@@ -901,7 +884,6 @@ const handleAnalyze = async () => {
         }
         // Save to database — non-blocking so Supabase client is free for dashboard navigation.
         // SPA navigation does NOT kill JS promises, so the save completes in background.
-        console.log('[Analysis] Saving to database for logged-in user:', user.id)
         saveAnalysisToDatabase(user.id, {
           ...data,
           filename: file.name,
@@ -912,7 +894,6 @@ const handleAnalyze = async () => {
         }, file, geo?.countryCode, isAdmin, session ? { access_token: session.access_token, refresh_token: session.refresh_token } : undefined)
           .then(savedData => {
             setSavedAnalysisId(savedData?.[0]?.id || null)
-            console.log('[Analysis] Saved to database successfully')
           })
           .catch(saveErr => {
             console.error('[Analysis] Failed to save to database:', saveErr)
@@ -953,7 +934,7 @@ const handleAnalyze = async () => {
             user_agent: ua.substring(0, 500),
             device_type: deviceType
           }).then(() => {
-            console.log('[Anonymous] Analysis tracked')
+            // tracked
           })
         } catch {
           // Silently ignore tracking errors
@@ -1278,14 +1259,10 @@ ${new Date().toLocaleDateString()}
             : 'https://masteringready.onrender.com'
           const pdfUrl = `${backendUrl}/api/download/pdf`
 
-          console.log('[PDF Download] Requesting:', pdfUrl, 'request_id:', requestIdRef.current)
-
           const response = await fetch(pdfUrl, {
             method: 'POST',
             body: formData
           })
-
-          console.log('[PDF Download] Response status:', response.status)
 
           if (response.ok) {
             // PDF download successful
@@ -1308,8 +1285,6 @@ ${new Date().toLocaleDateString()}
         } catch (pdfError) {
           console.error('[PDF Download] Exception:', pdfError)
         }
-      } else {
-        console.warn('[PDF Download] No request_id available, falling back to TXT')
       }
       
       // Fallback to TXT download
@@ -1371,7 +1346,7 @@ by Matías Carvajal
   // Clean report text from decorative lines for better mobile display
   const cleanReportText = (text: string): string => {
     if (!text) return ''
-    
+
     return text
       // Remove song title header (already shown above)
       .replace(/^🎵\s*Sobre\s*"[^"]*"\s*\n*/i, '')
@@ -1379,22 +1354,32 @@ by Matías Carvajal
       // Remove score and verdict lines (already shown in header)
       .replace(/^Puntuación:\s*\d+\/100\s*\n*/im, '')
       .replace(/^Score:\s*\d+\/100\s*\n*/im, '')
+      .replace(/^Puntuación MR:\s*\d+\/100\s*\n*/im, '')
+      .replace(/^MR Score:\s*\d+\/100\s*\n*/im, '')
       .replace(/^Veredicto:\s*[^\n]+\s*\n*/im, '')
       .replace(/^Verdict:\s*[^\n]+\s*\n*/im, '')
-      // Remove ALL decorative lines (multiple patterns)
-      .replace(/[═─━]{3,}/g, '')              // Lines with 3+ chars (including ━)
-      .replace(/^[═─━\s]+$/gm, '')            // Lines that are ONLY decorative chars
-      .replace(/[═─━]{2,}/g, '')              // Lines with 2+ chars (more aggressive)
+      // Remove ALL decorative lines
+      .replace(/[═─━_]{3,}/g, '')
+      .replace(/^[═─━_\s]+$/gm, '')
+      .replace(/[═─━]{2,}/g, '')
       // Fix headers: Add emojis and proper casing (ONLY if not already present)
       .replace(/(?<!✅\s)ASPECTOS POSITIVOS/g, '✅ Aspectos Positivos')
       .replace(/(?<!✅\s)POSITIVE ASPECTS/g, '✅ Positive Aspects')
       .replace(/(?<!⚠️\s)ASPECTOS PARA REVISAR/g, '⚠️ Aspectos para Revisar')
       .replace(/(?<!⚠️\s)AREAS TO REVIEW/g, '⚠️ Areas to Review')
-      // Fix additional headers (ONLY if not already present)
+      .replace(/(?<!⚠️\s)ÁREAS A MEJORAR/g, '⚠️ Áreas a Mejorar')
+      .replace(/(?<!⚠️\s)AREAS TO IMPROVE/g, '⚠️ Areas to Improve')
+      // Fix additional headers
       .replace(/(?<!⚠️\s)SI ESTE ARCHIVO CORRESPONDE A UNA MEZCLA:/g, '⚠️ Si este archivo corresponde a una mezcla:')
       .replace(/(?<!⚠️\s)IF THIS FILE IS A MIX:/g, '⚠️ If this file is a mix:')
       .replace(/(?<!✅\s)SI ESTE ES TU MASTER FINAL:/g, '✅ Si este es tu master final:')
       .replace(/(?<!✅\s)IF THIS IS YOUR FINAL MASTER:/g, '✅ If this is your final master:')
+      // Convert plain checkmarks and arrows to styled ones
+      .replace(/^✓\s*/gm, '• ')
+      .replace(/^→\s*/gm, '• ')
+      // Add recommendation emoji if missing
+      .replace(/(?<!💡\s)Recomendación:/g, '💡 Recomendación:')
+      .replace(/(?<!💡\s)Recommendation:/g, '💡 Recommendation:')
       // Remove duplicate emojis
       .replace(/✅\s*✅/g, '✅')
       .replace(/⚠️\s*⚠️/g, '⚠️')

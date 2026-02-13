@@ -33,11 +33,10 @@ export async function GET() {
   try {
     const supabase = createClient(url, key)
 
-    // Simple query to keep Supabase active
+    // Simple query to keep Supabase active (no RLS dependency)
     const { data, error } = await supabase
       .from('profiles')
-      .select('id')
-      .limit(1)
+      .select('count', { count: 'exact', head: true })
 
     if (error) {
       return NextResponse.json({

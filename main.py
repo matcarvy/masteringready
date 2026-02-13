@@ -65,6 +65,12 @@ try:
 except ImportError:
     FFMPEG_EXE = "ffmpeg"  # Fall back to system ffmpeg
 
+# Derive ffprobe path from ffmpeg binary (same directory, different binary name)
+import os as _os
+_ffmpeg_dir = _os.path.dirname(FFMPEG_EXE)
+_ffprobe_candidate = _os.path.join(_ffmpeg_dir, "ffprobe") if _ffmpeg_dir else "ffprobe"
+FFPROBE_EXE = _ffprobe_candidate if _os.path.isfile(_ffprobe_candidate) else "ffprobe"
+
 def _free_memory():
     """Force garbage collection and return memory to OS (Linux malloc_trim)."""
     gc.collect()
@@ -236,6 +242,8 @@ app.add_middleware(
         "https://masteringready.com",
         "https://www.masteringready.com",
         "http://localhost:3000",
+        "https://stream.masteringready.com",
+        "http://localhost:3001",
     ],
     allow_origin_regex=r"https://masteringready.*\.vercel\.app",
     allow_credentials=True,
@@ -1404,6 +1412,464 @@ async def get_stats_history(days: int = 7):
             "success": False,
             "error": str(e)
         }
+
+
+# ============== STREAM READY ENDPOINTS ==============
+# Video creator analysis — extracts audio from video, runs MR analysis engine,
+# translates results into plain-language platform compliance (no technical jargon).
+
+# Stream Ready constants
+SR_MAX_FILE_SIZE = 100 * 1024 * 1024  # 100MB
+SR_MAX_DURATION = 180  # 3 minutes
+SR_ALLOWED_EXTENSIONS = {'.mp4', '.mov', '.webm'}
+
+# Platform compliance targets (video/social platforms only)
+SR_PLATFORMS = [
+    {"id": "youtube",         "name": "YouTube",         "icon": "\U0001f534", "lufs_target": -14.0, "tp_limit": -1.0},
+    {"id": "tiktok",          "name": "TikTok",          "icon": "\U0001f3b5", "lufs_target": -14.0, "tp_limit": -1.0},
+    {"id": "instagram_reels", "name": "Instagram Reels", "icon": "\U0001f4f7", "lufs_target": -14.0, "tp_limit": -1.0},
+    {"id": "facebook",        "name": "Facebook",        "icon": "\U0001f535", "lufs_target": -14.0, "tp_limit": -1.0},
+]
+
+# Bilingual Stream Ready error messages
+SR_ERROR_MSGS = {
+    'video_too_large': {
+        'es': 'El video es muy grande. El límite es 100MB.',
+        'en': 'Video file is too large. The limit is 100MB.',
+    },
+    'video_format_not_supported': {
+        'es': 'Este formato de video no es compatible. Por favor sube un archivo MP4, MOV o WebM.',
+        'en': 'This video format is not supported. Please upload an MP4, MOV or WebM file.',
+    },
+    'video_too_long': {
+        'es': 'El video es muy largo. El límite es 3 minutos.',
+        'en': 'Video is too long. The limit is 3 minutes.',
+    },
+    'no_audio': {
+        'es': 'No pudimos extraer audio de este video. Puede que no tenga pista de audio.',
+        'en': "We couldn't extract audio from this video. It may not have an audio track.",
+    },
+    'sr_server_error': {
+        'es': 'Algo salió mal al analizar tu video. Por favor intenta de nuevo.',
+        'en': 'Something went wrong analyzing your video. Please try again.',
+    },
+}
+
+
+def _sr_bilingual_error(category: str, lang: str) -> str:
+    """Return Stream Ready bilingual error message."""
+    msgs = SR_ERROR_MSGS.get(category, SR_ERROR_MSGS['sr_server_error'])
+    return msgs.get(lang, msgs['en'])
+
+
+def _sr_get_ffprobe_duration(video_path: str) -> float:
+    """Get video duration in seconds via ffprobe. Returns 0.0 on failure."""
+    try:
+        result = subprocess.run(
+            [FFPROBE_EXE, '-v', 'error', '-show_entries', 'format=duration',
+             '-of', 'default=noprint_wrappers=1:nokey=1', video_path],
+            capture_output=True, text=True, timeout=15
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            return float(result.stdout.strip())
+    except Exception:
+        pass
+
+    # Fallback: parse ffmpeg stderr Duration line
+    try:
+        result = subprocess.run(
+            [FFMPEG_EXE, '-i', video_path, '-f', 'null', '-'],
+            capture_output=True, text=True, timeout=15
+        )
+        duration_match = re.search(r'Duration:\s*(\d+):(\d+):(\d+)\.(\d+)', result.stderr)
+        if duration_match:
+            h, m, s, frac = duration_match.groups()
+            return int(h) * 3600 + int(m) * 60 + int(s) + int(frac) / 100
+    except Exception:
+        pass
+
+    return 0.0
+
+
+def _sr_extract_audio(video_path: str) -> str:
+    """Extract audio from video to WAV via ffmpeg. Returns path to WAV temp file."""
+    wav_temp = tempfile.NamedTemporaryFile(delete=False, suffix='.wav')
+    wav_temp.close()
+    result = subprocess.run(
+        [FFMPEG_EXE, '-i', video_path, '-vn', '-acodec', 'pcm_s16le', '-ar', '48000', wav_temp.name, '-y'],
+        capture_output=True, text=True, timeout=120
+    )
+    if result.returncode != 0:
+        # Clean up failed WAV
+        try:
+            import os
+            os.unlink(wav_temp.name)
+        except Exception:
+            pass
+        raise RuntimeError(f"Audio extraction failed: {result.stderr[:200]}")
+    return wav_temp.name
+
+
+def _sr_calculate_platform_compliance(lufs: float, true_peak: float) -> list:
+    """Calculate compliance status for each platform based on LUFS and True Peak."""
+    platforms_result = []
+
+    for plat in SR_PLATFORMS:
+        target = plat["lufs_target"]
+        tp_limit = plat["tp_limit"]
+        name = plat["name"]
+
+        lufs_delta = lufs - target  # positive = too loud, negative = below target
+        tp_over = true_peak - tp_limit  # positive = exceeds limit
+
+        # Determine True Peak status
+        tp_pass = true_peak <= tp_limit
+        tp_close = not tp_pass and tp_over <= 0.5
+
+        # Determine LUFS status
+        # "pass" = LUFS is between target and 2 dB below target (0 to -2 delta)
+        # In terms of delta: -2.0 <= delta <= 0.0
+        if -2.0 <= lufs_delta <= 0.0:
+            lufs_status = "pass"
+        elif lufs_delta > 0.0 and lufs_delta <= 2.0:
+            # Slightly too loud (within 2 dB over)
+            lufs_status = "close"
+        elif lufs_delta < -2.0 and lufs_delta >= -3.0:
+            # Within 1 dB of passing threshold (-2 boundary)
+            lufs_status = "close"
+        else:
+            lufs_status = "fail"
+
+        # Combined status
+        if lufs_status == "pass" and tp_pass:
+            status = "pass"
+        elif (lufs_status == "close" or tp_close) and lufs_status != "fail" and (tp_pass or tp_close):
+            status = "close"
+        else:
+            status = "fail"
+
+        # Generate plain-language messages
+        message_es, message_en = _sr_platform_message(name, lufs_delta, tp_pass, tp_close)
+
+        platforms_result.append({
+            "id": plat["id"],
+            "name": name,
+            "icon": plat["icon"],
+            "status": status,
+            "lufs_delta": round(lufs_delta, 1),
+            "message_es": message_es,
+            "message_en": message_en,
+        })
+
+    return platforms_result
+
+
+def _sr_platform_message(platform: str, lufs_delta: float, tp_pass: bool, tp_close: bool) -> tuple:
+    """Generate bilingual plain-language message for a platform. No technical jargon."""
+
+    # True Peak failure takes priority (distortion is audible)
+    if not tp_pass and not tp_close:
+        return (
+            f"Las partes más fuertes de tu audio pueden distorsionar en {platform}.",
+            f"The loudest parts of your audio may distort on {platform}."
+        )
+
+    # LUFS-based messages
+    if lufs_delta > 2.0:
+        # Way too loud
+        return (
+            f"{platform} va a reducir el volumen de tu audio. Los pasajes suaves se van a perder.",
+            f"{platform} will reduce your audio volume. Quiet passages will be lost."
+        )
+    elif lufs_delta > 0.5:
+        # Slightly too loud
+        return (
+            f"{platform} va a reducir ligeramente tu audio.",
+            f"{platform} will slightly reduce your audio."
+        )
+    elif lufs_delta >= -2.0:
+        # Good range (0.5 to -2.0)
+        return (
+            f"Tu audio va a sonar bien en {platform}.",
+            f"Your audio will sound good on {platform}."
+        )
+    elif lufs_delta >= -6.0:
+        # Below target — platform may boost (quality loss)
+        return (
+            f"{platform} puede subir tu audio, lo cual puede afectar la calidad.",
+            f"{platform} may boost your audio, which can affect quality."
+        )
+    else:
+        # Way below target
+        return (
+            f"Tu audio está muy bajo para {platform}. Va a sonar débil o con artefactos.",
+            f"Your audio is too quiet for {platform}. It will sound weak or have artifacts."
+        )
+
+
+def _sr_overall_verdict(platforms: list) -> tuple:
+    """Calculate overall verdict from platform statuses. Returns (verdict_es, verdict_en)."""
+    statuses = [p["status"] for p in platforms]
+
+    if all(s == "fail" for s in statuses):
+        return ("Tu audio necesita trabajo", "Your audio needs work")
+    elif any(s == "fail" for s in statuses):
+        return ("Necesita ajustes", "Needs adjustment")
+    elif any(s == "close" for s in statuses):
+        return ("Casi listo", "Almost ready")
+    else:
+        return ("Listo para publicar", "Ready to publish")
+
+
+def _sr_energy_message(energy_data: dict) -> tuple:
+    """Generate bilingual plain-language energy message. No technical jargon."""
+    curve = energy_data.get("energy_curve", [])
+    dist = energy_data.get("energy_distribution", {})
+
+    if not curve:
+        return (
+            "No pudimos analizar la energía de tu audio.",
+            "We couldn't analyze your audio energy."
+        )
+
+    # Check dynamic range of energy curve
+    if len(curve) >= 2:
+        min_e = min(curve)
+        max_e = max(curve)
+        dynamic_range = max_e - min_e
+    else:
+        dynamic_range = 0.0
+
+    # Very flat energy (little variation)
+    if dynamic_range < 0.2:
+        return (
+            "Tu audio tiene un volumen bastante uniforme de principio a fin.",
+            "Your audio has fairly consistent volume from start to finish."
+        )
+
+    # High dynamic range — some parts much louder than others
+    if dynamic_range > 0.6:
+        return (
+            "Tu audio tiene secciones con volumen muy diferente. Las partes suaves se van a perder.",
+            "Your audio has sections with very different volume levels. Quiet passages will be lost."
+        )
+
+    # Moderate variation — normal for most content
+    return (
+        "Tu audio tiene buena variación de volumen entre secciones.",
+        "Your audio has good volume variation between sections."
+    )
+
+
+@app.get("/api/stream/health")
+async def stream_health():
+    """Stream Ready health check."""
+    return {"status": "ok", "service": "streamready"}
+
+
+@app.post("/api/stream/analyze")
+async def stream_analyze(
+    file: UploadFile = File(...),
+    lang: str = Form("es"),
+):
+    """
+    Analyze video audio for platform compliance (Stream Ready).
+
+    Accepts MP4/MOV/WebM video (max 100MB, max 3 min).
+    Extracts audio, runs analysis, returns plain-language bilingual results.
+    No technical jargon in the response.
+
+    Shares the same analysis_semaphore as Mastering Ready (512MB Render).
+    """
+    import time as _time
+    import os as _os
+    import json
+
+    start_time = _time.time()
+
+    logger.info(f"🎬 [StreamReady] Analysis request: {file.filename}, lang={lang}")
+
+    # Validate file extension
+    if not file.filename:
+        raise HTTPException(status_code=400, detail=_sr_bilingual_error('video_format_not_supported', lang))
+
+    file_ext = Path(file.filename).suffix.lower()
+    if file_ext not in SR_ALLOWED_EXTENSIONS:
+        raise HTTPException(
+            status_code=400,
+            detail=_sr_bilingual_error('video_format_not_supported', lang)
+        )
+
+    # Read file content
+    content = await file.read()
+    file_size = len(content)
+
+    if file_size > SR_MAX_FILE_SIZE:
+        raise HTTPException(
+            status_code=413,
+            detail=_sr_bilingual_error('video_too_large', lang)
+        )
+
+    if file_size == 0:
+        raise HTTPException(
+            status_code=400,
+            detail=_sr_bilingual_error('video_format_not_supported', lang)
+        )
+
+    logger.info(f"🎬 [StreamReady] File size: {file_size / 1024 / 1024:.2f} MB")
+
+    video_path = None
+    wav_path = None
+
+    try:
+        # Step 1: Save video to temp file
+        video_temp = tempfile.NamedTemporaryFile(delete=False, suffix=file_ext)
+        video_path = video_temp.name
+        video_temp.write(content)
+        video_temp.close()
+
+        # Free upload bytes immediately
+        del content
+        _free_memory()
+
+        logger.info(f"🎬 [StreamReady] Video saved to temp: {video_path}")
+
+        # Step 2: ffprobe duration check FIRST — reject > 3 min immediately
+        duration = _sr_get_ffprobe_duration(video_path)
+        logger.info(f"🎬 [StreamReady] Video duration: {duration:.1f}s")
+
+        if duration > SR_MAX_DURATION:
+            raise HTTPException(
+                status_code=400,
+                detail=_sr_bilingual_error('video_too_long', lang)
+            )
+
+        if duration <= 0:
+            # Could not determine duration — try to proceed (ffmpeg will fail if truly broken)
+            logger.warning(f"⚠️ [StreamReady] Could not determine duration, proceeding with extraction")
+
+        # Step 3: Extract audio to WAV
+        try:
+            wav_path = _sr_extract_audio(video_path)
+        except RuntimeError as e:
+            logger.error(f"❌ [StreamReady] Audio extraction failed: {e}")
+            raise HTTPException(status_code=400, detail=_sr_bilingual_error('no_audio', lang))
+
+        # Step 4: Delete video immediately (privacy-first)
+        try:
+            _os.unlink(video_path)
+            logger.info(f"🗑️ [StreamReady] Video deleted: {video_path}")
+            video_path = None  # Mark as deleted
+        except Exception:
+            pass
+
+        _free_memory()
+
+        # Step 5: Run analysis (shares MR semaphore — mutually exclusive)
+        async with analysis_semaphore:
+            logger.info(f"🔍 [StreamReady] Starting analysis...")
+
+            # Determine analysis mode based on WAV duration
+            wav_duration = _sr_get_ffprobe_duration(wav_path)
+            if wav_duration <= 0:
+                wav_duration = duration  # Use video duration as fallback
+
+            loop = asyncio.get_event_loop()
+
+            if wav_duration > 120:  # > 2 min → chunked
+                from analyzer import analyze_file_chunked
+                analyze_func = functools.partial(
+                    analyze_file_chunked,
+                    Path(wav_path),
+                    lang=lang,
+                    strict=False,
+                    chunk_duration=30.0,
+                )
+            else:
+                analyze_func = functools.partial(
+                    analyze_file,
+                    Path(wav_path),
+                    lang=lang,
+                    strict=False,
+                )
+
+            result = await loop.run_in_executor(None, analyze_func)
+
+        logger.info(f"✅ [StreamReady] Analysis complete")
+
+        # Step 6: Delete WAV
+        try:
+            _os.unlink(wav_path)
+            logger.info(f"🗑️ [StreamReady] WAV deleted: {wav_path}")
+            wav_path = None
+        except Exception:
+            pass
+
+        _free_memory()
+
+        # Step 7: Extract technical values from analysis result
+        technical = result.get("technical", {})
+        lufs = technical.get("lufs")
+        true_peak = technical.get("true_peak_dbtp")
+
+        if lufs is None or true_peak is None:
+            logger.error(f"❌ [StreamReady] Missing LUFS or True Peak in analysis result")
+            raise HTTPException(status_code=500, detail=_sr_bilingual_error('sr_server_error', lang))
+
+        # Step 8: Calculate platform compliance
+        platforms = _sr_calculate_platform_compliance(lufs, true_peak)
+
+        # Step 9: Overall verdict
+        verdict_es, verdict_en = _sr_overall_verdict(platforms)
+
+        # Step 10: Energy analysis with plain-language message
+        energy_data = result.get("energy_analysis", {})
+        energy_msg_es, energy_msg_en = _sr_energy_message(energy_data)
+
+        analysis_time = round(_time.time() - start_time, 1)
+
+        logger.info(f"✅ [StreamReady] Response ready in {analysis_time}s — Verdict: {verdict_en}")
+
+        return {
+            "success": True,
+            "verdict_es": verdict_es,
+            "verdict_en": verdict_en,
+            "platforms": platforms,
+            "energy_analysis": {
+                "energy_curve": energy_data.get("energy_curve", []),
+                "peak_energy_time_pct": energy_data.get("peak_energy_time_pct", 0.0),
+                "energy_distribution": energy_data.get("energy_distribution", {"low": 0.0, "mid": 0.0, "high": 0.0}),
+            },
+            "energy_message_es": energy_msg_es,
+            "energy_message_en": energy_msg_en,
+            "file": {
+                "duration": round(duration, 1),
+                "video_format": file_ext.lstrip('.'),
+            },
+            "analysis_time_seconds": analysis_time,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ [StreamReady] Unexpected error: {str(e)}")
+        raise HTTPException(status_code=500, detail=_sr_bilingual_error('sr_server_error', lang))
+    finally:
+        # Cleanup any remaining temp files
+        import os as _os_cleanup
+        if video_path:
+            try:
+                _os_cleanup.unlink(video_path)
+                logger.info(f"🗑️ [StreamReady] Video cleaned up in finally: {video_path}")
+            except Exception:
+                pass
+        if wav_path:
+            try:
+                _os_cleanup.unlink(wav_path)
+                logger.info(f"🗑️ [StreamReady] WAV cleaned up in finally: {wav_path}")
+            except Exception:
+                pass
+        _free_memory()
 
 
 # ============== RUN ==============

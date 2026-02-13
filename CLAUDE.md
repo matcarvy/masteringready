@@ -5,7 +5,7 @@
 - **Description**: Professional audio analysis platform for musicians/producers to evaluate mixes before mastering. Privacy-first (no audio storage, only derived metrics).
 - **Stack**: Next.js, Supabase, Stripe (Tier 1 + ROW payments), DLocal (LATAM payments — Phase 2)
 - **Spec file (FINAL — source of truth)**: ~/Downloads/mastering-ready-launch-spec-FINAL.xml
-- **Phase**: Pre-Launch / MVP — **Code complete, configuration done, ready to merge**
+- **Phase**: **LAUNCHED** (Feb 11, 2026) — Live at masteringready.com. Monitoring user behavior.
 - **Codebase**: /Users/matcarvy/masteringready
 - **Deployed on**: Vercel (prod: masteringready.com, dev: masteringready-git-dev-*.vercel.app)
 - **Analyzer API (prod)**: https://masteringready.onrender.com
@@ -42,10 +42,10 @@
 
 ## LAUNCH READINESS STATUS
 
-### CODE — COMPLETE
-All features implemented, TypeScript compiles clean, pushed to `dev`.
+### CODE — COMPLETE & LAUNCHED (Feb 11, 2026)
+All features implemented, TypeScript compiles clean, deployed to production on `main`.
 
-### CONFIGURATION — IN PROGRESS
+### CONFIGURATION — COMPLETE
 
 #### Step 1: Stripe Dashboard Setup — DONE (2026-02-09)
 1. **Create 3 Products + Prices** at dashboard.stripe.com:
@@ -205,21 +205,75 @@ Test in this order:
 
 ---
 
-## NOT IMPLEMENTED (Phase 2 / Post-Launch)
+## WHAT TO MONITOR (Post-Launch)
 
-- [ ] **eBook Migration** (Week 1-2 post-launch) — Move "Mastering Ready" eBook from Payhip ($15 USD) to this platform. Single ecosystem, cross-selling with analyses, better tracking, less fees. Scope: add `ebook` plan type, new case in checkout + webhook, protected PDF download endpoint (`/api/ebook/download` with signed URLs), `/ebook` page, cross-sell CTA (glossary link already exists → just change URL). Honor existing Payhip buyers manually or via coupon.
-- [ ] **DLocal** (LATAM local payment methods) — LATAM users can pay via Stripe for now
-- [ ] **Transactional emails** (welcome, receipt, renewal reminders) — Supabase handles auth emails
-- [ ] **Google Analytics** (`NEXT_PUBLIC_GA_MEASUREMENT_ID` — optional)
-- [ ] **Sentry error tracking** (`NEXT_PUBLIC_SENTRY_DSN` — optional)
-- [ ] **Stream Ready** (video creators platform — July 2026, separate product)
-- [ ] **Smart Leveler** (future feature using captured energy_curve + spectral_6band data)
-- [ ] **Priority Queue System** (when ~50-100 active users or OOM errors) — Serializes analysis processing (max 1 at a time), prioritizes paid users over free. Spec: `docs/specs/priority-queue-system.xml`. Triggers: sustained queue depth >5, Pro users waiting >30s, OOM errors in Render logs, or MRR >$500.
+Watch these metrics in admin dashboard before making changes:
+- **Anonymous funnel** (Overview tab) — conversion rate from analysis → signup. If low, revisit CTA/auth flow.
+- **Render logs** — OOM errors under real concurrent usage. Semaphore holds 1 at a time, but baseline is ~240MB.
+- **Feedback tab** — real user sentiment and pain points.
+- **Leads tab** — WhatsApp/Email CTA click-through and conversion.
+
+**Decision triggers:**
+| Signal | Action |
+|--------|--------|
+| Low anonymous → signup conversion | Tweak CTA, simplify auth, consider showing Rápido without signup |
+| OOM returns on Render | Implement priority queue (spec: `docs/specs/priority-queue-system.xml`) |
+| Users asking questions post-analysis | Add transactional emails (welcome, receipt) |
+| MRR > $500 or queue depth > 5 | Priority queue + consider Render upgrade |
+| First paying non-admin user | Verify webhook flow end-to-end, check payment history display |
+
+**Performance optimization tracking (Feb 12, 2026):**
+- **Baseline avg analysis time**: 45.2s (from admin stats)
+- **Optimizations shipped**: skip chunking for short compressed files (`ed316c8`), duration-based progress copy
+- **Render keep-alive cron**: LIVE — cron-job.org, `GET /health` every 10 min. Check logs after 24-48h.
+- **Supabase keep-alive cron**: LIVE — cron-job.org, `GET /api/health` daily at midnight.
+- **After 50-100 analyses**: Pull new avg analysis time from admin. Compare against 45.2s baseline to measure impact.
+- **Optimization #2** (chunk 30s→60s): Only pursue if #1+#3 gains are insufficient. Verification: ±2 point score tolerance, same verdict, same severity levels across 3-5 test files.
+
+---
+
+## NEXT STEPS (Priority Order)
+
+### Immediate (when evidence supports it)
+- [ ] **Shared secret Vercel ↔ Render** (~15 min) — `X-API-Secret` header prevents direct Render API abuse. Requires coordinated env var deploy.
+- [ ] **Google Search Console** — Add verification ID in `app/layout.tsx` line ~117. Submit sitemap.
+- [ ] **Facebook OAuth** — Submit Meta App Review + Business Verification → re-enable button in `SocialLoginButtons.tsx`
+
+### Short-term (Week 2-4 post-launch)
+- [ ] **eBook Migration** — Move from Payhip ($15 USD) to MasteringReady platform. Scope: `ebook` plan type, checkout + webhook case, protected PDF download (`/api/ebook/download` with signed URLs), `/ebook` page, cross-sell CTA.
+- [ ] **Transactional emails** — Welcome, receipt, renewal reminders. Currently Supabase handles only auth emails.
+- [ ] **Google Analytics** (`NEXT_PUBLIC_GA_MEASUREMENT_ID`)
+
+### Medium-term (Month 2-3)
+- [ ] **Priority Queue System** — Serialize analyses, prioritize paid users. Spec ready: `docs/specs/priority-queue-system.xml`. Trigger: OOM errors, queue depth >5, ~50-100 active users.
+- [ ] **DLocal** (LATAM local payment methods) — LATAM users can pay via Stripe for now.
+- [ ] **Smart Leveler** — Future feature using captured `energy_curve` + `spectral_6band` data.
+- [ ] **Sentry error tracking** (`NEXT_PUBLIC_SENTRY_DSN`)
+
+### Separate Product
+- [ ] **Stream Ready** — Video creators platform. Target: July 2026. Separate codebase, shared brand family. See details below.
+
+---
+
+## STREAM READY (Upcoming Product)
+
+- **Concept**: Analysis platform for video creators (YouTubers, streamers, content creators)
+- **Target launch**: July 2026
+- **Relationship to Mastering Ready**: Separate product, shared brand family ("Ready" suite). Separate codebase and deployment.
+- **Stack**: TBD — likely same (Next.js + Supabase + Stripe) for consistency and shared learnings
+- **Key differences from Mastering Ready**:
+  - Video/audio analysis (not just audio mastering)
+  - Different target audience (content creators vs musicians/producers)
+  - Different metrics and scoring criteria
+  - Different pricing structure TBD
+- **Shared infrastructure**: Stripe account, Supabase org (separate project), Vercel team
+- **Development plan**: Will be planned and built in a dedicated `~/streamready/` codebase
+- **Status**: Concept phase — no code yet
 
 ---
 
 ## Key Architecture Notes
-- Supabase tables: `profiles`, `analyses`, `subscriptions`, `payments`, `purchases`, `pricing_plans`, `regional_pricing`, `user_feedback`, `contact_requests`, `cta_clicks`, `deleted_accounts`, `aggregate_stats`
+- Supabase tables: `profiles`, `analyses`, `subscriptions`, `payments`, `purchases`, `pricing_plans`, `regional_pricing`, `user_feedback`, `contact_requests`, `cta_clicks`, `deleted_accounts`, `aggregate_stats`, `anonymous_analyses`
 - Stripe webhooks: checkout.session.completed, invoice.paid, invoice.payment_failed, customer.subscription.deleted, customer.subscription.updated
 - GeoIP → currently all routes to Stripe (DLocal Phase 2)
 - Analysis tracking: Free = lifetime counter (max 2), Pro = monthly (resets on billing cycle, max 30) + addon_analyses_remaining
@@ -1763,3 +1817,546 @@ Comprehensive security penetration test covering 7 attack vectors with 6 paralle
 - Google OAuth published, Facebook hidden
 - Supabase URLs configured, data erased, admin password secured
 - Only remaining: `git merge dev` → main → Vercel auto-deploy → 10-step verification
+
+### Session 2026-02-10 (Part 9) — Merge to Main + Production Fixes + Final Audit
+
+**What was done:**
+
+#### 1. Merge dev → main + Deploy
+- Merged `dev` into `main`, pushed to GitHub
+- Vercel auto-deployed to `masteringready.com`
+- Build: Clean, 22 routes compiled, zero errors
+
+#### 2. Post-Deploy 10-Step Verification (5/10 completed)
+| # | Check | Status |
+|---|-------|--------|
+| 1 | Homepage loads | PASS |
+| 2 | Google OAuth login | PASS |
+| 3 | Upload + analyze (admin, >50MB WAV) | PASS |
+| 4 | Results: Rápido + Completo + PDF download | PASS |
+| 5 | Compression indicator shows for >50MB files | PASS |
+| 6 | Subscription page loads with pricing | PASS |
+| 7 | Subscribe with real card | **PENDING (launch day)** |
+| 8 | Customer Portal (manage subscription) | **PENDING (launch day)** |
+| 9 | Stripe checkout branding shows "Mastering Ready" | PASS |
+| 10 | Cancel subscription → downgrade to Free | **PENDING (launch day)** |
+
+#### 3. Checkout Auth Fix (`3849e92`)
+- **Problem**: "Error al iniciar el pago" when clicking subscribe
+- **Root cause**: API routes (`/api/checkout`, `/api/customer-portal`) used `createServerClient` from `@supabase/ssr` which reads auth from cookies, but the frontend Supabase client stores sessions in localStorage via `@supabase/supabase-js`. API routes couldn't see the user session → 401 → generic error.
+- **Fix**: Changed both API routes to accept `Authorization: Bearer <token>` header. Updated frontend (`subscription/page.tsx`, `dashboard/page.tsx`) to send `session.access_token` with checkout and portal requests.
+- **Files changed**: `app/api/checkout/route.ts`, `app/api/customer-portal/route.ts`, `app/subscription/page.tsx`, `app/dashboard/page.tsx`
+
+#### 4. Compression UI Threshold Sync (`71d85e9`)
+- **Problem**: Compression indicator in UI triggered at 100MB but actual compression threshold was 50MB
+- **Fix**: Changed `file.size > 100 * 1024 * 1024` to `file.size > 50 * 1024 * 1024` in `app/page.tsx`
+
+#### 5. Metadata ArrayBuffer Detachment Fix (`e9bbb1a`)
+- **Problem**: Compressed files showed 44.1 kHz / 16-bit instead of original 48 kHz / 24-bit
+- **Root cause 1**: In `lib/audio-compression.ts`, `decodeAudioData(arrayBuffer)` detaches the ArrayBuffer (transfers ownership), making it empty. `parseFileHeader()` was called AFTER decode → read empty buffer → fell back to 16-bit/null defaults.
+- **Root cause 2**: In `app/page.tsx`, pre-compression header parse (lines 727-748) correctly captured original metadata, but line 769 (`originalMetadata = metadata`) unconditionally overwrote it with wrong values from compression result.
+- **Fix 1**: Moved `parseFileHeader()` BEFORE `decodeAudioData()` in `audio-compression.ts`
+- **Fix 2**: Changed `page.tsx` to only use compression metadata as fallback: `if (!originalMetadata) { originalMetadata = metadata }`
+
+#### 6. Spanish Accent Fix (`95ee70a`)
+- Found by final audit: `'analisis'` → `'análisis'` in 2 download filename fallbacks in `app/page.tsx`
+
+#### 7. Stripe Branding Update
+- User updated Stripe Dashboard > Business details > Business name from "Matias Carvajal" to "Mastering Ready"
+- Checkout page immediately reflected correct branding
+
+#### 8. Final 4-Agent Pre-Launch Audit — ALL PASS
+- **Frontend UI/Brand**: 1 blocker found (accent) → fixed in commit `95ee70a`
+- **Security/Payments**: 0 issues. Auth token flow correct, ALLOWED_ORIGINS whitelist in place, no exposed secrets
+- **Analyzer Backend**: 0 issues. v7.4.2 algorithms intact, IP rate limiting active, all endpoints secured
+- **Build/Config/Deploy**: 0 issues. Build clean, env vars configured, Vercel deployment healthy
+
+#### Commits to main (Part 9)
+1. `3849e92` - fix: checkout auth — send access token via header instead of SSR cookies
+2. `71d85e9` - fix: sync compression UI indicator threshold to 50MB
+3. `e9bbb1a` - fix: correct metadata capture — parse WAV header before decodeAudioData
+4. `95ee70a` - fix: correct Spanish accent in analysis filename fallback
+
+**Git state**: main on `95ee70a`, pushed. Build clean. Vercel production deploy healthy.
+
+---
+
+## LAUNCH DAY STEPS (Feb 11, 2026)
+
+**3 remaining payment verification steps:**
+
+1. **Subscribe with admin account** — Go to `/subscription`, click Pro Monthly ($5.49 COP pricing). Use real card. After payment, verify:
+   - Stripe webhook fires → `subscriptions` table updated
+   - Dashboard shows Pro welcome banner
+   - Analysis quota reflects Pro limits
+
+2. **Test Customer Portal** — From `/subscription`, click "Gestionar suscripción". Verify Stripe Customer Portal opens. Check invoice visibility and payment method management.
+
+3. **Cancel subscription** — In Customer Portal, cancel. Verify:
+   - `subscriptions.status` changes to `canceled` or `active` with `cancel_at_period_end = true`
+   - After period end, user downgrades to Free tier
+   - Dashboard reflects free limits
+
+4. **Verify phone** in Stripe Dashboard (currently Mat's brother's phone).
+
+After these 3 steps → all 10 post-deploy checks complete → **Mastering Ready is officially live.**
+
+### Session 2026-02-11 — Launch Day Fixes
+
+**Context**: Launch day. Production is live at `masteringready.com`. Admin subscribed to Pro ($5.49 COP). Testing payment flow, dashboard, PDF download.
+
+#### Launch Day Verification Progress
+| # | Check | Status |
+|---|-------|--------|
+| 1-6 | Homepage, OAuth, analysis, results, compression, subscription page | PASS (Session Part 9) |
+| 7 | Subscribe with real card | PASS — $5.49 COP charged |
+| 8 | Customer Portal | PASS |
+| 9 | Stripe checkout branding | PASS |
+| 10 | Cancel subscription → downgrade | **IN PROGRESS** |
+
+#### 1. PDF Download from Dashboard — COMPLETE
+- `api_request_id` saved with analysis, stored in DB
+- Dashboard "Descargar PDF" button fetches from Render's in-memory job storage
+- Confirmed working in production
+
+#### 2. Payment History — Wired Up (`6d7c5ec`)
+- Subscription page: payment history section now fetches from `payments` table
+- Desktop: table layout (Date, Description, Amount, Status, Receipt link)
+- Mobile: card layout with same info stacked
+- Status badges: green/red/yellow pills with CheckCircle/XCircle icons
+- Empty state: "No hay pagos registrados aún" when no records
+- Fetched in parallel with existing queries (no extra latency)
+
+#### 3. Webhook Payment Dedup Fix (`81c95e0`)
+- **Problem**: 3 duplicate payment records for a single Pro subscription ($5.49 × 3)
+- **Root cause**: `insertPaymentIfNew()` only deduped on `stripe_payment_intent_id`, but subscription payments use invoices (payment_intent is null). Both `checkout.session.completed` and `invoice.paid` fire for the same payment. Redeployments triggered Stripe webhook replays.
+- **Fix**: Added `stripe_invoice_id` dedup check in addition to `stripe_payment_intent_id`
+- **Cleanup**: Deleted 2 duplicate payment rows from Supabase
+
+#### 4. Analysis Save Awaited (`6d7c5ec`)
+- **Problem**: Non-blocking `.then()` save could fail to complete before user navigated to dashboard → analysis missing from DB
+- **Fix**: Changed to `await saveAnalysisToDatabase(...)`. Results still show immediately via `setResult(data)` before the await, so UI isn't blocked.
+
+#### 5. Analysis Loading Spinner (`e6c5f32`)
+- Added purple spinning SVG circle next to rotating methodology messages during analysis
+- Matches compression spinner style (same `@keyframes spin` animation)
+
+#### 6. Fully Parallelized Dashboard/Subscription Fetches (`e6c5f32`)
+- `can_buy_addon` moved from sequential call (after Promise.all) into the Promise.all batch
+- Eliminates redundant `getCurrentUser()` auth round-trip
+- Applied to both dashboard and subscription pages
+
+#### 7. Stable useEffect Dependency (`b08646d`)
+- **Problem**: Dashboard 30s timeout on SPA navigation from analyzer
+- **Root cause**: `[user]` dependency — Supabase `user` object is a new reference on every auth state update, causing useEffect to cancel and restart fetches repeatedly
+- **Fix**: Changed to `[user?.id]` (stable string) across 4 pages: dashboard, subscription, history, settings
+
+#### 8. Auto-Reload on Stalled Fetch (`8cef28c`)
+- **Problem**: Even with user?.id fix, SPA navigation sometimes causes stale Supabase connections that hang indefinitely
+- **Previous behavior**: 30s timeout → shows empty dashboard with "Gratis" / 0 analyses (broken state)
+- **New behavior**: 8s timeout → `window.location.reload()` (full reload always succeeds)
+- Applied to dashboard and subscription pages
+- Users see loading spinner for max ~8s, then clean reload with correct data
+
+#### Admin Counter Issue — Confirmed Admin-Only
+- `analyses_used_this_cycle = 0` despite multiple analyses is caused by admin's manually-created subscription
+- `increment_analysis_count` JOINs `subscriptions.plan_id = plans.id` — admin's subscription may have incorrect plan_id
+- Regular users get subscriptions via Stripe webhook which correctly sets plan_id
+- UNIQUE constraint on `plans.type` prevents duplicate plan rows
+- **No impact on regular users**
+
+#### Commits to main (Session 2026-02-11)
+1. `6d7c5ec` - fix: wire up payment history, await analysis save, inline addon RPC
+2. `81c95e0` - fix: deduplicate payments on invoice_id for subscription webhook events
+3. `e6c5f32` - fix: add analysis spinner, fully parallelize dashboard/subscription fetches
+4. `b08646d` - fix: use stable user.id as useEffect dependency to prevent fetch cancellation
+5. `8cef28c` - fix: auto-reload on stalled fetch instead of showing empty state
+
+**Git state**: main on `d3e1f85`, dev on `8cef28c`, pushed. Build clean.
+
+**Remaining**: Cancel subscription test → verify downgrade → launch announcement.
+
+---
+
+### 2026-02-11 Part 2 — Launch Day Fixes (Session continued from context compaction)
+
+#### Context
+Continued from prior session that ran out of context. All work on `main` branch (launch day).
+
+#### 1. Admin Dashboard Hang Fix (`f367ee2`)
+- **Problem**: Admin page sometimes hung on load
+- **Root cause**: `getAuthHeaders()` called `supabase.auth.getSession()` on stale singleton; `[user, authLoading]` caused repeated useEffect restarts due to object reference changes
+- **Fix**:
+  - `getAuthHeaders()` changed from async (calling singleton) to sync (using `session?.access_token` from AuthProvider context)
+  - Dependency `[user, authLoading]` → `[user?.id, authLoading]` (stable primitive)
+  - `userSort` dependency: `[userSearch, userSort]` → `[userSearch, userSort.field, userSort.asc]` (stable primitives)
+  - All `await getAuthHeaders()` → `getAuthHeaders()` (now synchronous)
+
+#### 2. Mobile Modal Responsiveness (`f367ee2`)
+- 12 modals across 5 files fixed:
+  - `page.tsx`: ContactModal, IpLimitModal, FreeLimitModal, VpnModal, UpgradeModal → `maxHeight: '90vh', overflowY: 'auto'`
+  - `dashboard/page.tsx`: UpgradeModal, ContactModal → same
+  - `subscription/page.tsx`: CancelModal → same + `overscrollBehavior: 'contain'`
+  - `history/page.tsx`: Analysis detail modal → `overscrollBehavior: 'contain'`
+  - `AuthModal.tsx`: Backdrop → `overscrollBehavior: 'contain'`
+  - FeedbackModal close button: 32px → 44px (2.75rem), literal ✕ → Lucide `<X size={20} />`, added aria-label
+
+#### 3. `_compressed` Leak Fix (`f367ee2`)
+- `main.py` line 1055: Status endpoint strips `_compressed` from `job['filename']` during polling
+- Full audit: zero user-facing paths leak the suffix
+
+#### 4. Analysis Not Saving to DB — CRITICAL FIX (`f367ee2`)
+- **Problem**: `saveAnalysisToDatabase` hung silently — console showed `[SaveAnalysis] Saving for logged-in user` but NO success/error after `Promise.all`
+- **Root cause**: Used shared Supabase singleton which had stale internal state after analysis (multiple auth/quota checks corrupted singleton)
+- **Fix**: `saveAnalysisToDatabase` now accepts `sessionTokens` param, creates `createFreshQueryClient()` with tokens from AuthProvider context
+- Both INSERT and RPC use fresh client instead of singleton
+
+#### 5. "Procesamiento Prioritario" Removed (`31d8287`)
+- User decision: "es mejor no prometer algo que en este momento no se hace"
+- Removed from 3 files (page.tsx FreeLimitModal/UpgradeModal, dashboard UpgradeModal, subscription benefit4) in both ES/EN
+
+#### 6. History Page Hang Fix (`5949f9f`)
+- Same stale singleton issue — data fetch hung
+- Added `createFreshQueryClient` + session from context
+- Changed 10s safety timeout (setLoading(false) → empty page) to 8s auto-reload
+
+#### 7. Subscription Page Session Fix (`5949f9f`)
+- `handleCheckout` and `handleManageSubscription` changed from `supabase.auth.getSession()` to `session` from AuthProvider context
+
+#### 8. All Pages Audited — No Hangs
+- settings, dashboard, history, subscription: ALL use `createFreshQueryClient`
+- admin: All 4 data API calls use fresh client (inline login uses singleton — acceptable, one-time operation)
+- page.tsx: 3 fire-and-forget analytics inserts use singleton — non-blocking, non-critical
+
+#### 9. Direct Cancel Subscription API (`ffd7221`)
+- **Problem**: Cancel button redirected to Stripe Customer Portal where user had to navigate and cancel again — confusing, didn't complete
+- **Fix**: New `/api/cancel-subscription/route.ts` endpoint calls `stripe.subscriptions.update(subId, { cancel_at_period_end: true })` directly
+- Modal button calls API in one click — shows "Cancelando..." loading state and error feedback
+- On success, page reloads to reflect updated state
+
+#### 10. Cancellation UI Banner (`a933ab2`)
+- When `canceled_at` is set (subscription scheduled for cancellation):
+  - Yellow warning banner: "Cancelación programada — Tu suscripción se cancelará el [date]. Mantendrás acceso Pro hasta esa fecha."
+  - Cancel button hidden (already cancelled)
+  - "Administrar suscripción" button remains for payment method updates
+- When `canceled_at` is null: normal view with "Próximo cobro" and cancel button
+
+#### 11. Webhook Reactivation Fix (`e769143`)
+- **Problem**: Webhook handler set `canceled_at` when cancelling but never cleared it when subscription was reactivated
+- **Fix**: `canceled_at` now always writes — either the cancellation date or `null`
+
+#### 12. PDF Download in History Page (`78549b3`)
+- **Problem**: History modal only had txt downloads, no PDF (dashboard had it)
+- **Fix**: Added "Descargar PDF" button for Pro users — same on-demand generation from DB data via backend `/api/download/pdf`
+- Extended `Analysis` interface with all fields needed for PDF generation
+
+#### Key Architectural Decisions
+- **Fresh client pattern**: `createFreshQueryClient(sessionTokens)` is the standard for all authenticated data fetches. Shared singleton only for non-critical fire-and-forget operations.
+- **Session from context**: Always get auth tokens from `useAuth()` → `session`, never from `supabase.auth.getSession()` on the singleton.
+- **8s auto-reload**: Safety net for any remaining stale connections — `window.location.reload()` always succeeds.
+- **Direct cancel API > Portal redirect**: Better UX, one click, no external navigation.
+
+#### Commits to main (Session 2026-02-11 Part 2)
+1. `f367ee2` - fix: admin hang, mobile modals, _compressed leak, analysis save with fresh client
+2. `31d8287` - remove: "procesamiento prioritario" from all modals (Phase 2 feature)
+3. `5949f9f` - fix: history page hang + subscription page session handling
+4. `ffd7221` - feat: direct cancel-subscription API, no more portal redirect
+5. `a933ab2` - feat: cancellation notice banner on subscription page
+6. `e769143` - fix: clear canceled_at when subscription reactivated via webhook
+7. `78549b3` - feat: PDF download button in history page for Pro users
+8. `a545c2c` - fix: remove `|| supabase` fallback on settings, history, admin (wait for session)
+9. `46b876c` - ux: analysis modals close on backdrop click, destructive modals require explicit button
+
+#### Admin Notes
+- Admin user (`matcarvy@gmail.com`, id `7a9ced11-...`): `is_admin = true`, unlimited analyses, `is_test_analysis` exclusion — does NOT need Pro subscription
+- "Test Name" was stale `profiles.full_name` — fixed by clicking "Guardar cambios" in Settings (syncs auth metadata → profiles table)
+- Supabase project name on Google OAuth consent screen (`cetgbmrylzgaqnrlfamt.supabase.co`) — free tier limitation, needs Supabase Pro ($25/mo) for custom domain
+
+#### Modal Dismiss Behavior (UX best practice)
+- **Informational modals** (analysis detail, upgrade, contact): close on backdrop click
+- **Destructive modals** (cancel subscription, delete account): require explicit button — no backdrop dismiss
+
+**Git state**: main on `46b876c`, pushed. Build clean.
+
+**Status**: LAUNCHED — Feb 11, 2026. Announced live by user.
+
+### Session 2026-02-12 — Post-Launch Hardening + Anonymous Tracking
+
+#### Context
+First post-launch session. Production live at `masteringready.com` since Feb 11.
+
+#### 1. Render OOM Fix — Memory Optimizations (`52dee8f`)
+- **Problem**: Render Starter tier (512MB) exceeded memory limit under concurrent analysis requests
+- **Root cause**: ~240MB baseline from libraries (librosa, scipy, numpy), no concurrency control, no explicit memory cleanup
+- **3 fixes**:
+  - `asyncio.Semaphore(1)` in `main.py` — serializes analyses (max 1 at a time)
+  - `del y` + `gc.collect()` in `analyzer.py` — frees numpy arrays between chunks
+  - Periodic job cleanup every 5 minutes in `main.py` — removes expired jobs from memory
+- Pushed to main, deployed to Render
+
+#### 2. Admin Feedback Tab Fix (`327f14d`)
+- **Problem**: Retroalimentación tab stuck on "Cargando..." and constantly refreshing
+- **Root cause**: `fetchFeedback` used stale `supabase` singleton instead of `createFreshQueryClient`
+- **Fix**: Switched to fresh client pattern matching other admin fetches
+
+#### 3. Admin Logout Fix (`79ae89b`)
+- **Problem**: "Cerrar sesión" button on admin dashboard didn't work
+- **Root cause**: Used `supabase.auth.signOut()` on stale singleton instead of context `signOut()`
+- **Fix**: Import `signOut` from `useAuth()`, reset `isAdmin` and `adminChecked` states
+
+#### 4. CTA Buttons Updated to MR Voice (`79ae89b`)
+- Blur overlay: "Ver mi análisis" + "Gratis. Sin tarjeta de crédito."
+- Left button (non-logged-in): "Ver mi análisis" + subtext
+- Right button (non-logged-in): "Análisis detallado" + "Desde $5.99"
+- Logged-in users see original download text unchanged
+- Option B chosen after research discussion — calm, precise, no hype
+
+#### 5. Anonymous Analysis Tracking (`77cf817`)
+- **Purpose**: Capture funnel data for users who analyze but don't sign up
+- **New table**: `anonymous_analyses` (migration `20260212000001_anonymous_analyses.sql`, executed in Supabase)
+- **Frontend** (`page.tsx`): Tracks anonymous analyses via `sessionStorage` (`mr_anon_session`) + Supabase insert
+- **AuthProvider**: Links anonymous analyses to user on signup (fire-and-forget update)
+- **Admin stats API**: Returns `anonymousFunnel` metrics (total anonymous, converted, conversion rate)
+- **Admin Overview tab**: New funnel card with 3 metrics
+- **RLS**: Anonymous INSERT allowed, admin-only SELECT, authenticated UPDATE for conversion linking
+
+#### 5. CTA Visual Hierarchy (`b8a9637`)
+- Advisor feedback: free button should feel like natural path, not inferior option
+- Free button: gradient primary + Headphones icon, "Sin tarjeta" (shorter)
+- Paid button: outline secondary + Crown icon
+- Contextual: paid button becomes primary when user has paid access
+
+#### 6. Anonymous Records Table in Admin (`d9944c7`)
+- Individual anonymous analysis records visible in Overview tab below funnel card
+- Last 50 records: filename, score (color-coded), format, country, converted badge, date
+
+#### 7. Performance Optimizations (`ed316c8`)
+- **Optimization #3**: Compressed files (MP3/AAC/M4A/OGG) now probe duration via pydub before chunking decision. Files < 2 min use faster single-pass. Safety net: unknown/zero duration → chunked.
+- **Duration-based progress copy**: Uses actual decoded duration (≥ 3 min → "under 90 seconds", < 3 min → "under 30 seconds"). File-size fallback when header parsing fails.
+- **Optimization #1** (Render keep-alive): DONE — cron-job.org configured `GET https://masteringready.onrender.com/health` every 10 min. Failure notifications ON.
+- **Optimization #2** (chunk 30s→60s): Deferred. Only pursue if #1+#3 gains insufficient after 50-100 analyses. Verification protocol: ±2 point score tolerance, same verdict, same severity levels across 3-5 test files.
+
+#### 8. Cron Jobs Configured (cron-job.org)
+- **Render Keep-Alive**: `GET https://masteringready.onrender.com/health` every 10 min. Prevents Render free tier cold starts (30-60s penalty). Failure notification ON.
+- **Supabase Keep-Alive**: `GET https://masteringready.com/api/health` daily at midnight (America/Bogota). Prevents Supabase free tier pause (7-day inactivity threshold). Failure notification ON.
+
+#### Commits to main (Session 2026-02-12)
+1. `52dee8f` - fix: memory optimizations to prevent OOM on Render Starter (512MB)
+2. `327f14d` - fix: feedback tab using stale singleton — switch to fresh client
+3. `79ae89b` - fix: admin logout + CTA buttons to MR voice (Option B)
+4. `77cf817` - feat: anonymous analysis tracking — capture funnel data for non-registered users
+5. `b8a9637` - ux: visual hierarchy — free button primary, paid secondary, remove crown from free
+6. `d9944c7` - feat: anonymous analyses table in admin Overview — individual records below funnel card
+7. `ed316c8` - perf: skip chunking for short compressed files, duration-based progress copy
+
+**Git state**: main on `ed316c8`, pushed. Build clean. All 22 routes compiled.
+
+### Session 2026-02-12 Part 2 — OOM Elimination
+
+#### Context
+Two OOM crashes on Render Starter (512MB) after launch. Instance failed at 7:50 PM and 8:18 PM on Feb 12. Root cause: Python holding large objects in RAM that could be handled externally.
+
+#### 1. OOM Fix — Memory Architecture Overhaul (`4b2d0db`)
+- **Root cause analysis**: Three compounding memory issues:
+  1. `content` bytes (~66MB) held in closure for entire analysis duration after writing to temp file
+  2. pydub `AudioSegment.from_file()` decoded entire compressed file into Python RAM just to read duration
+  3. `gc.collect()` only every 3 chunks + glibc allocator hoarding freed pages (never returned to OS)
+- **Fix 1**: `convert_to_wav()` now uses `subprocess.run([ffmpeg, ...])` instead of pydub — zero Python memory for AAC/M4A conversion
+- **Fix 2**: Duration probe uses `ffmpeg -i` + regex parse of stderr `Duration: HH:MM:SS.ff` — zero Python memory
+- **Fix 3**: `del content` (sync) / `nonlocal content; content = None` (async) after writing to temp file — frees ~66MB immediately
+- **Fix 4**: `_free_memory()` helper = `gc.collect()` + `ctypes.CDLL("libc.so.6").malloc_trim(0)` — forces glibc to return freed pages to OS
+- **Fix 5**: `gc.collect()` after EVERY chunk instead of every 3 in analyzer.py
+- **Peak memory**: ~350-400MB → ~260-280MB for typical analysis
+- **pydub fully removed from imports** — still in requirements.txt (harmless, not imported)
+
+#### Key Architectural Decisions
+- **malloc_trim is essential**: Python's `gc.collect()` only handles reference cycles. glibc's malloc arena hoards freed pages. `malloc_trim(0)` is the only way to return them to the OS. Wrapped in try/except for macOS compatibility.
+- **ffmpeg subprocess > pydub**: pydub is a Python wrapper that decodes into Python bytes objects. For operations where you don't need the audio data in Python (conversion, duration), subprocess is always better.
+- **nonlocal for closure memory**: `content = None` inside `_run_analysis` requires `nonlocal content` to actually free the outer scope's bytes object.
+
+#### Commits to main (Session 2026-02-12 Part 2)
+1. `4b2d0db` - fix: eliminate OOM on Render 512MB — replace pydub with ffmpeg subprocess, free upload bytes early
+
+**Git state**: main on `4b2d0db`, pushed.
+
+**IP rate limiting confirmed working** — first real blocked user observed Feb 12.
+
+### Session 2026-02-12 Part 3 — Performance Optimization + Verdict Bug + Data Capture
+
+#### Context
+Continued from Part 2. OOM fixes deployed, testing performance and PDF correctness.
+
+#### 1. Verdict Bug Fix (`af65ade`)
+- **Problem**: Dashboard/history PDFs showed wrong verdict (e.g., "Necesita trabajo" for 99/100 score)
+- **Root cause**: `mapVerdictToEnum()` used keyword matching on verdict text — broken for most strings:
+  - English ≥95: "Optimal margin" → "optimal" not in keywords → fell to `needs_work`
+  - Spanish 85-94: "Lista para mastering" → "lista" ≠ "listo" → fell to `needs_work`
+  - Score 20-39: "Compromised margin" → no keywords matched → `needs_work` instead of `critical`
+- **Fix (3 files)**:
+  - `app/page.tsx` + `AuthProvider.tsx`: Replaced `mapVerdictToEnum(verdict)` with `scoreToVerdictEnum(score)` — deterministic, mirrors backend
+  - `main.py` PDF endpoint Mode 1: Reconstructs verdict enum from score (fixes existing DB records)
+- All 3 PDF paths verified correct: main page (EN), dashboard (EN), dashboard (ES)
+
+#### 2. Performance Optimizations (`af65ade`)
+- **gc.collect every 3 chunks** instead of every chunk — `del y` already frees numpy arrays deterministically, gc.collect only catches circular refs (numpy doesn't create them). Saves ~2-3s on 13-chunk analysis.
+- **Compression progress smoothed**: +2/200ms instead of +10/500ms, cap at 92%, 0.4s CSS transition. No more 50→100% jump.
+
+#### 3. Benchmark Result
+- Paraíso Fractal (6.5min WAV, 14 chunks): **70.1 seconds** after clean Render rebuild
+- Progression: 92.9s (baseline) → 84.2s (memory fixes) → 70.1s (gc optimization + clean rebuild)
+- Healthy range: 68-73s. If drifts past 80s → clean Render rebuild + investigate.
+- Clean rebuild only needed for analyzer/memory code changes, not frontend tweaks.
+
+#### 4. Chunk Size Decision
+- 30s chunks confirmed optimal for 512MB Render Starter
+- 45s tested: 2.4x slower per chunk (superlinear STFT scaling + cache locality)
+- 60s tested: OOM (STFT + TruePeak processing exceeded 512MB)
+- Upgrade to Standard ($25/mo, 2GB/1CPU) when revenue justifies it — would enable 60s chunks and ~halve analysis time
+
+#### 5. UTM Attribution Capture (`e8132cf`)
+- **Purpose**: Track marketing attribution for Instagram campaigns and Stream Ready insights
+- **Flow**: `?utm_source=instagram&utm_medium=story&utm_campaign=launch` → `sessionStorage('mr_utm')` → profile INSERT on signup
+- **`page.tsx`**: Captures 5 UTM params from URL on landing page load
+- **`AuthProvider.tsx`**: Reads from sessionStorage on profile creation, saves to `profiles` table
+- Survives OAuth redirect flow (sessionStorage persists within tab)
+
+#### 6. Device Type Tracking (`e8132cf`)
+- **Purpose**: Mobile vs desktop split for Stream Ready build priority decisions
+- **`page.tsx`**: Parses `navigator.userAgent` → `mobile/tablet/desktop`, stores with anonymous analysis
+- **Admin Overview**: Device breakdown pills (📱 mobile / 📋 tablet / 🖥️ desktop) + device column in records table
+- **Stats API**: `deviceBreakdown` array in `anonymousFunnel` response
+
+#### 7. SQL Migration Executed
+```sql
+-- profiles: UTM attribution
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS utm_source TEXT;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS utm_medium TEXT;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS utm_campaign TEXT;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS utm_content TEXT;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS utm_term TEXT;
+
+-- anonymous_analyses: device tracking
+ALTER TABLE anonymous_analyses ADD COLUMN IF NOT EXISTS user_agent TEXT;
+ALTER TABLE anonymous_analyses ADD COLUMN IF NOT EXISTS device_type TEXT;
+```
+
+#### Commits to main (Session 2026-02-12 Part 3)
+1. `af65ade` - fix: verdict bug — score-based enum mapping, smoother compression progress, gc.collect optimization
+2. `e8132cf` - feat: UTM attribution capture on signup + device type tracking for anonymous analyses
+
+**Git state**: main on `e8132cf`, pushed. Build clean.
+
+**What to do next (evidence-based):**
+1. **Shared secret Vercel ↔ Render** (~15 min) — `X-API-Secret` header. Prevents direct Render API abuse.
+2. **Google Search Console** — Add verification ID in `app/layout.tsx` line ~117. Submit sitemap.
+3. **Facebook OAuth** — Meta App Review + Business Verification → re-enable button.
+4. **Monitor**: anonymous funnel conversion (now with device breakdown), UTM attribution on new signups, Render analysis times (benchmark: 68-73s).
+5. **Stream Ready data audit**: Comprehensive audit completed — MasteringReady captures 33 tables of data. Key gaps identified: user journey events, post-analysis behavior, cohort analysis. UTM + device tracking now filling two critical gaps.
+
+**Next product**: Stream Ready (video creators platform) — separate codebase `~/streamready/`. See `~/streamready/CLAUDE.md`.
+
+---
+
+### Session 2026-02-12 Part 4 — Stream Ready Backend Integration
+
+#### Stream Ready Endpoints Added to `main.py`
+
+Added `/api/stream/analyze` and `/api/stream/health` endpoints to the shared Render backend. Stream Ready is a **completely separate product** for video/audiovisual content creators (YouTube, TikTok, Instagram, Facebook). It shares the analysis engine with MR but has its own frontend, brand, voice, and audience.
+
+**Changes to `main.py`:**
+
+1. **CORS Origins** (line ~245): Added `https://stream.masteringready.com` + `http://localhost:3001`
+2. **FFPROBE_EXE** (line ~68): Derived from existing `FFMPEG_EXE` path for video duration checks
+3. **Stream Ready section** (lines ~1417-1872): 2 endpoints + 8 helper functions, all `_sr_` prefixed
+
+**`POST /api/stream/analyze`**: Video upload → ffprobe duration check → ffmpeg audio extraction → shared `analysis_semaphore` → `analyze_file()` → platform compliance calculation → bilingual plain-language response (no technical jargon). Privacy-first: video deleted immediately after audio extraction, WAV deleted after analysis.
+
+**`GET /api/stream/health`**: Returns `{"status": "ok", "service": "streamready"}`
+
+**Key architectural decisions:**
+- Shares MR's `asyncio.Semaphore(1)` — SR and MR analyses are mutually exclusive on 512MB Render
+- Translation layer is server-side — frontend never sees LUFS/dBTP/PLR values
+- All SR functions `_sr_` prefixed to avoid collisions with MR code
+- `strict=False` always — content creators, not mastering engineers
+
+**Git state**: `main.py` modified locally, not committed yet (waiting for user to push).
+
+---
+
+### Session 2026-02-13 — Bug Fixes: PDF/Verdict Consistency, GoTrueClient, Console Cleanup
+
+#### 1. Verdict Text Consistency (PDF + Dashboard + History match Analyzer)
+
+**Problem**: PDF, dashboard, and history showed different verdict texts for the same score:
+- Fresh analysis: "⚠️ Margen suficiente (revisar sugerencias)" (full analyzer verdict)
+- PDF from DB: "Casi listo" / "Almost ready" (simplified 4-value enum label)
+- Dashboard/History: "Casi listo" (same simplified enum)
+
+**Root cause**: DB stores only 4 verdict enums (`ready`/`almost_ready`/`needs_work`/`critical`), but analyzer has 7 score tiers. The PDF and dashboard used enum→label mapping that lost granularity.
+
+**Fix**: All three locations now derive verdict from **score** (always stored in DB), matching the analyzer's `score_report()` exactly:
+
+| Score | ES | EN |
+|-------|----|----|
+| ≥95 | Margen óptimo para mastering | Optimal margin for mastering |
+| ≥85 | Lista para mastering | Ready for mastering |
+| ≥75 | Margen suficiente (revisar sugerencias) | Sufficient margin (review suggestions) |
+| ≥60 | Margen reducido - revisar antes de mastering | Reduced margin - review before mastering |
+| ≥40 | Margen limitado - ajustes recomendados | Limited margin - adjustments recommended |
+| ≥20 | Margen comprometido para mastering | Compromised margin for mastering |
+| ≥5 | Requiere revisión | Requires review |
+| <5 | Sin margen para procesamiento adicional | No margin for additional processing |
+
+**Files changed:**
+- `analyzer.py` (PDF generation): Replaced static `VERDICT_LABELS` dict with score-based mapping
+- `app/dashboard/page.tsx`: Added `scoreToVerdictLabel(score, lang)` function, replaced `t.verdicts[enum]` lookups
+- `app/history/page.tsx`: Same `scoreToVerdictLabel()` function added, same replacement
+- `app/page.tsx`: `cleanReportText()` aligned with dashboard/history version (added `Puntuación MR`, `ÁREAS A MEJORAR`, `✓→•`, `💡 Recomendación` patterns)
+
+#### 2. Multiple GoTrueClient Instances Fix
+
+**Problem**: Navigating between analyzer → dashboard → PDF download → back → analyze again caused GoTrueClient counter to increment (1, 2, 3, 4, 5...) because `createFreshQueryClient()` created a NEW Supabase client on every call.
+
+**Fix**: `lib/supabase.ts` — Added module-level cache (`_cachedFreshClient` + `_cachedAccessToken`). If the access token hasn't changed, the existing fresh client is reused instead of creating a new one.
+
+```typescript
+let _cachedFreshClient: any = null
+let _cachedAccessToken: string | null = null
+// In createFreshQueryClient: check if same token → reuse cached client
+```
+
+#### 3. Console Debug Logging Removed (Production Hardening)
+
+**Problem**: 165+ console.log/console.warn statements in frontend code with no NODE_ENV checks. Reveals:
+- `[Geo]` logs: pricing strategy and country detection
+- `[SaveAnalysis]` logs: auth/quota flow and DB insert pattern
+- CTA debug logs: conditional display logic
+- PDF download debug logs
+
+**Fix**: Removed all debug `console.log` statements. Kept `console.error` for production error tracking.
+
+**Files cleaned:**
+- `lib/geoip.ts` — Removed `[Geo]` debug logs
+- `app/page.tsx` — Removed `[SaveAnalysis]`, `[Analysis]`, QuotaGuard, PDF debug logs
+- `components/auth/AuthProvider.tsx` — Removed `[SaveAnalysis]` verbose traces
+- `components/Results.tsx` — Removed CTA debug logs
+- `app/dashboard/page.tsx` — Removed debug logs
+- `app/history/page.tsx` — Removed debug logs
+- `app/subscription/page.tsx` — Removed debug logs
+- `app/settings/page.tsx` — Removed debug logs
+
+#### 4. Supabase Health Endpoint Fix
+
+**Problem**: Supabase keep-alive cron job (cron-job.org) failing. The `/api/health` endpoint queried `profiles` table with `select('id').limit(1)` — likely blocked by RLS for anonymous requests.
+
+**Fix**: Changed to `select('count', { count: 'exact', head: true })` which returns count metadata without requiring row-level read access.
+
+**Git state**: All changes local, not committed. Build clean (`npx next build` passes).
+
+**MR next steps:**
+1. **SEO audit + launch plan** — Tomorrow's priority. Google Search Console, sitemap, meta tags
+2. **Shared secret Vercel ↔ Render** — `X-API-Secret` header to prevent direct API abuse
+3. **Facebook OAuth** — Meta App Review + Business Verification → re-enable button
+4. **Monitor**: anonymous funnel, UTM attribution, Render analysis times (benchmark: 68-73s)
+5. **Render upgrade trigger**: When SR video processing + MR analysis concurrent = OOM on 512MB, upgrade to Standard ($25/mo)
+6. **Supabase cron**: Verify cron-job.org config is hitting the correct URL with GET method

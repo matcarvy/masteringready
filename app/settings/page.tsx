@@ -368,7 +368,6 @@ export default function SettingsPage() {
   useEffect(() => {
     if (!loading) return
     const timeout = setTimeout(() => {
-      console.warn('[Settings] Fetch stalled — reloading page')
       window.location.reload()
     }, 8000)
     return () => clearTimeout(timeout)
