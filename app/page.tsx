@@ -14,24 +14,13 @@ import { detectLanguage, setLanguageCookie } from '@/lib/language'
 import { getErrorMessage, ERROR_MESSAGES } from '@/lib/error-messages'
 
 // ============================================================================
-// Helper: Map verdict string to database enum
+// Helper: Map score to database verdict enum (deterministic, mirrors backend score_report)
 // ============================================================================
-function mapVerdictToEnum(verdict: string): 'ready' | 'almost_ready' | 'needs_work' | 'critical' {
-  if (!verdict) return 'needs_work'
-  const v = verdict.toLowerCase()
-  if (v.includes('óptimo') || v.includes('optimo') || v.includes('listo') ||
-      v.includes('ready') || v.includes('excellent') || v.includes('excelente')) {
-    return 'ready'
-  }
-  if (v.includes('casi') || v.includes('almost') || v.includes('good') ||
-      v.includes('bien') || v.includes('aceptable')) {
-    return 'almost_ready'
-  }
-  if (v.includes('critical') || v.includes('crítico') || v.includes('critico') ||
-      v.includes('serious') || v.includes('grave')) {
-    return 'critical'
-  }
-  return 'needs_work'
+function scoreToVerdictEnum(score: number): 'ready' | 'almost_ready' | 'needs_work' | 'critical' {
+  if (score >= 85) return 'ready'
+  if (score >= 60) return 'almost_ready'
+  if (score >= 40) return 'needs_work'
+  return 'critical'
 }
 
 // ============================================================================
@@ -55,7 +44,7 @@ async function saveAnalysisToDatabase(userId: string, analysis: any, fileObj?: F
     if (fresh) client = fresh
   }
 
-  const mappedVerdict = mapVerdictToEnum(analysis.verdict)
+  const mappedVerdict = scoreToVerdictEnum(analysis.score)
   const reportShort = analysis.report_short || analysis.report || null
   const reportWrite = analysis.report_write || analysis.report || null
   const reportVisual = analysis.report_visual || analysis.report_short || analysis.report || null
@@ -766,8 +755,8 @@ const handleAnalyze = async () => {
       setCompressionProgress(0)
 
       const compressionInterval = setInterval(() => {
-        setCompressionProgress(prev => Math.min(prev + 10, 90))
-      }, 500)
+        setCompressionProgress(prev => Math.min(prev + 2, 92))
+      }, 200)
 
       try {
         const { file: compressedFile, compressed, originalSize, newSize, originalMetadata: metadata } =
@@ -2231,7 +2220,7 @@ by Matías Carvajal
                             background: 'linear-gradient(90deg, #667eea 0%, #764ba2 100%)',
                             height: '1rem',
                             borderRadius: '9999px',
-                            transition: 'width 0.3s ease-out',
+                            transition: 'width 0.4s ease-out',
                             width: `${compressionProgress}%`,
                             boxShadow: '0 2px 8px rgba(102, 126, 234, 0.4)'
                           }} />

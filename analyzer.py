@@ -5104,7 +5104,10 @@ def analyze_file_chunked(
         finally:
             # Free numpy arrays between chunks to keep memory low on 512MB Render Starter
             del y
-            gc.collect()
+            # gc.collect every 3 chunks — del y already frees numpy arrays deterministically,
+            # gc only catches circular refs (saves ~1-2s vs every-chunk on 0.5 CPU)
+            if (i + 1) % 3 == 0 or i == num_chunks - 1:
+                gc.collect()
 
     print("Aggregating results...")
     

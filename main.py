@@ -1174,9 +1174,19 @@ async def download_pdf(
             data = json.loads(analysis_data)
             # DB stores metrics as {metrics: [...], metrics_bars: {...}}
             metrics_obj = data.get("metrics") or {}
+            # Reconstruct correct verdict from score (DB enum may be wrong due to old frontend mapping bug)
+            db_score = data.get("score", 0)
+            if db_score >= 85:
+                verdict_enum = "ready"
+            elif db_score >= 60:
+                verdict_enum = "almost_ready"
+            elif db_score >= 40:
+                verdict_enum = "needs_work"
+            else:
+                verdict_enum = "critical"
             result = {
-                "score": data.get("score", 0),
-                "verdict": data.get("verdict", ""),
+                "score": db_score,
+                "verdict": verdict_enum,
                 "filename": data.get("filename", "análisis"),
                 "file": {
                     "duration": data.get("duration_seconds"),
