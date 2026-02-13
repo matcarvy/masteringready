@@ -238,7 +238,7 @@ export async function GET(request: NextRequest) {
 
       // Anonymous funnel: recent individual records
       adminClient.from('anonymous_analyses')
-        .select('id, session_id, filename, score, verdict, format, lang, client_country, is_chunked, converted_to_user, created_at')
+        .select('id, session_id, filename, score, verdict, format, lang, client_country, is_chunked, converted_to_user, device_type, created_at')
         .order('created_at', { ascending: false })
         .limit(50)
     ])
@@ -511,26 +511,25 @@ export async function GET(request: NextRequest) {
         usersWithMultiplePct,
         totalProfiles: profileRows.length
       },
-      anonymousFunnel: {
-        totalAnonymous: anonTotalResult.count || 0,
-        converted: anonConvertedResult.count || 0,
-        conversionRate: (anonTotalResult.count || 0) > 0
-          ? Math.round(((anonConvertedResult.count || 0) / (anonTotalResult.count || 1)) * 1000) / 10
-          : 0,
-        recentRecords: (anonRecentResult.data || []) as Array<{
-          id: string
-          session_id: string
-          filename: string | null
-          score: number | null
-          verdict: string | null
-          format: string | null
-          lang: string | null
-          client_country: string | null
-          is_chunked: boolean
-          converted_to_user: boolean
-          created_at: string
+      anonymousFunnel: (() => {
+        const records = (anonRecentResult.data || []) as Array<{
+          id: string; session_id: string; filename: string | null; score: number | null
+          verdict: string | null; format: string | null; lang: string | null
+          client_country: string | null; is_chunked: boolean; converted_to_user: boolean
+          device_type: string | null; created_at: string
         }>
-      },
+        const deviceCounts: Record<string, number> = { mobile: 0, tablet: 0, desktop: 0 }
+        records.forEach(r => { if (r.device_type) deviceCounts[r.device_type] = (deviceCounts[r.device_type] || 0) + 1 })
+        return {
+          totalAnonymous: anonTotalResult.count || 0,
+          converted: anonConvertedResult.count || 0,
+          conversionRate: (anonTotalResult.count || 0) > 0
+            ? Math.round(((anonConvertedResult.count || 0) / (anonTotalResult.count || 1)) * 1000) / 10
+            : 0,
+          deviceBreakdown: Object.entries(deviceCounts).filter(([, c]) => c > 0).map(([device, count]) => ({ device, count })),
+          recentRecords: records
+        }
+      })(),
       technicalInsights: {
         spectral: {
           overall: overallAvg,

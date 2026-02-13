@@ -324,6 +324,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
             .single()
 
           if (!existingProfile) {
+            // Read UTM attribution from sessionStorage (captured on landing page)
+            let utmData: Record<string, string | null> = {}
+            try {
+              const utmRaw = sessionStorage.getItem('mr_utm')
+              if (utmRaw) {
+                utmData = JSON.parse(utmRaw)
+                sessionStorage.removeItem('mr_utm')
+              }
+            } catch { /* ignore */ }
+
             // Create profile
             await supabase.from('profiles').insert({
               id: u.id,
@@ -331,7 +341,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
               full_name: u.user_metadata?.full_name || u.user_metadata?.name || null,
               avatar_url: u.user_metadata?.avatar_url || null,
               terms_accepted_at: new Date().toISOString(),
-              terms_version: '1.0'
+              terms_version: '1.0',
+              ...(utmData.utm_source ? {
+                utm_source: utmData.utm_source,
+                utm_medium: utmData.utm_medium,
+                utm_campaign: utmData.utm_campaign,
+                utm_content: utmData.utm_content,
+                utm_term: utmData.utm_term,
+              } : {})
             })
 
             // Anti-abuse: Check if this email was previously deleted

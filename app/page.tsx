@@ -472,6 +472,22 @@ function Home() {
     }
   }, [langDetected])
 
+  // Capture UTM params from URL into sessionStorage (survives navigation to signup/login)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const utmSource = params.get('utm_source')
+    if (utmSource) {
+      const utm = {
+        utm_source: utmSource,
+        utm_medium: params.get('utm_medium') || null,
+        utm_campaign: params.get('utm_campaign') || null,
+        utm_content: params.get('utm_content') || null,
+        utm_term: params.get('utm_term') || null,
+      }
+      sessionStorage.setItem('mr_utm', JSON.stringify(utm))
+    }
+  }, [])
+
   // Scroll to results when analysis completes
   useEffect(() => {
     if (result) {
@@ -920,6 +936,8 @@ const handleAnalyze = async () => {
             anonSessionId = crypto.randomUUID()
             sessionStorage.setItem('mr_anon_session', anonSessionId)
           }
+          const ua = navigator.userAgent || ''
+          const deviceType = /iPad|Tablet/i.test(ua) ? 'tablet' : /Mobile|iPhone|Android.*Mobile/i.test(ua) ? 'mobile' : 'desktop'
           void supabase.from('anonymous_analyses').insert({
             session_id: anonSessionId,
             filename: file.name,
@@ -931,7 +949,9 @@ const handleAnalyze = async () => {
             format: file.name.split('.').pop()?.toUpperCase() || null,
             lang,
             client_country: geo?.countryCode || null,
-            is_chunked: data.is_chunked_analysis || false
+            is_chunked: data.is_chunked_analysis || false,
+            user_agent: ua.substring(0, 500),
+            device_type: deviceType
           }).then(() => {
             console.log('[Anonymous] Analysis tracked')
           })

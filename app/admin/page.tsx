@@ -90,6 +90,7 @@ interface StatsData {
     totalAnonymous: number
     converted: number
     conversionRate: number
+    deviceBreakdown?: Array<{ device: string; count: number }>
     recentRecords?: Array<{
       id: string
       session_id: string
@@ -101,6 +102,7 @@ interface StatsData {
       client_country: string | null
       is_chunked: boolean
       converted_to_user: boolean
+      device_type: string | null
       created_at: string
     }>
   }
@@ -1452,6 +1454,21 @@ export default function AdminPage() {
               </div>
             </div>
 
+            {/* Device breakdown */}
+            {statsData.anonymousFunnel.deviceBreakdown && statsData.anonymousFunnel.deviceBreakdown.length > 0 && (
+              <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+                {statsData.anonymousFunnel.deviceBreakdown.map(d => (
+                  <span key={d.device} style={{
+                    padding: '0.25rem 0.75rem', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: '500',
+                    background: d.device === 'mobile' ? '#ede9fe' : d.device === 'tablet' ? '#fef3c7' : '#e0f2fe',
+                    color: d.device === 'mobile' ? '#6d28d9' : d.device === 'tablet' ? '#92400e' : '#0369a1'
+                  }}>
+                    {d.device === 'mobile' ? '📱' : d.device === 'tablet' ? '📋' : '🖥️'} {d.device}: {d.count}
+                  </span>
+                ))}
+              </div>
+            )}
+
             {/* Recent anonymous analyses table */}
             {statsData.anonymousFunnel.recentRecords && statsData.anonymousFunnel.recentRecords.length > 0 && (
               <div style={{ marginTop: '1.25rem', borderTop: '1px solid #e5e7eb', paddingTop: '1.25rem' }}>
@@ -1471,6 +1488,9 @@ export default function AdminPage() {
                         </th>
                         <th style={{ textAlign: 'center', padding: '0.5rem 0.75rem', color: '#6b7280', fontWeight: '500' }}>
                           {lang === 'es' ? 'País' : 'Country'}
+                        </th>
+                        <th style={{ textAlign: 'center', padding: '0.5rem 0.75rem', color: '#6b7280', fontWeight: '500' }}>
+                          {lang === 'es' ? 'Dispositivo' : 'Device'}
                         </th>
                         <th style={{ textAlign: 'center', padding: '0.5rem 0.75rem', color: '#6b7280', fontWeight: '500' }}>
                           {lang === 'es' ? 'Convirtió' : 'Converted'}
@@ -1501,6 +1521,9 @@ export default function AdminPage() {
                           </td>
                           <td style={{ textAlign: 'center', padding: '0.5rem 0.75rem', color: '#6b7280' }}>
                             {record.client_country || '—'}
+                          </td>
+                          <td style={{ textAlign: 'center', padding: '0.5rem 0.75rem', color: '#6b7280', fontSize: '0.75rem' }}>
+                            {record.device_type === 'mobile' ? '📱' : record.device_type === 'tablet' ? '📋' : record.device_type === 'desktop' ? '🖥️' : '—'}
                           </td>
                           <td style={{ textAlign: 'center', padding: '0.5rem 0.75rem' }}>
                             <span style={{
