@@ -643,9 +643,9 @@ const handleAnalyze = async () => {
   }
 
   setLoading(true)
-  setProgress(0)
+  setProgress(1)
+  setResult(null)
   setError(null)
-  let uploadProgressInterval: ReturnType<typeof setInterval> | null = null
   try {
     // ============================================================
     // IP RATE LIMITING CHECK (for anonymous users only)
@@ -725,11 +725,7 @@ const handleAnalyze = async () => {
     let fileToAnalyze = file
     let originalMetadata: { sampleRate: number; bitDepth: number; numberOfChannels: number; duration: number; fileSize: number } | undefined = undefined
 
-    // Simulated progress during header parse + upload (0% → 8%)
-    // Prevents the bar from sitting at 0% while uploading large files
-    uploadProgressInterval = setInterval(() => {
-      setProgress(prev => prev < 8 ? prev + 1 : prev)
-    }, 800)
+    setProgress(3)
 
     // Capture metadata from WAV/AIFF header (first 1024 bytes — instant, no AudioContext).
     // originalMetadata is only needed when compressing (>50MB), so we skip AudioContext
@@ -759,6 +755,8 @@ const handleAnalyze = async () => {
     } catch {
       // Header parsing failed — backend will read from file directly
     }
+
+    setProgress(5)
 
     // Compress files over 50MB to prevent Render OOM (512MB RAM limit)
     const maxSize = 50 * 1024 * 1024
@@ -793,6 +791,8 @@ const handleAnalyze = async () => {
       }
     }
     
+    setProgress(7)
+
     // START ANALYSIS (returns job_id immediately)
     const startData = await startAnalysisPolling(fileToAnalyze, {
       lang,
@@ -802,7 +802,6 @@ const handleAnalyze = async () => {
       isAuthenticated: isLoggedIn
     })
     const jobId = startData.job_id
-    if (uploadProgressInterval) clearInterval(uploadProgressInterval)
 
     // Store request ID for PDF download
     requestIdRef.current = jobId
@@ -964,7 +963,6 @@ const handleAnalyze = async () => {
     }, 100)
     
   } catch (err: any) {
-    if (uploadProgressInterval) clearInterval(uploadProgressInterval)
     console.error('Analysis error:', err)
     setError(getErrorMessage(err, lang))
   } finally {
