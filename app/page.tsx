@@ -646,6 +646,7 @@ const handleAnalyze = async () => {
   setProgress(1)
   setResult(null)
   setError(null)
+  console.error('[Progress] Set to 1')
   try {
     // ============================================================
     // IP RATE LIMITING CHECK (for anonymous users only)
@@ -726,6 +727,7 @@ const handleAnalyze = async () => {
     let originalMetadata: { sampleRate: number; bitDepth: number; numberOfChannels: number; duration: number; fileSize: number } | undefined = undefined
 
     setProgress(3)
+    console.error('[Progress] Set to 3')
 
     // Capture metadata from WAV/AIFF header (first 1024 bytes — instant, no AudioContext).
     // originalMetadata is only needed when compressing (>50MB), so we skip AudioContext
@@ -757,6 +759,7 @@ const handleAnalyze = async () => {
     }
 
     setProgress(5)
+    console.error('[Progress] Set to 5')
 
     // Compress files over 50MB to prevent Render OOM (512MB RAM limit)
     const maxSize = 50 * 1024 * 1024
@@ -792,6 +795,7 @@ const handleAnalyze = async () => {
     }
     
     setProgress(7)
+    console.error('[Progress] Set to 7')
 
     // START ANALYSIS (returns job_id immediately)
     const startData = await startAnalysisPolling(fileToAnalyze, {
@@ -807,7 +811,8 @@ const handleAnalyze = async () => {
     requestIdRef.current = jobId
 
     setProgress(10)
-    
+    console.error('[Progress] Set to 10 (upload complete)')
+
     // POLL FOR RESULT — adaptive interval: fast at first, slows down
     const pollStartTime = Date.now()
     const maxPollDuration = 5 * 60 * 1000  // 5 min max
@@ -828,9 +833,14 @@ const handleAnalyze = async () => {
 
           try {
             const statusData = await getAnalysisStatus(jobId, lang)
+            console.error('[Progress] Poll response:', statusData.status, 'progress:', statusData.progress)
 
             // Update progress bar (don't allow it to go backwards)
-            setProgress(prev => Math.max(prev, statusData.progress || 0))
+            setProgress(prev => {
+              const next = Math.max(prev, statusData.progress || 0)
+              console.error('[Progress] setProgress functional:', prev, '->', next)
+              return next
+            })
 
             if (statusData.status === 'complete') {
               resolve(statusData.result)
@@ -2183,41 +2193,20 @@ by Matías Carvajal
                 </div>
               )}
 
-              {/* Analyze Button */}
+              {/* Analyze Button / Progress Display */}
               {file && !isFileTooLarge && (
-                <button
-                  onClick={handleAnalyze}
-                  disabled={loading || compressing}
-                  style={{
+                <>
+                {compressing ? (
+                  <div style={{
                     width: '100%',
-                    background: (loading || compressing) ? '#d1d5db' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                    color: (loading || compressing) ? '#6b7280' : 'white',
-                    padding: 'clamp(0.75rem, 2vw, 1rem)',
+                    background: '#f3f4f6',
+                    padding: 'clamp(1rem, 2vw, 1.5rem)',
                     borderRadius: '0.75rem',
-                    fontWeight: '600',
-                    fontSize: 'clamp(0.9375rem, 2.5vw, 1.125rem)',
-                    minHeight: '48px',
-                    border: 'none',
-                    cursor: (loading || compressing) ? 'not-allowed' : 'pointer',
-                    transition: 'all 0.3s',
-                    boxShadow: (loading || compressing) ? 'none' : '0 4px 20px rgba(102, 126, 234, 0.3)',
-                    opacity: (loading || compressing) ? 0.6 : 1
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!loading && !compressing) {
-                      e.currentTarget.style.transform = 'scale(1.02)'
-                      e.currentTarget.style.boxShadow = '0 8px 30px rgba(102, 126, 234, 0.4)'
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'scale(1)'
-                    e.currentTarget.style.boxShadow = (loading || compressing) ? 'none' : '0 4px 20px rgba(102, 126, 234, 0.3)'
-                  }}
-                >
-                  {compressing ? (
+                    border: '1px solid #e5e7eb'
+                  }}>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', width: '100%' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                        <svg style={{ animation: 'spin 1s linear infinite', height: '1.5rem', width: '1.5rem' }} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <svg style={{ animation: 'spin 1s linear infinite', height: '1.5rem', width: '1.5rem', color: '#667eea' }} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                           <circle style={{ opacity: 0.25 }} cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                           <path style={{ opacity: 0.75 }} fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
@@ -2242,23 +2231,31 @@ by Matías Carvajal
                             boxShadow: '0 2px 8px rgba(102, 126, 234, 0.4)'
                           }} />
                         </div>
-                        <div style={{ 
-                          display: 'flex', 
-                          justifyContent: 'space-between', 
+                        <div style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
                           marginTop: '0.75rem',
                           fontSize: '0.875rem',
                           opacity: 0.9
                         }}>
                           <span style={{ fontWeight: '600' }}>{compressionProgress}%</span>
                           <span>
-                            {lang === 'es' 
+                            {lang === 'es'
                               ? `${(file.size / 1024 / 1024).toFixed(1)}MB → ~${Math.min(35, (file.size / 1024 / 1024) * 0.3).toFixed(1)}MB`
                               : `${(file.size / 1024 / 1024).toFixed(1)}MB → ~${Math.min(35, (file.size / 1024 / 1024) * 0.3).toFixed(1)}MB`}
                           </span>
                         </div>
                       </div>
                     </div>
-                  ) : loading ? (
+                  </div>
+                ) : loading ? (
+                  <div style={{
+                    width: '100%',
+                    background: '#f3f4f6',
+                    padding: 'clamp(1rem, 2vw, 1.5rem)',
+                    borderRadius: '0.75rem',
+                    border: '1px solid #e5e7eb'
+                  }}>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.25rem', width: '100%' }}>
                       {/* Spinner + rotating methodology message */}
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
@@ -2328,22 +2325,50 @@ by Matías Carvajal
                         </div>
                       </div>
                     </div>
-                  ) : (
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      {needsCompression ? (
-                        <>
-                          <Play size={18} style={{ marginRight: '0.5rem' }} />
-                          {lang === 'es' ? 'Comprimir y Analizar' : 'Compress & Analyze'}
-                        </>
-                      ) : (
-                        <>
-                          <Play size={18} style={{ marginRight: '0.5rem' }} />
-                          {lang === 'es' ? 'Analizar Mezcla' : 'Analyze Mix'}
-                        </>
-                      )}
-                    </div>
-                  )}
+                  </div>
+                ) : (
+                <button
+                  onClick={handleAnalyze}
+                  style={{
+                    width: '100%',
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    color: 'white',
+                    padding: 'clamp(0.75rem, 2vw, 1rem)',
+                    borderRadius: '0.75rem',
+                    fontWeight: '600',
+                    fontSize: 'clamp(0.9375rem, 2.5vw, 1.125rem)',
+                    minHeight: '48px',
+                    border: 'none',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s',
+                    boxShadow: '0 4px 20px rgba(102, 126, 234, 0.3)',
+                    opacity: 1
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'scale(1.02)'
+                    e.currentTarget.style.boxShadow = '0 8px 30px rgba(102, 126, 234, 0.4)'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'scale(1)'
+                    e.currentTarget.style.boxShadow = '0 4px 20px rgba(102, 126, 234, 0.3)'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {needsCompression ? (
+                      <>
+                        <Play size={18} style={{ marginRight: '0.5rem' }} />
+                        {lang === 'es' ? 'Comprimir y Analizar' : 'Compress & Analyze'}
+                      </>
+                    ) : (
+                      <>
+                        <Play size={18} style={{ marginRight: '0.5rem' }} />
+                        {lang === 'es' ? 'Analizar Mezcla' : 'Analyze Mix'}
+                      </>
+                    )}
+                  </div>
                 </button>
+                )}
+              </>
               )}
 
               {/* Message when file is too large (>200MB) */}
