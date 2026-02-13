@@ -807,44 +807,47 @@ const handleAnalyze = async () => {
     
     setProgress(10)
     
-    // POLL FOR RESULT
-    let pollAttempts = 0
-    const maxPollAttempts = 120  // 120 attempts * 1.5 sec = 3 min max
-    
+    // POLL FOR RESULT — adaptive interval: fast at first, slows down
+    const pollStartTime = Date.now()
+    const maxPollDuration = 5 * 60 * 1000  // 5 min max
+    let pollCount = 0
+
     const pollForResult = async (): Promise<any> => {
       return new Promise((resolve, reject) => {
-        const pollInterval = setInterval(async () => {
-          pollAttempts++
-          
+        const poll = async () => {
+          pollCount++
+          const elapsed = Date.now() - pollStartTime
+
+          // Adaptive delay: 1s first 10s, 3s after, 4s after 90s
+          const getDelay = () => {
+            if (elapsed < 10000) return 1000
+            if (elapsed < 90000) return 3000
+            return 4000
+          }
+
           try {
             const statusData = await getAnalysisStatus(jobId, lang)
-            
-            
+
             // Update progress bar (don't allow it to go backwards)
             setProgress(prev => Math.max(prev, statusData.progress || 0))
-            
+
             if (statusData.status === 'complete') {
-              clearInterval(pollInterval)
               resolve(statusData.result)
-              
             } else if (statusData.status === 'error') {
-              clearInterval(pollInterval)
               console.error('Analysis error:', statusData.error)
               reject(new Error(statusData.error || 'Analysis failed'))
-              
-            } else if (pollAttempts >= maxPollAttempts) {
-              clearInterval(pollInterval)
+            } else if (elapsed >= maxPollDuration) {
               console.error('Polling timeout')
               reject(new Error(ERROR_MESSAGES.timeout[lang]))
+            } else {
+              setTimeout(poll, getDelay())
             }
-            
           } catch (pollError: any) {
-            clearInterval(pollInterval)
             console.error('Polling error:', pollError)
             reject(pollError)
           }
-          
-        }, 1500)  // Poll every 1.5 seconds
+        }
+        setTimeout(poll, 1000)  // First poll after 1s
       })
     }
     
@@ -2299,9 +2302,22 @@ by Matías Carvajal
                         }}>
                           <span style={{ fontWeight: '600' }}>{progress}%</span>
                           <span style={{ color: '#9ca3af', fontSize: '0.75rem' }}>
-                            {(fileDuration !== null ? fileDuration >= 180 : file && file.size > 50 * 1024 * 1024)
-                              ? (lang === 'es' ? 'Generalmente menos de 90 segundos' : 'Usually under 90 seconds')
-                              : (lang === 'es' ? 'Generalmente menos de 30 segundos' : 'Usually under 30 seconds')}
+                            {(() => {
+                              // Dynamic estimate based on actual file duration
+                              let estSec: number
+                              if (fileDuration !== null && fileDuration > 120) {
+                                // Chunked: ~8s per 60s chunk + 10s overhead, rounded to 10
+                                const chunks = Math.ceil(fileDuration / 60)
+                                estSec = Math.round((chunks * 8 + 10) / 10) * 10
+                              } else if (fileDuration !== null) {
+                                estSec = 25  // Short file, no chunking
+                              } else {
+                                estSec = file && file.size > 50 * 1024 * 1024 ? 90 : 30
+                              }
+                              return lang === 'es'
+                                ? `Estimado: ~${estSec} segundos`
+                                : `Estimated: ~${estSec} seconds`
+                            })()}
                           </span>
                         </div>
                       </div>

@@ -885,7 +885,7 @@ async def start_analysis(
                         Path(analysis_path),
                         lang=lang,
                         strict=strict,
-                        chunk_duration=30.0,  # 30 second chunks
+                        chunk_duration=60.0,  # 60 second chunks — halves overhead vs 30s
                         progress_callback=update_progress,  # ← Pass callback
                         original_metadata=original_metadata  # ← Pass original metadata
                     )
@@ -903,17 +903,17 @@ async def start_analysis(
                 result = await loop.run_in_executor(None, analyze_func)
                 
                 logger.info(f"✅ [{job_id}] Analysis complete: Score {result['score']}/100")
-                
-                # Update progress
+
+                # Update progress — analysis done, starting report generation
                 async with jobs_lock:
-                    jobs[job_id]['progress'] = 70
-                
+                    jobs[job_id]['progress'] = 75
+
                 # Generate reports (also blocking - run in executor)
                 logger.info(f"📝 [{job_id}] Generating reports...")
-                
+
                 # Import report generators
                 from analyzer import generate_short_mode_report, generate_visual_report
-                
+
                 # Strip _compressed suffix (added by browser-side compression)
                 display_filename = file.filename.replace('_compressed', '') if file.filename else file.filename
 
@@ -927,6 +927,9 @@ async def start_analysis(
                 )
                 report_write = await loop.run_in_executor(None, write_func)
 
+                async with jobs_lock:
+                    jobs[job_id]['progress'] = 85
+
                 # Generate SHORT report (summary without technical details)
                 short_func = functools.partial(
                     generate_short_mode_report,
@@ -936,6 +939,9 @@ async def start_analysis(
                     filename=display_filename
                 )
                 report_short = await loop.run_in_executor(None, short_func)
+
+                async with jobs_lock:
+                    jobs[job_id]['progress'] = 95
 
                 # Generate VISUAL report (bullets only)
                 visual_func = functools.partial(
