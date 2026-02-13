@@ -443,12 +443,17 @@ function Home() {
     return () => clearTimeout(timeoutId)
   }, [loading])
 
-  // Sync progress ref → state on a timer so the browser gets time to paint between updates.
-  // Direct setProgress calls inside async event handlers get batched by React 18 and never paint.
+  // Sync progress ref → DOM directly on a timer.
+  // React 18's automatic batching prevents setProgress calls from painting during async handlers.
+  // Direct DOM manipulation bypasses React entirely — guaranteed to update the UI.
   useEffect(() => {
     if (!loading) return
     const interval = setInterval(() => {
-      setProgress(progressRef.current)
+      const val = progressRef.current
+      const fill = document.getElementById('mr-progress-fill')
+      const text = document.getElementById('mr-progress-text')
+      if (fill) fill.style.width = `${val}%`
+      if (text) text.textContent = `${val}%`
     }, 300)
     return () => clearInterval(interval)
   }, [loading])
@@ -2296,7 +2301,7 @@ by Matías Carvajal
                           height: '1rem',
                           overflow: 'hidden'
                         }}>
-                          <div style={{
+                          <div id="mr-progress-fill" style={{
                             background: 'linear-gradient(90deg, #667eea 0%, #764ba2 100%)',
                             height: '1rem',
                             borderRadius: '9999px',
@@ -2312,7 +2317,7 @@ by Matías Carvajal
                           fontSize: '0.875rem',
                           opacity: 0.9
                         }}>
-                          <span style={{ fontWeight: '600' }}>{progress}%</span>
+                          <span id="mr-progress-text" style={{ fontWeight: '600' }}>{progress}%</span>
                           <span style={{ color: '#9ca3af', fontSize: '0.75rem' }}>
                             {(() => {
                               // Dynamic estimate based on actual file duration
