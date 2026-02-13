@@ -645,6 +645,7 @@ const handleAnalyze = async () => {
   setLoading(true)
   setProgress(0)
   setError(null)
+  let uploadProgressInterval: ReturnType<typeof setInterval> | null = null
   try {
     // ============================================================
     // IP RATE LIMITING CHECK (for anonymous users only)
@@ -724,6 +725,12 @@ const handleAnalyze = async () => {
     let fileToAnalyze = file
     let originalMetadata: { sampleRate: number; bitDepth: number; numberOfChannels: number; duration: number; fileSize: number } | undefined = undefined
 
+    // Simulated progress during header parse + upload (0% → 8%)
+    // Prevents the bar from sitting at 0% while uploading large files
+    uploadProgressInterval = setInterval(() => {
+      setProgress(prev => prev < 8 ? prev + 1 : prev)
+    }, 800)
+
     // Always capture original metadata from file header (before any compression)
     // This ensures correct bit depth/sample rate even if backend reads compressed file
     try {
@@ -790,10 +797,11 @@ const handleAnalyze = async () => {
       isAuthenticated: isLoggedIn
     })
     const jobId = startData.job_id
-    
+    if (uploadProgressInterval) clearInterval(uploadProgressInterval)
+
     // Store request ID for PDF download
     requestIdRef.current = jobId
-    
+
     setProgress(10)
     
     // POLL FOR RESULT — adaptive interval: fast at first, slows down
@@ -951,6 +959,7 @@ const handleAnalyze = async () => {
     }, 100)
     
   } catch (err: any) {
+    if (uploadProgressInterval) clearInterval(uploadProgressInterval)
     console.error('Analysis error:', err)
     setError(getErrorMessage(err, lang))
   } finally {
