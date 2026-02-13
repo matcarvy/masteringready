@@ -731,31 +731,33 @@ const handleAnalyze = async () => {
       setProgress(prev => prev < 8 ? prev + 1 : prev)
     }, 800)
 
-    // Always capture original metadata from file header (before any compression)
-    // This ensures correct bit depth/sample rate even if backend reads compressed file
-    // Wrapped in 5s timeout — decodeAudioData can hang on repeat analyses in some browsers
+    // Capture metadata from WAV/AIFF header (first 1024 bytes — instant, no AudioContext).
+    // originalMetadata is only needed when compressing (>50MB), so we skip AudioContext
+    // for smaller files. This prevents decodeAudioData hangs on repeat analyses.
     try {
       const headerBuffer = await file.slice(0, 1024).arrayBuffer()
       const headerInfo = parseFileHeader(headerBuffer, file.name)
-      if (headerInfo.sampleRate || headerInfo.bitDepth > 16) {
-        const tempCtx = new (window.AudioContext || (window as any).webkitAudioContext)()
-        const fullBuffer = await file.arrayBuffer()
-        const decoded = await Promise.race([
-          tempCtx.decodeAudioData(fullBuffer),
-          new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000))
-        ])
-        originalMetadata = {
-          sampleRate: headerInfo.sampleRate || decoded.sampleRate,
-          bitDepth: headerInfo.bitDepth,
-          numberOfChannels: headerInfo.numberOfChannels || decoded.numberOfChannels,
-          duration: decoded.duration,
-          fileSize: file.size
+      if (headerInfo.sampleRate && headerInfo.numberOfChannels && headerInfo.bitDepth) {
+        // Calculate duration from header without AudioContext (WAV/AIFF only)
+        const headerSize = 44 // WAV standard header
+        const bytesPerSample = headerInfo.bitDepth / 8
+        const estimatedDuration = (file.size - headerSize) / (headerInfo.sampleRate * headerInfo.numberOfChannels * bytesPerSample)
+        if (estimatedDuration > 0 && isFinite(estimatedDuration)) {
+          setFileDuration(estimatedDuration)
         }
-        setFileDuration(decoded.duration)
-        tempCtx.close()
+        // Only build originalMetadata when file will be compressed (backend reads directly otherwise)
+        if (file.size > 50 * 1024 * 1024) {
+          originalMetadata = {
+            sampleRate: headerInfo.sampleRate,
+            bitDepth: headerInfo.bitDepth,
+            numberOfChannels: headerInfo.numberOfChannels,
+            duration: estimatedDuration > 0 ? estimatedDuration : 0,
+            fileSize: file.size
+          }
+        }
       }
     } catch {
-      // Header parsing failed or timed out — backend will read from file directly
+      // Header parsing failed — backend will read from file directly
     }
 
     // Compress files over 50MB to prevent Render OOM (512MB RAM limit)
