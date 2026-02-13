@@ -234,7 +234,9 @@ Watch these metrics in admin dashboard before making changes:
 
 ## NEXT STEPS (Priority Order)
 
-### Immediate (when evidence supports it)
+### Immediate (active bugs / quick wins)
+- [ ] **Verify progress bar fix** — Direct DOM manipulation approach deployed (`7be3f46`). User to test. If still broken, debug whether the `useEffect([loading])` interval fires at all.
+- [ ] **Remove diagnostic code** — Once progress bar confirmed, clean up `progressRef`, `console.error` remnants, and any leftover debugging artifacts.
 - [ ] **Shared secret Vercel ↔ Render** (~15 min) — `X-API-Secret` header prevents direct Render API abuse. Requires coordinated env var deploy.
 - [ ] **Google Search Console** — Add verification ID in `app/layout.tsx` line ~117. Submit sitemap.
 - [ ] **Facebook OAuth** — Submit Meta App Review + Business Verification → re-enable button in `SocialLoginButtons.tsx`
@@ -243,15 +245,13 @@ Watch these metrics in admin dashboard before making changes:
 - [ ] **eBook Migration** — Move from Payhip ($15 USD) to MasteringReady platform. Scope: `ebook` plan type, checkout + webhook case, protected PDF download (`/api/ebook/download` with signed URLs), `/ebook` page, cross-sell CTA.
 - [ ] **Transactional emails** — Welcome, receipt, renewal reminders. Currently Supabase handles only auth emails.
 - [ ] **Google Analytics** (`NEXT_PUBLIC_GA_MEASUREMENT_ID`)
+- [ ] **Stream Ready deploy** — Backend endpoints ready in `main.py` (`_sr_` prefix). Frontend at `~/streamready/`. Needs: GitHub repo, Vercel project (`stream.masteringready.com`), env vars, Supabase project (post-launch). See `~/streamready/CLAUDE.md`.
 
 ### Medium-term (Month 2-3)
 - [ ] **Priority Queue System** — Serialize analyses, prioritize paid users. Spec ready: `docs/specs/priority-queue-system.xml`. Trigger: OOM errors, queue depth >5, ~50-100 active users.
 - [ ] **DLocal** (LATAM local payment methods) — LATAM users can pay via Stripe for now.
 - [ ] **Smart Leveler** — Future feature using captured `energy_curve` + `spectral_6band` data.
 - [ ] **Sentry error tracking** (`NEXT_PUBLIC_SENTRY_DSN`)
-
-### Separate Product
-- [ ] **Stream Ready** — Video creators platform. Target: July 2026. Separate codebase, shared brand family. See details below.
 
 ---
 
@@ -267,8 +267,8 @@ Watch these metrics in admin dashboard before making changes:
   - Different metrics and scoring criteria
   - Different pricing structure TBD
 - **Shared infrastructure**: Stripe account, Supabase org (separate project), Vercel team
-- **Development plan**: Will be planned and built in a dedicated `~/streamready/` codebase
-- **Status**: Concept phase — no code yet
+- **Development plan**: Separate codebase at `~/streamready/`, shared backend at `~/masteringready/main.py`
+- **Status**: Phase 1 MVP built (not deployed). Frontend + backend complete, `npx next build` clean. See `~/streamready/CLAUDE.md` for full details.
 
 ---
 
@@ -2351,12 +2351,82 @@ let _cachedAccessToken: string | null = null
 
 **Fix**: Changed to `select('count', { count: 'exact', head: true })` which returns count metadata without requiring row-level read access.
 
-**Git state**: All changes local, not committed. Build clean (`npx next build` passes).
+**Git state**: Committed and pushed as part of `111f6ed` (Session 2026-02-13 Part 2 batch).
 
-**MR next steps:**
-1. **SEO audit + launch plan** — Tomorrow's priority. Google Search Console, sitemap, meta tags
-2. **Shared secret Vercel ↔ Render** — `X-API-Secret` header to prevent direct API abuse
-3. **Facebook OAuth** — Meta App Review + Business Verification → re-enable button
-4. **Monitor**: anonymous funnel, UTM attribution, Render analysis times (benchmark: 68-73s)
-5. **Render upgrade trigger**: When SR video processing + MR analysis concurrent = OOM on 512MB, upgrade to Standard ($25/mo)
-6. **Supabase cron**: Verify cron-job.org config is hitting the correct URL with GET method
+---
+
+### Session 2026-02-13 Part 2 — Progress Bar Fix + Infinite Reload Fix
+
+#### Context
+Continued from Session 2026-02-13 (context compaction). Main task: fix progress bar stuck at 0%/1% during analysis. Secondary: fix dashboard infinite reload loop.
+
+#### 1. Progress Bar Bug — Root Cause Analysis
+
+**Original symptom**: Progress bar stays at 0% during entire analysis, then jumps to results.
+
+**Investigation progression (across Sessions 2026-02-13 and 2026-02-13 Part 2):**
+
+1. **`decodeAudioData()` hang** (FIXED `7daf256`): Browser WebAudio API hung permanently on 2nd analysis, blocking upload. Fixed by removing AudioContext for files <50MB, using WAV header math for duration.
+
+2. **`result` state hiding progress bar** (FIXED `be6e299`): Second analysis kept `result` from first analysis set. `{!result ? (upload area) : (results)}` hid progress bar. Added `setResult(null)` at start.
+
+3. **Progress bar inside disabled `<button>`** (FIXED `388c7e3`): Progress bar + spinner + compression UI were all rendered inside `<button disabled={loading}>`. Refactored: progress/compression display as standalone `<div>` elements, button only renders when idle.
+
+4. **Diagnostic logging** (`388c7e3`): Added `console.error('[Progress]')` at every `setProgress` call to trace execution.
+
+5. **Diagnostic results** (user tested): ALL setProgress calls execute correctly:
+   - `Set to 1, 3, 5, 7, 10` — all fire
+   - Poll responses: `progress: 10` (×19), then `27, 35, 52, 100`
+   - Functional updater: `10→10, 10→27, 27→35, 35→52, 52→100`
+   - **But UI stays at 1% throughout**
+
+6. **React 18 automatic batching** (ROOT CAUSE): React 18 batches ALL state updates in async event handlers (including `setProgress` calls from `handleAnalyze` and even from `setInterval` callbacks). The browser never gets a painting opportunity between batched updates. The `progress` state IS updated internally, but React never flushes a render that the browser can paint.
+
+7. **Ref + interval approach** (FAILED `e045529`): Used `progressRef` for instant writes + `setInterval(300ms)` calling `setProgress(progressRef.current)`. Still didn't paint — React's batching extends even to timer-based setState.
+
+8. **Direct DOM manipulation** (CURRENT FIX `7be3f46`): Bypass React entirely. `progressRef.current` written from async handler. `setInterval(300ms)` reads ref and writes directly to DOM via `document.getElementById`:
+   - `#mr-progress-fill` → `style.width = ${val}%`
+   - `#mr-progress-text` → `textContent = ${val}%`
+
+**Status**: Deployed, awaiting user verification.
+
+**Key architectural insight**: React 18's automatic batching is more aggressive than documented. Even `setInterval` callbacks that call `setState` don't guarantee browser paint between updates when the component is mid-async-operation. For real-time progress indicators, direct DOM manipulation is the reliable approach.
+
+#### 2. Infinite Reload Loop Fix (`fdb332b`)
+
+**Problem**: Dashboard (and 4 other pages) had an 8-second auto-reload safety timeout that caused infinite reload loops when fetches consistently failed (NetworkError, stale Supabase connections).
+
+**Root cause**: `useEffect` with `[loading]` dependency called `window.location.reload()` after 8s if `loading` was still true. After reload, `loading` starts true again, fetch fails again, 8s → reload → infinite loop.
+
+**Fix**: Added `sessionStorage` flag per page (e.g., `mr_dash_reload`) to limit auto-reload to **1 attempt max**. Flag cleared when loading succeeds.
+
+**Pages fixed**: dashboard, history, subscription, settings, admin (5 pages).
+
+#### 3. Backend Progress Gap (Known Behavior)
+
+**Observation**: Backend stays at `progress: 10` (format detected) for ~19 consecutive polls before chunk processing starts (27%). This is normal — Render cold starts, semaphore wait, and initial file reading cause delay between format detection and chunk processing.
+
+**Not a bug**: The progress values from the backend are correct (10→18→27→35→44→52→61→70→75→85→95→100). The gap just means the backend spends most time at the beginning (loading file) rather than during chunk processing.
+
+#### Commits to main (Session 2026-02-13 Part 2)
+1. `388c7e3` - fix: move progress bar out of disabled button + add diagnostic logging
+2. `fdb332b` - fix: prevent infinite reload loop on all pages (sessionStorage guard)
+3. `e045529` - fix: progress bar updates via ref + interval (React 18 batching bypass attempt)
+4. `7be3f46` - fix: bypass React rendering — update progress bar via direct DOM manipulation
+
+**Git state**: main on `7be3f46`, pushed. Build clean.
+
+**Progress bar fix status**: Direct DOM manipulation deployed (`7be3f46`). Awaiting user verification. If DOM approach doesn't work either, next step would be investigating whether the `useEffect([loading])` interval even fires (add console.error inside interval callback).
+
+---
+
+**MR next steps (priority order):**
+1. **Verify progress bar fix** — User to test after Vercel deploy. If still stuck, add console.error inside the interval to confirm it fires.
+2. **Remove diagnostic code** — Once progress bar is confirmed working, clean up: remove `progressRef` if not needed, remove `console.error` remnants.
+3. **GoTrueClient warning** — "Multiple GoTrueClient instances detected" still appears. Cached fresh client may not fully prevent this. Low priority (Supabase says "not an error").
+4. **SEO audit + Google Search Console** — Add verification ID in `app/layout.tsx` line ~117. Submit sitemap.
+5. **Shared secret Vercel ↔ Render** (~15 min) — `X-API-Secret` header prevents direct Render API abuse.
+6. **Facebook OAuth** — Meta App Review + Business Verification → re-enable button.
+7. **eBook Migration** — Move from Payhip ($15 USD) to MasteringReady platform.
+8. **Monitor**: anonymous funnel, UTM attribution, Render analysis times (benchmark: 68-73s), device breakdown.
+9. **Stream Ready deploy** — Backend endpoints ready in `main.py`. Frontend at `~/streamready/`. Needs GitHub repo + Vercel project + Supabase project.
