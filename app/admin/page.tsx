@@ -1096,11 +1096,16 @@ export default function AdminPage() {
     }
   }, [feedbackFilter, isAdmin, activeTab, fetchFeedback])
 
-  // Safety timeout — if initial fetch hangs (stale connections from SPA navigation), auto-reload
+  // Safety timeout — if initial fetch hangs (stale connections from SPA navigation), auto-reload (max 1 attempt)
   useEffect(() => {
-    if (!statsLoading) return
+    if (!statsLoading) {
+      sessionStorage.removeItem('mr_adm_reload')
+      return
+    }
+    const alreadyReloaded = sessionStorage.getItem('mr_adm_reload')
+    if (alreadyReloaded) return
     const timeout = setTimeout(() => {
-      console.warn('[Admin] Fetch stalled — reloading page')
+      sessionStorage.setItem('mr_adm_reload', '1')
       window.location.reload()
     }, 8000)
     return () => clearTimeout(timeout)

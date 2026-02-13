@@ -364,10 +364,16 @@ export default function SettingsPage() {
     }
   }
 
-  // Safety timeout — if loading hangs, auto-reload (full reload always succeeds)
+  // Safety timeout — if loading hangs, auto-reload (max 1 attempt)
   useEffect(() => {
-    if (!loading) return
+    if (!loading) {
+      sessionStorage.removeItem('mr_set_reload')
+      return
+    }
+    const alreadyReloaded = sessionStorage.getItem('mr_set_reload')
+    if (alreadyReloaded) return
     const timeout = setTimeout(() => {
+      sessionStorage.setItem('mr_set_reload', '1')
       window.location.reload()
     }, 8000)
     return () => clearTimeout(timeout)

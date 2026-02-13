@@ -616,10 +616,16 @@ function DashboardContent() {
     }
   }
 
-  // Safety timeout — if fetch hangs (stale connections from SPA navigation), auto-reload
+  // Safety timeout — if fetch hangs (stale connections from SPA navigation), auto-reload (max 1 attempt)
   useEffect(() => {
-    if (!loading) return
+    if (!loading) {
+      sessionStorage.removeItem('mr_dash_reload')
+      return
+    }
+    const alreadyReloaded = sessionStorage.getItem('mr_dash_reload')
+    if (alreadyReloaded) return
     const timeout = setTimeout(() => {
+      sessionStorage.setItem('mr_dash_reload', '1')
       window.location.reload()
     }, 8000)
     return () => clearTimeout(timeout)
