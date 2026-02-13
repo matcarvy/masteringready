@@ -246,6 +246,7 @@ function Home() {
 
   const [loading, setLoading] = useState(false)
   const [progress, setProgress] = useState(0)
+  const progressRef = useRef(0)
   const [result, setResult] = useState<any>(null)
   const [displayScore, setDisplayScore] = useState(0)
   const [error, setError] = useState<string | null>(null)
@@ -440,6 +441,16 @@ function Home() {
     scheduleNext()
 
     return () => clearTimeout(timeoutId)
+  }, [loading])
+
+  // Sync progress ref → state on a timer so the browser gets time to paint between updates.
+  // Direct setProgress calls inside async event handlers get batched by React 18 and never paint.
+  useEffect(() => {
+    if (!loading) return
+    const interval = setInterval(() => {
+      setProgress(progressRef.current)
+    }, 300)
+    return () => clearInterval(interval)
   }, [loading])
 
   // Auto-detect language based on user's location
@@ -643,10 +654,10 @@ const handleAnalyze = async () => {
   }
 
   setLoading(true)
+  progressRef.current = 1
   setProgress(1)
   setResult(null)
   setError(null)
-  console.error('[Progress] Set to 1')
   try {
     // ============================================================
     // IP RATE LIMITING CHECK (for anonymous users only)
@@ -726,8 +737,7 @@ const handleAnalyze = async () => {
     let fileToAnalyze = file
     let originalMetadata: { sampleRate: number; bitDepth: number; numberOfChannels: number; duration: number; fileSize: number } | undefined = undefined
 
-    setProgress(3)
-    console.error('[Progress] Set to 3')
+    progressRef.current = 3
 
     // Capture metadata from WAV/AIFF header (first 1024 bytes — instant, no AudioContext).
     // originalMetadata is only needed when compressing (>50MB), so we skip AudioContext
@@ -758,8 +768,7 @@ const handleAnalyze = async () => {
       // Header parsing failed — backend will read from file directly
     }
 
-    setProgress(5)
-    console.error('[Progress] Set to 5')
+    progressRef.current = 5
 
     // Compress files over 50MB to prevent Render OOM (512MB RAM limit)
     const maxSize = 50 * 1024 * 1024
@@ -794,8 +803,7 @@ const handleAnalyze = async () => {
       }
     }
     
-    setProgress(7)
-    console.error('[Progress] Set to 7')
+    progressRef.current = 7
 
     // START ANALYSIS (returns job_id immediately)
     const startData = await startAnalysisPolling(fileToAnalyze, {
@@ -810,8 +818,7 @@ const handleAnalyze = async () => {
     // Store request ID for PDF download
     requestIdRef.current = jobId
 
-    setProgress(10)
-    console.error('[Progress] Set to 10 (upload complete)')
+    progressRef.current = 10
 
     // POLL FOR RESULT — adaptive interval: fast at first, slows down
     const pollStartTime = Date.now()
@@ -833,14 +840,12 @@ const handleAnalyze = async () => {
 
           try {
             const statusData = await getAnalysisStatus(jobId, lang)
-            console.error('[Progress] Poll response:', statusData.status, 'progress:', statusData.progress)
 
-            // Update progress bar (don't allow it to go backwards)
-            setProgress(prev => {
-              const next = Math.max(prev, statusData.progress || 0)
-              console.error('[Progress] setProgress functional:', prev, '->', next)
-              return next
-            })
+            // Update progress ref (interval syncs to state for browser paint)
+            const newProgress = statusData.progress || 0
+            if (newProgress > progressRef.current) {
+              progressRef.current = newProgress
+            }
 
             if (statusData.status === 'complete') {
               resolve(statusData.result)
@@ -865,7 +870,7 @@ const handleAnalyze = async () => {
     // Wait for result
     const data = await pollForResult()
 
-    setProgress(100)
+    progressRef.current = 100
 
     // Save analysis — quota must be verified before showing results.
     // DB save runs in background to prevent UI from hanging on slow Supabase calls.
@@ -880,6 +885,7 @@ const handleAnalyze = async () => {
               setUserAnalysisStatus(quotaCheck)
               setShowFreeLimitModal(true)
               // Do NOT show results — analysis is lost
+              progressRef.current = 0
               setProgress(0)
               setLoading(false)
               return
@@ -887,6 +893,7 @@ const handleAnalyze = async () => {
           } catch (quotaErr) {
             console.error('[Analysis] Quota re-check failed, blocking display:', quotaErr)
             setShowFreeLimitModal(true)
+            progressRef.current = 0
             setProgress(0)
             setLoading(false)
             return
@@ -977,6 +984,7 @@ const handleAnalyze = async () => {
     setError(getErrorMessage(err, lang))
   } finally {
     setLoading(false)
+    progressRef.current = 0
     setProgress(0)
     setCompressing(false)
     setCompressionProgress(0)
@@ -994,6 +1002,7 @@ const handleAnalyze = async () => {
     setResult(null)
     setError(null)
     setLoading(false)
+    progressRef.current = 0
     setProgress(0)
     setFileDuration(null)
     setSavedAnalysisId(null)
