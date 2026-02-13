@@ -50,19 +50,29 @@ import uuid
 import asyncio
 import functools
 import gc
+import re
+import subprocess
 import unicodedata
 import urllib.parse
 from typing import Optional, Dict, Any
 from datetime import datetime, timedelta
 import soundfile as sf
-from pydub import AudioSegment
 
-# Configure pydub to use bundled ffmpeg (imageio-ffmpeg) — no system install needed
+# Get ffmpeg path from imageio-ffmpeg (no system install needed)
 try:
     import imageio_ffmpeg
-    AudioSegment.converter = imageio_ffmpeg.get_ffmpeg_exe()
+    FFMPEG_EXE = imageio_ffmpeg.get_ffmpeg_exe()
 except ImportError:
-    pass  # Fall back to system ffmpeg if available
+    FFMPEG_EXE = "ffmpeg"  # Fall back to system ffmpeg
+
+def _free_memory():
+    """Force garbage collection and return memory to OS (Linux malloc_trim)."""
+    gc.collect()
+    try:
+        import ctypes
+        ctypes.CDLL("libc.so.6").malloc_trim(0)
+    except Exception:
+        pass  # Not Linux or libc unavailable
 
 # Analyzer version - used in API responses for tracking
 ANALYZER_VERSION = "7.4.2"
@@ -180,7 +190,7 @@ async def cleanup_old_jobs():
             logger.info(f"🗑️ Cleaning up expired job: {job_id}")
             del jobs[job_id]
         if expired:
-            gc.collect()
+            _free_memory()
 
 # Create FastAPI app
 app = FastAPI(
@@ -279,14 +289,17 @@ def classify_analysis_error(error_str: str) -> str:
     return 'server_error'
 
 def convert_to_wav(input_path: str, file_ext: str) -> str:
-    """Convert AAC/M4A to WAV using pydub (requires ffmpeg). Returns path to WAV temp file."""
-    logger.info(f"🔄 Converting {file_ext} to WAV via pydub/ffmpeg...")
-    fmt = 'aac' if file_ext == '.aac' else file_ext.lstrip('.')
-    audio = AudioSegment.from_file(input_path, format=fmt)
+    """Convert AAC/M4A to WAV using ffmpeg subprocess (zero Python memory). Returns path to WAV temp file."""
+    logger.info(f"🔄 Converting {file_ext} to WAV via ffmpeg subprocess...")
     wav_temp = tempfile.NamedTemporaryFile(delete=False, suffix='.wav')
-    audio.export(wav_temp.name, format='wav')
     wav_temp.close()
-    logger.info(f"✅ Converted to WAV: {wav_temp.name} ({len(audio) / 1000:.1f}s)")
+    result = subprocess.run(
+        [FFMPEG_EXE, '-i', input_path, '-acodec', 'pcm_s24le', wav_temp.name, '-y'],
+        capture_output=True, text=True, timeout=120
+    )
+    if result.returncode != 0:
+        raise RuntimeError(f"ffmpeg conversion failed: {result.stderr[:200]}")
+    logger.info(f"✅ Converted to WAV: {wav_temp.name}")
     return wav_temp.name
 
 # Initialize IP rate limiter and VPN detector
@@ -515,7 +528,11 @@ async def analyze_mix_endpoint(
             # Write uploaded content
             temp_file.write(content)
             temp_file.flush()
-            
+
+            # Free upload bytes — file is on disk now, no longer needed in RAM
+            del content
+            _free_memory()
+
             logger.info(f"💾 Temp file created: {temp_file.name}")
 
             # Convert AAC/M4A to WAV (not natively supported by libsndfile)
@@ -595,6 +612,8 @@ async def analyze_mix_endpoint(
                     logger.info(f"🗑️ Converted WAV cleaned up: {wav_converted}")
                 except Exception:
                     pass
+            # Force garbage collection + return memory to OS
+            _free_memory()
 
     # File automatically deleted here
     logger.info("🗑️ Temp file auto-deleted")
@@ -703,16 +722,21 @@ async def start_analysis(
             await _run_analysis()
 
     async def _run_analysis():
+        nonlocal content  # Allow freeing upload bytes from closure
         # Capture metadata from outer scope
         metadata_from_frontend = original_metadata_from_frontend
         logger.info(f"🔍 [{job_id}] Captured frontend metadata: {metadata_from_frontend}")
-        
+
         try:
             # Create temp file
             with tempfile.NamedTemporaryFile(delete=True, suffix=file_ext) as temp_file:
                 temp_file.write(content)
                 temp_file.flush()
-                
+
+                # Free upload bytes — file is on disk now, no longer needed in RAM
+                content = None
+                _free_memory()
+
                 logger.info(f"💾 [{job_id}] Temp file created")
 
                 # Convert AAC/M4A to WAV (not natively supported by libsndfile)
@@ -793,13 +817,21 @@ async def start_analysis(
                     use_chunked = estimated_duration_min > 2.0  # Use chunked for files > 2 minutes
                     logger.info(f"📊 [{job_id}] Using ACTUAL duration: {estimated_duration_min:.1f} min")
                 elif is_compressed:
-                    # Compressed format - try to get duration before deciding
+                    # Compressed format - try to get duration via ffmpeg (zero memory)
                     # Short compressed files (< 2 min) can be analyzed without chunking
                     try:
-                        probe_audio = AudioSegment.from_file(analysis_path)
-                        estimated_duration_min = len(probe_audio) / 60000.0  # pydub gives ms
-                        del probe_audio  # Free memory immediately
-                        logger.info(f"📊 [{job_id}] Compressed duration from pydub: {estimated_duration_min:.1f} min")
+                        probe_result = subprocess.run(
+                            [FFMPEG_EXE, '-i', analysis_path, '-f', 'null', '-'],
+                            capture_output=True, text=True, timeout=15
+                        )
+                        duration_match = re.search(r'Duration:\s*(\d+):(\d+):(\d+)\.(\d+)', probe_result.stderr)
+                        if duration_match:
+                            h, m, s, frac = duration_match.groups()
+                            total_sec = int(h) * 3600 + int(m) * 60 + int(s) + int(frac) / 100
+                            estimated_duration_min = total_sec / 60.0
+                        else:
+                            raise ValueError("Could not parse duration from ffmpeg output")
+                        logger.info(f"📊 [{job_id}] Compressed duration from ffmpeg probe: {estimated_duration_min:.1f} min")
                     except Exception as e:
                         # Fallback: estimate from file size (conservative: ~0.7 MB/min for low bitrate)
                         estimated_duration_min = file_size_mb * 1.5
@@ -1050,8 +1082,8 @@ async def start_analysis(
                     logger.info(f"🗑️ [{job_id}] Converted WAV cleaned up: {wav_converted}")
                 except Exception:
                     pass
-            # Force garbage collection after analysis to free numpy arrays
-            gc.collect()
+            # Force garbage collection + return memory to OS
+            _free_memory()
 
     # Start asyncio task (non-blocking)
     asyncio.create_task(analyze_in_background())

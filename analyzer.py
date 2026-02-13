@@ -5104,8 +5104,7 @@ def analyze_file_chunked(
         finally:
             # Free numpy arrays between chunks to keep memory low on 512MB Render Starter
             del y
-            if (i + 1) % 3 == 0 or i == num_chunks - 1:
-                gc.collect()
+            gc.collect()
 
     print("Aggregating results...")
     
