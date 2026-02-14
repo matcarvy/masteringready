@@ -2944,59 +2944,11 @@ by Matías Carvajal
                         overflowX: 'auto',
                         maxWidth: '100%',
                         margin: 0,
-                        filter: (!isLoggedIn && !isUnlocking) ? 'blur(4px)' : 'none',
-                        transition: 'filter 0.6s ease-out',
-                        userSelect: (!isLoggedIn && !isUnlocking) ? 'none' : 'auto',
-                        cursor: !isLoggedIn ? 'pointer' : 'auto'
+                        userSelect: 'auto',
+                        cursor: 'auto'
                       }}>
                         {cleanReportText((result as any).report_visual || result.report_short || result.report)}
                       </pre>
-                      {/* Unlock overlay for non-logged users */}
-                      {!isLoggedIn && (
-                        <div style={{
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          right: 0,
-                          bottom: 0,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          background: 'rgba(255, 255, 255, 0.3)',
-                          borderRadius: '0.5rem',
-                          cursor: 'pointer',
-                          opacity: isUnlocking ? 0 : 1,
-                          transition: 'opacity 0.4s ease-out',
-                          pointerEvents: isUnlocking ? 'none' : 'auto'
-                        }}>
-                          <div style={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            gap: '0.25rem',
-                            padding: '0.75rem 1.25rem',
-                            background: 'white',
-                            borderRadius: '1rem',
-                            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                            transition: 'color 0.3s ease'
-                          }}>
-                            <span style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '0.5rem',
-                              color: isUnlocking ? '#10b981' : '#667eea',
-                              fontWeight: '600',
-                              fontSize: '0.875rem'
-                            }}>
-                              {isUnlocking ? <Headphones size={16} /> : <Headphones size={16} />}
-                              {lang === 'es' ? 'Ver mi análisis' : 'View my analysis'}
-                            </span>
-                            <span style={{ fontSize: '0.7rem', color: '#9ca3af', fontWeight: '400' }}>
-                              {lang === 'es' ? 'Gratis. Sin tarjeta.' : 'Free. No credit card.'}
-                            </span>
-                          </div>
-                        </div>
-                      )}
                     </div>
                   </div>
                 )}
