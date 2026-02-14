@@ -3161,13 +3161,10 @@ by Matías Carvajal
                     )}
                   </button>
 
-                  {/* Download Full Report — Pro only */}
+                  {/* Download Full Report — hidden for anonymous (single CTA funnel), shown for logged-in users */}
+                  {isLoggedIn && (
                   <button
                     onClick={() => {
-                      if (!isLoggedIn) {
-                        setShowAuthModal(true)
-                        return
-                      }
                       if (!effectiveHasPaidAccess) {
                         setShowUpgradeModal(true)
                         return
@@ -3182,19 +3179,19 @@ by Matías Carvajal
                       justifyContent: 'center',
                       gap: '0.5rem',
                       padding: '0.875rem 1.25rem',
-                      background: (isLoggedIn && effectiveHasPaidAccess) ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'white',
-                      color: (isLoggedIn && effectiveHasPaidAccess) ? 'white' : '#6b7280',
-                      border: (isLoggedIn && effectiveHasPaidAccess) ? 'none' : '2px solid #d1d5db',
+                      background: effectiveHasPaidAccess ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'white',
+                      color: effectiveHasPaidAccess ? 'white' : '#6b7280',
+                      border: effectiveHasPaidAccess ? 'none' : '2px solid #d1d5db',
                       borderRadius: '0.75rem',
                       fontWeight: '600',
                       fontSize: 'clamp(0.8rem, 2vw, 0.9rem)',
                       cursor: 'pointer',
                       transition: 'all 0.2s',
-                      boxShadow: (isLoggedIn && effectiveHasPaidAccess) ? '0 4px 12px rgba(102, 126, 234, 0.3)' : 'none'
+                      boxShadow: effectiveHasPaidAccess ? '0 4px 12px rgba(102, 126, 234, 0.3)' : 'none'
                     }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.transform = 'translateY(-1px)'
-                      if (isLoggedIn && effectiveHasPaidAccess) {
+                      if (effectiveHasPaidAccess) {
                         e.currentTarget.style.boxShadow = '0 6px 20px rgba(102, 126, 234, 0.4)'
                       } else {
                         e.currentTarget.style.background = '#f3f4f6'
@@ -3202,14 +3199,14 @@ by Matías Carvajal
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.transform = 'translateY(0)'
-                      if (isLoggedIn && effectiveHasPaidAccess) {
+                      if (effectiveHasPaidAccess) {
                         e.currentTarget.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.3)'
                       } else {
                         e.currentTarget.style.background = 'white'
                       }
                     }}
                   >
-                    {(!isLoggedIn || !effectiveHasPaidAccess) ? (
+                    {!effectiveHasPaidAccess ? (
                       <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem' }}>
                         <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                           <Crown size={18} style={{ color: '#d97706' }} />
@@ -3226,6 +3223,7 @@ by Matías Carvajal
                       </>
                     )}
                   </button>
+                  )}
                 </div>
               </div>
 
