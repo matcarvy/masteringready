@@ -408,18 +408,18 @@ export function AuthModal({ isOpen, onClose, onSuccess, lang }: AuthModalProps) 
             <div style={{
               display: 'flex',
               justifyContent: 'center',
-              marginBottom: '0.75rem'
+              marginBottom: '0.5rem'
             }}>
               <div style={{
-                width: '48px',
-                height: '48px',
+                width: '40px',
+                height: '40px',
                 background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                 borderRadius: '50%',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center'
               }}>
-                <Headphones size={24} style={{ color: 'white' }} />
+                <Headphones size={20} style={{ color: 'white' }} />
               </div>
             </div>
 
@@ -429,7 +429,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, lang }: AuthModalProps) 
               background: '#f3f4f6',
               borderRadius: '0.5rem',
               padding: '0.25rem',
-              marginBottom: '1rem'
+              marginBottom: '0.75rem'
             }}>
               {(['signup', 'login'] as AuthMode[]).map((m) => (
                 <button
@@ -462,8 +462,8 @@ export function AuthModal({ isOpen, onClose, onSuccess, lang }: AuthModalProps) 
             <p style={{
               textAlign: 'center',
               color: '#6b7280',
-              fontSize: '0.875rem',
-              marginBottom: '1rem'
+              fontSize: '0.8125rem',
+              marginBottom: '0.5rem'
             }}>
               {mode === 'login' ? t.loginSubtitle : t.signupSubtitle}
             </p>
@@ -474,8 +474,8 @@ export function AuthModal({ isOpen, onClose, onSuccess, lang }: AuthModalProps) 
                 display: 'flex',
                 flexWrap: 'wrap',
                 justifyContent: 'center',
-                gap: '0.75rem',
-                marginBottom: '1rem'
+                gap: '0.5rem',
+                marginBottom: '0.75rem'
               }}>
                 {[t.benefit1, t.benefit2, t.benefit3].map((benefit, i) => (
                   <span
@@ -507,7 +507,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, lang }: AuthModalProps) 
             <div style={{
               display: 'flex',
               alignItems: 'center',
-              margin: '1.25rem 0',
+              margin: '0.75rem 0',
               gap: '1rem'
             }}>
               <div style={{ flex: 1, height: '1px', background: '#e5e7eb' }} />
