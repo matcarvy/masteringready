@@ -13,6 +13,10 @@ import { getAllPricesForCountry } from '@/lib/pricing-config'
 import { detectLanguage, setLanguageCookie } from '@/lib/language'
 import { getErrorMessage, ERROR_MESSAGES } from '@/lib/error-messages'
 
+// Module-level quota cache — survives React state resets / component remounts
+// (GoTrueClient conflicts cause auth state flicker → state loss)
+let _quotaCache: AnalysisStatus | null = null
+
 // ============================================================================
 // Helper: Map score to database verdict enum (deterministic, mirrors backend score_report)
 // ============================================================================
@@ -552,7 +556,7 @@ function Home() {
         // Check quota directly — don't rely solely on AuthProvider signal
         // (pendingAnalysis in localStorage may already be consumed)
         checkCanAnalyze().then((status) => {
-          setUserAnalysisStatus(status)
+          setUserAnalysisStatus(status); _quotaCache = status
           if (!status.can_analyze) {
             setShowFreeLimitModal(true)
           }
@@ -600,11 +604,11 @@ function Home() {
       if (status.reason === 'NO_PLAN') {
         setTimeout(() => {
           checkCanAnalyze().then((retryStatus) => {
-            setUserAnalysisStatus(retryStatus)
+            setUserAnalysisStatus(retryStatus); _quotaCache = retryStatus
           }).catch(() => {})
         }, 2000)
       } else {
-        setUserAnalysisStatus(status)
+        setUserAnalysisStatus(status); _quotaCache = status
       }
     }).catch(() => {
       // Don't block page load on failed quota check
@@ -696,7 +700,9 @@ const handleAnalyze = async () => {
     // ============================================================
     // QUOTA CHECK — diagnostic + timeout safety net
     // ============================================================
-    console.error('[MR-Q]', { isLoggedIn, cached: !!userAnalysisStatus, can: userAnalysisStatus?.can_analyze, reason: userAnalysisStatus?.reason })
+    // Use module-level cache as fallback when React state was lost (GoTrueClient conflicts)
+    const effectiveQuotaStatus = userAnalysisStatus || _quotaCache
+    console.error('[MR-Q]', { isLoggedIn, state: !!userAnalysisStatus, moduleCache: !!_quotaCache, can: effectiveQuotaStatus?.can_analyze, reason: effectiveQuotaStatus?.reason })
 
     // ============================================================
     // IP RATE LIMITING CHECK (for anonymous users only)
@@ -736,18 +742,18 @@ const handleAnalyze = async () => {
       // ============================================================
       try {
         let analysisStatus: AnalysisStatus
-        if (userAnalysisStatus?.can_analyze && userAnalysisStatus.reason !== 'ANONYMOUS') {
-          analysisStatus = userAnalysisStatus
-          console.error('[MR-Q] Using cached status:', userAnalysisStatus.reason)
+        if (effectiveQuotaStatus?.can_analyze && effectiveQuotaStatus.reason !== 'ANONYMOUS') {
+          analysisStatus = effectiveQuotaStatus
+          console.error('[MR-Q] Using cached status:', effectiveQuotaStatus.reason)
         } else {
-          console.error('[MR-Q] Calling checkCanAnalyze, cached:', userAnalysisStatus?.reason || 'null')
+          console.error('[MR-Q] Calling checkCanAnalyze, cached:', effectiveQuotaStatus?.reason || 'null')
           analysisStatus = await Promise.race([
             checkCanAnalyze(),
             new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Quota check timeout')), 8000))
           ])
           console.error('[MR-Q] checkCanAnalyze returned:', analysisStatus.reason, analysisStatus.can_analyze)
         }
-        setUserAnalysisStatus(analysisStatus)
+        setUserAnalysisStatus(analysisStatus); _quotaCache = analysisStatus
 
         // Defensive: if user is logged in but checkCanAnalyze returns ANONYMOUS,
         // the Supabase session may have expired — deny analysis rather than bypass quota
@@ -940,7 +946,7 @@ const handleAnalyze = async () => {
           try {
             const quotaCheck = await checkCanAnalyze()
             if (!quotaCheck.can_analyze || quotaCheck.reason === 'ANONYMOUS') {
-              setUserAnalysisStatus(quotaCheck)
+              setUserAnalysisStatus(quotaCheck); _quotaCache = quotaCheck
               setShowFreeLimitModal(true)
               // Do NOT show results — analysis is lost
               progressRef.current = 0
@@ -960,14 +966,18 @@ const handleAnalyze = async () => {
         // Quota verified — show results immediately
         setResult(data)
         // Optimistically update quota cache (no network call)
-        if (userAnalysisStatus) {
-          const newUsed = userAnalysisStatus.analyses_used + 1
-          const limit = userAnalysisStatus.analyses_limit
-          setUserAnalysisStatus({
-            ...userAnalysisStatus,
+        // Use module-level _quotaCache as fallback if React state was lost
+        const cachedForUpdate = userAnalysisStatus || _quotaCache
+        if (cachedForUpdate) {
+          const newUsed = cachedForUpdate.analyses_used + 1
+          const limit = cachedForUpdate.analyses_limit
+          const updated = {
+            ...cachedForUpdate,
             analyses_used: newUsed,
             can_analyze: limit < 0 ? true : newUsed < limit // limit < 0 = admin (unlimited)
-          })
+          }
+          setUserAnalysisStatus(updated)
+          _quotaCache = updated
         }
         // Save to database — non-blocking so Supabase client is free for dashboard navigation.
         // SPA navigation does NOT kill JS promises, so the save completes in background.
@@ -1052,7 +1062,8 @@ const handleAnalyze = async () => {
 
   const handleReset = () => {
     // Check quota before allowing new upload — don't let user waste time uploading
-    if (isLoggedIn && userAnalysisStatus && !userAnalysisStatus.can_analyze && userAnalysisStatus.reason !== 'NO_PLAN') {
+    const quotaForReset = userAnalysisStatus || _quotaCache
+    if (isLoggedIn && quotaForReset && !quotaForReset.can_analyze && quotaForReset.reason !== 'NO_PLAN') {
       setShowFreeLimitModal(true)
       return
     }
