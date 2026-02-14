@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 ENABLE_IP_RATE_LIMIT = os.getenv('ENABLE_IP_RATE_LIMIT', 'true').lower() == 'true'
 
 # Maximum free analyses per IP
-MAX_FREE_ANALYSES_PER_IP = 1
+MAX_FREE_ANALYSES_PER_IP = 3
 
 
 def hash_ip(ip_address: str) -> str:
