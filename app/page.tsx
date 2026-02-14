@@ -702,7 +702,6 @@ const handleAnalyze = async () => {
     // ============================================================
     // Use module-level cache as fallback when React state was lost (GoTrueClient conflicts)
     const effectiveQuotaStatus = userAnalysisStatus || _quotaCache
-    console.error('[MR-Q]', { isLoggedIn, state: !!userAnalysisStatus, moduleCache: !!_quotaCache, can: effectiveQuotaStatus?.can_analyze, reason: effectiveQuotaStatus?.reason })
 
     // ============================================================
     // IP RATE LIMITING CHECK (for anonymous users only)
@@ -744,14 +743,11 @@ const handleAnalyze = async () => {
         let analysisStatus: AnalysisStatus
         if (effectiveQuotaStatus?.can_analyze && effectiveQuotaStatus.reason !== 'ANONYMOUS') {
           analysisStatus = effectiveQuotaStatus
-          console.error('[MR-Q] Using cached status:', effectiveQuotaStatus.reason)
         } else {
-          console.error('[MR-Q] Calling checkCanAnalyze, cached:', effectiveQuotaStatus?.reason || 'null')
           analysisStatus = await Promise.race([
             checkCanAnalyze(),
             new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Quota check timeout')), 8000))
           ])
-          console.error('[MR-Q] checkCanAnalyze returned:', analysisStatus.reason, analysisStatus.can_analyze)
         }
         setUserAnalysisStatus(analysisStatus); _quotaCache = analysisStatus
 
@@ -794,7 +790,6 @@ const handleAnalyze = async () => {
     let fileToAnalyze = file
     let originalMetadata: { sampleRate: number; bitDepth: number; numberOfChannels: number; duration: number; fileSize: number } | undefined = undefined
 
-    console.error('[MR-1] Quota passed, file:', file.name, (file.size / 1024 / 1024).toFixed(1) + 'MB')
     progressRef.current = 3
 
     // Header parse ONLY for files needing compression (>50MB) — captures original metadata
@@ -829,7 +824,6 @@ const handleAnalyze = async () => {
       }
     }
 
-    console.error('[MR-2] Header phase done')
     progressRef.current = 5
 
     // Compress files over 50MB to prevent Render OOM (512MB RAM limit)
@@ -856,6 +850,16 @@ const handleAnalyze = async () => {
 
         setCompressing(false)
         setCompressionProgress(0)
+
+        // Reset progress animation AFTER compression — the CSS animation and percentage
+        // counter were running during compression, making them desync with actual analysis.
+        // Recalculate estimated time based on compressed file size + duration.
+        const postCompressEst = fileDuration && fileDuration > 120
+          ? Math.round((Math.ceil(fileDuration / 60) * 8 + 10) / 10) * 10
+          : 35
+        setProgressAnimDuration(postCompressEst)
+        setProgressKey(k => k + 1) // Restart CSS animation from 0%
+        progressStartRef.current = { time: Date.now(), duration: postCompressEst }
       } catch (compressionError) {
         clearInterval(compressionInterval)
         setCompressing(false)
@@ -863,11 +867,8 @@ const handleAnalyze = async () => {
         throw new Error(ERROR_MESSAGES.corrupt_file[lang])
       }
     }
-    
-    progressRef.current = 7
 
-    // Diagnostic: confirm we reached the upload phase (remove once verified)
-    console.error('[MR] Uploading to Render...', fileToAnalyze.name, (fileToAnalyze.size / 1024 / 1024).toFixed(1) + 'MB')
+    progressRef.current = 7
 
     // START ANALYSIS (returns job_id immediately)
     const startData = await startAnalysisPolling(fileToAnalyze, {

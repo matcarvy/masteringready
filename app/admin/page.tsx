@@ -2450,15 +2450,25 @@ export default function AdminPage() {
                         {['sub', 'low', 'low_mid', 'mid', 'high_mid', 'high'].map((band, i) => {
                           const val = data.avg[band] || 0
                           const colors = ['#ef4444', '#f97316', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6']
+                          const bandLabel = band === 'low_mid' ? 'Low Mid' : band === 'high_mid' ? 'High Mid' : band.charAt(0).toUpperCase() + band.slice(1)
                           return (
                             <div
                               key={band}
-                              title={`${band === 'low_mid' ? 'Low Mid' : band === 'high_mid' ? 'High Mid' : band}: ${val}%`}
                               style={{
                                 width: `${val}%`,
                                 background: colors[i],
-                                minWidth: val > 0 ? '2px' : '0'
+                                minWidth: val > 0 ? '2px' : '0',
+                                cursor: 'pointer'
                               }}
+                              onMouseEnter={(e) => {
+                                const rect = e.currentTarget.getBoundingClientRect()
+                                setChartTooltip({
+                                  x: rect.left + rect.width / 2,
+                                  y: rect.top - 8,
+                                  content: `${bandLabel}: ${val}%`
+                                })
+                              }}
+                              onMouseLeave={() => setChartTooltip(null)}
                             />
                           )
                         })}
