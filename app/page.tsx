@@ -448,30 +448,33 @@ function Home() {
   const [progressAnimDuration, setProgressAnimDuration] = useState(60)
   // Key forces React to unmount/remount the animation div on each analysis — restarts CSS animation
   const [progressKey, setProgressKey] = useState(0)
+  // Stable start time for percentage counter — ref avoids useEffect restart on duration changes
+  const progressStartRef = useRef<{ time: number; duration: number }>({ time: 0, duration: 60 })
 
   // Percentage counter — runs alongside CSS animation, uses DOM manipulation (proven reliable)
   useEffect(() => {
     if (!loading) return
-    const startTime = Date.now()
-    const duration = progressAnimDuration * 1000
     const timer = setInterval(() => {
+      const { time: startTime, duration } = progressStartRef.current
+      if (startTime === 0) return
       const elapsed = Date.now() - startTime
+      const durationMs = duration * 1000
       const el = document.getElementById('mr-progress-percent')
       if (!el) return
-      if (elapsed <= duration) {
-        const fraction = elapsed / duration
+      if (elapsed <= durationMs) {
+        const fraction = elapsed / durationMs
         // sqrt approximation of ease-out matches CSS keyframe curve closely
         const percent = Math.round(1 + Math.sqrt(fraction) * 92)
         el.textContent = `${percent}%`
       } else {
         // Beyond animation duration — slowly increment to show still working
-        const overTime = (elapsed - duration) / 1000
+        const overTime = (elapsed - durationMs) / 1000
         const percent = Math.min(97, Math.round(93 + overTime * 0.1))
         el.textContent = `${percent}%`
       }
     }, 300)
     return () => clearInterval(timer)
-  }, [loading, progressAnimDuration])
+  }, [loading]) // Only depends on loading — ref handles duration changes
 
   // Auto-detect language based on user's location
   // Priority: URL param > cookie > timezone/browser detection
@@ -674,9 +677,11 @@ const handleAnalyze = async () => {
   }
 
   // Set CSS animation duration based on file size (before loading starts so first render uses it)
+  // Set ONCE — never change mid-handler (causes CSS animation glitch + counter desync)
   const estSeconds = file.size > 50 * 1024 * 1024 ? 90 : file.size > 10 * 1024 * 1024 ? 60 : 35
   setProgressAnimDuration(estSeconds)
   setProgressKey(k => k + 1) // Force CSS animation restart on repeat analyses
+  progressStartRef.current = { time: Date.now(), duration: estSeconds }
   setLoading(true)
   progressRef.current = 1
   setProgress(1)
@@ -764,25 +769,20 @@ const handleAnalyze = async () => {
     progressRef.current = 3
 
     // Capture metadata from WAV/AIFF header (first 1024 bytes — instant, no AudioContext).
-    // originalMetadata is only needed when compressing (>50MB), so we skip AudioContext
-    // for smaller files. This prevents decodeAudioData hangs on repeat analyses.
+    // Wrapped in 3s timeout to prevent hangs on browser Blob API issues.
     try {
-      const headerBuffer = await file.slice(0, 1024).arrayBuffer()
-      const headerInfo = parseFileHeader(headerBuffer, file.name)
-      if (headerInfo.sampleRate && headerInfo.numberOfChannels && headerInfo.bitDepth) {
-        // Calculate duration from header without AudioContext (WAV/AIFF only)
+      const headerPromise = (async () => {
+        const headerBuffer = await file.slice(0, 1024).arrayBuffer()
+        return parseFileHeader(headerBuffer, file.name)
+      })()
+      const timeoutPromise = new Promise<null>((_, reject) => setTimeout(() => reject(new Error('Header parse timeout')), 3000))
+      const headerInfo = await Promise.race([headerPromise, timeoutPromise])
+      if (headerInfo && headerInfo.sampleRate && headerInfo.numberOfChannels && headerInfo.bitDepth) {
         const headerSize = 44 // WAV standard header
         const bytesPerSample = headerInfo.bitDepth / 8
         const estimatedDuration = (file.size - headerSize) / (headerInfo.sampleRate * headerInfo.numberOfChannels * bytesPerSample)
         if (estimatedDuration > 0 && isFinite(estimatedDuration)) {
           setFileDuration(estimatedDuration)
-          // Refine CSS animation duration with actual file duration
-          if (estimatedDuration > 120) {
-            const chunks = Math.ceil(estimatedDuration / 60)
-            setProgressAnimDuration(Math.round(chunks * 8 + 10))
-          } else {
-            setProgressAnimDuration(25)
-          }
         }
         // Only build originalMetadata when file will be compressed (backend reads directly otherwise)
         if (file.size > 50 * 1024 * 1024) {
@@ -796,7 +796,7 @@ const handleAnalyze = async () => {
         }
       }
     } catch {
-      // Header parsing failed — backend will read from file directly
+      // Header parsing failed or timed out — backend will read from file directly
     }
 
     progressRef.current = 5
@@ -835,6 +835,9 @@ const handleAnalyze = async () => {
     }
     
     progressRef.current = 7
+
+    // Diagnostic: confirm we reached the upload phase (remove once verified)
+    console.error('[MR] Uploading to Render...', fileToAnalyze.name, (fileToAnalyze.size / 1024 / 1024).toFixed(1) + 'MB')
 
     // START ANALYSIS (returns job_id immediately)
     const startData = await startAnalysisPolling(fileToAnalyze, {

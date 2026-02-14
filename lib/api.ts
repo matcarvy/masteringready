@@ -113,15 +113,26 @@ export async function startAnalysisPolling(
     formData.append('original_metadata_json', JSON.stringify(options.originalMetadata))
   }
 
+  // 2-minute timeout on upload — prevents indefinite hang on slow connections
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), 120000)
+
   let res: Response
   try {
     res = await fetch(`${API_URL}/api/analyze/start`, {
       method: 'POST',
       body: formData,
+      signal: controller.signal,
     })
   } catch (fetchError: any) {
+    clearTimeout(timeoutId)
+    if (fetchError.name === 'AbortError') {
+      throw new AnalysisApiError('Upload timeout', 'timeout')
+    }
     throw new AnalysisApiError('Network error', 'offline')
   }
+
+  clearTimeout(timeoutId)
 
   if (!res.ok) {
     const text = await res.text()
