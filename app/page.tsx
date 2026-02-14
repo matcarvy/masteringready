@@ -443,21 +443,9 @@ function Home() {
     return () => clearTimeout(timeoutId)
   }, [loading])
 
-  // Progress render tick — forces re-renders every 500ms during loading.
-  // The JSX reads progressRef.current directly (not progress state) to show the latest value.
-  // This works the same way as the loadingMsgIndex timer — setTimeout-driven state updates
-  // that React flushes and re-renders normally.
-  const [progressTick, setProgressTick] = useState(0)
-  useEffect(() => {
-    if (!loading) {
-      setProgressTick(0)
-      return
-    }
-    const interval = setInterval(() => {
-      setProgressTick(t => t + 1)
-    }, 500)
-    return () => clearInterval(interval)
-  }, [loading])
+  // Progress bar animation duration — computed when loading starts.
+  // Pure CSS animation (no React state) prevents the stuck-at-1% issue.
+  const [progressAnimDuration, setProgressAnimDuration] = useState(60)
 
   // Auto-detect language based on user's location
   // Priority: URL param > cookie > timezone/browser detection
@@ -659,7 +647,9 @@ const handleAnalyze = async () => {
     return
   }
 
-  console.error('[MR-v6] Analysis started — progressTick + ref approach')
+  // Set CSS animation duration based on file size (before loading starts so first render uses it)
+  const estSeconds = file.size > 50 * 1024 * 1024 ? 90 : file.size > 10 * 1024 * 1024 ? 60 : 35
+  setProgressAnimDuration(estSeconds)
   setLoading(true)
   progressRef.current = 1
   setProgress(1)
@@ -759,6 +749,13 @@ const handleAnalyze = async () => {
         const estimatedDuration = (file.size - headerSize) / (headerInfo.sampleRate * headerInfo.numberOfChannels * bytesPerSample)
         if (estimatedDuration > 0 && isFinite(estimatedDuration)) {
           setFileDuration(estimatedDuration)
+          // Refine CSS animation duration with actual file duration
+          if (estimatedDuration > 120) {
+            const chunks = Math.ceil(estimatedDuration / 60)
+            setProgressAnimDuration(Math.round(chunks * 8 + 10))
+          } else {
+            setProgressAnimDuration(25)
+          }
         }
         // Only build originalMetadata when file will be compressed (backend reads directly otherwise)
         if (file.size > 50 * 1024 * 1024) {
@@ -2294,7 +2291,7 @@ by Matías Carvajal
                         </p>
                       </div>
 
-                      {/* Progress bar + percentage */}
+                      {/* Progress bar — pure CSS animation (no React state) */}
                       <div style={{ width: '100%' }}>
                         <div style={{
                           width: '100%',
@@ -2307,37 +2304,30 @@ by Matías Carvajal
                             background: 'linear-gradient(90deg, #667eea 0%, #764ba2 100%)',
                             height: '1rem',
                             borderRadius: '9999px',
-                            transition: 'width 0.3s ease-out',
-                            width: `${progressRef.current}%`,
+                            animation: `progressFill ${progressAnimDuration}s cubic-bezier(0.15, 0.85, 0.25, 1) forwards`,
                             boxShadow: '0 2px 8px rgba(102, 126, 234, 0.4)'
                           }} />
                         </div>
                         <div style={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
+                          textAlign: 'center',
                           marginTop: '0.5rem',
-                          fontSize: '0.875rem',
-                          opacity: 0.9
+                          fontSize: '0.8rem',
+                          color: '#9ca3af'
                         }}>
-                          <span style={{ fontWeight: '600' }}>{progressRef.current}%</span>
-                          <span style={{ color: '#9ca3af', fontSize: '0.75rem' }}>
-                            {(() => {
-                              // Dynamic estimate based on actual file duration
-                              let estSec: number
-                              if (fileDuration !== null && fileDuration > 120) {
-                                // Chunked: ~8s per 60s chunk + 10s overhead, rounded to 10
-                                const chunks = Math.ceil(fileDuration / 60)
-                                estSec = Math.round((chunks * 8 + 10) / 10) * 10
-                              } else if (fileDuration !== null) {
-                                estSec = 25  // Short file, no chunking
-                              } else {
-                                estSec = file && file.size > 50 * 1024 * 1024 ? 90 : 30
-                              }
-                              return lang === 'es'
-                                ? `Estimado: ~${estSec} segundos`
-                                : `Estimated: ~${estSec} seconds`
-                            })()}
-                          </span>
+                          {(() => {
+                            let estSec: number
+                            if (fileDuration !== null && fileDuration > 120) {
+                              const chunks = Math.ceil(fileDuration / 60)
+                              estSec = Math.round((chunks * 8 + 10) / 10) * 10
+                            } else if (fileDuration !== null) {
+                              estSec = 25
+                            } else {
+                              estSec = file && file.size > 50 * 1024 * 1024 ? 90 : 30
+                            }
+                            return lang === 'es'
+                              ? `Estimado: ~${estSec} segundos`
+                              : `Estimated: ~${estSec} seconds`
+                          })()}
                         </div>
                       </div>
                     </div>
@@ -5196,6 +5186,17 @@ by Matías Carvajal
           0% { opacity: 0; transform: translateY(-10px); }
           60% { opacity: 1; transform: translateY(2px); }
           100% { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes progressFill {
+          0% { width: 1%; }
+          8% { width: 10%; }
+          25% { width: 30%; }
+          50% { width: 55%; }
+          70% { width: 72%; }
+          85% { width: 84%; }
+          95% { width: 90%; }
+          100% { width: 92%; }
         }
 
         @media (prefers-reduced-motion: reduce) {
