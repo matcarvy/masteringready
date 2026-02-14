@@ -2282,9 +2282,8 @@ by Matías Carvajal
                 <>
                 {compressing ? (
                   <div style={{
-                    width: '100%',
                     background: '#f3f4f6',
-                    padding: 'clamp(1rem, 2vw, 1.5rem)',
+                    padding: 'clamp(1rem, 3vw, 1.5rem)',
                     borderRadius: '0.75rem',
                     border: '1px solid #e5e7eb'
                   }}>
@@ -2334,9 +2333,8 @@ by Matías Carvajal
                   </div>
                 ) : loading ? (
                   <div style={{
-                    width: '100%',
                     background: '#f3f4f6',
-                    padding: 'clamp(1rem, 2vw, 1.5rem)',
+                    padding: 'clamp(1rem, 3vw, 1.5rem)',
                     borderRadius: '0.75rem',
                     border: '1px solid #e5e7eb'
                   }}>
