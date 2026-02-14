@@ -30,7 +30,7 @@ export const metadata: Metadata = {
     default: 'Mastering Ready | Analyze your mix before mastering',
     template: '%s | Mastering Ready'
   },
-  description: "Upload your mix and find out if it's ready for mastering. 0-100 score, professional metrics and specific recommendations in 60 seconds. 1 free full analysis.",
+  description: "Upload your mix and find out if it's ready for mastering. 0-100 score, professional metrics and specific recommendations in 60 seconds. 2 free full analyses.",
   keywords: [
     'mix analysis',
     'prepare mix for mastering',
@@ -71,7 +71,7 @@ export const metadata: Metadata = {
     url: siteConfig.url,
     siteName: siteConfig.name,
     title: 'Is your mix ready for mastering? Find out in 60 seconds',
-    description: 'Professional technical analysis: LUFS, True Peak, headroom, frequency balance. 0-100 score with specific recommendations. 1 free full analysis.',
+    description: 'Professional technical analysis: LUFS, True Peak, headroom, frequency balance. 0-100 score with specific recommendations. 2 free full analyses.',
     images: [
       {
         url: '/og-image.png',
@@ -89,7 +89,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'Is your mix ready for mastering? Find out in 60 seconds',
-    description: 'Professional technical analysis: LUFS, True Peak, headroom, frequency balance. 0-100 score with specific recommendations. 1 free full analysis.',
+    description: 'Professional technical analysis: LUFS, True Peak, headroom, frequency balance. 0-100 score with specific recommendations. 2 free full analyses.',
     site: siteConfig.twitter,
     creator: siteConfig.twitter,
     images: ['/og-image.png']

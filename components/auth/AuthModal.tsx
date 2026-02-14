@@ -52,7 +52,7 @@ const translations = {
     // Divider
     or: 'o continúa con',
     // Benefits
-    benefit1: '1 análisis completo gratis',
+    benefit1: '2 análisis completos gratis',
     benefit2: 'Informe Completo + PDF',
     benefit3: 'Guardar en Mis Análisis',
     // Validation errors
@@ -90,7 +90,7 @@ const translations = {
     // Divider
     or: 'or continue with',
     // Benefits
-    benefit1: '1 free full analysis',
+    benefit1: '2 free full analyses',
     benefit2: 'Full Report + PDF',
     benefit3: 'Save to My Analyses',
     // Validation errors

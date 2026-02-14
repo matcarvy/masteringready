@@ -346,9 +346,9 @@ function Home() {
     return () => { cancelled = true }
   }, [user, isAdmin])
 
-  // Free user gets full access (Completo + PDF) for their 1 free analysis
+  // Free user gets full access (Completo + PDF) for their 2 free analyses
   const effectiveHasPaidAccess = hasPaidAccess ||
-    (isLoggedIn && result !== null && userAnalysisStatus?.analyses_used !== undefined && userAnalysisStatus.analyses_used <= 1)
+    (isLoggedIn && result !== null && userAnalysisStatus?.analyses_used !== undefined && userAnalysisStatus.analyses_used <= 2)
 
   // Mobile detection
   useEffect(() => {
@@ -4689,8 +4689,8 @@ by Matías Carvajal
               lineHeight: '1.5'
             }}>
               {lang === 'es'
-                ? 'Cada dispositivo tiene 1 análisis de prueba. Crea una cuenta para tu análisis completo gratis.'
-                : 'Each device gets 1 trial analysis. Create an account for your free full analysis.'}
+                ? 'Cada dispositivo tiene 1 análisis de prueba. Crea una cuenta para tus 2 análisis completos gratis.'
+                : 'Each device gets 1 trial analysis. Create an account for your 2 free full analyses.'}
             </p>
 
             {/* Benefits reminder */}
@@ -4715,7 +4715,7 @@ by Matías Carvajal
                 color: '#6b7280',
                 lineHeight: '1.6'
               }}>
-                <li>{lang === 'es' ? '1 análisis completo gratis' : '1 free full analysis'}</li>
+                <li>{lang === 'es' ? '2 análisis completos gratis' : '2 free full analyses'}</li>
                 <li>{lang === 'es' ? 'Informe Completo + PDF' : 'Full Report + PDF'}</li>
                 <li>{lang === 'es' ? 'Historial de análisis' : 'Analysis history'}</li>
               </ul>
@@ -4841,7 +4841,7 @@ by Matías Carvajal
               marginBottom: '0.75rem',
               color: '#111827'
             }}>
-              {lang === 'es' ? 'Has usado tu análisis completo gratis' : "You've used your free full analysis"}
+              {lang === 'es' ? 'Has usado tus 2 análisis completos gratis' : "You've used your 2 free full analyses"}
             </h3>
 
             {/* Description */}

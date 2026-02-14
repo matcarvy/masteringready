@@ -392,8 +392,8 @@ function DashboardContent() {
   const { geo } = useGeo()
   const t = translations[lang]
   const isPro = subscription?.plan?.type === 'pro' || subscription?.plan?.type === 'studio'
-  // Free user gets full access (Completo + PDF) for their 1 free analysis
-  const hasFullAccess = isPro || (!isPro && userStatus !== null && userStatus.analyses_used <= 1)
+  // Free user gets full access (Completo + PDF) for their 2 free analyses
+  const hasFullAccess = isPro || (!isPro && userStatus !== null && userStatus.analyses_used <= 2)
 
   const prices = getAllPricesForCountry(geo?.countryCode || 'US')
 
@@ -497,7 +497,7 @@ function DashboardContent() {
             }
           } else {
             // Free plan
-            if (status.analyses_used >= 1) {
+            if (status.analyses_used >= 2) {
               setDashboardState('free_limit_reached')
             } else if (status.analyses_used === 0 && (!analysesData || analysesData.length === 0)) {
               setDashboardState('new_user')
@@ -639,7 +639,7 @@ function DashboardContent() {
     if (searchParams.get('checkout') !== 'success') return
     if (subscription.plan?.type !== 'pro' && subscription.plan?.type !== 'studio') return
 
-    const bonus = Math.min(profile.analyses_lifetime_used || 0, 1)
+    const bonus = Math.min(profile.analyses_lifetime_used || 0, 2)
     setWelcomeBonus(bonus)
     setShowWelcomeBanner(true)
   }, [loading, profile, subscription, searchParams])
@@ -960,9 +960,9 @@ function DashboardContent() {
                 </>
               ) : (
                 <>
-                  {userStatus ? Math.max(0, 1 - userStatus.analyses_used) : 1}
+                  {userStatus ? Math.max(0, 2 - userStatus.analyses_used) : 2}
                   <span style={{ fontSize: '0.875rem', fontWeight: '400', color: '#6b7280' }}>
-                    {' / 1 '}{t.lifetimeLimit}
+                    {' / 2 '}{t.lifetimeLimit}
                   </span>
                 </>
               )}

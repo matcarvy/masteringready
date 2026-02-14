@@ -1,9 +1,9 @@
 -- ============================================================================
 -- Free Tier Change: 2 Rápido → 1 Full (Completo + PDF)
 -- ============================================================================
--- Reduces free tier from 2 lifetime Rápido-only analyses to 1 full analysis
+-- Changes free tier from 2 lifetime Rápido-only analyses to 2 full analyses
 -- (including Completo report + PDF download) for better conversion.
--- Also reduces anonymous IP limit from 2 → 1.
+-- Anonymous IP limit stays at 2.
 
 -- STEP 1: Update can_user_analyze to limit free tier to 1 analysis
 -- (Preserves admin bypass that was added directly to DB)
@@ -49,13 +49,13 @@ BEGIN
     v_cycle_used := COALESCE(v_cycle_used, 0);
     v_addon_remaining := COALESCE(v_addon_remaining, 0);
 
-    -- FREE plan: 1 lifetime full analysis
+    -- FREE plan: 2 lifetime full analyses
     IF v_plan_type = 'free' THEN
-        IF v_lifetime_used >= 1 THEN
-            RETURN QUERY SELECT FALSE, 'FREE_LIMIT_REACHED'::TEXT, v_lifetime_used, 1, TRUE;
+        IF v_lifetime_used >= 2 THEN
+            RETURN QUERY SELECT FALSE, 'FREE_LIMIT_REACHED'::TEXT, v_lifetime_used, 2, TRUE;
             RETURN;
         END IF;
-        RETURN QUERY SELECT TRUE, 'OK'::TEXT, v_lifetime_used, 1, TRUE;
+        RETURN QUERY SELECT TRUE, 'OK'::TEXT, v_lifetime_used, 2, TRUE;
         RETURN;
     END IF;
 
@@ -119,7 +119,7 @@ BEGIN
         RETURN;
     END IF;
 
-    -- Check if limit reached (1 free analysis per IP)
+    -- Check if limit reached (1 free analysis per IP — funnels to signup)
     IF v_session.analyses_count >= 1 THEN
         RETURN QUERY SELECT FALSE, v_session.analyses_count, FALSE, 'LIMIT_REACHED'::TEXT;
         RETURN;
@@ -131,4 +131,4 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Update table comment
-COMMENT ON TABLE anonymous_sessions IS 'Tracks anonymous user sessions by IP for rate limiting (1 free analysis per IP)';
+COMMENT ON TABLE anonymous_sessions IS 'Tracks anonymous user sessions by IP for rate limiting (1 free analysis per IP, funnels to signup)';

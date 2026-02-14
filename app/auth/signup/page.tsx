@@ -21,7 +21,7 @@ import { Headphones, Mail, Lock, User, ArrowLeft, Eye, EyeOff, Check } from 'luc
 const translations = {
   es: {
     title: 'Crear Cuenta',
-    subtitle: 'Empieza con 1 análisis completo gratis',
+    subtitle: 'Empieza con 2 análisis completos gratis',
     name: 'Nombre completo',
     email: 'Correo electrónico',
     password: 'Contraseña',
@@ -41,7 +41,7 @@ const translations = {
     error: 'Error al crear la cuenta. Intenta de nuevo.',
     emailExists: 'Ya existe una cuenta con este correo electrónico.',
     success: '¡Cuenta creada! Revisa tu correo para confirmar.',
-    freeAnalyses: '1 análisis completo + PDF',
+    freeAnalyses: '2 análisis completos + PDF',
     noCard: 'Sin tarjeta de crédito',
     cancelAnytime: 'Cancela cuando quieras',
     termsLabel: 'Acepto los',
@@ -52,7 +52,7 @@ const translations = {
   },
   en: {
     title: 'Create Account',
-    subtitle: 'Start with 1 free full analysis',
+    subtitle: 'Start with 2 free full analyses',
     name: 'Full name',
     email: 'Email address',
     password: 'Password',
@@ -72,7 +72,7 @@ const translations = {
     error: 'Error creating account. Please try again.',
     emailExists: 'An account with this email already exists.',
     success: 'Account created! Check your email to confirm.',
-    freeAnalyses: '1 full analysis + PDF',
+    freeAnalyses: '2 full analyses + PDF',
     noCard: 'No credit card required',
     cancelAnytime: 'Cancel anytime',
     termsLabel: 'I accept the',
