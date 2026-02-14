@@ -247,6 +247,7 @@ function Home() {
   const [loading, setLoading] = useState(false)
   const [progress, setProgress] = useState(0)
   const progressRef = useRef(0)
+  const isAnalyzingRef = useRef(false) // Mutex: prevents concurrent handleAnalyze execution
   const [result, setResult] = useState<any>(null)
   const [displayScore, setDisplayScore] = useState(0)
   const [error, setError] = useState<string | null>(null)
@@ -664,6 +665,9 @@ const handleAnalyze = async () => {
   // Wait for auth state to be determined — prevents treating a logged-in user
   // as anonymous when navigating back (auth re-initializing)
   if (authLoading) return
+  // Mutex: prevent concurrent executions (ref is synchronous, not batched by React)
+  if (isAnalyzingRef.current) return
+  isAnalyzingRef.current = true
 
   // Snapshot auth state at start — used to skip redundant post-analysis re-check
   const wasLoggedInAtStart = isLoggedIn
@@ -766,26 +770,28 @@ const handleAnalyze = async () => {
     let fileToAnalyze = file
     let originalMetadata: { sampleRate: number; bitDepth: number; numberOfChannels: number; duration: number; fileSize: number } | undefined = undefined
 
+    console.error('[MR-1] Quota passed, file:', file.name, (file.size / 1024 / 1024).toFixed(1) + 'MB')
     progressRef.current = 3
 
-    // Capture metadata from WAV/AIFF header (first 1024 bytes — instant, no AudioContext).
-    // Wrapped in 3s timeout to prevent hangs on browser Blob API issues.
-    try {
-      const headerPromise = (async () => {
-        const headerBuffer = await file.slice(0, 1024).arrayBuffer()
-        return parseFileHeader(headerBuffer, file.name)
-      })()
-      const timeoutPromise = new Promise<null>((_, reject) => setTimeout(() => reject(new Error('Header parse timeout')), 3000))
-      const headerInfo = await Promise.race([headerPromise, timeoutPromise])
-      if (headerInfo && headerInfo.sampleRate && headerInfo.numberOfChannels && headerInfo.bitDepth) {
-        const headerSize = 44 // WAV standard header
-        const bytesPerSample = headerInfo.bitDepth / 8
-        const estimatedDuration = (file.size - headerSize) / (headerInfo.sampleRate * headerInfo.numberOfChannels * bytesPerSample)
-        if (estimatedDuration > 0 && isFinite(estimatedDuration)) {
-          setFileDuration(estimatedDuration)
-        }
-        // Only build originalMetadata when file will be compressed (backend reads directly otherwise)
-        if (file.size > 50 * 1024 * 1024) {
+    // Header parse ONLY for files needing compression (>50MB) — captures original metadata
+    // before compression destroys it. For smaller files, backend reads metadata directly.
+    // This eliminates the only await between setLoading(true) and startAnalysisPolling.
+    const maxSize = 50 * 1024 * 1024
+    if (file.size > maxSize) {
+      try {
+        const headerPromise = (async () => {
+          const headerBuffer = await file.slice(0, 1024).arrayBuffer()
+          return parseFileHeader(headerBuffer, file.name)
+        })()
+        const timeoutPromise = new Promise<null>((_, reject) => setTimeout(() => reject(new Error('Header parse timeout')), 3000))
+        const headerInfo = await Promise.race([headerPromise, timeoutPromise])
+        if (headerInfo && headerInfo.sampleRate && headerInfo.numberOfChannels && headerInfo.bitDepth) {
+          const headerSize = 44
+          const bytesPerSample = headerInfo.bitDepth / 8
+          const estimatedDuration = (file.size - headerSize) / (headerInfo.sampleRate * headerInfo.numberOfChannels * bytesPerSample)
+          if (estimatedDuration > 0 && isFinite(estimatedDuration)) {
+            setFileDuration(estimatedDuration)
+          }
           originalMetadata = {
             sampleRate: headerInfo.sampleRate,
             bitDepth: headerInfo.bitDepth,
@@ -794,15 +800,15 @@ const handleAnalyze = async () => {
             fileSize: file.size
           }
         }
+      } catch {
+        // Header parsing failed or timed out — backend will read from file directly
       }
-    } catch {
-      // Header parsing failed or timed out — backend will read from file directly
     }
 
+    console.error('[MR-2] Header phase done')
     progressRef.current = 5
 
     // Compress files over 50MB to prevent Render OOM (512MB RAM limit)
-    const maxSize = 50 * 1024 * 1024
     if (file.size > maxSize) {
       setCompressing(true)
       setCompressionProgress(0)
@@ -1017,6 +1023,7 @@ const handleAnalyze = async () => {
     console.error('Analysis error:', err)
     setError(getErrorMessage(err, lang))
   } finally {
+    isAnalyzingRef.current = false
     setLoading(false)
     progressRef.current = 0
     setProgress(0)
