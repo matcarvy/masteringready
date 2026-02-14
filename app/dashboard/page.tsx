@@ -266,7 +266,7 @@ interface Profile {
 
 // Dashboard state types per spec
 type DashboardState =
-  | 'new_user'        // 0 analyses, show 2 free available
+  | 'new_user'        // 0 analyses, show 1 free available
   | 'has_analyses'    // Has analyses, show history
   | 'free_limit_reached' // Free user, 2 used, upgrade CTA
   | 'pro_active'      // Pro with analyses remaining
@@ -392,6 +392,8 @@ function DashboardContent() {
   const { geo } = useGeo()
   const t = translations[lang]
   const isPro = subscription?.plan?.type === 'pro' || subscription?.plan?.type === 'studio'
+  // Free user gets full access (Completo + PDF) for their 1 free analysis
+  const hasFullAccess = isPro || (!isPro && userStatus !== null && userStatus.analyses_used <= 1)
 
   const prices = getAllPricesForCountry(geo?.countryCode || 'US')
 
@@ -495,7 +497,7 @@ function DashboardContent() {
             }
           } else {
             // Free plan
-            if (status.analyses_used >= 2) {
+            if (status.analyses_used >= 1) {
               setDashboardState('free_limit_reached')
             } else if (status.analyses_used === 0 && (!analysesData || analysesData.length === 0)) {
               setDashboardState('new_user')
@@ -556,7 +558,7 @@ function DashboardContent() {
 
   // Handle tab click for complete (pro only)
   const handleTabClick = (tab: 'rapid' | 'summary' | 'complete') => {
-    if (tab === 'complete' && !isPro) {
+    if (tab === 'complete' && !hasFullAccess) {
       setShowUpgradeModal(true)
       return
     }
@@ -637,7 +639,7 @@ function DashboardContent() {
     if (searchParams.get('checkout') !== 'success') return
     if (subscription.plan?.type !== 'pro' && subscription.plan?.type !== 'studio') return
 
-    const bonus = Math.min(profile.analyses_lifetime_used || 0, 2)
+    const bonus = Math.min(profile.analyses_lifetime_used || 0, 1)
     setWelcomeBonus(bonus)
     setShowWelcomeBanner(true)
   }, [loading, profile, subscription, searchParams])
@@ -958,9 +960,9 @@ function DashboardContent() {
                 </>
               ) : (
                 <>
-                  {userStatus ? Math.max(0, 2 - userStatus.analyses_used) : 2}
+                  {userStatus ? Math.max(0, 1 - userStatus.analyses_used) : 1}
                   <span style={{ fontSize: '0.875rem', fontWeight: '400', color: '#6b7280' }}>
-                    {' / 2 '}{t.lifetimeLimit}
+                    {' / 1 '}{t.lifetimeLimit}
                   </span>
                 </>
               )}
@@ -1417,10 +1419,10 @@ function DashboardContent() {
                   {tab === 'rapid' && <Zap size={16} />}
                   {tab === 'summary' && <FileText size={16} />}
                   {tab === 'complete' && (
-                    !isPro ? <Crown size={16} style={{ color: '#d97706' }} /> : <TrendingUp size={16} />
+                    !hasFullAccess ? <Crown size={16} style={{ color: '#d97706' }} /> : <TrendingUp size={16} />
                   )}
                   {t.tabs[tab]}
-                  {tab === 'complete' && !isPro && (
+                  {tab === 'complete' && !hasFullAccess && (
                     <span style={{
                       fontSize: '0.625rem',
                       background: '#fef3c7',
@@ -1628,7 +1630,7 @@ function DashboardContent() {
                   {cleanReportText(selectedAnalysis.report_short || '') || (lang === 'es' ? 'No hay datos de resumen disponibles.' : 'No summary data available.')}
                 </div>
               )}
-              {reportTab === 'complete' && isPro && (
+              {reportTab === 'complete' && hasFullAccess && (
                 <div style={{
                   whiteSpace: 'pre-wrap',
                   wordBreak: 'break-word',
@@ -1790,8 +1792,8 @@ function DashboardContent() {
                   </button>
                 )}
 
-                {/* Download Completo - Pro only */}
-                {reportTab === 'complete' && isPro && selectedAnalysis.report_write && (
+                {/* Download Completo - paid or free user's 1st analysis */}
+                {reportTab === 'complete' && hasFullAccess && selectedAnalysis.report_write && (
                   <button
                     onClick={() => {
                       const content = `Mastering Ready - Análisis Completo\n${'='.repeat(40)}\n\nArchivo: ${selectedAnalysis.filename}\nPuntuación: ${selectedAnalysis.score}/100\nFecha: ${new Date(selectedAnalysis.created_at).toLocaleDateString()}\n\n${selectedAnalysis.report_write}`
@@ -1824,8 +1826,8 @@ function DashboardContent() {
                   </button>
                 )}
 
-                {/* Download PDF - Pro only, always available from DB data */}
-                {isPro && (
+                {/* Download PDF - paid or free user's 1st analysis */}
+                {hasFullAccess && (
                   <button
                     onClick={async () => {
                       try {
@@ -1889,8 +1891,8 @@ function DashboardContent() {
                   </button>
                 )}
 
-                {/* Upgrade prompt for Completo when not Pro */}
-                {reportTab === 'complete' && !isPro && (
+                {/* Upgrade prompt for Completo when no full access */}
+                {reportTab === 'complete' && !hasFullAccess && (
                   <button
                     onClick={() => setShowUpgradeModal(true)}
                     style={{

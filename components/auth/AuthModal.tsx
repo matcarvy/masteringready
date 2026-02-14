@@ -52,9 +52,9 @@ const translations = {
     // Divider
     or: 'o continúa con',
     // Benefits
-    benefit1: 'Ver análisis completo sin blur',
-    benefit2: 'Guardar en Mis Análisis',
-    benefit3: '1 análisis extra gratis',
+    benefit1: '1 análisis completo gratis',
+    benefit2: 'Informe Completo + PDF',
+    benefit3: 'Guardar en Mis Análisis',
     // Validation errors
     nameRequired: 'El nombre es requerido',
     emailRequired: 'El correo electrónico es requerido',
@@ -90,9 +90,9 @@ const translations = {
     // Divider
     or: 'or continue with',
     // Benefits
-    benefit1: 'See full analysis without blur',
-    benefit2: 'Save to My Analyses',
-    benefit3: '1 extra free analysis',
+    benefit1: '1 free full analysis',
+    benefit2: 'Full Report + PDF',
+    benefit3: 'Save to My Analyses',
     // Validation errors
     nameRequired: 'Name is required',
     emailRequired: 'Email is required',

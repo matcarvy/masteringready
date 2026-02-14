@@ -41,7 +41,7 @@ El servicio está diseñado como herramienta educativa y de referencia. Los resu
         title: 'Planes y Pagos',
         content: `Ofrecemos diferentes niveles de servicio:
 
-• Gratis: 2 análisis para empezar, solo modo rápido y resumen
+• Gratis: 1 análisis completo para empezar, incluye informe completo y PDF
 • Análisis Individual: $5.99 USD, un análisis completo con PDF
 • Pro: $9.99/mes USD, 30 análisis mensuales con todas las funciones
 • Pack Adicional (solo Pro): $3.99 USD por 10 análisis extra
@@ -135,7 +135,7 @@ The service is designed as an educational and reference tool. Results are indica
         title: 'Plans and Payments',
         content: `We offer different service levels:
 
-• Free: 2 analyses to get started, quick and summary mode only
+• Free: 1 full analysis to get started, includes complete report and PDF
 • Single Analysis: $5.99 USD, one complete analysis with PDF
 • Pro: $9.99/month USD, 30 monthly analyses with all features
 • Add-on Pack (Pro only): $3.99 USD for 10 extra analyses

@@ -346,6 +346,10 @@ function Home() {
     return () => { cancelled = true }
   }, [user, isAdmin])
 
+  // Free user gets full access (Completo + PDF) for their 1 free analysis
+  const effectiveHasPaidAccess = hasPaidAccess ||
+    (isLoggedIn && result !== null && userAnalysisStatus?.analyses_used !== undefined && userAnalysisStatus.analyses_used <= 1)
+
   // Mobile detection
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768)
@@ -2642,8 +2646,8 @@ by Matías Carvajal
                           setShowAuthModal(true)
                           return
                         }
-                        // Completo requires paid access (Pro or Single purchase)
-                        if (view === 'write' && isLoggedIn && !hasPaidAccess) {
+                        // Completo requires paid access (Pro, Single purchase, or free user's 1st analysis)
+                        if (view === 'write' && isLoggedIn && !effectiveHasPaidAccess) {
                           setShowUpgradeModal(true)
                           return
                         }
@@ -2671,7 +2675,7 @@ by Matías Carvajal
                       }}
                     >
                       {/* Crown icon for non-logged users on Resumen, unpaid on Completo */}
-                      {((view === 'short' && !isLoggedIn) || (view === 'write' && (!isLoggedIn || !hasPaidAccess))) && (
+                      {((view === 'short' && !isLoggedIn) || (view === 'write' && (!isLoggedIn || !effectiveHasPaidAccess))) && (
                         <Crown size={12} style={{
                           position: 'absolute',
                           top: '4px',
@@ -3164,7 +3168,7 @@ by Matías Carvajal
                         setShowAuthModal(true)
                         return
                       }
-                      if (!hasPaidAccess) {
+                      if (!effectiveHasPaidAccess) {
                         setShowUpgradeModal(true)
                         return
                       }
@@ -3178,19 +3182,19 @@ by Matías Carvajal
                       justifyContent: 'center',
                       gap: '0.5rem',
                       padding: '0.875rem 1.25rem',
-                      background: (isLoggedIn && hasPaidAccess) ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'white',
-                      color: (isLoggedIn && hasPaidAccess) ? 'white' : '#6b7280',
-                      border: (isLoggedIn && hasPaidAccess) ? 'none' : '2px solid #d1d5db',
+                      background: (isLoggedIn && effectiveHasPaidAccess) ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'white',
+                      color: (isLoggedIn && effectiveHasPaidAccess) ? 'white' : '#6b7280',
+                      border: (isLoggedIn && effectiveHasPaidAccess) ? 'none' : '2px solid #d1d5db',
                       borderRadius: '0.75rem',
                       fontWeight: '600',
                       fontSize: 'clamp(0.8rem, 2vw, 0.9rem)',
                       cursor: 'pointer',
                       transition: 'all 0.2s',
-                      boxShadow: (isLoggedIn && hasPaidAccess) ? '0 4px 12px rgba(102, 126, 234, 0.3)' : 'none'
+                      boxShadow: (isLoggedIn && effectiveHasPaidAccess) ? '0 4px 12px rgba(102, 126, 234, 0.3)' : 'none'
                     }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.transform = 'translateY(-1px)'
-                      if (isLoggedIn && hasPaidAccess) {
+                      if (isLoggedIn && effectiveHasPaidAccess) {
                         e.currentTarget.style.boxShadow = '0 6px 20px rgba(102, 126, 234, 0.4)'
                       } else {
                         e.currentTarget.style.background = '#f3f4f6'
@@ -3198,14 +3202,14 @@ by Matías Carvajal
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.transform = 'translateY(0)'
-                      if (isLoggedIn && hasPaidAccess) {
+                      if (isLoggedIn && effectiveHasPaidAccess) {
                         e.currentTarget.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.3)'
                       } else {
                         e.currentTarget.style.background = 'white'
                       }
                     }}
                   >
-                    {(!isLoggedIn || !hasPaidAccess) ? (
+                    {(!isLoggedIn || !effectiveHasPaidAccess) ? (
                       <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem' }}>
                         <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                           <Crown size={18} style={{ color: '#d97706' }} />
@@ -4687,8 +4691,8 @@ by Matías Carvajal
               lineHeight: '1.5'
             }}>
               {lang === 'es'
-                ? 'Cada dispositivo tiene 2 análisis gratis. Crea una cuenta para continuar analizando tus mixes.'
-                : 'Each device gets 2 free analyses. Create an account to continue analyzing your mixes.'}
+                ? 'Cada dispositivo tiene 1 análisis de prueba. Crea una cuenta para tu análisis completo gratis.'
+                : 'Each device gets 1 trial analysis. Create an account for your free full analysis.'}
             </p>
 
             {/* Benefits reminder */}
@@ -4713,9 +4717,9 @@ by Matías Carvajal
                 color: '#6b7280',
                 lineHeight: '1.6'
               }}>
-                <li>{lang === 'es' ? '2 análisis adicionales gratis' : '2 additional free analyses'}</li>
+                <li>{lang === 'es' ? '1 análisis completo gratis' : '1 free full analysis'}</li>
+                <li>{lang === 'es' ? 'Informe Completo + PDF' : 'Full Report + PDF'}</li>
                 <li>{lang === 'es' ? 'Historial de análisis' : 'Analysis history'}</li>
-                <li>{lang === 'es' ? 'Descargas en .txt' : '.txt downloads'}</li>
               </ul>
             </div>
 
@@ -4839,7 +4843,7 @@ by Matías Carvajal
               marginBottom: '0.75rem',
               color: '#111827'
             }}>
-              {lang === 'es' ? 'Has usado tus 2 análisis gratuitos' : "You've used your 2 free analyses"}
+              {lang === 'es' ? 'Has usado tu análisis completo gratis' : "You've used your free full analysis"}
             </h3>
 
             {/* Description */}

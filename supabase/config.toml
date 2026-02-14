@@ -1,10 +1,6 @@
 # MasteringReady - Supabase Configuration
 # Configuración de Supabase para MasteringReady
 
-[project]
-id = "masteringready"
-name = "MasteringReady"
-
 [api]
 # Port to use for the API URL / Puerto para la URL de API
 port = 54321
@@ -18,9 +14,6 @@ max_rows = 1000
 [db]
 # Port to use for the database URL / Puerto para la URL de base de datos
 port = 54322
-# Password for the postgres user / Contraseña para el usuario postgres
-# Keep this secure / Mantén esto seguro
-password = "postgres"
 
 [studio]
 # Port for Supabase Studio / Puerto para Supabase Studio
@@ -40,8 +33,6 @@ additional_redirect_urls = [
 jwt_expiry = 3600
 # Enable signup / Habilitar registro
 enable_signup = true
-# Email confirmation / Confirmación por email
-enable_confirmations = false
 
 [auth.email]
 # Enable email auth / Habilitar auth por email
@@ -72,10 +63,6 @@ file_size_limit = "10MiB"
 [realtime]
 # Enable realtime / Habilitar tiempo real
 enabled = true
-# Publish frequency / Frecuencia de publicación
-poll_interval_ms = 100
-# Max rows changed per publication
-poll_max_changes = 100
 
 [analytics]
 # Enable analytics / Habilitar analíticas
