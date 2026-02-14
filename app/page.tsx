@@ -676,6 +676,7 @@ const handleAnalyze = async () => {
   // (prevents re-click after closing FreeLimitModal with file still loaded)
   // Skip if reason is NO_PLAN (new user profile may not exist yet — let RPC re-check)
   if (isLoggedIn && userAnalysisStatus && !userAnalysisStatus.can_analyze && userAnalysisStatus.reason !== 'NO_PLAN') {
+    isAnalyzingRef.current = false // Release mutex — this return is before try/finally
     setShowFreeLimitModal(true)
     return
   }
@@ -693,11 +694,19 @@ const handleAnalyze = async () => {
   setError(null)
   try {
     // ============================================================
+    // QUOTA CHECK — diagnostic + timeout safety net
+    // ============================================================
+    console.error('[MR-Q]', { isLoggedIn, cached: !!userAnalysisStatus, can: userAnalysisStatus?.can_analyze, reason: userAnalysisStatus?.reason })
+
+    // ============================================================
     // IP RATE LIMITING CHECK (for anonymous users only)
     // ============================================================
     if (!isLoggedIn) {
       try {
-        const ipCheck = await checkIpLimit(false)
+        const ipCheck = await Promise.race([
+          checkIpLimit(false),
+          new Promise<never>((_, reject) => setTimeout(() => reject(new Error('IP check timeout')), 8000))
+        ])
 
         if (!ipCheck.can_analyze) {
           setLoading(false)
@@ -726,9 +735,18 @@ const handleAnalyze = async () => {
       // Use cached status if available and positive — skip RPC round-trip
       // ============================================================
       try {
-        const analysisStatus = (userAnalysisStatus?.can_analyze && userAnalysisStatus.reason !== 'ANONYMOUS')
-          ? userAnalysisStatus
-          : await checkCanAnalyze()
+        let analysisStatus: AnalysisStatus
+        if (userAnalysisStatus?.can_analyze && userAnalysisStatus.reason !== 'ANONYMOUS') {
+          analysisStatus = userAnalysisStatus
+          console.error('[MR-Q] Using cached status:', userAnalysisStatus.reason)
+        } else {
+          console.error('[MR-Q] Calling checkCanAnalyze, cached:', userAnalysisStatus?.reason || 'null')
+          analysisStatus = await Promise.race([
+            checkCanAnalyze(),
+            new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Quota check timeout')), 8000))
+          ])
+          console.error('[MR-Q] checkCanAnalyze returned:', analysisStatus.reason, analysisStatus.can_analyze)
+        }
         setUserAnalysisStatus(analysisStatus)
 
         // Defensive: if user is logged in but checkCanAnalyze returns ANONYMOUS,
