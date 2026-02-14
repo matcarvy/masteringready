@@ -2944,8 +2944,10 @@ by Matías Carvajal
                         overflowX: 'auto',
                         maxWidth: '100%',
                         margin: 0,
-                        userSelect: 'auto',
-                        cursor: 'auto'
+                        filter: !isLoggedIn ? 'blur(5px)' : 'none',
+                        transition: 'filter 0.6s ease-out',
+                        userSelect: !isLoggedIn ? 'none' : 'auto',
+                        cursor: !isLoggedIn ? 'pointer' : 'auto'
                       }}>
                         {cleanReportText((result as any).report_visual || result.report_short || result.report)}
                       </pre>
