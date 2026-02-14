@@ -2690,6 +2690,50 @@ by Matías Carvajal
                   ))}
                 </div>
 
+                {/* Inline signup banner for anonymous users — visible near locked tabs */}
+                {!isLoggedIn && result && (
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '0.75rem',
+                    padding: '0.625rem 1rem',
+                    marginBottom: '1rem',
+                    background: 'linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%)',
+                    borderRadius: '0.5rem',
+                    border: '1px solid #ddd6fe',
+                    flexWrap: 'wrap'
+                  }}>
+                    <span style={{
+                      fontSize: 'clamp(0.8rem, 2vw, 0.875rem)',
+                      color: '#5b21b6',
+                      flex: '1 1 auto',
+                      minWidth: '200px'
+                    }}>
+                      {lang === 'es'
+                        ? 'Crea tu cuenta gratis para desbloquear Resumen, Completo y PDF'
+                        : 'Create your free account to unlock Summary, Complete and PDF'}
+                    </span>
+                    <button
+                      onClick={() => setShowAuthModal(true)}
+                      style={{
+                        padding: '0.375rem 1rem',
+                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '0.375rem',
+                        fontSize: '0.8125rem',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap',
+                        flexShrink: 0
+                      }}
+                    >
+                      {lang === 'es' ? 'Crear cuenta' : 'Sign up'}
+                    </button>
+                  </div>
+                )}
+
                 {/* Tab Content Wrapper with cross-fade */}
                 <div style={{
                   opacity: tabTransition ? 0 : 1,
