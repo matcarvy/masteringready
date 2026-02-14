@@ -66,7 +66,8 @@ const translations = {
     emailExists: 'Ya existe una cuenta con este email',
     error: 'Error. Intenta de nuevo.',
     // Success
-    unlocking: 'Accediendo...'
+    unlocking: 'Accediendo...',
+    checkEmail: 'Revisa tu correo electrónico para confirmar tu cuenta. Si no lo ves, revisa la carpeta de spam.'
   },
   en: {
     // Tabs
@@ -104,7 +105,8 @@ const translations = {
     emailExists: 'Account already exists',
     error: 'Error. Please try again.',
     // Success
-    unlocking: 'Accessing...'
+    unlocking: 'Accessing...',
+    checkEmail: 'Check your email to confirm your account. If you don\'t see it, check your spam folder.'
   }
 }
 
@@ -124,6 +126,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, lang }: AuthModalProps) 
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [authSuccess, setAuthSuccess] = useState(false)
   const [lockAnimationPhase, setLockAnimationPhase] = useState<'idle' | 'shake' | 'open' | 'green'>('idle')
 
@@ -135,6 +138,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, lang }: AuthModalProps) 
       setPassword('')
       setConfirmPassword('')
       setError(null)
+      setSuccessMessage(null)
       setAuthSuccess(false)
       setLockAnimationPhase('idle')
     }
@@ -244,8 +248,14 @@ export function AuthModal({ isOpen, onClose, onSuccess, lang }: AuthModalProps) 
       }
 
       if (data.user) {
-        // Close modal immediately — page.tsx handles unlock animation
-        // based on AuthProvider quota check result
+        if (!data.session) {
+          // No session = email confirmation required
+          setLoading(false)
+          setError('')
+          setSuccessMessage(t.checkEmail)
+          return
+        }
+        // Session exists = auto-confirmed
         setLoading(false)
         onSuccess()
       }
@@ -315,10 +325,10 @@ export function AuthModal({ isOpen, onClose, onSuccess, lang }: AuthModalProps) 
         transform: 'translate(-50%, -50%)',
         background: 'white',
         borderRadius: '1.25rem',
-        padding: '2rem',
+        padding: 'clamp(1.25rem, 4vw, 2rem)',
         maxWidth: '420px',
-        width: 'calc(100% - 2rem)',
-        maxHeight: '90vh',
+        width: 'calc(100% - 1.5rem)',
+        maxHeight: '85vh',
         overflowY: 'auto',
         boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
         zIndex: 101,
@@ -424,6 +434,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, lang }: AuthModalProps) 
                   onClick={() => {
                     setMode(m)
                     setError(null)
+                    setSuccessMessage(null)
                   }}
                   style={{
                     flex: 1,
@@ -515,6 +526,23 @@ export function AuthModal({ isOpen, onClose, onSuccess, lang }: AuthModalProps) 
                   fontSize: '0.8rem'
                 }}>
                   {error}
+                </div>
+              )}
+
+              {/* Success Message (email confirmation) */}
+              {successMessage && (
+                <div style={{
+                  background: '#f0fdf4',
+                  border: '1px solid #bbf7d0',
+                  color: '#16a34a',
+                  padding: '0.625rem 0.875rem',
+                  borderRadius: '0.5rem',
+                  marginBottom: '0.875rem',
+                  fontSize: '0.8rem',
+                  lineHeight: '1.4'
+                }}>
+                  <Check size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '0.375rem' }} />
+                  {successMessage}
                 </div>
               )}
 
