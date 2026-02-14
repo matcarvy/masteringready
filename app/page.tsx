@@ -443,18 +443,19 @@ function Home() {
     return () => clearTimeout(timeoutId)
   }, [loading])
 
-  // Sync progress ref → DOM directly on a timer.
-  // React 18's automatic batching prevents setProgress calls from painting during async handlers.
-  // Direct DOM manipulation bypasses React entirely — guaranteed to update the UI.
+  // Progress render tick — forces re-renders every 500ms during loading.
+  // The JSX reads progressRef.current directly (not progress state) to show the latest value.
+  // This works the same way as the loadingMsgIndex timer — setTimeout-driven state updates
+  // that React flushes and re-renders normally.
+  const [progressTick, setProgressTick] = useState(0)
   useEffect(() => {
-    if (!loading) return
+    if (!loading) {
+      setProgressTick(0)
+      return
+    }
     const interval = setInterval(() => {
-      const val = progressRef.current
-      const fill = document.getElementById('mr-progress-fill')
-      const text = document.getElementById('mr-progress-text')
-      if (fill) fill.style.width = `${val}%`
-      if (text) text.textContent = `${val}%`
-    }, 300)
+      setProgressTick(t => t + 1)
+    }, 500)
     return () => clearInterval(interval)
   }, [loading])
 
@@ -658,6 +659,7 @@ const handleAnalyze = async () => {
     return
   }
 
+  console.error('[MR-v6] Analysis started — progressTick + ref approach')
   setLoading(true)
   progressRef.current = 1
   setProgress(1)
@@ -846,7 +848,7 @@ const handleAnalyze = async () => {
           try {
             const statusData = await getAnalysisStatus(jobId, lang)
 
-            // Update progress ref (interval syncs to state for browser paint)
+            // Update progress ref — render tick timer syncs to UI
             const newProgress = statusData.progress || 0
             if (newProgress > progressRef.current) {
               progressRef.current = newProgress
@@ -2301,12 +2303,12 @@ by Matías Carvajal
                           height: '1rem',
                           overflow: 'hidden'
                         }}>
-                          <div id="mr-progress-fill" style={{
+                          <div style={{
                             background: 'linear-gradient(90deg, #667eea 0%, #764ba2 100%)',
                             height: '1rem',
                             borderRadius: '9999px',
                             transition: 'width 0.3s ease-out',
-                            width: `${progress}%`,
+                            width: `${progressRef.current}%`,
                             boxShadow: '0 2px 8px rgba(102, 126, 234, 0.4)'
                           }} />
                         </div>
@@ -2317,7 +2319,7 @@ by Matías Carvajal
                           fontSize: '0.875rem',
                           opacity: 0.9
                         }}>
-                          <span id="mr-progress-text" style={{ fontWeight: '600' }}>{progress}%</span>
+                          <span style={{ fontWeight: '600' }}>{progressRef.current}%</span>
                           <span style={{ color: '#9ca3af', fontSize: '0.75rem' }}>
                             {(() => {
                               // Dynamic estimate based on actual file duration
