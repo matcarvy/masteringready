@@ -446,6 +446,32 @@ function Home() {
   // Progress bar animation duration — computed when loading starts.
   // Pure CSS animation (no React state) prevents the stuck-at-1% issue.
   const [progressAnimDuration, setProgressAnimDuration] = useState(60)
+  // Key forces React to unmount/remount the animation div on each analysis — restarts CSS animation
+  const [progressKey, setProgressKey] = useState(0)
+
+  // Percentage counter — runs alongside CSS animation, uses DOM manipulation (proven reliable)
+  useEffect(() => {
+    if (!loading) return
+    const startTime = Date.now()
+    const duration = progressAnimDuration * 1000
+    const timer = setInterval(() => {
+      const elapsed = Date.now() - startTime
+      const el = document.getElementById('mr-progress-percent')
+      if (!el) return
+      if (elapsed <= duration) {
+        const fraction = elapsed / duration
+        // sqrt approximation of ease-out matches CSS keyframe curve closely
+        const percent = Math.round(1 + Math.sqrt(fraction) * 92)
+        el.textContent = `${percent}%`
+      } else {
+        // Beyond animation duration — slowly increment to show still working
+        const overTime = (elapsed - duration) / 1000
+        const percent = Math.min(97, Math.round(93 + overTime * 0.1))
+        el.textContent = `${percent}%`
+      }
+    }, 300)
+    return () => clearInterval(timer)
+  }, [loading, progressAnimDuration])
 
   // Auto-detect language based on user's location
   // Priority: URL param > cookie > timezone/browser detection
@@ -650,6 +676,7 @@ const handleAnalyze = async () => {
   // Set CSS animation duration based on file size (before loading starts so first render uses it)
   const estSeconds = file.size > 50 * 1024 * 1024 ? 90 : file.size > 10 * 1024 * 1024 ? 60 : 35
   setProgressAnimDuration(estSeconds)
+  setProgressKey(k => k + 1) // Force CSS animation restart on repeat analyses
   setLoading(true)
   progressRef.current = 1
   setProgress(1)
@@ -2300,11 +2327,11 @@ by Matías Carvajal
                           height: '1rem',
                           overflow: 'hidden'
                         }}>
-                          <div style={{
+                          <div key={progressKey} style={{
                             background: 'linear-gradient(90deg, #667eea 0%, #764ba2 100%)',
                             height: '1rem',
                             borderRadius: '9999px',
-                            animation: `progressFill ${progressAnimDuration}s cubic-bezier(0.15, 0.85, 0.25, 1) forwards`,
+                            animation: `progressFill ${progressAnimDuration}s ease-out forwards`,
                             boxShadow: '0 2px 8px rgba(102, 126, 234, 0.4)'
                           }} />
                         </div>
@@ -2312,8 +2339,13 @@ by Matías Carvajal
                           textAlign: 'center',
                           marginTop: '0.5rem',
                           fontSize: '0.8rem',
-                          color: '#9ca3af'
+                          color: '#9ca3af',
+                          display: 'flex',
+                          justifyContent: 'center',
+                          gap: '0.5rem'
                         }}>
+                          <span id="mr-progress-percent" style={{ fontWeight: '500', color: '#667eea' }}>1%</span>
+                          <span>
                           {(() => {
                             let estSec: number
                             if (fileDuration !== null && fileDuration > 120) {
@@ -2325,9 +2357,10 @@ by Matías Carvajal
                               estSec = file && file.size > 50 * 1024 * 1024 ? 90 : 30
                             }
                             return lang === 'es'
-                              ? `Estimado: ~${estSec} segundos`
-                              : `Estimated: ~${estSec} seconds`
+                              ? `· Estimado: ~${estSec} segundos`
+                              : `· Estimated: ~${estSec} seconds`
                           })()}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -5190,13 +5223,13 @@ by Matías Carvajal
 
         @keyframes progressFill {
           0% { width: 1%; }
-          8% { width: 10%; }
-          25% { width: 30%; }
-          50% { width: 55%; }
-          70% { width: 72%; }
-          85% { width: 84%; }
-          95% { width: 90%; }
-          100% { width: 92%; }
+          5% { width: 15%; }
+          15% { width: 35%; }
+          30% { width: 55%; }
+          50% { width: 70%; }
+          70% { width: 82%; }
+          85% { width: 89%; }
+          100% { width: 93%; }
         }
 
         @media (prefers-reduced-motion: reduce) {
