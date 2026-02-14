@@ -1623,8 +1623,8 @@ by Matías Carvajal
                 {lang === 'es' ? 'Analizar' : 'Analyze'}
               </button>
 
-              {/* Hamburger menu — mobile only, when not logged in and auth resolved */}
-              {isMobile && !user && !authLoading && (
+              {/* Hamburger menu — mobile only, when not logged in */}
+              {isMobile && !user && (
                 <div ref={mobileMenuRef} style={{ position: 'relative' }}>
                   <button
                     onClick={() => setMobileMenuOpen(!mobileMenuOpen)}

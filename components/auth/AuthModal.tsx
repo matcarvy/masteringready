@@ -7,7 +7,7 @@
  * Combined login/signup modal with unlock animation
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { SocialLoginButtons } from './SocialLoginButtons'
 import { X, Mail, Lock, User, Eye, EyeOff, Check, Headphones, Music } from 'lucide-react'
@@ -116,6 +116,7 @@ const translations = {
 
 export function AuthModal({ isOpen, onClose, onSuccess, lang }: AuthModalProps) {
   const t = translations[lang]
+  const modalRef = useRef<HTMLDivElement>(null)
 
   // State
   const [mode, setMode] = useState<AuthMode>('signup')
@@ -251,8 +252,10 @@ export function AuthModal({ isOpen, onClose, onSuccess, lang }: AuthModalProps) 
         if (!data.session) {
           // No session = email confirmation required
           setLoading(false)
-          setError('')
+          setError(null)
           setSuccessMessage(t.checkEmail)
+          // Scroll modal to top so success message is visible on mobile
+          setTimeout(() => modalRef.current?.scrollTo({ top: 0, behavior: 'smooth' }), 100)
           return
         }
         // Session exists = auto-confirmed
@@ -318,7 +321,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, lang }: AuthModalProps) 
       />
 
       {/* Modal */}
-      <div style={{
+      <div ref={modalRef} style={{
         position: 'fixed',
         top: '50%',
         left: '50%',

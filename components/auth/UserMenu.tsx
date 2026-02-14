@@ -71,12 +71,7 @@ export function UserMenu({ lang = 'es', isMobile = false }: UserMenuProps) {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  // Loading state — render nothing to avoid ghost text flash
-  if (loading) {
-    return null
-  }
-
-  // Not logged in
+  // Not logged in (or still loading — show login/signup as default to avoid blank flash)
   if (!user) {
     // On mobile, login/signup is handled by hamburger menu in page.tsx
     if (isMobile) return null
