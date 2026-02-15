@@ -330,7 +330,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, lang }: AuthModalProps) 
         borderRadius: '1.25rem',
         padding: 'clamp(1.25rem, 4vw, 2rem)',
         maxWidth: '420px',
-        width: 'calc(100% - 1.5rem)',
+        width: 'calc(100% - 2.5rem)',
         maxHeight: '85vh',
         overflowY: 'auto',
         boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
