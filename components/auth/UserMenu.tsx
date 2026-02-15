@@ -85,15 +85,15 @@ export function UserMenu({ lang = 'es', isMobile = false }: UserMenuProps) {
             padding: '0.5rem 1rem',
             minWidth: '6.5rem',
             textAlign: 'center',
-            color: '#6b7280',
+            color: 'var(--mr-text-secondary)',
             textDecoration: 'none',
             fontSize: '0.95rem',
             fontWeight: '500',
             borderRadius: '0.5rem',
             transition: 'color 0.2s'
           }}
-          onMouseEnter={(e) => e.currentTarget.style.color = '#667eea'}
-          onMouseLeave={(e) => e.currentTarget.style.color = '#6b7280'}
+          onMouseEnter={(e) => e.currentTarget.style.color = 'var(--mr-primary)'}
+          onMouseLeave={(e) => e.currentTarget.style.color = 'var(--mr-text-secondary)'}
         >
           {t.login}
         </Link>
@@ -103,22 +103,22 @@ export function UserMenu({ lang = 'es', isMobile = false }: UserMenuProps) {
             padding: '0.5rem 1rem',
             minWidth: '6rem',
             textAlign: 'center',
-            background: 'white',
-            color: '#667eea',
+            background: 'var(--mr-bg-card)',
+            color: 'var(--mr-primary)',
             textDecoration: 'none',
             fontSize: '0.95rem',
             fontWeight: '600',
             borderRadius: '0.5rem',
-            border: '2px solid #667eea',
+            border: '2px solid var(--mr-primary)',
             transition: 'all 0.2s'
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.background = '#667eea'
-            e.currentTarget.style.color = 'white'
+            e.currentTarget.style.background = 'var(--mr-primary)'
+            e.currentTarget.style.color = 'var(--mr-text-inverse)'
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'white'
-            e.currentTarget.style.color = '#667eea'
+            e.currentTarget.style.background = 'var(--mr-bg-card)'
+            e.currentTarget.style.color = 'var(--mr-primary)'
           }}
         >
           {t.signUp}
@@ -187,7 +187,7 @@ export function UserMenu({ lang = 'es', isMobile = false }: UserMenuProps) {
             width: '32px',
             height: '32px',
             borderRadius: '50%',
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            background: 'var(--mr-gradient)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -202,7 +202,7 @@ export function UserMenu({ lang = 'es', isMobile = false }: UserMenuProps) {
         {/* Name — hidden on mobile to save header space */}
         {!isMobile && (
           <span style={{
-            color: '#374151',
+            color: 'var(--mr-text-primary)',
             fontSize: '0.875rem',
             fontWeight: '500',
             maxWidth: '120px',
@@ -216,7 +216,7 @@ export function UserMenu({ lang = 'es', isMobile = false }: UserMenuProps) {
 
         <ChevronDown
           size={16}
-          color="#374151"
+          color="var(--mr-text-primary)"
           style={{
             transform: isOpen ? 'rotate(180deg)' : 'rotate(0)',
             transition: 'transform 0.2s'
@@ -230,9 +230,9 @@ export function UserMenu({ lang = 'es', isMobile = false }: UserMenuProps) {
           position: 'absolute',
           top: 'calc(100% + 0.5rem)',
           right: 0,
-          background: 'white',
+          background: 'var(--mr-bg-card)',
           borderRadius: '0.75rem',
-          boxShadow: '0 10px 40px rgba(0,0,0,0.15)',
+          boxShadow: 'var(--mr-shadow-lg)',
           minWidth: 'min(200px, 80vw)',
           overflow: 'hidden',
           zIndex: 50
@@ -240,18 +240,18 @@ export function UserMenu({ lang = 'es', isMobile = false }: UserMenuProps) {
           {/* User Info Header */}
           <div style={{
             padding: '1rem',
-            borderBottom: '1px solid #e5e7eb'
+            borderBottom: '1px solid var(--mr-border)'
           }}>
             <div style={{
               fontWeight: '600',
-              color: '#111827',
+              color: 'var(--mr-text-primary)',
               marginBottom: '0.25rem'
             }}>
               {displayName}
             </div>
             <div style={{
               fontSize: '0.875rem',
-              color: '#6b7280',
+              color: 'var(--mr-text-secondary)',
               overflow: 'hidden',
               textOverflow: 'ellipsis'
             }}>
@@ -276,15 +276,15 @@ export function UserMenu({ lang = 'es', isMobile = false }: UserMenuProps) {
                   alignItems: 'center',
                   gap: '0.75rem',
                   padding: '0.75rem 1rem',
-                  color: '#374151',
+                  color: 'var(--mr-text-primary)',
                   textDecoration: 'none',
                   fontSize: '0.95rem',
                   transition: 'background 0.2s'
                 }}
-                onMouseEnter={(e) => e.currentTarget.style.background = '#f3f4f6'}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--mr-bg-elevated)'}
                 onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
               >
-                <item.icon size={18} color="#6b7280" />
+                <item.icon size={18} color="var(--mr-text-secondary)" />
                 {item.label}
               </Link>
             ))}
@@ -292,7 +292,7 @@ export function UserMenu({ lang = 'es', isMobile = false }: UserMenuProps) {
 
           {/* Logout */}
           <div style={{
-            borderTop: '1px solid #e5e7eb',
+            borderTop: '1px solid var(--mr-border)',
             padding: '0.5rem 0'
           }}>
             <button
@@ -302,7 +302,7 @@ export function UserMenu({ lang = 'es', isMobile = false }: UserMenuProps) {
                 alignItems: 'center',
                 gap: '0.75rem',
                 padding: '0.75rem 1rem',
-                color: '#dc2626',
+                color: 'var(--mr-red)',
                 background: 'none',
                 border: 'none',
                 width: '100%',
@@ -311,7 +311,7 @@ export function UserMenu({ lang = 'es', isMobile = false }: UserMenuProps) {
                 cursor: 'pointer',
                 transition: 'background 0.2s'
               }}
-              onMouseEnter={(e) => e.currentTarget.style.background = '#fef2f2'}
+              onMouseEnter={(e) => e.currentTarget.style.background = 'var(--mr-red-bg)'}
               onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
             >
               <LogOut size={18} />

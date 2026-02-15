@@ -1,0 +1,118 @@
+/**
+ * MasteringReady Global Theme System
+ * ====================================
+ * CSS variables for dark/light mode.
+ * All prefixed with --mr- to avoid collisions.
+ *
+ * Usage in inline styles:
+ *   style={{ background: 'var(--mr-bg-card)', color: 'var(--mr-text-primary)' }}
+ */
+
+/* ===== THEME-INDEPENDENT CONSTANTS ===== */
+:root {
+  /* Brand */
+  --mr-primary: #667eea;
+  --mr-primary-dark: #764ba2;
+  --mr-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+
+  /* Semantic (same in both themes) */
+  --mr-green: #10b981;
+  --mr-red: #ef4444;
+  --mr-amber: #f59e0b;
+  --mr-blue: #3b82f6;
+  --mr-purple: #7c3aed;
+
+  /* Layout */
+  --mr-radius: 0.75rem;
+  --mr-radius-sm: 0.5rem;
+  --mr-radius-lg: 1rem;
+}
+
+/* ===== LIGHT THEME ===== */
+[data-theme="light"] {
+  /* Backgrounds (5-layer depth system) */
+  --mr-bg-base: #f9fafb;
+  --mr-bg-card: #ffffff;
+  --mr-bg-elevated: #f3f4f6;
+  --mr-bg-hover: #e5e7eb;
+  --mr-bg-input: #ffffff;
+
+  /* Text (3-layer hierarchy) */
+  --mr-text-primary: #111827;
+  --mr-text-secondary: #6b7280;
+  --mr-text-tertiary: #9ca3af;
+  --mr-text-inverse: #ffffff;
+
+  /* Borders */
+  --mr-border: #e5e7eb;
+  --mr-border-strong: #d1d5db;
+
+  /* Shadows */
+  --mr-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --mr-shadow-lg: 0 10px 40px rgba(0, 0, 0, 0.15);
+
+  /* Status backgrounds (light tinted) */
+  --mr-green-bg: #ecfdf5;
+  --mr-red-bg: #fef2f2;
+  --mr-amber-bg: #fffbeb;
+  --mr-blue-bg: #eff6ff;
+  --mr-purple-bg: #f5f3ff;
+
+  /* Status text (dark on light bg) */
+  --mr-green-text: #065f46;
+  --mr-red-text: #991b1b;
+  --mr-amber-text: #92400e;
+  --mr-blue-text: #1e40af;
+  --mr-purple-text: #5b21b6;
+}
+
+/* ===== DARK THEME ===== */
+[data-theme="dark"] {
+  /* Backgrounds (5-layer depth system) */
+  --mr-bg-base: #0f1117;
+  --mr-bg-card: #1a1d27;
+  --mr-bg-elevated: #242836;
+  --mr-bg-hover: #2e3345;
+  --mr-bg-input: #1a1d27;
+
+  /* Text (3-layer hierarchy) */
+  --mr-text-primary: #f1f3f9;
+  --mr-text-secondary: #a0a6b8;
+  --mr-text-tertiary: #6b7280;
+  --mr-text-inverse: #0f1117;
+
+  /* Borders */
+  --mr-border: #2e3345;
+  --mr-border-strong: #3d4358;
+
+  /* Shadows */
+  --mr-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
+  --mr-shadow-lg: 0 10px 40px rgba(0, 0, 0, 0.5);
+
+  /* Status backgrounds (dark, saturated) */
+  --mr-green-bg: #052e16;
+  --mr-red-bg: #450a0a;
+  --mr-amber-bg: #451a03;
+  --mr-blue-bg: #172554;
+  --mr-purple-bg: #2e1065;
+
+  /* Status text (light on dark bg) */
+  --mr-green-text: #86efac;
+  --mr-red-text: #fca5a5;
+  --mr-amber-text: #fcd34d;
+  --mr-blue-text: #93c5fd;
+  --mr-purple-text: #c4b5fd;
+}
+
+/* ===== BASE STYLES ===== */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--mr-bg-base);
+  color: var(--mr-text-primary);
+  transition: background 0.3s ease, color 0.3s ease;
+}

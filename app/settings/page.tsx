@@ -1,9 +1,9 @@
 'use client'
 
 /**
- * Settings Page / Página de Configuración
- * Profile, Preferences, Security, Data & Privacy
- * Perfil, Preferencias, Seguridad, Datos y Privacidad
+ * Settings Page / Pagina de Configuracion
+ * Profile, Preferences, Appearance, Security, Data & Privacy
+ * Perfil, Preferencias, Apariencia, Seguridad, Datos y Privacidad
  */
 
 import { useState, useEffect } from 'react'
@@ -12,6 +12,8 @@ import Link from 'next/link'
 import { useAuth, UserMenu } from '@/components/auth'
 import { supabase, createFreshQueryClient } from '@/lib/supabase'
 import { detectLanguage, setLanguageCookie } from '@/lib/language'
+import { ThemeToggle } from '@/components/ThemeToggle'
+import { useTheme } from '@/lib/theme'
 import {
   Music,
   Zap,
@@ -23,7 +25,10 @@ import {
   Check,
   AlertTriangle,
   Eye,
-  EyeOff
+  EyeOff,
+  Sun,
+  Moon,
+  Monitor
 } from 'lucide-react'
 
 // ============================================================================
@@ -32,13 +37,13 @@ import {
 
 const translations = {
   es: {
-    title: 'Configuración',
+    title: 'Configuracion',
     loading: 'Cargando...',
     analyze: 'Analizar',
     // Profile
     profileSection: 'Perfil',
     name: 'Nombre',
-    email: 'Correo electrónico',
+    email: 'Correo electronico',
     managedBy: 'Gestionado por',
     saveChanges: 'Guardar cambios',
     saving: 'Guardando...',
@@ -47,24 +52,30 @@ const translations = {
     preferencesSection: 'Preferencias',
     language: 'Idioma',
     languageSaved: 'Idioma actualizado',
+    // Appearance
+    appearanceSection: 'Apariencia',
+    appearanceDescription: 'Elige el tema visual',
+    themeSystem: 'Sistema',
+    themeLight: 'Claro',
+    themeDark: 'Oscuro',
     // Security
     securitySection: 'Seguridad',
-    changePassword: 'Cambiar contraseña',
-    currentPassword: 'Contraseña actual',
-    newPassword: 'Nueva contraseña',
-    confirmPassword: 'Confirmar nueva contraseña',
-    updatePassword: 'Actualizar contraseña',
+    changePassword: 'Cambiar contrasena',
+    currentPassword: 'Contrasena actual',
+    newPassword: 'Nueva contrasena',
+    confirmPassword: 'Confirmar nueva contrasena',
+    updatePassword: 'Actualizar contrasena',
     updatingPassword: 'Actualizando...',
-    passwordUpdated: 'Contraseña actualizada correctamente',
-    passwordMismatch: 'Las contraseñas no coinciden',
-    passwordTooShort: 'La contraseña debe tener al menos 6 caracteres',
+    passwordUpdated: 'Contrasena actualizada correctamente',
+    passwordMismatch: 'Las contrasenas no coinciden',
+    passwordTooShort: 'La contrasena debe tener al menos 6 caracteres',
     connectedAccounts: 'Cuentas conectadas',
     connectedWith: 'Conectado con',
     // Data
     dataSection: 'Datos y privacidad',
     deleteAccount: 'Eliminar mi cuenta',
     deleteTitle: '¿Eliminar tu cuenta?',
-    deleteMessage: 'Esta acción es permanente. Se eliminarán todos tus análisis y datos. No se puede deshacer.',
+    deleteMessage: 'Esta accion es permanente. Se eliminaran todos tus analisis y datos. No se puede deshacer.',
     deleteConfirmInput: 'Escribe "ELIMINAR" para confirmar',
     deleteConfirmWord: 'ELIMINAR',
     deletePermanently: 'Eliminar permanentemente',
@@ -87,6 +98,12 @@ const translations = {
     preferencesSection: 'Preferences',
     language: 'Language',
     languageSaved: 'Language updated',
+    // Appearance
+    appearanceSection: 'Appearance',
+    appearanceDescription: 'Choose visual theme',
+    themeSystem: 'System',
+    themeLight: 'Light',
+    themeDark: 'Dark',
     // Security
     securitySection: 'Security',
     changePassword: 'Change password',
@@ -120,6 +137,7 @@ const translations = {
 export default function SettingsPage() {
   const router = useRouter()
   const { user, session, loading: authLoading, signOut } = useAuth()
+  const { theme, setTheme } = useTheme()
 
   const [lang, setLang] = useState<'es' | 'en'>('es')
   const [isMobile, setIsMobile] = useState(false)
@@ -384,7 +402,7 @@ export default function SettingsPage() {
     return (
       <div style={{
         minHeight: '100vh',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        background: 'var(--mr-gradient)',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
@@ -392,7 +410,7 @@ export default function SettingsPage() {
         gap: '1rem'
       }}>
         <span style={{ fontSize: '2rem' }}>🎧</span>
-        <div style={{ color: 'white', fontSize: '1.25rem' }}>{t.loading}</div>
+        <div style={{ color: 'var(--mr-text-inverse)', fontSize: '1.25rem' }}>{t.loading}</div>
       </div>
     )
   }
@@ -402,14 +420,14 @@ export default function SettingsPage() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: '#f3f4f6',
+      background: 'var(--mr-bg-elevated)',
       fontFamily: 'Inter, system-ui, sans-serif',
       overflowX: 'hidden'
     }}>
       {/* Header */}
       <header style={{
-        background: 'white',
-        borderBottom: '1px solid #e5e7eb',
+        background: 'var(--mr-bg-card)',
+        borderBottom: '1px solid var(--mr-border)',
         padding: '1rem 1.5rem',
         position: 'sticky',
         top: 0,
@@ -434,7 +452,7 @@ export default function SettingsPage() {
             <div style={{
               width: '32px',
               height: '32px',
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              background: 'var(--mr-gradient)',
               borderRadius: '0.5rem',
               display: 'flex',
               alignItems: 'center',
@@ -445,7 +463,7 @@ export default function SettingsPage() {
             {!isMobile && (
               <span style={{
                 fontWeight: '700',
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                background: 'var(--mr-gradient)',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
                 backgroundClip: 'text'
@@ -466,7 +484,7 @@ export default function SettingsPage() {
                 minWidth: '2.5rem',
                 textAlign: 'center',
                 background: 'transparent',
-                color: '#6b7280',
+                color: 'var(--mr-text-secondary)',
                 border: 'none',
                 cursor: 'pointer',
                 fontWeight: '500',
@@ -476,6 +494,8 @@ export default function SettingsPage() {
               {lang === 'es' ? 'EN' : 'ES'}
             </button>
 
+            <ThemeToggle lang={lang} />
+
             <UserMenu lang={lang} isMobile={isMobile} />
 
             <Link
@@ -484,8 +504,8 @@ export default function SettingsPage() {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.5rem',
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                color: 'white',
+                background: 'var(--mr-gradient)',
+                color: 'var(--mr-text-inverse)',
                 padding: '0.5rem 1rem',
                 borderRadius: '9999px',
                 fontWeight: '600',
@@ -495,7 +515,7 @@ export default function SettingsPage() {
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.transform = 'translateY(-2px)'
-                e.currentTarget.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.4)'
+                e.currentTarget.style.boxShadow = 'var(--mr-shadow-lg)'
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.transform = 'translateY(0)'
@@ -518,7 +538,7 @@ export default function SettingsPage() {
         <h1 style={{
           fontSize: '1.75rem',
           fontWeight: '700',
-          color: '#111827',
+          color: 'var(--mr-text-primary)',
           marginBottom: '2rem'
         }}>
           {t.title}
@@ -526,22 +546,22 @@ export default function SettingsPage() {
 
         {/* Profile Section */}
         <section style={{
-          background: 'white',
+          background: 'var(--mr-bg-card)',
           borderRadius: '1rem',
           padding: '1.5rem',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+          boxShadow: 'var(--mr-shadow)',
           marginBottom: '1.5rem'
         }}>
           <h2 style={{
             fontSize: '1.125rem',
             fontWeight: '600',
-            color: '#111827',
+            color: 'var(--mr-text-primary)',
             marginBottom: '1.25rem',
             display: 'flex',
             alignItems: 'center',
             gap: '0.5rem'
           }}>
-            <User size={20} style={{ color: '#667eea' }} />
+            <User size={20} style={{ color: 'var(--mr-primary)' }} />
             {t.profileSection}
           </h2>
 
@@ -551,7 +571,7 @@ export default function SettingsPage() {
               display: 'block',
               fontSize: '0.875rem',
               fontWeight: '500',
-              color: '#374151',
+              color: 'var(--mr-text-primary)',
               marginBottom: '0.5rem'
             }}>
               {t.name}
@@ -565,15 +585,15 @@ export default function SettingsPage() {
                   style={{
                     width: '100%',
                     padding: '0.75rem',
-                    border: '1px solid #e5e7eb',
+                    border: '1px solid var(--mr-border)',
                     borderRadius: '0.5rem',
                     fontSize: '0.95rem',
-                    background: '#f9fafb',
-                    color: '#6b7280',
+                    background: 'var(--mr-bg-base)',
+                    color: 'var(--mr-text-secondary)',
                     boxSizing: 'border-box'
                   }}
                 />
-                <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.375rem' }}>
+                <p style={{ fontSize: '0.75rem', color: 'var(--mr-text-tertiary)', marginTop: '0.375rem' }}>
                   {t.managedBy} {oauthProvider}
                 </p>
               </div>
@@ -585,11 +605,13 @@ export default function SettingsPage() {
                 style={{
                   width: '100%',
                   padding: '0.75rem',
-                  border: '1px solid #d1d5db',
+                  border: '1px solid var(--mr-border-strong)',
                   borderRadius: '0.5rem',
                   fontSize: '0.95rem',
                   outline: 'none',
-                  boxSizing: 'border-box'
+                  boxSizing: 'border-box',
+                  background: 'var(--mr-bg-card)',
+                  color: 'var(--mr-text-primary)'
                 }}
               />
             )}
@@ -601,7 +623,7 @@ export default function SettingsPage() {
               display: 'block',
               fontSize: '0.875rem',
               fontWeight: '500',
-              color: '#374151',
+              color: 'var(--mr-text-primary)',
               marginBottom: '0.5rem'
             }}>
               {t.email}
@@ -613,11 +635,11 @@ export default function SettingsPage() {
               style={{
                 width: '100%',
                 padding: '0.75rem',
-                border: '1px solid #e5e7eb',
+                border: '1px solid var(--mr-border)',
                 borderRadius: '0.5rem',
                 fontSize: '0.95rem',
-                background: '#f9fafb',
-                color: '#6b7280',
+                background: 'var(--mr-bg-base)',
+                color: 'var(--mr-text-secondary)',
                 boxSizing: 'border-box'
               }}
             />
@@ -633,8 +655,8 @@ export default function SettingsPage() {
                 alignItems: 'center',
                 gap: '0.5rem',
                 padding: '0.625rem 1.25rem',
-                background: profileSaved ? '#10b981' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                color: 'white',
+                background: profileSaved ? 'var(--mr-green)' : 'var(--mr-gradient)',
+                color: 'var(--mr-text-inverse)',
                 border: 'none',
                 borderRadius: '0.5rem',
                 fontSize: '0.875rem',
@@ -650,22 +672,22 @@ export default function SettingsPage() {
 
         {/* Preferences Section */}
         <section style={{
-          background: 'white',
+          background: 'var(--mr-bg-card)',
           borderRadius: '1rem',
           padding: '1.5rem',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+          boxShadow: 'var(--mr-shadow)',
           marginBottom: '1.5rem'
         }}>
           <h2 style={{
             fontSize: '1.125rem',
             fontWeight: '600',
-            color: '#111827',
+            color: 'var(--mr-text-primary)',
             marginBottom: '1.25rem',
             display: 'flex',
             alignItems: 'center',
             gap: '0.5rem'
           }}>
-            <Globe size={20} style={{ color: '#667eea' }} />
+            <Globe size={20} style={{ color: 'var(--mr-primary)' }} />
             {t.preferencesSection}
           </h2>
 
@@ -674,7 +696,7 @@ export default function SettingsPage() {
               display: 'block',
               fontSize: '0.875rem',
               fontWeight: '500',
-              color: '#374151',
+              color: 'var(--mr-text-primary)',
               marginBottom: '0.5rem'
             }}>
               {t.language}
@@ -684,25 +706,25 @@ export default function SettingsPage() {
                 onClick={() => handleLanguageChange('es')}
                 style={{
                   padding: '0.625rem 1.25rem',
-                  border: lang === 'es' ? '2px solid #667eea' : '2px solid #e5e7eb',
+                  border: lang === 'es' ? '2px solid var(--mr-primary)' : '2px solid var(--mr-border)',
                   borderRadius: '0.5rem',
-                  background: lang === 'es' ? '#eef2ff' : 'white',
-                  color: lang === 'es' ? '#667eea' : '#374151',
+                  background: lang === 'es' ? 'var(--mr-purple-bg)' : 'var(--mr-bg-card)',
+                  color: lang === 'es' ? 'var(--mr-primary)' : 'var(--mr-text-primary)',
                   fontWeight: lang === 'es' ? '600' : '500',
                   fontSize: '0.875rem',
                   cursor: 'pointer'
                 }}
               >
-                Español
+                Espanol
               </button>
               <button
                 onClick={() => handleLanguageChange('en')}
                 style={{
                   padding: '0.625rem 1.25rem',
-                  border: lang === 'en' ? '2px solid #667eea' : '2px solid #e5e7eb',
+                  border: lang === 'en' ? '2px solid var(--mr-primary)' : '2px solid var(--mr-border)',
                   borderRadius: '0.5rem',
-                  background: lang === 'en' ? '#eef2ff' : 'white',
-                  color: lang === 'en' ? '#667eea' : '#374151',
+                  background: lang === 'en' ? 'var(--mr-purple-bg)' : 'var(--mr-bg-card)',
+                  color: lang === 'en' ? 'var(--mr-primary)' : 'var(--mr-text-primary)',
                   fontWeight: lang === 'en' ? '600' : '500',
                   fontSize: '0.875rem',
                   cursor: 'pointer'
@@ -714,24 +736,83 @@ export default function SettingsPage() {
           </div>
         </section>
 
-        {/* Security Section */}
+        {/* Appearance Section */}
         <section style={{
-          background: 'white',
+          background: 'var(--mr-bg-card)',
           borderRadius: '1rem',
           padding: '1.5rem',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+          boxShadow: 'var(--mr-shadow)',
           marginBottom: '1.5rem'
         }}>
           <h2 style={{
             fontSize: '1.125rem',
             fontWeight: '600',
-            color: '#111827',
+            color: 'var(--mr-text-primary)',
+            marginBottom: '0.25rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem'
+          }}>
+            <Sun size={20} style={{ color: 'var(--mr-primary)' }} />
+            {t.appearanceSection}
+          </h2>
+          <p style={{
+            fontSize: '0.875rem',
+            color: 'var(--mr-text-secondary)',
+            marginBottom: '1.25rem'
+          }}>
+            {t.appearanceDescription}
+          </p>
+
+          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+            {([
+              { value: 'system' as const, label: t.themeSystem, icon: <Monitor size={16} /> },
+              { value: 'light' as const, label: t.themeLight, icon: <Sun size={16} /> },
+              { value: 'dark' as const, label: t.themeDark, icon: <Moon size={16} /> }
+            ]).map((option) => (
+              <button
+                key={option.value}
+                onClick={() => setTheme(option.value)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  padding: '0.625rem 1.25rem',
+                  border: theme === option.value ? '2px solid var(--mr-primary)' : '2px solid var(--mr-border)',
+                  borderRadius: '0.5rem',
+                  background: theme === option.value ? 'var(--mr-purple-bg)' : 'var(--mr-bg-card)',
+                  color: theme === option.value ? 'var(--mr-primary)' : 'var(--mr-text-primary)',
+                  fontWeight: theme === option.value ? '600' : '500',
+                  fontSize: '0.875rem',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                {option.icon}
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </section>
+
+        {/* Security Section */}
+        <section style={{
+          background: 'var(--mr-bg-card)',
+          borderRadius: '1rem',
+          padding: '1.5rem',
+          boxShadow: 'var(--mr-shadow)',
+          marginBottom: '1.5rem'
+        }}>
+          <h2 style={{
+            fontSize: '1.125rem',
+            fontWeight: '600',
+            color: 'var(--mr-text-primary)',
             marginBottom: '1.25rem',
             display: 'flex',
             alignItems: 'center',
             gap: '0.5rem'
           }}>
-            <Shield size={20} style={{ color: '#667eea' }} />
+            <Shield size={20} style={{ color: 'var(--mr-primary)' }} />
             {t.securitySection}
           </h2>
 
@@ -742,25 +823,25 @@ export default function SettingsPage() {
               alignItems: 'center',
               gap: '0.75rem',
               padding: '1rem',
-              background: '#f9fafb',
+              background: 'var(--mr-bg-base)',
               borderRadius: '0.75rem'
             }}>
               <div style={{
                 width: '40px',
                 height: '40px',
                 borderRadius: '50%',
-                background: '#eef2ff',
+                background: 'var(--mr-purple-bg)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center'
               }}>
-                <Shield size={20} style={{ color: '#667eea' }} />
+                <Shield size={20} style={{ color: 'var(--mr-primary)' }} />
               </div>
               <div>
-                <p style={{ fontWeight: '500', color: '#374151', fontSize: '0.95rem' }}>
+                <p style={{ fontWeight: '500', color: 'var(--mr-text-primary)', fontSize: '0.95rem' }}>
                   {t.connectedAccounts}
                 </p>
-                <p style={{ fontSize: '0.8rem', color: '#6b7280' }}>
+                <p style={{ fontSize: '0.8rem', color: 'var(--mr-text-secondary)' }}>
                   {t.connectedWith} {oauthProvider}
                 </p>
               </div>
@@ -774,9 +855,9 @@ export default function SettingsPage() {
                   borderRadius: '0.5rem',
                   marginBottom: '1rem',
                   fontSize: '0.875rem',
-                  background: passwordMessage.type === 'success' ? '#f0fdf4' : '#fef2f2',
+                  background: passwordMessage.type === 'success' ? 'var(--mr-green-bg)' : 'var(--mr-red-bg)',
                   border: `1px solid ${passwordMessage.type === 'success' ? '#bbf7d0' : '#fecaca'}`,
-                  color: passwordMessage.type === 'success' ? '#15803d' : '#dc2626'
+                  color: passwordMessage.type === 'success' ? 'var(--mr-green-text)' : 'var(--mr-red)'
                 }}>
                   {passwordMessage.text}
                 </div>
@@ -787,10 +868,10 @@ export default function SettingsPage() {
                   onClick={() => setShowPasswordForm(true)}
                   style={{
                     padding: '0.625rem 1.25rem',
-                    border: '1px solid #d1d5db',
+                    border: '1px solid var(--mr-border-strong)',
                     borderRadius: '0.5rem',
-                    background: 'white',
-                    color: '#374151',
+                    background: 'var(--mr-bg-card)',
+                    color: 'var(--mr-text-primary)',
                     fontSize: '0.875rem',
                     fontWeight: '500',
                     cursor: 'pointer'
@@ -806,7 +887,7 @@ export default function SettingsPage() {
                       display: 'block',
                       fontSize: '0.875rem',
                       fontWeight: '500',
-                      color: '#374151',
+                      color: 'var(--mr-text-primary)',
                       marginBottom: '0.5rem'
                     }}>
                       {t.newPassword}
@@ -820,11 +901,13 @@ export default function SettingsPage() {
                           width: '100%',
                           padding: '0.75rem',
                           paddingRight: '2.75rem',
-                          border: '1px solid #d1d5db',
+                          border: '1px solid var(--mr-border-strong)',
                           borderRadius: '0.5rem',
                           fontSize: '0.95rem',
                           outline: 'none',
-                          boxSizing: 'border-box'
+                          boxSizing: 'border-box',
+                          background: 'var(--mr-bg-card)',
+                          color: 'var(--mr-text-primary)'
                         }}
                       />
                       <button
@@ -838,7 +921,7 @@ export default function SettingsPage() {
                           background: 'none',
                           border: 'none',
                           cursor: 'pointer',
-                          color: '#9ca3af',
+                          color: 'var(--mr-text-tertiary)',
                           padding: 0
                         }}
                       >
@@ -853,7 +936,7 @@ export default function SettingsPage() {
                       display: 'block',
                       fontSize: '0.875rem',
                       fontWeight: '500',
-                      color: '#374151',
+                      color: 'var(--mr-text-primary)',
                       marginBottom: '0.5rem'
                     }}>
                       {t.confirmPassword}
@@ -867,11 +950,13 @@ export default function SettingsPage() {
                           width: '100%',
                           padding: '0.75rem',
                           paddingRight: '2.75rem',
-                          border: '1px solid #d1d5db',
+                          border: '1px solid var(--mr-border-strong)',
                           borderRadius: '0.5rem',
                           fontSize: '0.95rem',
                           outline: 'none',
-                          boxSizing: 'border-box'
+                          boxSizing: 'border-box',
+                          background: 'var(--mr-bg-card)',
+                          color: 'var(--mr-text-primary)'
                         }}
                       />
                       <button
@@ -885,7 +970,7 @@ export default function SettingsPage() {
                           background: 'none',
                           border: 'none',
                           cursor: 'pointer',
-                          color: '#9ca3af',
+                          color: 'var(--mr-text-tertiary)',
                           padding: 0
                         }}
                       >
@@ -900,8 +985,8 @@ export default function SettingsPage() {
                       disabled={passwordLoading}
                       style={{
                         padding: '0.625rem 1.25rem',
-                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                        color: 'white',
+                        background: 'var(--mr-gradient)',
+                        color: 'var(--mr-text-inverse)',
                         border: 'none',
                         borderRadius: '0.5rem',
                         fontSize: '0.875rem',
@@ -920,9 +1005,9 @@ export default function SettingsPage() {
                       }}
                       style={{
                         padding: '0.625rem 1.25rem',
-                        background: 'white',
-                        color: '#6b7280',
-                        border: '1px solid #d1d5db',
+                        background: 'var(--mr-bg-card)',
+                        color: 'var(--mr-text-secondary)',
+                        border: '1px solid var(--mr-border-strong)',
                         borderRadius: '0.5rem',
                         fontSize: '0.875rem',
                         cursor: 'pointer'
@@ -939,22 +1024,22 @@ export default function SettingsPage() {
 
         {/* Data & Privacy Section */}
         <section style={{
-          background: 'white',
+          background: 'var(--mr-bg-card)',
           borderRadius: '1rem',
           padding: '1.5rem',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+          boxShadow: 'var(--mr-shadow)',
           marginBottom: '2rem'
         }}>
           <h2 style={{
             fontSize: '1.125rem',
             fontWeight: '600',
-            color: '#111827',
+            color: 'var(--mr-text-primary)',
             marginBottom: '1.25rem',
             display: 'flex',
             alignItems: 'center',
             gap: '0.5rem'
           }}>
-            <Trash2 size={20} style={{ color: '#dc2626' }} />
+            <Trash2 size={20} style={{ color: 'var(--mr-red)' }} />
             {t.dataSection}
           </h2>
 
@@ -962,8 +1047,8 @@ export default function SettingsPage() {
             onClick={() => setShowDeleteModal(true)}
             style={{
               padding: '0.625rem 1.25rem',
-              background: 'white',
-              color: '#dc2626',
+              background: 'var(--mr-bg-card)',
+              color: 'var(--mr-red)',
               border: '1px solid #fecaca',
               borderRadius: '0.5rem',
               fontSize: '0.875rem',
@@ -972,10 +1057,10 @@ export default function SettingsPage() {
               transition: 'all 0.2s'
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = '#fef2f2'
+              e.currentTarget.style.background = 'var(--mr-red-bg)'
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'white'
+              e.currentTarget.style.background = 'var(--mr-bg-card)'
             }}
           >
             {t.deleteAccount}
@@ -1000,12 +1085,12 @@ export default function SettingsPage() {
           <div
             onClick={(e) => e.stopPropagation()}
             style={{
-              background: 'white',
+              background: 'var(--mr-bg-card)',
               borderRadius: '1rem',
               padding: 'clamp(1.25rem, 4vw, 2rem)',
               maxWidth: '440px',
               width: 'calc(100% - 1rem)',
-              boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+              boxShadow: 'var(--mr-shadow-lg)',
               position: 'relative'
             }}
           >
@@ -1014,7 +1099,7 @@ export default function SettingsPage() {
               style={{
                 position: 'absolute', top: '1rem', right: '1rem',
                 background: 'none', border: 'none', cursor: 'pointer',
-                color: '#6b7280', padding: '0.75rem'
+                color: 'var(--mr-text-secondary)', padding: '0.75rem'
               }}
               aria-label={lang === 'es' ? 'Cerrar' : 'Close'}
             >
@@ -1026,19 +1111,19 @@ export default function SettingsPage() {
               <div style={{
                 width: '56px',
                 height: '56px',
-                background: '#fef2f2',
+                background: 'var(--mr-red-bg)',
                 borderRadius: '50%',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 margin: '0 auto 1rem'
               }}>
-                <AlertTriangle size={28} style={{ color: '#dc2626' }} />
+                <AlertTriangle size={28} style={{ color: 'var(--mr-red)' }} />
               </div>
-              <h3 style={{ fontSize: '1.25rem', fontWeight: '700', color: '#111827', marginBottom: '0.5rem' }}>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: '700', color: 'var(--mr-text-primary)', marginBottom: '0.5rem' }}>
                 {t.deleteTitle}
               </h3>
-              <p style={{ color: '#6b7280', fontSize: '0.875rem', lineHeight: '1.5' }}>
+              <p style={{ color: 'var(--mr-text-secondary)', fontSize: '0.875rem', lineHeight: '1.5' }}>
                 {t.deleteMessage}
               </p>
             </div>
@@ -1049,7 +1134,7 @@ export default function SettingsPage() {
                 display: 'block',
                 fontSize: '0.875rem',
                 fontWeight: '500',
-                color: '#374151',
+                color: 'var(--mr-text-primary)',
                 marginBottom: '0.5rem'
               }}>
                 {t.deleteConfirmInput}
@@ -1061,11 +1146,13 @@ export default function SettingsPage() {
                 style={{
                   width: '100%',
                   padding: '0.75rem',
-                  border: '1px solid #d1d5db',
+                  border: '1px solid var(--mr-border-strong)',
                   borderRadius: '0.5rem',
                   fontSize: '0.95rem',
                   outline: 'none',
-                  boxSizing: 'border-box'
+                  boxSizing: 'border-box',
+                  background: 'var(--mr-bg-card)',
+                  color: 'var(--mr-text-primary)'
                 }}
               />
             </div>
@@ -1078,8 +1165,8 @@ export default function SettingsPage() {
                 style={{
                   flex: 1,
                   padding: '0.75rem',
-                  background: deleteConfirm === t.deleteConfirmWord ? '#dc2626' : '#e5e7eb',
-                  color: deleteConfirm === t.deleteConfirmWord ? 'white' : '#9ca3af',
+                  background: deleteConfirm === t.deleteConfirmWord ? 'var(--mr-red)' : 'var(--mr-bg-hover)',
+                  color: deleteConfirm === t.deleteConfirmWord ? 'var(--mr-text-inverse)' : 'var(--mr-text-tertiary)',
                   border: 'none',
                   borderRadius: '0.5rem',
                   fontSize: '0.875rem',
@@ -1097,9 +1184,9 @@ export default function SettingsPage() {
                 style={{
                   flex: 1,
                   padding: '0.75rem',
-                  background: 'white',
-                  color: '#374151',
-                  border: '1px solid #d1d5db',
+                  background: 'var(--mr-bg-card)',
+                  color: 'var(--mr-text-primary)',
+                  border: '1px solid var(--mr-border-strong)',
                   borderRadius: '0.5rem',
                   fontSize: '0.875rem',
                   fontWeight: '500',

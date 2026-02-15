@@ -1,9 +1,9 @@
 'use client'
 
 /**
- * Subscription Page / Página de Suscripción
+ * Subscription Page / Pagina de Suscripcion
  * Shows current plan, usage, upgrade/addon options, billing info
- * Muestra plan actual, uso, opciones de actualización/addon, info de facturación
+ * Muestra plan actual, uso, opciones de actualizacion/addon, info de facturacion
  */
 
 import { useState, useEffect } from 'react'
@@ -14,6 +14,7 @@ import { supabase, createFreshQueryClient, UserDashboardStatus } from '@/lib/sup
 import { useGeo } from '@/lib/useGeo'
 import { getAllPricesForCountry } from '@/lib/pricing-config'
 import { detectLanguage, setLanguageCookie } from '@/lib/language'
+import { ThemeToggle } from '@/components/ThemeToggle'
 import {
   Music,
   Zap,
@@ -35,7 +36,7 @@ import {
 
 const translations = {
   es: {
-    title: 'Tu Suscripción',
+    title: 'Tu Suscripcion',
     loading: 'Cargando...',
     analyze: 'Analizar',
     currentPlan: 'Plan actual',
@@ -43,52 +44,52 @@ const translations = {
     pro: 'Mastering Ready Pro',
     proBadge: 'PRO',
     // Free plan
-    analysisUsage: 'Uso de análisis',
+    analysisUsage: 'Uso de analisis',
     lifetimeAnalyses: 'para empezar',
-    getMoreWithPro: 'Obtén más con Pro',
-    benefit1: '30 análisis al mes',
-    benefit2: 'Análisis Completo y Detallado',
+    getMoreWithPro: 'Obten mas con Pro',
+    benefit1: '30 analisis al mes',
+    benefit2: 'Analisis Completo y Detallado',
     benefit3: 'Descarga de PDFs',
     upgradeToPro: 'Actualizar a Pro',
     cancelAnytime: 'Cancela cuando quieras',
-    justNeedOne: '¿Solo necesitas un análisis?',
-    buySingle: 'Comprar análisis individual',
+    justNeedOne: '¿Solo necesitas un analisis?',
+    buySingle: 'Comprar analisis individual',
     // Pro plan
-    usageThisMonth: 'Análisis restantes este mes',
-    analysesOf30: 'análisis',
+    usageThisMonth: 'Analisis restantes este mes',
+    analysesOf30: 'analisis',
     resetsOn: 'Se reinicia el',
-    needMore: '¿Necesitas más análisis?',
-    addExtra: 'Agrega 10 análisis extra este mes',
-    add10: 'Agregar 10 análisis',
-    maxPacks: 'Máximo 2 packs por mes',
+    needMore: '¿Necesitas mas analisis?',
+    addExtra: 'Agrega 10 analisis extra este mes',
+    add10: 'Agregar 10 analisis',
+    maxPacks: 'Maximo 2 packs por mes',
     // Billing
-    billingInfo: 'Información de facturación',
-    nextBilling: 'Próximo cobro',
-    paymentMethod: 'Método de pago',
-    updatePayment: 'Actualizar método de pago',
-    cancelSubscription: 'Cancelar suscripción',
+    billingInfo: 'Informacion de facturacion',
+    nextBilling: 'Proximo cobro',
+    paymentMethod: 'Metodo de pago',
+    updatePayment: 'Actualizar metodo de pago',
+    cancelSubscription: 'Cancelar suscripcion',
     // Cancel modal
-    cancelTitle: '¿Cancelar suscripción?',
-    cancelMessage: 'Mantendrás acceso hasta el final del periodo. Tus análisis guardados no se eliminarán.',
-    yesCancel: 'Sí, cancelar',
+    cancelTitle: '¿Cancelar suscripcion?',
+    cancelMessage: 'Mantendras acceso hasta el final del periodo. Tus analisis guardados no se eliminaran.',
+    yesCancel: 'Si, cancelar',
     goBack: 'Volver',
     // Payment history
     paymentHistory: 'Historial de pagos',
-    noPayments: 'No hay pagos registrados aún',
+    noPayments: 'No hay pagos registrados aun',
     colDate: 'Fecha',
-    colDescription: 'Descripción',
+    colDescription: 'Descripcion',
     colAmount: 'Monto',
     colStatus: 'Estado',
     statusSucceeded: 'Exitoso',
     statusFailed: 'Fallido',
     statusPending: 'Pendiente',
     viewReceipt: 'Ver recibo',
-    manageSubscription: 'Administrar suscripción',
+    manageSubscription: 'Administrar suscripcion',
     perMonth: '/mes',
-    cancellationScheduled: 'Cancelación programada',
-    cancelsOn: 'Tu suscripción se cancelará el',
-    keepAccess: 'Mantendrás acceso Pro hasta esa fecha.',
-    reactivate: 'Reactivar suscripción'
+    cancellationScheduled: 'Cancelacion programada',
+    cancelsOn: 'Tu suscripcion se cancelara el',
+    keepAccess: 'Mantendras acceso Pro hasta esa fecha.',
+    reactivate: 'Reactivar suscripcion'
   },
   en: {
     title: 'Your Subscription',
@@ -334,7 +335,7 @@ export default function SubscriptionPage() {
       window.location.reload()
     } catch (error) {
       console.error('Cancel error:', error)
-      setCancelError(lang === 'es' ? 'Error de conexión' : 'Connection error')
+      setCancelError(lang === 'es' ? 'Error de conexion' : 'Connection error')
       setCancelling(false)
     }
   }
@@ -366,7 +367,7 @@ export default function SubscriptionPage() {
     return (
       <div style={{
         minHeight: '100vh',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        background: 'var(--mr-gradient)',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
@@ -374,7 +375,7 @@ export default function SubscriptionPage() {
         gap: '1rem'
       }}>
         <span style={{ fontSize: '2rem' }}>🎧</span>
-        <div style={{ color: 'white', fontSize: '1.25rem' }}>{t.loading}</div>
+        <div style={{ color: 'var(--mr-text-inverse)', fontSize: '1.25rem' }}>{t.loading}</div>
       </div>
     )
   }
@@ -384,14 +385,14 @@ export default function SubscriptionPage() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: '#f3f4f6',
+      background: 'var(--mr-bg-elevated)',
       fontFamily: 'Inter, system-ui, sans-serif',
       overflowX: 'hidden'
     }}>
       {/* Header */}
       <header style={{
-        background: 'white',
-        borderBottom: '1px solid #e5e7eb',
+        background: 'var(--mr-bg-card)',
+        borderBottom: '1px solid var(--mr-border)',
         padding: '1rem 1.5rem',
         position: 'sticky',
         top: 0,
@@ -416,7 +417,7 @@ export default function SubscriptionPage() {
             <div style={{
               width: '32px',
               height: '32px',
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              background: 'var(--mr-gradient)',
               borderRadius: '0.5rem',
               display: 'flex',
               alignItems: 'center',
@@ -427,7 +428,7 @@ export default function SubscriptionPage() {
             {!isMobile && (
               <span style={{
                 fontWeight: '700',
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                background: 'var(--mr-gradient)',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
                 backgroundClip: 'text'
@@ -458,7 +459,7 @@ export default function SubscriptionPage() {
                 minWidth: '2.5rem',
                 textAlign: 'center',
                 background: 'transparent',
-                color: '#6b7280',
+                color: 'var(--mr-text-secondary)',
                 border: 'none',
                 cursor: 'pointer',
                 fontWeight: '500',
@@ -468,6 +469,8 @@ export default function SubscriptionPage() {
               {lang === 'es' ? 'EN' : 'ES'}
             </button>
 
+            <ThemeToggle lang={lang} />
+
             <UserMenu lang={lang} isMobile={isMobile} />
 
             <Link
@@ -476,8 +479,8 @@ export default function SubscriptionPage() {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.5rem',
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                color: 'white',
+                background: 'var(--mr-gradient)',
+                color: 'var(--mr-text-inverse)',
                 padding: '0.5rem 1rem',
                 borderRadius: '9999px',
                 fontWeight: '600',
@@ -487,7 +490,7 @@ export default function SubscriptionPage() {
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.transform = 'translateY(-2px)'
-                e.currentTarget.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.4)'
+                e.currentTarget.style.boxShadow = 'var(--mr-shadow-lg)'
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.transform = 'translateY(0)'
@@ -510,7 +513,7 @@ export default function SubscriptionPage() {
         <h1 style={{
           fontSize: '1.75rem',
           fontWeight: '700',
-          color: '#111827',
+          color: 'var(--mr-text-primary)',
           marginBottom: '2rem'
         }}>
           {t.title}
@@ -519,13 +522,13 @@ export default function SubscriptionPage() {
         {/* Current Plan Card */}
         <div style={{
           background: isPro
-            ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-            : 'white',
+            ? 'var(--mr-gradient)'
+            : 'var(--mr-bg-card)',
           borderRadius: '1rem',
           padding: '1.5rem',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+          boxShadow: 'var(--mr-shadow)',
           marginBottom: '1.5rem',
-          color: isPro ? 'white' : '#111827'
+          color: isPro ? 'var(--mr-text-inverse)' : 'var(--mr-text-primary)'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
             <span style={{ fontSize: '0.875rem', opacity: isPro ? 0.9 : 0.6 }}>
@@ -550,23 +553,23 @@ export default function SubscriptionPage() {
             alignItems: 'center',
             gap: '0.5rem'
           }}>
-            {isPro ? <Crown size={24} /> : <Star size={24} style={{ color: '#6b7280' }} />}
+            {isPro ? <Crown size={24} /> : <Star size={24} style={{ color: 'var(--mr-text-secondary)' }} />}
             {isPro ? t.pro : t.free}
           </p>
         </div>
 
         {/* Usage Card */}
         <div style={{
-          background: 'white',
+          background: 'var(--mr-bg-card)',
           borderRadius: '1rem',
           padding: '1.5rem',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+          boxShadow: 'var(--mr-shadow)',
           marginBottom: '1.5rem'
         }}>
           <h2 style={{
             fontSize: '1rem',
             fontWeight: '600',
-            color: '#111827',
+            color: 'var(--mr-text-primary)',
             marginBottom: '1rem'
           }}>
             {isPro ? t.usageThisMonth : t.analysisUsage}
@@ -580,21 +583,21 @@ export default function SubscriptionPage() {
               fontSize: '0.875rem',
               marginBottom: '0.5rem'
             }}>
-              <span style={{ color: '#374151', fontWeight: '600' }}>
+              <span style={{ color: 'var(--mr-text-primary)', fontWeight: '600' }}>
                 {remaining} / {maxAnalyses}
               </span>
-              <span style={{ color: '#6b7280' }}>
+              <span style={{ color: 'var(--mr-text-secondary)' }}>
                 {isPro ? (lang === 'es' ? 'restantes' : 'remaining') : t.lifetimeAnalyses}
               </span>
             </div>
             <div style={{
-              background: '#e5e7eb',
+              background: 'var(--mr-bg-hover)',
               borderRadius: '9999px',
               height: '0.625rem',
               overflow: 'hidden'
             }}>
               <div style={{
-                background: remaining === 0 ? '#ef4444' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                background: remaining === 0 ? 'var(--mr-red)' : 'var(--mr-gradient)',
                 height: '100%',
                 borderRadius: '9999px',
                 width: `${Math.min(100, (usedAnalyses / maxAnalyses) * 100)}%`,
@@ -604,7 +607,7 @@ export default function SubscriptionPage() {
           </div>
 
           {isPro && userStatus?.current_period_end && (
-            <p style={{ fontSize: '0.8rem', color: '#6b7280' }}>
+            <p style={{ fontSize: '0.8rem', color: 'var(--mr-text-secondary)' }}>
               {t.resetsOn} {new Date(userStatus.current_period_end).toLocaleDateString(lang === 'es' ? 'es-ES' : 'en-US', {
                 day: 'numeric',
                 month: 'long'
@@ -616,38 +619,38 @@ export default function SubscriptionPage() {
         {/* Pro-specific: Add-on option */}
         {isPro && canBuyAddon && (
           <div style={{
-            background: 'white',
+            background: 'var(--mr-bg-card)',
             borderRadius: '1rem',
             padding: '1.5rem',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+            boxShadow: 'var(--mr-shadow)',
             marginBottom: '1.5rem'
           }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem' }}>
               <div style={{
                 width: '40px',
                 height: '40px',
-                background: '#eef2ff',
+                background: 'var(--mr-purple-bg)',
                 borderRadius: '0.75rem',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 flexShrink: 0
               }}>
-                <Package size={20} style={{ color: '#667eea' }} />
+                <Package size={20} style={{ color: 'var(--mr-primary)' }} />
               </div>
               <div style={{ flex: 1 }}>
-                <h3 style={{ fontSize: '1rem', fontWeight: '600', color: '#111827', marginBottom: '0.25rem' }}>
+                <h3 style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--mr-text-primary)', marginBottom: '0.25rem' }}>
                   {t.needMore}
                 </h3>
-                <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '1rem' }}>
+                <p style={{ fontSize: '0.875rem', color: 'var(--mr-text-secondary)', marginBottom: '1rem' }}>
                   {t.addExtra}
                 </p>
                 <button
                   onClick={() => handleCheckout('addon')}
                   style={{
                     padding: '0.625rem 1.25rem',
-                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                    color: 'white',
+                    background: 'var(--mr-gradient)',
+                    color: 'var(--mr-text-inverse)',
                     border: 'none',
                     borderRadius: '0.5rem',
                     fontSize: '0.875rem',
@@ -657,7 +660,7 @@ export default function SubscriptionPage() {
                 >
                   {t.add10} ({prices.addon})
                 </button>
-                <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.5rem' }}>
+                <p style={{ fontSize: '0.75rem', color: 'var(--mr-text-tertiary)', marginTop: '0.5rem' }}>
                   {t.maxPacks}
                 </p>
               </div>
@@ -670,10 +673,10 @@ export default function SubscriptionPage() {
           <>
             {/* Upgrade Card */}
             <div style={{
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              background: 'var(--mr-gradient)',
               borderRadius: '1rem',
               padding: '2rem',
-              color: 'white',
+              color: 'var(--mr-text-inverse)',
               marginBottom: '1.5rem'
             }}>
               <h2 style={{ fontSize: '1.25rem', fontWeight: '700', marginBottom: '1.25rem' }}>
@@ -712,8 +715,8 @@ export default function SubscriptionPage() {
                 style={{
                   width: '100%',
                   padding: '1rem',
-                  background: 'white',
-                  color: '#667eea',
+                  background: 'var(--mr-bg-card)',
+                  color: 'var(--mr-primary)',
                   border: 'none',
                   borderRadius: '0.5rem',
                   fontSize: '1rem',
@@ -736,14 +739,14 @@ export default function SubscriptionPage() {
 
             {/* Single Analysis Option */}
             <div style={{
-              background: 'white',
+              background: 'var(--mr-bg-card)',
               borderRadius: '1rem',
               padding: '1.5rem',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+              boxShadow: 'var(--mr-shadow)',
               marginBottom: '1.5rem',
               textAlign: 'center'
             }}>
-              <h3 style={{ fontSize: '1rem', fontWeight: '600', color: '#111827', marginBottom: '1rem' }}>
+              <h3 style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--mr-text-primary)', marginBottom: '1rem' }}>
                 {t.justNeedOne}
               </h3>
               <button
@@ -751,8 +754,8 @@ export default function SubscriptionPage() {
                 style={{
                   padding: '0.625rem 1.5rem',
                   background: 'transparent',
-                  color: '#667eea',
-                  border: '2px solid #667eea',
+                  color: 'var(--mr-primary)',
+                  border: '2px solid var(--mr-primary)',
                   borderRadius: '0.5rem',
                   fontSize: '0.875rem',
                   fontWeight: '600',
@@ -768,28 +771,28 @@ export default function SubscriptionPage() {
         {/* Billing Info (Pro only) */}
         {isPro && hasStripe && (
           <div style={{
-            background: 'white',
+            background: 'var(--mr-bg-card)',
             borderRadius: '1rem',
             padding: '1.5rem',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+            boxShadow: 'var(--mr-shadow)',
             marginBottom: '1.5rem'
           }}>
             <h2 style={{
               fontSize: '1.125rem',
               fontWeight: '600',
-              color: '#111827',
+              color: 'var(--mr-text-primary)',
               marginBottom: '1.25rem',
               display: 'flex',
               alignItems: 'center',
               gap: '0.5rem'
             }}>
-              <CreditCard size={20} style={{ color: '#667eea' }} />
+              <CreditCard size={20} style={{ color: 'var(--mr-primary)' }} />
               {t.billingInfo}
             </h2>
 
             {canceledAt ? (
               <div style={{
-                background: '#fef3c7',
+                background: 'var(--mr-amber-bg)',
                 border: '1px solid #fde68a',
                 borderRadius: '0.75rem',
                 padding: '1rem',
@@ -797,11 +800,11 @@ export default function SubscriptionPage() {
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
                   <AlertTriangle size={16} style={{ color: '#d97706' }} />
-                  <span style={{ fontWeight: '600', color: '#92400e', fontSize: '0.875rem' }}>
+                  <span style={{ fontWeight: '600', color: 'var(--mr-amber-text)', fontSize: '0.875rem' }}>
                     {t.cancellationScheduled}
                   </span>
                 </div>
-                <p style={{ color: '#92400e', fontSize: '0.8rem', margin: 0, lineHeight: '1.5' }}>
+                <p style={{ color: 'var(--mr-amber-text)', fontSize: '0.8rem', margin: 0, lineHeight: '1.5' }}>
                   {t.cancelsOn}{' '}
                   <strong>
                     {new Date(canceledAt).toLocaleDateString(lang === 'es' ? 'es-ES' : 'en-US', {
@@ -818,11 +821,11 @@ export default function SubscriptionPage() {
                 display: 'flex',
                 justifyContent: 'space-between',
                 padding: '0.75rem 0',
-                borderBottom: '1px solid #f3f4f6',
+                borderBottom: '1px solid var(--mr-bg-elevated)',
                 fontSize: '0.875rem'
               }}>
-                <span style={{ color: '#6b7280' }}>{t.nextBilling}</span>
-                <span style={{ color: '#374151', fontWeight: '500' }}>
+                <span style={{ color: 'var(--mr-text-secondary)' }}>{t.nextBilling}</span>
+                <span style={{ color: 'var(--mr-text-primary)', fontWeight: '500' }}>
                   {new Date(userStatus.current_period_end).toLocaleDateString(lang === 'es' ? 'es-ES' : 'en-US', {
                     day: 'numeric',
                     month: 'long',
@@ -842,9 +845,9 @@ export default function SubscriptionPage() {
                 onClick={handleManageSubscription}
                 style={{
                   padding: '0.625rem 1.25rem',
-                  background: 'white',
-                  color: '#374151',
-                  border: '1px solid #d1d5db',
+                  background: 'var(--mr-bg-card)',
+                  color: 'var(--mr-text-primary)',
+                  border: '1px solid var(--mr-border-strong)',
                   borderRadius: '0.5rem',
                   fontSize: '0.875rem',
                   fontWeight: '500',
@@ -859,8 +862,8 @@ export default function SubscriptionPage() {
                   onClick={() => setShowCancelModal(true)}
                   style={{
                     padding: '0.625rem 1.25rem',
-                    background: 'white',
-                    color: '#dc2626',
+                    background: 'var(--mr-bg-card)',
+                    color: 'var(--mr-red)',
                     border: '1px solid #fecaca',
                     borderRadius: '0.5rem',
                     fontSize: '0.875rem',
@@ -879,16 +882,16 @@ export default function SubscriptionPage() {
         {/* Payment History */}
         {isPro && (
           <div style={{
-            background: 'white',
+            background: 'var(--mr-bg-card)',
             borderRadius: '1rem',
             padding: isMobile ? '1rem' : '1.5rem',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+            boxShadow: 'var(--mr-shadow)',
             marginBottom: '2rem'
           }}>
             <h2 style={{
               fontSize: '1.125rem',
               fontWeight: '600',
-              color: '#111827',
+              color: 'var(--mr-text-primary)',
               marginBottom: '1rem'
             }}>
               {t.paymentHistory}
@@ -898,7 +901,7 @@ export default function SubscriptionPage() {
               <div style={{
                 textAlign: 'center',
                 padding: '2rem 1rem',
-                color: '#9ca3af',
+                color: 'var(--mr-text-tertiary)',
                 fontSize: '0.875rem'
               }}>
                 {t.noPayments}
@@ -908,12 +911,12 @@ export default function SubscriptionPage() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 {payments.map((p) => (
                   <div key={p.id} style={{
-                    border: '1px solid #e5e7eb',
+                    border: '1px solid var(--mr-border)',
                     borderRadius: '0.5rem',
                     padding: '0.75rem'
                   }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.375rem' }}>
-                      <span style={{ fontSize: '0.8125rem', color: '#6b7280' }}>
+                      <span style={{ fontSize: '0.8125rem', color: 'var(--mr-text-secondary)' }}>
                         {new Date(p.created_at).toLocaleDateString(lang === 'es' ? 'es-CO' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
                       </span>
                       <span style={{
@@ -922,8 +925,8 @@ export default function SubscriptionPage() {
                         gap: '0.25rem',
                         fontSize: '0.75rem',
                         fontWeight: '500',
-                        color: p.status === 'succeeded' ? '#059669' : p.status === 'failed' ? '#dc2626' : '#d97706',
-                        background: p.status === 'succeeded' ? '#ecfdf5' : p.status === 'failed' ? '#fef2f2' : '#fffbeb',
+                        color: p.status === 'succeeded' ? '#059669' : p.status === 'failed' ? 'var(--mr-red)' : '#d97706',
+                        background: p.status === 'succeeded' ? 'var(--mr-green-bg)' : p.status === 'failed' ? 'var(--mr-red-bg)' : 'var(--mr-amber-bg)',
                         padding: '0.125rem 0.5rem',
                         borderRadius: '9999px'
                       }}>
@@ -931,11 +934,11 @@ export default function SubscriptionPage() {
                         {p.status === 'succeeded' ? t.statusSucceeded : p.status === 'failed' ? t.statusFailed : t.statusPending}
                       </span>
                     </div>
-                    <div style={{ fontSize: '0.875rem', fontWeight: '500', color: '#111827', marginBottom: '0.25rem' }}>
-                      {p.description || '—'}
+                    <div style={{ fontSize: '0.875rem', fontWeight: '500', color: 'var(--mr-text-primary)', marginBottom: '0.25rem' }}>
+                      {p.description || '\u2014'}
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '0.9375rem', fontWeight: '600', color: '#111827' }}>
+                      <span style={{ fontSize: '0.9375rem', fontWeight: '600', color: 'var(--mr-text-primary)' }}>
                         ${p.amount.toFixed(2)} {p.currency}
                       </span>
                       {p.receipt_url && (
@@ -959,24 +962,24 @@ export default function SubscriptionPage() {
               <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
                   <thead>
-                    <tr style={{ borderBottom: '1px solid #e5e7eb' }}>
-                      <th style={{ textAlign: 'left', padding: '0.5rem 0.75rem', color: '#6b7280', fontWeight: '500' }}>{t.colDate}</th>
-                      <th style={{ textAlign: 'left', padding: '0.5rem 0.75rem', color: '#6b7280', fontWeight: '500' }}>{t.colDescription}</th>
-                      <th style={{ textAlign: 'right', padding: '0.5rem 0.75rem', color: '#6b7280', fontWeight: '500' }}>{t.colAmount}</th>
-                      <th style={{ textAlign: 'center', padding: '0.5rem 0.75rem', color: '#6b7280', fontWeight: '500' }}>{t.colStatus}</th>
+                    <tr style={{ borderBottom: '1px solid var(--mr-border)' }}>
+                      <th style={{ textAlign: 'left', padding: '0.5rem 0.75rem', color: 'var(--mr-text-secondary)', fontWeight: '500' }}>{t.colDate}</th>
+                      <th style={{ textAlign: 'left', padding: '0.5rem 0.75rem', color: 'var(--mr-text-secondary)', fontWeight: '500' }}>{t.colDescription}</th>
+                      <th style={{ textAlign: 'right', padding: '0.5rem 0.75rem', color: 'var(--mr-text-secondary)', fontWeight: '500' }}>{t.colAmount}</th>
+                      <th style={{ textAlign: 'center', padding: '0.5rem 0.75rem', color: 'var(--mr-text-secondary)', fontWeight: '500' }}>{t.colStatus}</th>
                       <th style={{ padding: '0.5rem 0.75rem' }}></th>
                     </tr>
                   </thead>
                   <tbody>
                     {payments.map((p) => (
-                      <tr key={p.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                        <td style={{ padding: '0.625rem 0.75rem', color: '#374151' }}>
+                      <tr key={p.id} style={{ borderBottom: '1px solid var(--mr-bg-elevated)' }}>
+                        <td style={{ padding: '0.625rem 0.75rem', color: 'var(--mr-text-primary)' }}>
                           {new Date(p.created_at).toLocaleDateString(lang === 'es' ? 'es-CO' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
                         </td>
-                        <td style={{ padding: '0.625rem 0.75rem', color: '#374151' }}>
-                          {p.description || '—'}
+                        <td style={{ padding: '0.625rem 0.75rem', color: 'var(--mr-text-primary)' }}>
+                          {p.description || '\u2014'}
                         </td>
-                        <td style={{ padding: '0.625rem 0.75rem', color: '#111827', fontWeight: '600', textAlign: 'right' }}>
+                        <td style={{ padding: '0.625rem 0.75rem', color: 'var(--mr-text-primary)', fontWeight: '600', textAlign: 'right' }}>
                           ${p.amount.toFixed(2)} {p.currency}
                         </td>
                         <td style={{ padding: '0.625rem 0.75rem', textAlign: 'center' }}>
@@ -986,8 +989,8 @@ export default function SubscriptionPage() {
                             gap: '0.25rem',
                             fontSize: '0.75rem',
                             fontWeight: '500',
-                            color: p.status === 'succeeded' ? '#059669' : p.status === 'failed' ? '#dc2626' : '#d97706',
-                            background: p.status === 'succeeded' ? '#ecfdf5' : p.status === 'failed' ? '#fef2f2' : '#fffbeb',
+                            color: p.status === 'succeeded' ? '#059669' : p.status === 'failed' ? 'var(--mr-red)' : '#d97706',
+                            background: p.status === 'succeeded' ? 'var(--mr-green-bg)' : p.status === 'failed' ? 'var(--mr-red-bg)' : 'var(--mr-amber-bg)',
                             padding: '0.125rem 0.5rem',
                             borderRadius: '9999px'
                           }}>
@@ -1037,21 +1040,21 @@ export default function SubscriptionPage() {
           <div
             onClick={(e) => e.stopPropagation()}
             style={{
-              background: 'white',
+              background: 'var(--mr-bg-card)',
               borderRadius: '1rem',
               padding: '2rem',
               maxWidth: '440px',
               width: '100%',
               maxHeight: '90vh',
               overflowY: 'auto',
-              boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
+              boxShadow: 'var(--mr-shadow-lg)'
             }}
           >
             <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
               <div style={{
                 width: '56px',
                 height: '56px',
-                background: '#fef3c7',
+                background: 'var(--mr-amber-bg)',
                 borderRadius: '50%',
                 display: 'flex',
                 alignItems: 'center',
@@ -1060,16 +1063,16 @@ export default function SubscriptionPage() {
               }}>
                 <AlertTriangle size={28} style={{ color: '#d97706' }} />
               </div>
-              <h3 style={{ fontSize: '1.25rem', fontWeight: '700', color: '#111827', marginBottom: '0.5rem' }}>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: '700', color: 'var(--mr-text-primary)', marginBottom: '0.5rem' }}>
                 {t.cancelTitle}
               </h3>
-              <p style={{ color: '#6b7280', fontSize: '0.875rem', lineHeight: '1.5' }}>
+              <p style={{ color: 'var(--mr-text-secondary)', fontSize: '0.875rem', lineHeight: '1.5' }}>
                 {t.cancelMessage}
               </p>
             </div>
 
             {cancelError && (
-              <p style={{ color: '#dc2626', fontSize: '0.8rem', marginBottom: '0.75rem', textAlign: 'center' }}>
+              <p style={{ color: 'var(--mr-red)', fontSize: '0.8rem', marginBottom: '0.75rem', textAlign: 'center' }}>
                 {cancelError}
               </p>
             )}
@@ -1081,8 +1084,8 @@ export default function SubscriptionPage() {
                 style={{
                   flex: 1,
                   padding: '0.75rem',
-                  background: cancelling ? '#9ca3af' : '#dc2626',
-                  color: 'white',
+                  background: cancelling ? 'var(--mr-text-tertiary)' : 'var(--mr-red)',
+                  color: 'var(--mr-text-inverse)',
                   border: 'none',
                   borderRadius: '0.5rem',
                   fontSize: '0.875rem',
@@ -1101,9 +1104,9 @@ export default function SubscriptionPage() {
                 style={{
                   flex: 1,
                   padding: '0.75rem',
-                  background: 'white',
-                  color: '#374151',
-                  border: '1px solid #d1d5db',
+                  background: 'var(--mr-bg-card)',
+                  color: 'var(--mr-text-primary)',
+                  border: '1px solid var(--mr-border-strong)',
                   borderRadius: '0.5rem',
                   fontSize: '0.875rem',
                   fontWeight: '500',

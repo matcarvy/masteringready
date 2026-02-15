@@ -326,14 +326,14 @@ export function AuthModal({ isOpen, onClose, onSuccess, lang }: AuthModalProps) 
         top: '50%',
         left: '50%',
         transform: 'translate(-50%, -50%)',
-        background: 'white',
+        background: 'var(--mr-bg-card)',
         borderRadius: '1.25rem',
         padding: 'clamp(1.25rem, 4vw, 2rem)',
         maxWidth: '400px',
         width: 'calc(100% - 3.5rem)',
         maxHeight: '85vh',
         overflowY: 'auto',
-        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+        boxShadow: 'var(--mr-shadow-lg)',
         zIndex: 101,
         animation: 'slideUp 0.3s ease-out'
       }}>
@@ -347,7 +347,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, lang }: AuthModalProps) 
             background: 'none',
             border: 'none',
             cursor: 'pointer',
-            color: '#6b7280',
+            color: 'var(--mr-text-secondary)',
             padding: '0.75rem'
           }}
           aria-label={lang === 'es' ? 'Cerrar' : 'Close'}
@@ -368,8 +368,8 @@ export function AuthModal({ isOpen, onClose, onSuccess, lang }: AuthModalProps) 
               width: '80px',
               height: '80px',
               background: lockAnimationPhase === 'green'
-                ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
-                : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                ? 'linear-gradient(135deg, var(--mr-green) 0%, #059669 100%)'
+                : 'var(--mr-gradient)',
               borderRadius: '50%',
               display: 'flex',
               alignItems: 'center',
@@ -396,7 +396,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, lang }: AuthModalProps) 
             <p style={{
               fontSize: '1.125rem',
               fontWeight: '600',
-              color: lockAnimationPhase === 'green' ? '#059669' : '#374151',
+              color: lockAnimationPhase === 'green' ? 'var(--mr-green-text)' : 'var(--mr-text-primary)',
               transition: 'color 0.3s ease'
             }}>
               {t.unlocking}
@@ -413,7 +413,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, lang }: AuthModalProps) 
               <div style={{
                 width: '40px',
                 height: '40px',
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                background: 'var(--mr-gradient)',
                 borderRadius: '50%',
                 display: 'flex',
                 alignItems: 'center',
@@ -426,7 +426,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, lang }: AuthModalProps) 
             {/* Tab Toggle */}
             <div style={{
               display: 'flex',
-              background: '#f3f4f6',
+              background: 'var(--mr-bg-elevated)',
               borderRadius: '0.5rem',
               padding: '0.25rem',
               marginBottom: '0.75rem'
@@ -444,8 +444,8 @@ export function AuthModal({ isOpen, onClose, onSuccess, lang }: AuthModalProps) 
                     padding: '0.5rem 1rem',
                     borderRadius: '0.375rem',
                     border: 'none',
-                    background: mode === m ? 'white' : 'transparent',
-                    color: mode === m ? '#667eea' : '#6b7280',
+                    background: mode === m ? 'var(--mr-bg-card)' : 'transparent',
+                    color: mode === m ? 'var(--mr-primary)' : 'var(--mr-text-secondary)',
                     fontWeight: mode === m ? '600' : '500',
                     fontSize: '0.875rem',
                     cursor: 'pointer',
@@ -461,7 +461,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, lang }: AuthModalProps) 
             {/* Subtitle */}
             <p style={{
               textAlign: 'center',
-              color: '#6b7280',
+              color: 'var(--mr-text-secondary)',
               fontSize: '0.8125rem',
               marginBottom: '0.5rem'
             }}>
@@ -485,7 +485,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, lang }: AuthModalProps) 
                       alignItems: 'center',
                       gap: '0.25rem',
                       fontSize: '0.75rem',
-                      color: '#10b981',
+                      color: 'var(--mr-green)',
                       fontWeight: '500'
                     }}
                   >
@@ -510,9 +510,9 @@ export function AuthModal({ isOpen, onClose, onSuccess, lang }: AuthModalProps) 
               margin: '0.75rem 0',
               gap: '1rem'
             }}>
-              <div style={{ flex: 1, height: '1px', background: '#e5e7eb' }} />
-              <span style={{ color: '#9ca3af', fontSize: '0.75rem' }}>{t.or}</span>
-              <div style={{ flex: 1, height: '1px', background: '#e5e7eb' }} />
+              <div style={{ flex: 1, height: '1px', background: 'var(--mr-border)' }} />
+              <span style={{ color: 'var(--mr-text-tertiary)', fontSize: '0.75rem' }}>{t.or}</span>
+              <div style={{ flex: 1, height: '1px', background: 'var(--mr-border)' }} />
             </div>
 
             {/* Form */}
@@ -520,9 +520,9 @@ export function AuthModal({ isOpen, onClose, onSuccess, lang }: AuthModalProps) 
               {/* Error Message */}
               {error && (
                 <div style={{
-                  background: '#fef2f2',
+                  background: 'var(--mr-red-bg)',
                   border: '1px solid #fecaca',
-                  color: '#dc2626',
+                  color: 'var(--mr-red)',
                   padding: '0.625rem 0.875rem',
                   borderRadius: '0.5rem',
                   marginBottom: '0.875rem',
@@ -535,9 +535,9 @@ export function AuthModal({ isOpen, onClose, onSuccess, lang }: AuthModalProps) 
               {/* Success Message (email confirmation) */}
               {successMessage && (
                 <div style={{
-                  background: '#f0fdf4',
+                  background: 'var(--mr-green-bg)',
                   border: '1px solid #bbf7d0',
-                  color: '#16a34a',
+                  color: 'var(--mr-green-text)',
                   padding: '0.625rem 0.875rem',
                   borderRadius: '0.5rem',
                   marginBottom: '0.875rem',
@@ -560,7 +560,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, lang }: AuthModalProps) 
                         left: '0.75rem',
                         top: '50%',
                         transform: 'translateY(-50%)',
-                        color: '#9ca3af'
+                        color: 'var(--mr-text-tertiary)'
                       }}
                     />
                     <input
@@ -571,7 +571,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, lang }: AuthModalProps) 
                       style={{
                         width: '100%',
                         padding: '0.625rem 0.75rem 0.625rem 2.5rem',
-                        border: '1px solid #d1d5db',
+                        border: '1px solid var(--mr-border-strong)',
                         borderRadius: '0.5rem',
                         fontSize: '0.875rem',
                         outline: 'none',
@@ -592,7 +592,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, lang }: AuthModalProps) 
                       left: '0.75rem',
                       top: '50%',
                       transform: 'translateY(-50%)',
-                      color: '#9ca3af'
+                      color: 'var(--mr-text-tertiary)'
                     }}
                   />
                   <input
@@ -603,7 +603,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, lang }: AuthModalProps) 
                     style={{
                       width: '100%',
                       padding: '0.625rem 0.75rem 0.625rem 2.5rem',
-                      border: '1px solid #d1d5db',
+                      border: '1px solid var(--mr-border-strong)',
                       borderRadius: '0.5rem',
                       fontSize: '0.875rem',
                       outline: 'none',
@@ -623,7 +623,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, lang }: AuthModalProps) 
                       left: '0.75rem',
                       top: '50%',
                       transform: 'translateY(-50%)',
-                      color: '#9ca3af'
+                      color: 'var(--mr-text-tertiary)'
                     }}
                   />
                   <input
@@ -634,7 +634,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, lang }: AuthModalProps) 
                     style={{
                       width: '100%',
                       padding: '0.625rem 2.5rem 0.625rem 2.5rem',
-                      border: '1px solid #d1d5db',
+                      border: '1px solid var(--mr-border-strong)',
                       borderRadius: '0.5rem',
                       fontSize: '0.875rem',
                       outline: 'none',
@@ -652,7 +652,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, lang }: AuthModalProps) 
                       background: 'none',
                       border: 'none',
                       cursor: 'pointer',
-                      color: '#9ca3af',
+                      color: 'var(--mr-text-tertiary)',
                       padding: 0
                     }}
                   >
@@ -672,7 +672,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, lang }: AuthModalProps) 
                         left: '0.75rem',
                         top: '50%',
                         transform: 'translateY(-50%)',
-                        color: '#9ca3af'
+                        color: 'var(--mr-text-tertiary)'
                       }}
                     />
                     <input
@@ -683,7 +683,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, lang }: AuthModalProps) 
                       style={{
                         width: '100%',
                         padding: '0.625rem 0.75rem 0.625rem 2.5rem',
-                        border: '1px solid #d1d5db',
+                        border: '1px solid var(--mr-border-strong)',
                         borderRadius: '0.5rem',
                         fontSize: '0.875rem',
                         outline: 'none',
@@ -700,7 +700,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, lang }: AuthModalProps) 
                   <a
                     href="/auth/forgot-password"
                     style={{
-                      color: '#667eea',
+                      color: 'var(--mr-primary)',
                       fontSize: '0.75rem',
                       textDecoration: 'none'
                     }}
@@ -718,9 +718,9 @@ export function AuthModal({ isOpen, onClose, onSuccess, lang }: AuthModalProps) 
                   width: '100%',
                   padding: '0.75rem',
                   background: loading
-                    ? '#9ca3af'
-                    : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  color: 'white',
+                    ? 'var(--mr-text-tertiary)'
+                    : 'var(--mr-gradient)',
+                  color: 'var(--mr-text-inverse)',
                   border: 'none',
                   borderRadius: '0.5rem',
                   fontSize: '0.9rem',

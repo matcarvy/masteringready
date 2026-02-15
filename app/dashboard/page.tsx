@@ -32,6 +32,7 @@ import {
   Info,
   HardDrive
 } from 'lucide-react'
+import { ThemeToggle } from '@/components/ThemeToggle'
 
 // ============================================================================
 // TRANSLATIONS / TRADUCCIONES
@@ -79,7 +80,8 @@ const translations = {
     unlockBenefits: [
       'Acceso a análisis Completo y Detallado',
       'Descargar PDFs completos',
-      '30 análisis al mes'
+      '30 análisis al mes',
+      'Historial de análisis'
     ],
     monthlyPrice: '$9.99/mes',
     getProNow: 'Obtener Pro',
@@ -152,7 +154,8 @@ const translations = {
     unlockBenefits: [
       'Access to Complete and Detailed analysis',
       'Download complete PDFs',
-      '30 analyses per month'
+      '30 analyses per month',
+      'Analysis history'
     ],
     monthlyPrice: '$9.99/month',
     getProNow: 'Get Pro',
@@ -649,7 +652,7 @@ function DashboardContent() {
     return (
       <div style={{
         minHeight: '100vh',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        background: 'var(--mr-gradient)',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
@@ -657,7 +660,7 @@ function DashboardContent() {
         gap: '1rem'
       }}>
         <span style={{ fontSize: '2rem' }}>🎧</span>
-        <div style={{ color: 'white', fontSize: '1.25rem' }}>{t.loading}</div>
+        <div style={{ color: 'var(--mr-text-inverse)', fontSize: '1.25rem' }}>{t.loading}</div>
       </div>
     )
   }
@@ -670,14 +673,14 @@ function DashboardContent() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: '#f3f4f6',
+      background: 'var(--mr-bg-elevated)',
       fontFamily: 'Inter, system-ui, sans-serif',
       overflowX: 'hidden'
     }}>
       {/* Header */}
       <header style={{
-        background: 'white',
-        borderBottom: '1px solid #e5e7eb',
+        background: 'var(--mr-bg-card)',
+        borderBottom: '1px solid var(--mr-border)',
         padding: isMobile ? '0.75rem 1rem' : '1rem 1.5rem',
         position: 'sticky',
         top: 0,
@@ -703,7 +706,7 @@ function DashboardContent() {
             <div style={{
               width: '32px',
               height: '32px',
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              background: 'var(--mr-gradient)',
               borderRadius: '0.5rem',
               display: 'flex',
               alignItems: 'center',
@@ -714,7 +717,7 @@ function DashboardContent() {
             {!isMobile && (
               <span style={{
                 fontWeight: '700',
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                background: 'var(--mr-gradient)',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
                 backgroundClip: 'text'
@@ -748,7 +751,7 @@ function DashboardContent() {
                 minWidth: '2.5rem',
                 textAlign: 'center',
                 background: 'transparent',
-                color: '#6b7280',
+                color: 'var(--mr-text-secondary)',
                 border: 'none',
                 cursor: 'pointer',
                 fontWeight: '500',
@@ -757,6 +760,9 @@ function DashboardContent() {
             >
               {lang === 'es' ? 'EN' : 'ES'}
             </button>
+
+            {/* Theme Toggle */}
+            <ThemeToggle lang={lang} />
 
             {/* User Menu with Logout */}
             <UserMenu lang={lang} isMobile={isMobile} />
@@ -768,7 +774,7 @@ function DashboardContent() {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.375rem',
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                background: 'var(--mr-gradient)',
                 color: 'white',
                 padding: isMobile ? '0.4rem 0.75rem' : '0.5rem 1rem',
                 borderRadius: '9999px',
@@ -779,7 +785,7 @@ function DashboardContent() {
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.transform = 'translateY(-2px)'
-                e.currentTarget.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.4)'
+                e.currentTarget.style.boxShadow = 'var(--mr-shadow-lg)'
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.transform = 'translateY(0)'
@@ -802,7 +808,7 @@ function DashboardContent() {
         {/* Welcome to Pro Banner */}
         {showWelcomeBanner && (
           <div style={{
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            background: 'var(--mr-gradient)',
             borderRadius: '1rem',
             padding: isMobile ? '1rem 1.25rem' : '1.25rem 1.5rem',
             marginBottom: '1.5rem',
@@ -810,7 +816,7 @@ function DashboardContent() {
             display: 'flex',
             alignItems: 'center',
             gap: '1rem',
-            boxShadow: '0 4px 15px rgba(102, 126, 234, 0.3)',
+            boxShadow: 'var(--mr-shadow-lg)',
             animation: 'bannerSlideDown 0.5s cubic-bezier(0.16, 1, 0.3, 1)'
           }}>
             <span style={{ fontSize: '1.5rem', flexShrink: 0 }}>🎉</span>
@@ -858,7 +864,7 @@ function DashboardContent() {
         }}>
           {/* Welcome Card */}
           <div style={{
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            background: 'var(--mr-gradient)',
             borderRadius: '1rem',
             padding: isMobile ? '1.25rem' : '1.5rem',
             color: 'white',
@@ -876,18 +882,18 @@ function DashboardContent() {
 
           {/* Plan Card */}
           <div style={{
-            background: 'white',
+            background: 'var(--mr-bg-card)',
             borderRadius: '1rem',
             padding: isMobile ? '1rem' : '1.5rem',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+            boxShadow: 'var(--mr-shadow)',
             opacity: 0,
             animation: 'cardFadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) 75ms forwards'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
-              {isPro ? <Crown size={20} style={{ color: '#f59e0b' }} /> : <Star size={20} style={{ color: '#6b7280' }} />}
-              <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>{t.currentPlan}</span>
+              {isPro ? <Crown size={20} style={{ color: 'var(--mr-amber)' }} /> : <Star size={20} style={{ color: 'var(--mr-text-secondary)' }} />}
+              <span style={{ fontSize: '0.875rem', color: 'var(--mr-text-secondary)' }}>{t.currentPlan}</span>
             </div>
-            <p style={{ fontSize: '1.5rem', fontWeight: '700', color: '#111827' }}>
+            <p style={{ fontSize: '1.5rem', fontWeight: '700', color: 'var(--mr-text-primary)' }}>
               {isPro ? (subscription?.plan?.type === 'studio' ? t.studio : t.pro) : t.free}
             </p>
             {!isPro && (
@@ -896,7 +902,7 @@ function DashboardContent() {
                 style={{
                   marginTop: '0.75rem',
                   padding: '0.5rem 1rem',
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  background: 'var(--mr-gradient)',
                   color: 'white',
                   border: 'none',
                   borderRadius: '0.5rem',
@@ -919,8 +925,8 @@ function DashboardContent() {
                   marginTop: '0.75rem',
                   padding: '0.5rem 1rem',
                   background: 'transparent',
-                  color: '#6b7280',
-                  border: '1px solid #e5e7eb',
+                  color: 'var(--mr-text-secondary)',
+                  border: '1px solid var(--mr-border)',
                   borderRadius: '0.5rem',
                   fontSize: '0.75rem',
                   fontWeight: '500',
@@ -934,34 +940,34 @@ function DashboardContent() {
 
           {/* Analyses Remaining - Updated per spec */}
           <div style={{
-            background: 'white',
+            background: 'var(--mr-bg-card)',
             borderRadius: '1rem',
             padding: isMobile ? '1rem' : '1.5rem',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+            boxShadow: 'var(--mr-shadow)',
             opacity: 0,
             animation: 'cardFadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) 150ms forwards',
             ...(dashboardState === 'free_limit_reached' || dashboardState === 'pro_limit_reached' ? {
-              border: '2px solid #f59e0b'
+              border: '2px solid var(--mr-amber)'
             } : {})
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
-              <Clock size={20} style={{ color: dashboardState.includes('limit') ? '#f59e0b' : '#3b82f6' }} />
-              <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+              <Clock size={20} style={{ color: dashboardState.includes('limit') ? 'var(--mr-amber)' : 'var(--mr-blue)' }} />
+              <span style={{ fontSize: '0.875rem', color: 'var(--mr-text-secondary)' }}>
                 {isPro ? t.proAnalysesLeft : t.freeAnalysesLeft}
               </span>
             </div>
-            <p style={{ fontSize: '1.5rem', fontWeight: '700', color: '#111827' }}>
+            <p style={{ fontSize: '1.5rem', fontWeight: '700', color: 'var(--mr-text-primary)' }}>
               {isPro ? (
                 <>
                   {userStatus ? Math.max(0, 30 - userStatus.analyses_used) : 30}
-                  <span style={{ fontSize: '0.875rem', fontWeight: '400', color: '#6b7280' }}>
+                  <span style={{ fontSize: '0.875rem', fontWeight: '400', color: 'var(--mr-text-secondary)' }}>
                     {' '}{t.proLimit}
                   </span>
                 </>
               ) : (
                 <>
                   {userStatus ? Math.max(0, 2 - userStatus.analyses_used) : 2}
-                  <span style={{ fontSize: '0.875rem', fontWeight: '400', color: '#6b7280' }}>
+                  <span style={{ fontSize: '0.875rem', fontWeight: '400', color: 'var(--mr-text-secondary)' }}>
                     {' / 2 '}{t.lifetimeLimit}
                   </span>
                 </>
@@ -974,7 +980,7 @@ function DashboardContent() {
                   onClick={() => setShowUpgradeModal(true)}
                   style={{
                     padding: '0.5rem',
-                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    background: 'var(--mr-gradient)',
                     color: 'white',
                     border: 'none',
                     borderRadius: '0.375rem',
@@ -993,7 +999,7 @@ function DashboardContent() {
                   onClick={() => handleCheckout('addon')}
                   style={{
                     padding: '0.5rem',
-                    background: '#f59e0b',
+                    background: 'var(--mr-amber)',
                     color: 'white',
                     border: 'none',
                     borderRadius: '0.375rem',
@@ -1011,18 +1017,18 @@ function DashboardContent() {
 
           {/* Total Analyses */}
           <div style={{
-            background: 'white',
+            background: 'var(--mr-bg-card)',
             borderRadius: '1rem',
             padding: isMobile ? '1rem' : '1.5rem',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+            boxShadow: 'var(--mr-shadow)',
             opacity: 0,
             animation: 'cardFadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) 225ms forwards'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
-              <BarChart3 size={20} style={{ color: '#10b981' }} />
-              <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>{t.totalAnalyses}</span>
+              <BarChart3 size={20} style={{ color: 'var(--mr-green)' }} />
+              <span style={{ fontSize: '0.875rem', color: 'var(--mr-text-secondary)' }}>{t.totalAnalyses}</span>
             </div>
-            <p style={{ fontSize: '1.5rem', fontWeight: '700', color: '#111827' }}>
+            <p style={{ fontSize: '1.5rem', fontWeight: '700', color: 'var(--mr-text-primary)' }}>
               {profile?.total_analyses || 0}
             </p>
           </div>
@@ -1035,10 +1041,10 @@ function DashboardContent() {
           const review = analyses.filter(a => a.score < 60).length
           return (
             <div style={{
-              background: 'white',
+              background: 'var(--mr-bg-card)',
               borderRadius: '1rem',
               padding: '1.25rem 1.5rem',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+              boxShadow: 'var(--mr-shadow)',
               marginBottom: '1.5rem',
               opacity: 0,
               animation: 'cardFadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) 300ms forwards'
@@ -1046,21 +1052,21 @@ function DashboardContent() {
               <h3 style={{
                 fontSize: '1rem',
                 fontWeight: '700',
-                color: '#111827',
+                color: 'var(--mr-text-primary)',
                 marginBottom: '1rem'
               }}>
                 {lang === 'es' ? 'Resumen de tus análisis' : 'Your analyses summary'}
               </h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.925rem', color: '#374151' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.925rem', color: 'var(--mr-text-primary)' }}>
                   <span>✅</span>
                   <span><strong>{ready}</strong> {lang === 'es' ? (ready === 1 ? 'lista para mastering' : 'listas para mastering') : 'ready for mastering'}</span>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.925rem', color: '#374151' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.925rem', color: 'var(--mr-text-primary)' }}>
                   <span>🔧</span>
                   <span><strong>{adjustments}</strong> {lang === 'es' ? (adjustments === 1 ? 'necesita ajustes' : 'necesitan ajustes') : (adjustments === 1 ? 'needs adjustments' : 'need adjustments')}</span>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.925rem', color: '#374151' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.925rem', color: 'var(--mr-text-primary)' }}>
                   <span>⚠️</span>
                   <span><strong>{review}</strong> {lang === 'es' ? (review === 1 ? 'requiere revisión' : 'requieren revisión') : (review === 1 ? 'requires review' : 'require review')}</span>
                 </div>
@@ -1071,18 +1077,18 @@ function DashboardContent() {
 
         {/* Analyses List */}
         <div style={{
-          background: 'white',
+          background: 'var(--mr-bg-card)',
           borderRadius: '1rem',
           padding: '1.5rem',
           opacity: 0,
           animation: 'cardFadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) 375ms forwards',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+          boxShadow: 'var(--mr-shadow)'
         }}>
           <h2 style={{
             fontSize: '1.25rem',
             fontWeight: '700',
             marginBottom: '1.5rem',
-            color: '#111827',
+            color: 'var(--mr-text-primary)',
             display: 'flex',
             alignItems: 'center',
             gap: '0.5rem'
@@ -1095,7 +1101,7 @@ function DashboardContent() {
             <div style={{
               textAlign: 'center',
               padding: '3rem 1rem',
-              color: '#6b7280'
+              color: 'var(--mr-text-secondary)'
             }}>
               <FileAudio size={48} style={{ marginBottom: '1rem', opacity: 0.5 }} />
               <p style={{ fontSize: '1.125rem', marginBottom: '0.5rem' }}>{t.noAnalyses}</p>
@@ -1107,7 +1113,7 @@ function DashboardContent() {
                   alignItems: 'center',
                   gap: '0.5rem',
                   padding: '0.75rem 1.5rem',
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  background: 'var(--mr-gradient)',
                   color: 'white',
                   textDecoration: 'none',
                   borderRadius: '0.5rem',
@@ -1129,19 +1135,19 @@ function DashboardContent() {
                     alignItems: 'center',
                     gap: '1rem',
                     padding: '1rem',
-                    background: '#f9fafb',
+                    background: 'var(--mr-bg-base)',
                     borderRadius: '0.75rem',
                     cursor: 'pointer',
                     transition: 'all 0.2s',
                     border: '1px solid transparent'
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = '#667eea'
-                    e.currentTarget.style.background = '#f0f4ff'
+                    e.currentTarget.style.borderColor = 'var(--mr-primary)'
+                    e.currentTarget.style.background = 'var(--mr-bg-hover)'
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.borderColor = 'transparent'
-                    e.currentTarget.style.background = '#f9fafb'
+                    e.currentTarget.style.background = 'var(--mr-bg-base)'
                   }}
                 >
                   {/* Score */}
@@ -1149,7 +1155,7 @@ function DashboardContent() {
                     width: 'clamp(48px, 12vw, 60px)',
                     height: 'clamp(48px, 12vw, 60px)',
                     borderRadius: '50%',
-                    background: `conic-gradient(${getScoreColor(analysis.score)} ${analysis.score * 3.6}deg, #e5e7eb 0deg)`,
+                    background: `conic-gradient(${getScoreColor(analysis.score)} ${analysis.score * 3.6}deg, var(--mr-bg-hover) 0deg)`,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -1159,7 +1165,7 @@ function DashboardContent() {
                       width: '50px',
                       height: '50px',
                       borderRadius: '50%',
-                      background: 'white',
+                      background: 'var(--mr-bg-card)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -1175,7 +1181,7 @@ function DashboardContent() {
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <p style={{
                       fontWeight: '600',
-                      color: '#111827',
+                      color: 'var(--mr-text-primary)',
                       marginBottom: '0.25rem',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
@@ -1188,7 +1194,7 @@ function DashboardContent() {
                       alignItems: 'center',
                       gap: '1rem',
                       fontSize: '0.75rem',
-                      color: '#6b7280'
+                      color: 'var(--mr-text-secondary)'
                     }}>
                       <span style={{
                         color: getVerdictColor(analysis.verdict),
@@ -1210,7 +1216,7 @@ function DashboardContent() {
                   </div>
 
                   {/* Arrow */}
-                  <ChevronRight size={20} style={{ color: '#9ca3af', flexShrink: 0 }} />
+                  <ChevronRight size={20} style={{ color: 'var(--mr-text-tertiary)', flexShrink: 0 }} />
                 </div>
               ))}
             </div>
@@ -1241,7 +1247,7 @@ function DashboardContent() {
           <div
             onClick={(e) => e.stopPropagation()}
             style={{
-            background: 'white',
+            background: 'var(--mr-bg-card)',
             borderRadius: isMobile ? '0.75rem' : '1rem',
             maxWidth: '600px',
             width: '100%',
@@ -1254,7 +1260,7 @@ function DashboardContent() {
             {/* Modal Header */}
             <div style={{
               padding: isMobile ? '1rem' : '1.25rem 1.5rem',
-              borderBottom: '1px solid #e5e7eb',
+              borderBottom: '1px solid var(--mr-border)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
@@ -1263,7 +1269,7 @@ function DashboardContent() {
               <div style={{ minWidth: 0, flex: 1 }}>
                 <h3 style={{
                   fontWeight: '700',
-                  color: '#111827',
+                  color: 'var(--mr-text-primary)',
                   marginBottom: '0.25rem',
                   fontSize: isMobile ? '0.9rem' : '1rem',
                   overflow: 'hidden',
@@ -1272,7 +1278,7 @@ function DashboardContent() {
                 }}>
                   {selectedAnalysis.filename}
                 </h3>
-                <p style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                <p style={{ fontSize: '0.75rem', color: 'var(--mr-text-secondary)' }}>
                   {formatDate(selectedAnalysis.created_at)}
                 </p>
               </div>
@@ -1282,7 +1288,7 @@ function DashboardContent() {
                   background: 'none',
                   border: 'none',
                   cursor: 'pointer',
-                  color: '#6b7280',
+                  color: 'var(--mr-text-secondary)',
                   padding: '0.75rem'
                 }}
                 aria-label={lang === 'es' ? 'Cerrar' : 'Close'}
@@ -1294,7 +1300,7 @@ function DashboardContent() {
             {/* Score */}
             <div style={{
               padding: '1.5rem',
-              background: '#f9fafb',
+              background: 'var(--mr-bg-base)',
               display: 'flex',
               alignItems: 'center',
               gap: '1.5rem'
@@ -1303,7 +1309,7 @@ function DashboardContent() {
                 width: '80px',
                 height: '80px',
                 borderRadius: '50%',
-                background: `conic-gradient(${getScoreColor(selectedAnalysis.score)} ${selectedAnalysis.score * 3.6}deg, #e5e7eb 0deg)`,
+                background: `conic-gradient(${getScoreColor(selectedAnalysis.score)} ${selectedAnalysis.score * 3.6}deg, var(--mr-bg-hover) 0deg)`,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -1313,7 +1319,7 @@ function DashboardContent() {
                   width: '66px',
                   height: '66px',
                   borderRadius: '50%',
-                  background: 'white',
+                  background: 'var(--mr-bg-card)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -1333,7 +1339,7 @@ function DashboardContent() {
                 }}>
                   {scoreToVerdictLabel(selectedAnalysis.score, lang)}
                 </p>
-                <p style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+                <p style={{ fontSize: '0.875rem', color: 'var(--mr-text-secondary)' }}>
                   {t.score}: {selectedAnalysis.score}/100
                 </p>
               </div>
@@ -1354,16 +1360,16 @@ function DashboardContent() {
                 <div style={{
                   margin: isMobile ? '0 1rem' : '0 1.5rem',
                   padding: '0.75rem 1rem',
-                  background: '#f9fafb',
+                  background: 'var(--mr-bg-base)',
                   borderRadius: '0.5rem',
-                  border: '1px solid #f3f4f6'
+                  border: '1px solid var(--mr-bg-elevated)'
                 }}>
                   <div style={{
                     display: 'flex',
                     alignItems: 'center',
                     gap: '0.375rem',
                     marginBottom: '0.5rem',
-                    color: '#6b7280',
+                    color: 'var(--mr-text-secondary)',
                     fontSize: '0.75rem',
                     fontWeight: '600',
                     textTransform: 'uppercase',
@@ -1380,8 +1386,8 @@ function DashboardContent() {
                   }}>
                     {items.map(item => (
                       <div key={item.label} style={{ display: 'flex', gap: '0.375rem' }}>
-                        <span style={{ color: '#9ca3af' }}>{item.label}:</span>
-                        <span style={{ color: '#374151', fontWeight: '500' }}>{item.value}</span>
+                        <span style={{ color: 'var(--mr-text-tertiary)' }}>{item.label}:</span>
+                        <span style={{ color: 'var(--mr-text-primary)', fontWeight: '500' }}>{item.value}</span>
                       </div>
                     ))}
                   </div>
@@ -1392,7 +1398,7 @@ function DashboardContent() {
             {/* Tabs */}
             <div style={{
               display: 'flex',
-              borderBottom: '1px solid #e5e7eb',
+              borderBottom: '1px solid var(--mr-border)',
               padding: isMobile ? '0 1rem' : '0 1.5rem'
             }}>
               {(['rapid', 'summary', 'complete'] as const).map((tab) => (
@@ -1404,8 +1410,8 @@ function DashboardContent() {
                     padding: isMobile ? '0.75rem 0.5rem' : '1rem',
                     background: 'none',
                     border: 'none',
-                    borderBottom: reportTab === tab ? '2px solid #667eea' : '2px solid transparent',
-                    color: reportTab === tab ? '#667eea' : '#6b7280',
+                    borderBottom: reportTab === tab ? '2px solid var(--mr-primary)' : '2px solid transparent',
+                    color: reportTab === tab ? 'var(--mr-primary)' : 'var(--mr-text-secondary)',
                     fontWeight: reportTab === tab ? '600' : '500',
                     cursor: 'pointer',
                     display: 'flex',
@@ -1419,14 +1425,14 @@ function DashboardContent() {
                   {tab === 'rapid' && <Zap size={16} />}
                   {tab === 'summary' && <FileText size={16} />}
                   {tab === 'complete' && (
-                    !hasFullAccess ? <Crown size={16} style={{ color: '#d97706' }} /> : <TrendingUp size={16} />
+                    !hasFullAccess ? <Crown size={16} style={{ color: 'var(--mr-amber)' }} /> : <TrendingUp size={16} />
                   )}
                   {t.tabs[tab]}
                   {tab === 'complete' && !hasFullAccess && (
                     <span style={{
                       fontSize: '0.625rem',
-                      background: '#fef3c7',
-                      color: '#92400e',
+                      background: 'var(--mr-amber-bg)',
+                      color: 'var(--mr-amber-text)',
                       padding: '0.125rem 0.375rem',
                       borderRadius: '9999px',
                       fontWeight: '500'
@@ -1450,7 +1456,7 @@ function DashboardContent() {
                   <h4 style={{
                     fontSize: '1rem',
                     fontWeight: '600',
-                    color: '#374151',
+                    color: 'var(--mr-text-primary)',
                     marginBottom: '0.5rem',
                     display: 'flex',
                     alignItems: 'center',
@@ -1459,7 +1465,7 @@ function DashboardContent() {
                     ⚡ {lang === 'es' ? 'Análisis Rápido' : 'Quick Analysis'}
                   </h4>
 
-                  <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '1.5rem' }}>
+                  <p style={{ fontSize: '0.875rem', color: 'var(--mr-text-secondary)', marginBottom: '1.5rem' }}>
                     🎵 {lang === 'es' ? 'Sobre' : 'About'} "{selectedAnalysis.filename}"
                   </p>
 
@@ -1475,7 +1481,7 @@ function DashboardContent() {
                       <h4 style={{
                         fontSize: '0.875rem',
                         fontWeight: '600',
-                        color: '#374151',
+                        color: 'var(--mr-text-primary)',
                         marginBottom: '0.5rem',
                         display: 'flex',
                         alignItems: 'center',
@@ -1486,7 +1492,7 @@ function DashboardContent() {
 
                       <p style={{
                         fontSize: '0.7rem',
-                        color: '#6b7280',
+                        color: 'var(--mr-text-secondary)',
                         marginBottom: '1rem',
                         lineHeight: '1.4',
                         fontStyle: 'italic'
@@ -1538,14 +1544,14 @@ function DashboardContent() {
                                   maxWidth: isMobile ? '90px' : '120px',
                                   fontSize: '0.75rem',
                                   fontWeight: '500',
-                                  color: '#4b5563',
+                                  color: 'var(--mr-text-secondary)',
                                   textAlign: 'right'
                                 }}>
                                   {lang === 'es' ? label.es : label.en}
                                 </div>
                                 <div style={{
                                   flex: 1,
-                                  background: '#e5e7eb',
+                                  background: 'var(--mr-bg-hover)',
                                   borderRadius: '9999px',
                                   height: '0.5rem',
                                   overflow: 'hidden'
@@ -1580,24 +1586,24 @@ function DashboardContent() {
                         gap: '0.75rem',
                         marginTop: '1rem',
                         paddingTop: '0.75rem',
-                        borderTop: '1px solid #e5e7eb',
+                        borderTop: '1px solid var(--mr-border)',
                         fontSize: '0.65rem',
-                        color: '#6b7280'
+                        color: 'var(--mr-text-secondary)'
                       }}>
                         <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                          <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981' }}></span>
+                          <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--mr-green)' }}></span>
                           {lang === 'es' ? 'Margen cómodo' : 'Comfortable'}
                         </span>
                         <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                          <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#3b82f6' }}></span>
+                          <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--mr-blue)' }}></span>
                           {lang === 'es' ? 'Margen suficiente' : 'Sufficient'}
                         </span>
                         <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                          <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#f59e0b' }}></span>
+                          <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--mr-amber)' }}></span>
                           {lang === 'es' ? 'Margen reducido' : 'Reduced'}
                         </span>
                         <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                          <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#ef4444' }}></span>
+                          <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--mr-red)' }}></span>
                           {lang === 'es' ? 'Margen comprometido' : 'Compromised'}
                         </span>
                       </div>
@@ -1611,7 +1617,7 @@ function DashboardContent() {
                     fontSize: '0.875rem',
                     lineHeight: '1.8',
                     fontFamily: 'Inter, system-ui, sans-serif',
-                    color: '#374151'
+                    color: 'var(--mr-text-primary)'
                   }}>
                     {cleanReportText(selectedAnalysis.report_visual || '') || (lang === 'es' ? 'No hay datos de análisis rápido disponibles.' : 'No quick analysis data available.')}
                   </div>
@@ -1625,7 +1631,7 @@ function DashboardContent() {
                   lineHeight: '1.8',
                   fontFamily: 'Inter, system-ui, sans-serif',
                   margin: 0,
-                  color: '#374151'
+                  color: 'var(--mr-text-primary)'
                 }}>
                   {cleanReportText(selectedAnalysis.report_short || '') || (lang === 'es' ? 'No hay datos de resumen disponibles.' : 'No summary data available.')}
                 </div>
@@ -1638,7 +1644,7 @@ function DashboardContent() {
                   lineHeight: '1.8',
                   fontFamily: 'Inter, system-ui, sans-serif',
                   margin: 0,
-                  color: '#374151'
+                  color: 'var(--mr-text-primary)'
                 }}>
                   {cleanReportText(selectedAnalysis.report_write || '') || (lang === 'es' ? 'No hay datos de análisis completo disponibles.' : 'No complete analysis data available.')}
                 </div>
@@ -1689,7 +1695,7 @@ function DashboardContent() {
                     <button
                       onClick={() => setShowContactModal(true)}
                       style={{
-                        background: 'white',
+                        background: 'var(--mr-bg-card)',
                         color: '#6366f1',
                         padding: '0.625rem 1.25rem',
                         borderRadius: '0.5rem',
@@ -1697,17 +1703,17 @@ function DashboardContent() {
                         fontWeight: '600',
                         fontSize: '0.85rem',
                         cursor: 'pointer',
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                        boxShadow: 'var(--mr-shadow)',
                         transition: 'all 0.2s',
                         marginLeft: isMobile ? '0' : '3.5rem'
                       }}
                       onMouseEnter={(e) => {
                         e.currentTarget.style.transform = 'translateY(-1px)'
-                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.12)'
+                        e.currentTarget.style.boxShadow = 'var(--mr-shadow-lg)'
                       }}
                       onMouseLeave={(e) => {
                         e.currentTarget.style.transform = 'translateY(0)'
-                        e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)'
+                        e.currentTarget.style.boxShadow = 'var(--mr-shadow)'
                       }}
                     >
                       {cta.button}
@@ -1722,7 +1728,7 @@ function DashboardContent() {
                 gap: '0.75rem',
                 marginTop: '1rem',
                 paddingTop: '1rem',
-                borderTop: '1px solid #e5e7eb'
+                borderTop: '1px solid var(--mr-border)'
               }}>
                 {/* Download Rápido - Available for all */}
                 {reportTab === 'rapid' && selectedAnalysis.report_visual && (
@@ -1740,12 +1746,12 @@ function DashboardContent() {
                     style={{
                       flex: 1,
                       padding: '0.75rem',
-                      background: 'white',
-                      border: '2px solid #e5e7eb',
+                      background: 'var(--mr-bg-card)',
+                      border: '2px solid var(--mr-border)',
                       borderRadius: '0.5rem',
                       fontSize: '0.875rem',
                       fontWeight: '500',
-                      color: '#374151',
+                      color: 'var(--mr-text-primary)',
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
@@ -1774,12 +1780,12 @@ function DashboardContent() {
                     style={{
                       flex: 1,
                       padding: '0.75rem',
-                      background: 'white',
-                      border: '2px solid #e5e7eb',
+                      background: 'var(--mr-bg-card)',
+                      border: '2px solid var(--mr-border)',
                       borderRadius: '0.5rem',
                       fontSize: '0.875rem',
                       fontWeight: '500',
-                      color: '#374151',
+                      color: 'var(--mr-text-primary)',
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
@@ -1808,12 +1814,12 @@ function DashboardContent() {
                     style={{
                       flex: 1,
                       padding: '0.75rem',
-                      background: 'white',
-                      border: '2px solid #e5e7eb',
+                      background: 'var(--mr-bg-card)',
+                      border: '2px solid var(--mr-border)',
                       borderRadius: '0.5rem',
                       fontSize: '0.875rem',
                       fontWeight: '500',
-                      color: '#374151',
+                      color: 'var(--mr-text-primary)',
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
@@ -1873,7 +1879,7 @@ function DashboardContent() {
                     style={{
                       flex: 1,
                       padding: '0.75rem',
-                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      background: 'var(--mr-gradient)',
                       border: 'none',
                       borderRadius: '0.5rem',
                       fontSize: '0.875rem',
@@ -1898,7 +1904,7 @@ function DashboardContent() {
                     style={{
                       flex: 1,
                       padding: '0.75rem',
-                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      background: 'var(--mr-gradient)',
                       border: 'none',
                       borderRadius: '0.5rem',
                       fontSize: '0.875rem',
@@ -1940,7 +1946,7 @@ function DashboardContent() {
           overscrollBehavior: 'contain'
         }}>
           <div style={{
-            background: 'white',
+            background: 'var(--mr-bg-card)',
             borderRadius: '1rem',
             padding: '2rem',
             maxWidth: '420px',
@@ -1948,7 +1954,7 @@ function DashboardContent() {
             position: 'relative',
             maxHeight: '90vh',
             overflowY: 'auto',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            boxShadow: 'var(--mr-shadow-lg)',
             animation: 'modalContentIn 0.25s cubic-bezier(0.16, 1, 0.3, 1)'
           }}>
             {/* Close button */}
@@ -1961,7 +1967,7 @@ function DashboardContent() {
                 background: 'none',
                 border: 'none',
                 cursor: 'pointer',
-                color: '#6b7280',
+                color: 'var(--mr-text-secondary)',
                 padding: '0.75rem'
               }}
               aria-label={lang === 'es' ? 'Cerrar' : 'Close'}
@@ -1984,7 +1990,7 @@ function DashboardContent() {
                 alignItems: 'center',
                 justifyContent: 'center'
               }}>
-                <Crown size={28} style={{ color: '#d97706' }} />
+                <Crown size={28} style={{ color: 'var(--mr-amber)' }} />
               </div>
             </div>
 
@@ -1994,14 +2000,14 @@ function DashboardContent() {
               fontWeight: '700',
               textAlign: 'center',
               marginBottom: '0.5rem',
-              color: '#111827'
+              color: 'var(--mr-text-primary)'
             }}>
               {t.unlockComplete}
             </h3>
 
             <p style={{
               textAlign: 'center',
-              color: '#6b7280',
+              color: 'var(--mr-text-secondary)',
               fontSize: '0.875rem',
               marginBottom: '1.5rem'
             }}>
@@ -2033,7 +2039,7 @@ function DashboardContent() {
                   }}>
                     <TrendingUp size={12} style={{ color: '#16a34a' }} />
                   </div>
-                  <span style={{ fontSize: '0.9rem', color: '#374151' }}>
+                  <span style={{ fontSize: '0.9rem', color: 'var(--mr-text-primary)' }}>
                     {benefit}
                   </span>
                 </div>
@@ -2048,10 +2054,11 @@ function DashboardContent() {
               <span style={{
                 fontSize: '2rem',
                 fontWeight: '700',
-                color: '#111827'
+                color: 'var(--mr-text-primary)'
               }}>
                 {prices.pro_monthly}/{lang === 'es' ? 'mes' : 'month'}
               </span>
+
             </div>
 
             {/* CTA Button */}
@@ -2063,7 +2070,7 @@ function DashboardContent() {
               style={{
                 width: '100%',
                 padding: '1rem',
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                background: 'var(--mr-gradient)',
                 color: 'white',
                 border: 'none',
                 borderRadius: '0.5rem',
@@ -2085,9 +2092,9 @@ function DashboardContent() {
               textAlign: 'center',
               marginTop: '1rem',
               paddingTop: '1rem',
-              borderTop: '1px solid #e5e7eb'
+              borderTop: '1px solid var(--mr-border)'
             }}>
-              <p style={{ fontSize: '0.8rem', color: '#6b7280', marginBottom: '0.5rem' }}>
+              <p style={{ fontSize: '0.8rem', color: 'var(--mr-text-secondary)', marginBottom: '0.5rem' }}>
                 {lang === 'es' ? 'O compra un análisis individual' : 'Or buy a single analysis'}
               </p>
               <button
@@ -2098,8 +2105,8 @@ function DashboardContent() {
                 style={{
                   padding: '0.5rem 1rem',
                   background: 'transparent',
-                  color: '#667eea',
-                  border: '1px solid #667eea',
+                  color: 'var(--mr-primary)',
+                  border: '1px solid var(--mr-primary)',
                   borderRadius: '0.375rem',
                   fontSize: '0.875rem',
                   fontWeight: '500',
@@ -2133,12 +2140,12 @@ function DashboardContent() {
           <div
             onClick={(e) => e.stopPropagation()}
             style={{
-              background: 'white',
+              background: 'var(--mr-bg-card)',
               borderRadius: '1rem',
               padding: '2rem',
               maxWidth: '500px',
               width: '100%',
-              boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+              boxShadow: 'var(--mr-shadow-lg)',
               position: 'relative',
               maxHeight: '90vh',
               overflowY: 'auto',
@@ -2150,7 +2157,7 @@ function DashboardContent() {
               style={{
                 position: 'absolute', top: '1rem', right: '1rem',
                 background: 'none', border: 'none', cursor: 'pointer',
-                color: '#6b7280', padding: '0.75rem'
+                color: 'var(--mr-text-secondary)', padding: '0.75rem'
               }}
               aria-label={lang === 'es' ? 'Cerrar' : 'Close'}
             >
@@ -2162,7 +2169,7 @@ function DashboardContent() {
               <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>
                 {lang === 'es' ? '¡Trabajemos juntos!' : "Let's work together!"}
               </h3>
-              <p style={{ color: '#6b7280' }}>
+              <p style={{ color: 'var(--mr-text-secondary)' }}>
                 {lang === 'es' ? 'Elige cómo prefieres contactarme:' : 'Choose how you prefer to contact me:'}
               </p>
             </div>
@@ -2179,7 +2186,7 @@ function DashboardContent() {
                 rel="noopener noreferrer"
                 style={{
                   display: 'flex', alignItems: 'center', gap: '1rem',
-                  padding: '1rem 1.5rem', background: '#f0fdf4',
+                  padding: '1rem 1.5rem', background: 'var(--mr-green-bg)',
                   border: '1px solid #86efac', borderRadius: '0.75rem',
                   textDecoration: 'none', color: '#166534', cursor: 'pointer'
                 }}
@@ -2204,9 +2211,9 @@ function DashboardContent() {
                 )}`}
                 style={{
                   display: 'flex', alignItems: 'center', gap: '1rem',
-                  padding: '1rem 1.5rem', background: '#eff6ff',
+                  padding: '1rem 1.5rem', background: 'var(--mr-blue-bg)',
                   border: '1px solid #93c5fd', borderRadius: '0.75rem',
-                  textDecoration: 'none', color: '#1e40af', cursor: 'pointer'
+                  textDecoration: 'none', color: 'var(--mr-blue-text)', cursor: 'pointer'
                 }}
               >
                 <div style={{ fontSize: '2rem' }}>📧</div>

@@ -12,6 +12,7 @@ import Link from 'next/link'
 import { useAuth, UserMenu } from '@/components/auth'
 import { supabase, createFreshQueryClient } from '@/lib/supabase'
 import { detectLanguage, setLanguageCookie } from '@/lib/language'
+import { ThemeToggle } from '@/components/ThemeToggle'
 import {
   Music,
   FileAudio,
@@ -351,19 +352,19 @@ export default function HistoryPage() {
 
   // Helpers
   const getScoreColor = (score: number) => {
-    if (score >= 80) return '#10b981'
-    if (score >= 60) return '#3b82f6'
-    if (score >= 40) return '#f59e0b'
-    return '#ef4444'
+    if (score >= 80) return 'var(--mr-green)'
+    if (score >= 60) return 'var(--mr-blue)'
+    if (score >= 40) return 'var(--mr-amber)'
+    return 'var(--mr-red)'
   }
 
   const getVerdictColor = (verdict: string) => {
     switch (verdict) {
-      case 'ready': return '#10b981'
-      case 'almost_ready': return '#3b82f6'
-      case 'needs_work': return '#f59e0b'
-      case 'critical': return '#ef4444'
-      default: return '#6b7280'
+      case 'ready': return 'var(--mr-green)'
+      case 'almost_ready': return 'var(--mr-blue)'
+      case 'needs_work': return 'var(--mr-amber)'
+      case 'critical': return 'var(--mr-red)'
+      default: return 'var(--mr-text-secondary)'
     }
   }
 
@@ -401,7 +402,7 @@ export default function HistoryPage() {
     return (
       <div style={{
         minHeight: '100vh',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        background: 'var(--mr-gradient)',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
@@ -409,7 +410,7 @@ export default function HistoryPage() {
         gap: '1rem'
       }}>
         <span style={{ fontSize: '2rem' }}>🎧</span>
-        <div style={{ color: 'white', fontSize: '1.25rem' }}>{t.loading}</div>
+        <div style={{ color: 'var(--mr-text-inverse)', fontSize: '1.25rem' }}>{t.loading}</div>
       </div>
     )
   }
@@ -419,14 +420,14 @@ export default function HistoryPage() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: '#f3f4f6',
+      background: 'var(--mr-bg-elevated)',
       fontFamily: 'Inter, system-ui, sans-serif',
       overflowX: 'hidden'
     }}>
       {/* Header */}
       <header style={{
-        background: 'white',
-        borderBottom: '1px solid #e5e7eb',
+        background: 'var(--mr-bg-card)',
+        borderBottom: '1px solid var(--mr-border)',
         padding: '1rem 1.5rem',
         position: 'sticky',
         top: 0,
@@ -451,7 +452,7 @@ export default function HistoryPage() {
             <div style={{
               width: '32px',
               height: '32px',
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              background: 'var(--mr-gradient)',
               borderRadius: '0.5rem',
               display: 'flex',
               alignItems: 'center',
@@ -462,7 +463,7 @@ export default function HistoryPage() {
             {!isMobile && (
               <span style={{
                 fontWeight: '700',
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                background: 'var(--mr-gradient)',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
                 backgroundClip: 'text'
@@ -493,7 +494,7 @@ export default function HistoryPage() {
                 minWidth: '2.5rem',
                 textAlign: 'center',
                 background: 'transparent',
-                color: '#6b7280',
+                color: 'var(--mr-text-secondary)',
                 border: 'none',
                 cursor: 'pointer',
                 fontWeight: '500',
@@ -503,6 +504,8 @@ export default function HistoryPage() {
               {lang === 'es' ? 'EN' : 'ES'}
             </button>
 
+            <ThemeToggle lang={lang} />
+
             <UserMenu lang={lang} isMobile={isMobile} />
 
             <Link
@@ -511,8 +514,8 @@ export default function HistoryPage() {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.5rem',
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                color: 'white',
+                background: 'var(--mr-gradient)',
+                color: 'var(--mr-text-inverse)',
                 padding: '0.5rem 1rem',
                 borderRadius: '9999px',
                 fontWeight: '600',
@@ -522,7 +525,7 @@ export default function HistoryPage() {
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.transform = 'translateY(-2px)'
-                e.currentTarget.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.4)'
+                e.currentTarget.style.boxShadow = 'var(--mr-shadow-lg)'
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.transform = 'translateY(0)'
@@ -546,12 +549,12 @@ export default function HistoryPage() {
           <h1 style={{
             fontSize: '1.75rem',
             fontWeight: '700',
-            color: '#111827',
+            color: 'var(--mr-text-primary)',
             marginBottom: '0.5rem'
           }}>
             {t.title}
           </h1>
-          <p style={{ color: '#6b7280', fontSize: '0.95rem' }}>
+          <p style={{ color: 'var(--mr-text-secondary)', fontSize: '0.95rem' }}>
             {t.subtitle}
           </p>
         </div>
@@ -559,14 +562,14 @@ export default function HistoryPage() {
         {analyses.length === 0 ? (
           /* Empty State */
           <div style={{
-            background: 'white',
+            background: 'var(--mr-bg-card)',
             borderRadius: '1rem',
             padding: '3rem 1.5rem',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+            boxShadow: 'var(--mr-shadow)',
             textAlign: 'center'
           }}>
-            <FileAudio size={48} style={{ marginBottom: '1rem', opacity: 0.5, color: '#6b7280' }} />
-            <p style={{ fontSize: '1.125rem', color: '#374151', marginBottom: '1.5rem' }}>
+            <FileAudio size={48} style={{ marginBottom: '1rem', opacity: 0.5, color: 'var(--mr-text-secondary)' }} />
+            <p style={{ fontSize: '1.125rem', color: 'var(--mr-text-primary)', marginBottom: '1.5rem' }}>
               {t.noAnalyses}
             </p>
             <Link
@@ -576,8 +579,8 @@ export default function HistoryPage() {
                 alignItems: 'center',
                 gap: '0.5rem',
                 padding: '0.75rem 1.5rem',
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                color: 'white',
+                background: 'var(--mr-gradient)',
+                color: 'var(--mr-text-inverse)',
                 textDecoration: 'none',
                 borderRadius: '0.5rem',
                 fontWeight: '600'
@@ -591,21 +594,21 @@ export default function HistoryPage() {
           <>
             {/* Filters */}
             <div style={{
-              background: 'white',
+              background: 'var(--mr-bg-card)',
               borderRadius: '1rem',
               padding: '1rem 1.5rem',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+              boxShadow: 'var(--mr-shadow)',
               marginBottom: '1rem',
               display: 'flex',
               flexWrap: 'wrap',
               gap: '1rem',
               alignItems: 'center'
             }}>
-              <SlidersHorizontal size={18} style={{ color: '#6b7280' }} />
+              <SlidersHorizontal size={18} style={{ color: 'var(--mr-text-secondary)' }} />
 
               {/* Sort By */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <label style={{ fontSize: '0.875rem', color: '#6b7280', fontWeight: '500' }}>
+                <label style={{ fontSize: '0.875rem', color: 'var(--mr-text-secondary)', fontWeight: '500' }}>
                   {t.sortBy}:
                 </label>
                 <select
@@ -613,11 +616,11 @@ export default function HistoryPage() {
                   onChange={(e) => setSortBy(e.target.value as SortOption)}
                   style={{
                     padding: '0.375rem 0.75rem',
-                    border: '1px solid #d1d5db',
+                    border: '1px solid var(--mr-border-strong)',
                     borderRadius: '0.375rem',
                     fontSize: '0.875rem',
-                    color: '#374151',
-                    background: 'white',
+                    color: 'var(--mr-text-primary)',
+                    background: 'var(--mr-bg-card)',
                     cursor: 'pointer',
                     outline: 'none'
                   }}
@@ -631,7 +634,7 @@ export default function HistoryPage() {
 
               {/* Status Filter */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <label style={{ fontSize: '0.875rem', color: '#6b7280', fontWeight: '500' }}>
+                <label style={{ fontSize: '0.875rem', color: 'var(--mr-text-secondary)', fontWeight: '500' }}>
                   {t.statusFilter}:
                 </label>
                 <select
@@ -639,11 +642,11 @@ export default function HistoryPage() {
                   onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
                   style={{
                     padding: '0.375rem 0.75rem',
-                    border: '1px solid #d1d5db',
+                    border: '1px solid var(--mr-border-strong)',
                     borderRadius: '0.375rem',
                     fontSize: '0.875rem',
-                    color: '#374151',
-                    background: 'white',
+                    color: 'var(--mr-text-primary)',
+                    background: 'var(--mr-bg-card)',
                     cursor: 'pointer',
                     outline: 'none'
                   }}
@@ -658,16 +661,16 @@ export default function HistoryPage() {
 
             {/* Analyses List */}
             <div style={{
-              background: 'white',
+              background: 'var(--mr-bg-card)',
               borderRadius: '1rem',
               padding: '1.5rem',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+              boxShadow: 'var(--mr-shadow)'
             }}>
               {filteredAnalyses.length === 0 ? (
                 <div style={{
                   textAlign: 'center',
                   padding: '2rem 1rem',
-                  color: '#6b7280'
+                  color: 'var(--mr-text-secondary)'
                 }}>
                   <p style={{ fontSize: '0.95rem' }}>
                     {lang === 'es' ? 'No hay análisis con este filtro' : 'No analyses match this filter'}
@@ -688,19 +691,19 @@ export default function HistoryPage() {
                           alignItems: 'center',
                           gap: '1rem',
                           padding: '1rem',
-                          background: '#f9fafb',
+                          background: 'var(--mr-bg-base)',
                           borderRadius: '0.75rem',
                           cursor: 'pointer',
                           transition: 'all 0.2s',
                           border: '1px solid transparent'
                         }}
                         onMouseEnter={(e) => {
-                          e.currentTarget.style.borderColor = '#667eea'
-                          e.currentTarget.style.background = '#f0f4ff'
+                          e.currentTarget.style.borderColor = 'var(--mr-primary)'
+                          e.currentTarget.style.background = 'var(--mr-bg-hover)'
                         }}
                         onMouseLeave={(e) => {
                           e.currentTarget.style.borderColor = 'transparent'
-                          e.currentTarget.style.background = '#f9fafb'
+                          e.currentTarget.style.background = 'var(--mr-bg-base)'
                         }}
                       >
                         {/* Score */}
@@ -708,7 +711,7 @@ export default function HistoryPage() {
                           width: '60px',
                           height: '60px',
                           borderRadius: '50%',
-                          background: `conic-gradient(${getScoreColor(analysis.score)} ${analysis.score * 3.6}deg, #e5e7eb 0deg)`,
+                          background: `conic-gradient(${getScoreColor(analysis.score)} ${analysis.score * 3.6}deg, var(--mr-border) 0deg)`,
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
@@ -718,7 +721,7 @@ export default function HistoryPage() {
                             width: '50px',
                             height: '50px',
                             borderRadius: '50%',
-                            background: 'white',
+                            background: 'var(--mr-bg-card)',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
@@ -734,7 +737,7 @@ export default function HistoryPage() {
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <p style={{
                             fontWeight: '600',
-                            color: '#111827',
+                            color: 'var(--mr-text-primary)',
                             marginBottom: '0.25rem',
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
@@ -747,7 +750,7 @@ export default function HistoryPage() {
                             alignItems: 'center',
                             gap: '1rem',
                             fontSize: '0.75rem',
-                            color: '#6b7280'
+                            color: 'var(--mr-text-secondary)'
                           }}>
                             <span style={{
                               color: getVerdictColor(analysis.verdict),
@@ -763,7 +766,7 @@ export default function HistoryPage() {
                         </div>
 
                         {/* Arrow */}
-                        <ChevronRight size={20} style={{ color: '#9ca3af', flexShrink: 0 }} />
+                        <ChevronRight size={20} style={{ color: 'var(--mr-text-tertiary)', flexShrink: 0 }} />
                       </div>
                     ))}
                   </div>
@@ -776,9 +779,9 @@ export default function HistoryPage() {
                       justifyContent: 'space-between',
                       marginTop: '1.5rem',
                       paddingTop: '1rem',
-                      borderTop: '1px solid #e5e7eb'
+                      borderTop: '1px solid var(--mr-border)'
                     }}>
-                      <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+                      <span style={{ fontSize: '0.875rem', color: 'var(--mr-text-secondary)' }}>
                         {t.showing} {showingStart}-{showingEnd} {t.of} {filteredAnalyses.length} {t.analyses}
                       </span>
                       <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -790,10 +793,10 @@ export default function HistoryPage() {
                             alignItems: 'center',
                             gap: '0.25rem',
                             padding: '0.5rem 0.75rem',
-                            border: '1px solid #d1d5db',
+                            border: '1px solid var(--mr-border-strong)',
                             borderRadius: '0.375rem',
-                            background: currentPage === 1 ? '#f3f4f6' : 'white',
-                            color: currentPage === 1 ? '#9ca3af' : '#374151',
+                            background: currentPage === 1 ? 'var(--mr-bg-elevated)' : 'var(--mr-bg-card)',
+                            color: currentPage === 1 ? 'var(--mr-text-tertiary)' : 'var(--mr-text-primary)',
                             fontSize: '0.875rem',
                             cursor: currentPage === 1 ? 'not-allowed' : 'pointer'
                           }}
@@ -809,10 +812,10 @@ export default function HistoryPage() {
                             alignItems: 'center',
                             gap: '0.25rem',
                             padding: '0.5rem 0.75rem',
-                            border: '1px solid #d1d5db',
+                            border: '1px solid var(--mr-border-strong)',
                             borderRadius: '0.375rem',
-                            background: currentPage === totalPages ? '#f3f4f6' : 'white',
-                            color: currentPage === totalPages ? '#9ca3af' : '#374151',
+                            background: currentPage === totalPages ? 'var(--mr-bg-elevated)' : 'var(--mr-bg-card)',
+                            color: currentPage === totalPages ? 'var(--mr-text-tertiary)' : 'var(--mr-text-primary)',
                             fontSize: '0.875rem',
                             cursor: currentPage === totalPages ? 'not-allowed' : 'pointer'
                           }}
@@ -852,7 +855,7 @@ export default function HistoryPage() {
           <div
             onClick={(e) => e.stopPropagation()}
             style={{
-            background: 'white',
+            background: 'var(--mr-bg-card)',
             borderRadius: '1rem',
             maxWidth: '600px',
             width: '100%',
@@ -864,16 +867,16 @@ export default function HistoryPage() {
             {/* Modal Header */}
             <div style={{
               padding: '1.25rem 1.5rem',
-              borderBottom: '1px solid #e5e7eb',
+              borderBottom: '1px solid var(--mr-border)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between'
             }}>
               <div>
-                <h3 style={{ fontWeight: '700', color: '#111827', marginBottom: '0.25rem' }}>
+                <h3 style={{ fontWeight: '700', color: 'var(--mr-text-primary)', marginBottom: '0.25rem' }}>
                   {selectedAnalysis.filename}
                 </h3>
-                <p style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                <p style={{ fontSize: '0.75rem', color: 'var(--mr-text-secondary)' }}>
                   {formatDate(selectedAnalysis.created_at)}
                 </p>
               </div>
@@ -883,7 +886,7 @@ export default function HistoryPage() {
                   background: 'none',
                   border: 'none',
                   cursor: 'pointer',
-                  color: '#6b7280',
+                  color: 'var(--mr-text-secondary)',
                   padding: '0.75rem'
                 }}
                 aria-label={lang === 'es' ? 'Cerrar' : 'Close'}
@@ -895,7 +898,7 @@ export default function HistoryPage() {
             {/* Score */}
             <div style={{
               padding: '1.5rem',
-              background: '#f9fafb',
+              background: 'var(--mr-bg-base)',
               display: 'flex',
               alignItems: 'center',
               gap: '1.5rem'
@@ -904,7 +907,7 @@ export default function HistoryPage() {
                 width: '80px',
                 height: '80px',
                 borderRadius: '50%',
-                background: `conic-gradient(${getScoreColor(selectedAnalysis.score)} ${selectedAnalysis.score * 3.6}deg, #e5e7eb 0deg)`,
+                background: `conic-gradient(${getScoreColor(selectedAnalysis.score)} ${selectedAnalysis.score * 3.6}deg, var(--mr-border) 0deg)`,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -914,7 +917,7 @@ export default function HistoryPage() {
                   width: '66px',
                   height: '66px',
                   borderRadius: '50%',
-                  background: 'white',
+                  background: 'var(--mr-bg-card)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -934,7 +937,7 @@ export default function HistoryPage() {
                 }}>
                   {scoreToVerdictLabel(selectedAnalysis.score, lang)}
                 </p>
-                <p style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+                <p style={{ fontSize: '0.875rem', color: 'var(--mr-text-secondary)' }}>
                   {t.score}: {selectedAnalysis.score}/100
                 </p>
               </div>
@@ -943,7 +946,7 @@ export default function HistoryPage() {
             {/* Tabs */}
             <div style={{
               display: 'flex',
-              borderBottom: '1px solid #e5e7eb',
+              borderBottom: '1px solid var(--mr-border)',
               padding: '0 1.5rem'
             }}>
               {(['rapid', 'summary', 'complete'] as const).map((tab) => (
@@ -955,8 +958,8 @@ export default function HistoryPage() {
                     padding: '1rem',
                     background: 'none',
                     border: 'none',
-                    borderBottom: reportTab === tab ? '2px solid #667eea' : '2px solid transparent',
-                    color: reportTab === tab ? '#667eea' : '#6b7280',
+                    borderBottom: reportTab === tab ? '2px solid var(--mr-primary)' : '2px solid transparent',
+                    color: reportTab === tab ? 'var(--mr-primary)' : 'var(--mr-text-secondary)',
                     fontWeight: reportTab === tab ? '600' : '500',
                     cursor: 'pointer',
                     display: 'flex',
@@ -973,8 +976,8 @@ export default function HistoryPage() {
                   {tab === 'complete' && !isPro && (
                     <span style={{
                       fontSize: '0.625rem',
-                      background: '#fef3c7',
-                      color: '#92400e',
+                      background: 'var(--mr-amber-bg)',
+                      color: 'var(--mr-amber-text)',
                       padding: '0.125rem 0.375rem',
                       borderRadius: '9999px',
                       fontWeight: '500'
@@ -997,7 +1000,7 @@ export default function HistoryPage() {
                   <h4 style={{
                     fontSize: '1rem',
                     fontWeight: '600',
-                    color: '#374151',
+                    color: 'var(--mr-text-primary)',
                     marginBottom: '0.5rem',
                     display: 'flex',
                     alignItems: 'center',
@@ -1005,7 +1008,7 @@ export default function HistoryPage() {
                   }}>
                     ⚡ {lang === 'es' ? 'Análisis Rápido' : 'Quick Analysis'}
                   </h4>
-                  <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '1.5rem' }}>
+                  <p style={{ fontSize: '0.875rem', color: 'var(--mr-text-secondary)', marginBottom: '1.5rem' }}>
                     🎵 {lang === 'es' ? 'Sobre' : 'About'} "{selectedAnalysis.filename}"
                   </p>
 
@@ -1021,7 +1024,7 @@ export default function HistoryPage() {
                       <h4 style={{
                         fontSize: '0.875rem',
                         fontWeight: '600',
-                        color: '#374151',
+                        color: 'var(--mr-text-primary)',
                         marginBottom: '0.5rem',
                         display: 'flex',
                         alignItems: 'center',
@@ -1031,7 +1034,7 @@ export default function HistoryPage() {
                       </h4>
                       <p style={{
                         fontSize: '0.7rem',
-                        color: '#6b7280',
+                        color: 'var(--mr-text-secondary)',
                         marginBottom: '1rem',
                         lineHeight: '1.4',
                         fontStyle: 'italic'
@@ -1057,10 +1060,10 @@ export default function HistoryPage() {
                             tonal_balance: { es: 'Balance Frecuencias', en: 'Freq. Balance' }
                           }
                           const statusColors: { [key: string]: string } = {
-                            excellent: '#10b981',
-                            good: '#3b82f6',
-                            warning: '#f59e0b',
-                            critical: '#ef4444'
+                            excellent: 'var(--mr-green)',
+                            good: 'var(--mr-blue)',
+                            warning: 'var(--mr-amber)',
+                            critical: 'var(--mr-red)'
                           }
                           const orderedKeys = ['headroom', 'true_peak', 'plr', 'dynamic_range', 'lufs', 'lufs_(integrated)', 'loudness', 'stereo_width', 'stereo_correlation', 'frequency_balance', 'tonal_balance']
                           const displayedKeys = orderedKeys.filter(key => bars[key])
@@ -1068,7 +1071,7 @@ export default function HistoryPage() {
                           return displayedKeys.map((key) => {
                             const bar = bars[key]
                             const label = metricLabels[key] || { es: key, en: key }
-                            const color = statusColors[bar.status] || '#6b7280'
+                            const color = statusColors[bar.status] || 'var(--mr-text-secondary)'
                             return (
                               <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                                 <div style={{
@@ -1076,14 +1079,14 @@ export default function HistoryPage() {
                                   maxWidth: 'clamp(80px, 20vw, 120px)',
                                   fontSize: 'clamp(0.6875rem, 1.5vw, 0.75rem)',
                                   fontWeight: '500',
-                                  color: '#4b5563',
+                                  color: 'var(--mr-text-secondary)',
                                   textAlign: 'right'
                                 }}>
                                   {lang === 'es' ? label.es : label.en}
                                 </div>
                                 <div style={{
                                   flex: 1,
-                                  background: '#e5e7eb',
+                                  background: 'var(--mr-border)',
                                   borderRadius: '9999px',
                                   height: '0.5rem',
                                   overflow: 'hidden'
@@ -1119,7 +1122,7 @@ export default function HistoryPage() {
                     fontSize: '0.875rem',
                     lineHeight: '1.8',
                     fontFamily: 'Inter, system-ui, sans-serif',
-                    color: '#374151'
+                    color: 'var(--mr-text-primary)'
                   }}>
                     {cleanReportText(selectedAnalysis.report_visual || '') || (lang === 'es' ? 'No hay datos de análisis rápido disponibles.' : 'No quick analysis data available.')}
                   </div>
@@ -1132,7 +1135,7 @@ export default function HistoryPage() {
                   fontSize: '0.875rem',
                   lineHeight: '1.8',
                   fontFamily: 'Inter, system-ui, sans-serif',
-                  color: '#374151'
+                  color: 'var(--mr-text-primary)'
                 }}>
                   {cleanReportText(selectedAnalysis.report_short || '') || (lang === 'es' ? 'No hay datos de resumen disponibles.' : 'No summary data available.')}
                 </div>
@@ -1144,7 +1147,7 @@ export default function HistoryPage() {
                   fontSize: '0.875rem',
                   lineHeight: '1.8',
                   fontFamily: 'Inter, system-ui, sans-serif',
-                  color: '#374151'
+                  color: 'var(--mr-text-primary)'
                 }}>
                   {cleanReportText(selectedAnalysis.report_write || '') || (lang === 'es' ? 'No hay datos de análisis completo disponibles.' : 'No complete analysis data available.')}
                 </div>
@@ -1162,7 +1165,7 @@ export default function HistoryPage() {
                     padding: '1.25rem',
                     marginTop: '1.5rem',
                     color: 'white',
-                    boxShadow: '0 10px 25px rgba(99, 102, 241, 0.15)'
+                    boxShadow: 'var(--mr-shadow-lg)'
                   }}>
                     <div style={{
                       display: 'flex',
@@ -1208,7 +1211,7 @@ export default function HistoryPage() {
                         fontWeight: '600',
                         fontSize: '0.85rem',
                         cursor: 'pointer',
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                        boxShadow: 'var(--mr-shadow)',
                         textDecoration: 'none',
                         marginLeft: 'clamp(0rem, 5vw, 3.5rem)',
                         transition: 'all 0.2s'
@@ -1226,7 +1229,7 @@ export default function HistoryPage() {
                 gap: '0.75rem',
                 marginTop: '1rem',
                 paddingTop: '1rem',
-                borderTop: '1px solid #e5e7eb'
+                borderTop: '1px solid var(--mr-border)'
               }}>
                 {reportTab === 'rapid' && selectedAnalysis.report_visual && (
                   <button
@@ -1243,12 +1246,12 @@ export default function HistoryPage() {
                     style={{
                       flex: 1,
                       padding: '0.75rem',
-                      background: 'white',
-                      border: '2px solid #e5e7eb',
+                      background: 'var(--mr-bg-card)',
+                      border: '2px solid var(--mr-border)',
                       borderRadius: '0.5rem',
                       fontSize: '0.875rem',
                       fontWeight: '500',
-                      color: '#374151',
+                      color: 'var(--mr-text-primary)',
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
@@ -1275,12 +1278,12 @@ export default function HistoryPage() {
                     style={{
                       flex: 1,
                       padding: '0.75rem',
-                      background: 'white',
-                      border: '2px solid #e5e7eb',
+                      background: 'var(--mr-bg-card)',
+                      border: '2px solid var(--mr-border)',
                       borderRadius: '0.5rem',
                       fontSize: '0.875rem',
                       fontWeight: '500',
-                      color: '#374141',
+                      color: 'var(--mr-text-primary)',
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
@@ -1307,12 +1310,12 @@ export default function HistoryPage() {
                     style={{
                       flex: 1,
                       padding: '0.75rem',
-                      background: 'white',
-                      border: '2px solid #e5e7eb',
+                      background: 'var(--mr-bg-card)',
+                      border: '2px solid var(--mr-border)',
                       borderRadius: '0.5rem',
                       fontSize: '0.875rem',
                       fontWeight: '500',
-                      color: '#374151',
+                      color: 'var(--mr-text-primary)',
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
@@ -1330,12 +1333,12 @@ export default function HistoryPage() {
                     style={{
                       flex: 1,
                       padding: '0.75rem',
-                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      background: 'var(--mr-gradient)',
                       border: 'none',
                       borderRadius: '0.5rem',
                       fontSize: '0.875rem',
                       fontWeight: '600',
-                      color: 'white',
+                      color: 'var(--mr-text-inverse)',
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
@@ -1393,12 +1396,12 @@ export default function HistoryPage() {
                     style={{
                       flex: 1,
                       padding: '0.75rem',
-                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      background: 'var(--mr-gradient)',
                       border: 'none',
                       borderRadius: '0.5rem',
                       fontSize: '0.875rem',
                       fontWeight: '600',
-                      color: 'white',
+                      color: 'var(--mr-text-inverse)',
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',

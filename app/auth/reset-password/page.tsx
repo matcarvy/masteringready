@@ -124,7 +124,7 @@ function ResetPasswordContent() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      background: 'var(--mr-gradient)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -158,12 +158,12 @@ function ResetPasswordContent() {
       </button>
 
       <div style={{
-        background: 'white',
+        background: 'var(--mr-bg-card)',
         borderRadius: '1.5rem',
         padding: 'clamp(1.5rem, 5vw, 2.5rem)',
         width: '100%',
         maxWidth: '420px',
-        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+        boxShadow: 'var(--mr-shadow-lg)'
       }}>
         <Link
           href="/"
@@ -171,7 +171,7 @@ function ResetPasswordContent() {
             display: 'inline-flex',
             alignItems: 'center',
             gap: '0.5rem',
-            color: '#6b7280',
+            color: 'var(--mr-text-secondary)',
             textDecoration: 'none',
             fontSize: '0.875rem',
             marginBottom: '1.5rem'
@@ -185,7 +185,7 @@ function ResetPasswordContent() {
           <div style={{
             width: '64px',
             height: '64px',
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            background: 'var(--mr-gradient)',
             borderRadius: '1rem',
             display: 'flex',
             alignItems: 'center',
@@ -197,12 +197,12 @@ function ResetPasswordContent() {
           <h1 style={{
             fontSize: '1.75rem',
             fontWeight: 'bold',
-            color: '#111827',
+            color: 'var(--mr-text-primary)',
             marginBottom: '0.5rem'
           }}>
             {t.title}
           </h1>
-          <p style={{ color: '#6b7280', fontSize: '0.95rem' }}>
+          <p style={{ color: 'var(--mr-text-secondary)', fontSize: '0.95rem' }}>
             {t.subtitle}
           </p>
         </div>
@@ -210,9 +210,9 @@ function ResetPasswordContent() {
         {!hasSession ? (
           <div style={{ textAlign: 'center' }}>
             <div style={{
-              background: '#fef2f2',
+              background: 'var(--mr-red-bg)',
               border: '1px solid #fecaca',
-              color: '#dc2626',
+              color: 'var(--mr-red)',
               padding: '1rem',
               borderRadius: '0.75rem',
               marginBottom: '1.5rem',
@@ -226,8 +226,8 @@ function ResetPasswordContent() {
               style={{
                 display: 'inline-block',
                 padding: '0.875rem 1.5rem',
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                color: 'white',
+                background: 'var(--mr-gradient)',
+                color: 'var(--mr-text-inverse)',
                 borderRadius: '0.5rem',
                 fontSize: '1rem',
                 fontWeight: '600',
@@ -242,25 +242,25 @@ function ResetPasswordContent() {
             <div style={{
               width: '64px',
               height: '64px',
-              background: '#ecfdf5',
+              background: 'var(--mr-green-bg)',
               borderRadius: '50%',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               margin: '0 auto 1rem'
             }}>
-              <CheckCircle size={32} color="#10b981" />
+              <CheckCircle size={32} color="var(--mr-green)" />
             </div>
             <h2 style={{
               fontSize: '1.25rem',
               fontWeight: '600',
-              color: '#111827',
+              color: 'var(--mr-text-primary)',
               marginBottom: '0.5rem'
             }}>
               {t.successTitle}
             </h2>
             <p style={{
-              color: '#6b7280',
+              color: 'var(--mr-text-secondary)',
               fontSize: '0.95rem',
               lineHeight: '1.5',
               marginBottom: '1.5rem'
@@ -272,8 +272,8 @@ function ResetPasswordContent() {
               style={{
                 display: 'inline-block',
                 padding: '0.875rem 1.5rem',
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                color: 'white',
+                background: 'var(--mr-gradient)',
+                color: 'var(--mr-text-inverse)',
                 borderRadius: '0.5rem',
                 fontSize: '1rem',
                 fontWeight: '600',
@@ -287,9 +287,9 @@ function ResetPasswordContent() {
           <form onSubmit={handleSubmit}>
             {error && (
               <div style={{
-                background: '#fef2f2',
+                background: 'var(--mr-red-bg)',
                 border: '1px solid #fecaca',
-                color: '#dc2626',
+                color: 'var(--mr-red)',
                 padding: '0.75rem 1rem',
                 borderRadius: '0.5rem',
                 marginBottom: '1rem',
@@ -306,7 +306,7 @@ function ResetPasswordContent() {
                   display: 'block',
                   fontSize: '0.875rem',
                   fontWeight: '500',
-                  color: '#374151',
+                  color: 'var(--mr-text-primary)',
                   marginBottom: '0.5rem'
                 }}
               >
@@ -320,7 +320,7 @@ function ResetPasswordContent() {
                     left: '0.875rem',
                     top: '50%',
                     transform: 'translateY(-50%)',
-                    color: '#9ca3af'
+                    color: 'var(--mr-text-tertiary)'
                   }}
                 />
                 <input
@@ -332,7 +332,7 @@ function ResetPasswordContent() {
                   style={{
                     width: '100%',
                     padding: '0.75rem 2.75rem 0.75rem 2.75rem',
-                    border: '1px solid #d1d5db',
+                    border: '1px solid var(--mr-border-strong)',
                     borderRadius: '0.5rem',
                     fontSize: '1rem',
                     outline: 'none',
@@ -350,7 +350,7 @@ function ResetPasswordContent() {
                     background: 'none',
                     border: 'none',
                     cursor: 'pointer',
-                    color: '#9ca3af',
+                    color: 'var(--mr-text-tertiary)',
                     padding: 0
                   }}
                 >
@@ -366,7 +366,7 @@ function ResetPasswordContent() {
                   display: 'block',
                   fontSize: '0.875rem',
                   fontWeight: '500',
-                  color: '#374151',
+                  color: 'var(--mr-text-primary)',
                   marginBottom: '0.5rem'
                 }}
               >
@@ -380,7 +380,7 @@ function ResetPasswordContent() {
                     left: '0.875rem',
                     top: '50%',
                     transform: 'translateY(-50%)',
-                    color: '#9ca3af'
+                    color: 'var(--mr-text-tertiary)'
                   }}
                 />
                 <input
@@ -392,7 +392,7 @@ function ResetPasswordContent() {
                   style={{
                     width: '100%',
                     padding: '0.75rem 2.75rem 0.75rem 2.75rem',
-                    border: '1px solid #d1d5db',
+                    border: '1px solid var(--mr-border-strong)',
                     borderRadius: '0.5rem',
                     fontSize: '1rem',
                     outline: 'none',
@@ -410,7 +410,7 @@ function ResetPasswordContent() {
                     background: 'none',
                     border: 'none',
                     cursor: 'pointer',
-                    color: '#9ca3af',
+                    color: 'var(--mr-text-tertiary)',
                     padding: 0
                   }}
                 >
@@ -426,9 +426,9 @@ function ResetPasswordContent() {
                 width: '100%',
                 padding: '0.875rem',
                 background: loading
-                  ? '#9ca3af'
-                  : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                color: 'white',
+                  ? 'var(--mr-text-tertiary)'
+                  : 'var(--mr-gradient)',
+                color: 'var(--mr-text-inverse)',
                 border: 'none',
                 borderRadius: '0.5rem',
                 fontSize: '1rem',
@@ -451,12 +451,12 @@ export default function ResetPasswordPage() {
     <Suspense fallback={
       <div style={{
         minHeight: '100vh',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        background: 'var(--mr-gradient)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center'
       }}>
-        <div style={{ color: 'white', fontSize: '1.25rem' }}>Loading...</div>
+        <div style={{ color: 'var(--mr-text-inverse)', fontSize: '1.25rem' }}>Loading...</div>
       </div>
     }>
       <ResetPasswordContent />

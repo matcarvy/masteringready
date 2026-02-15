@@ -199,7 +199,7 @@ function SignupContent() {
     return (
       <div style={{
         minHeight: '100vh',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        background: 'var(--mr-gradient)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -207,18 +207,18 @@ function SignupContent() {
         fontFamily: 'Inter, system-ui, sans-serif'
       }}>
         <div style={{
-          background: 'white',
+          background: 'var(--mr-bg-card)',
           borderRadius: '1.5rem',
           padding: 'clamp(1.5rem, 5vw, 2.5rem)',
           width: '100%',
           maxWidth: '420px',
           textAlign: 'center',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+          boxShadow: 'var(--mr-shadow-lg)'
         }}>
           <div style={{
             width: '80px',
             height: '80px',
-            background: '#10b981',
+            background: 'var(--mr-green)',
             borderRadius: '50%',
             display: 'flex',
             alignItems: 'center',
@@ -230,7 +230,7 @@ function SignupContent() {
           <h1 style={{
             fontSize: '1.5rem',
             fontWeight: 'bold',
-            color: '#111827',
+            color: 'var(--mr-text-primary)',
             marginBottom: '1rem'
           }}>
             {t.success}
@@ -241,8 +241,8 @@ function SignupContent() {
               display: 'inline-block',
               marginTop: '1rem',
               padding: '0.75rem 1.5rem',
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              color: 'white',
+              background: 'var(--mr-gradient)',
+              color: 'var(--mr-text-inverse)',
               textDecoration: 'none',
               borderRadius: '0.5rem',
               fontWeight: '600'
@@ -258,7 +258,7 @@ function SignupContent() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      background: 'var(--mr-gradient)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -294,7 +294,7 @@ function SignupContent() {
 
       {/* Signup Card */}
       <div style={{
-        background: 'white',
+        background: 'var(--mr-bg-card)',
         borderRadius: '1.5rem',
         padding: 'clamp(1.5rem, 5vw, 2.5rem)',
         width: '100%',
@@ -308,7 +308,7 @@ function SignupContent() {
             display: 'inline-flex',
             alignItems: 'center',
             gap: '0.5rem',
-            color: '#6b7280',
+            color: 'var(--mr-text-secondary)',
             textDecoration: 'none',
             fontSize: '0.875rem',
             marginBottom: '1.5rem'
@@ -323,7 +323,7 @@ function SignupContent() {
           <div style={{
             width: '64px',
             height: '64px',
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            background: 'var(--mr-gradient)',
             borderRadius: '1rem',
             display: 'flex',
             alignItems: 'center',
@@ -335,12 +335,12 @@ function SignupContent() {
           <h1 style={{
             fontSize: '1.75rem',
             fontWeight: 'bold',
-            color: '#111827',
+            color: 'var(--mr-text-primary)',
             marginBottom: '0.5rem'
           }}>
             {t.title}
           </h1>
-          <p style={{ color: '#6b7280', fontSize: '0.95rem' }}>
+          <p style={{ color: 'var(--mr-text-secondary)', fontSize: '0.95rem' }}>
             {t.subtitle}
           </p>
         </div>
@@ -361,7 +361,7 @@ function SignupContent() {
                 alignItems: 'center',
                 gap: '0.25rem',
                 fontSize: '0.75rem',
-                color: '#10b981',
+                color: 'var(--mr-green)',
                 fontWeight: '500'
               }}
             >
@@ -384,9 +384,9 @@ function SignupContent() {
           margin: '1.5rem 0',
           gap: '1rem'
         }}>
-          <div style={{ flex: 1, height: '1px', background: '#e5e7eb' }} />
-          <span style={{ color: '#9ca3af', fontSize: '0.875rem' }}>{t.or}</span>
-          <div style={{ flex: 1, height: '1px', background: '#e5e7eb' }} />
+          <div style={{ flex: 1, height: '1px', background: 'var(--mr-border)' }} />
+          <span style={{ color: 'var(--mr-text-tertiary)', fontSize: '0.875rem' }}>{t.or}</span>
+          <div style={{ flex: 1, height: '1px', background: 'var(--mr-border)' }} />
         </div>
 
         {/* Email/Password Form */}
@@ -394,9 +394,9 @@ function SignupContent() {
           {/* Error Message */}
           {error && (
             <div style={{
-              background: '#fef2f2',
+              background: 'var(--mr-red-bg)',
               border: '1px solid #fecaca',
-              color: '#dc2626',
+              color: 'var(--mr-red)',
               padding: '0.75rem 1rem',
               borderRadius: '0.5rem',
               marginBottom: '1rem',
@@ -414,7 +414,7 @@ function SignupContent() {
                 display: 'block',
                 fontSize: '0.875rem',
                 fontWeight: '500',
-                color: '#374151',
+                color: 'var(--mr-text-primary)',
                 marginBottom: '0.5rem'
               }}
             >
@@ -428,7 +428,7 @@ function SignupContent() {
                   left: '0.875rem',
                   top: '50%',
                   transform: 'translateY(-50%)',
-                  color: '#9ca3af'
+                  color: 'var(--mr-text-tertiary)'
                 }}
               />
               <input
@@ -440,7 +440,7 @@ function SignupContent() {
                 style={{
                   width: '100%',
                   padding: '0.75rem 0.875rem 0.75rem 2.75rem',
-                  border: '1px solid #d1d5db',
+                  border: '1px solid var(--mr-border-strong)',
                   borderRadius: '0.5rem',
                   fontSize: '1rem',
                   outline: 'none',
@@ -458,7 +458,7 @@ function SignupContent() {
                 display: 'block',
                 fontSize: '0.875rem',
                 fontWeight: '500',
-                color: '#374151',
+                color: 'var(--mr-text-primary)',
                 marginBottom: '0.5rem'
               }}
             >
@@ -472,7 +472,7 @@ function SignupContent() {
                   left: '0.875rem',
                   top: '50%',
                   transform: 'translateY(-50%)',
-                  color: '#9ca3af'
+                  color: 'var(--mr-text-tertiary)'
                 }}
               />
               <input
@@ -484,7 +484,7 @@ function SignupContent() {
                 style={{
                   width: '100%',
                   padding: '0.75rem 0.875rem 0.75rem 2.75rem',
-                  border: '1px solid #d1d5db',
+                  border: '1px solid var(--mr-border-strong)',
                   borderRadius: '0.5rem',
                   fontSize: '1rem',
                   outline: 'none',
@@ -502,7 +502,7 @@ function SignupContent() {
                 display: 'block',
                 fontSize: '0.875rem',
                 fontWeight: '500',
-                color: '#374151',
+                color: 'var(--mr-text-primary)',
                 marginBottom: '0.5rem'
               }}
             >
@@ -516,7 +516,7 @@ function SignupContent() {
                   left: '0.875rem',
                   top: '50%',
                   transform: 'translateY(-50%)',
-                  color: '#9ca3af'
+                  color: 'var(--mr-text-tertiary)'
                 }}
               />
               <input
@@ -528,7 +528,7 @@ function SignupContent() {
                 style={{
                   width: '100%',
                   padding: '0.75rem 2.75rem 0.75rem 2.75rem',
-                  border: '1px solid #d1d5db',
+                  border: '1px solid var(--mr-border-strong)',
                   borderRadius: '0.5rem',
                   fontSize: '1rem',
                   outline: 'none',
@@ -546,7 +546,7 @@ function SignupContent() {
                   background: 'none',
                   border: 'none',
                   cursor: 'pointer',
-                  color: '#9ca3af',
+                  color: 'var(--mr-text-tertiary)',
                   padding: 0
                 }}
               >
@@ -563,7 +563,7 @@ function SignupContent() {
                 display: 'block',
                 fontSize: '0.875rem',
                 fontWeight: '500',
-                color: '#374151',
+                color: 'var(--mr-text-primary)',
                 marginBottom: '0.5rem'
               }}
             >
@@ -577,7 +577,7 @@ function SignupContent() {
                   left: '0.875rem',
                   top: '50%',
                   transform: 'translateY(-50%)',
-                  color: '#9ca3af'
+                  color: 'var(--mr-text-tertiary)'
                 }}
               />
               <input
@@ -589,7 +589,7 @@ function SignupContent() {
                 style={{
                   width: '100%',
                   padding: '0.75rem 0.875rem 0.75rem 2.75rem',
-                  border: '1px solid #d1d5db',
+                  border: '1px solid var(--mr-border-strong)',
                   borderRadius: '0.5rem',
                   fontSize: '1rem',
                   outline: 'none',
@@ -608,7 +608,7 @@ function SignupContent() {
                 gap: '0.75rem',
                 cursor: 'pointer',
                 fontSize: '0.875rem',
-                color: '#374151',
+                color: 'var(--mr-text-primary)',
                 lineHeight: '1.4'
               }}
             >
@@ -620,7 +620,7 @@ function SignupContent() {
                   width: '18px',
                   height: '18px',
                   marginTop: '2px',
-                  accentColor: '#667eea',
+                  accentColor: 'var(--mr-primary)',
                   cursor: 'pointer',
                   flexShrink: 0
                 }}
@@ -630,7 +630,7 @@ function SignupContent() {
                 <Link
                   href="/terms"
                   target="_blank"
-                  style={{ color: '#667eea', textDecoration: 'underline' }}
+                  style={{ color: 'var(--mr-primary)', textDecoration: 'underline' }}
                   onClick={(e) => e.stopPropagation()}
                 >
                   {t.termsLink}
@@ -639,7 +639,7 @@ function SignupContent() {
                 <Link
                   href="/privacy"
                   target="_blank"
-                  style={{ color: '#667eea', textDecoration: 'underline' }}
+                  style={{ color: 'var(--mr-primary)', textDecoration: 'underline' }}
                   onClick={(e) => e.stopPropagation()}
                 >
                   {t.privacyLink}
@@ -656,9 +656,9 @@ function SignupContent() {
               width: '100%',
               padding: '0.875rem',
               background: loading || !termsAccepted
-                ? '#9ca3af'
-                : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              color: 'white',
+                ? 'var(--mr-text-tertiary)'
+                : 'var(--mr-gradient)',
+              color: 'var(--mr-text-inverse)',
               border: 'none',
               borderRadius: '0.5rem',
               fontSize: '1rem',
@@ -675,14 +675,14 @@ function SignupContent() {
         <p style={{
           textAlign: 'center',
           marginTop: '1.5rem',
-          color: '#6b7280',
+          color: 'var(--mr-text-secondary)',
           fontSize: '0.95rem'
         }}>
           {t.hasAccount}{' '}
           <Link
             href={`/auth/login?lang=${lang}`}
             style={{
-              color: '#667eea',
+              color: 'var(--mr-primary)',
               fontWeight: '600',
               textDecoration: 'none'
             }}
@@ -704,12 +704,12 @@ export default function SignupPage() {
     <Suspense fallback={
       <div style={{
         minHeight: '100vh',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        background: 'var(--mr-gradient)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center'
       }}>
-        <div style={{ color: 'white', fontSize: '1.25rem' }}>Loading...</div>
+        <div style={{ color: 'var(--mr-text-inverse)', fontSize: '1.25rem' }}>Loading...</div>
       </div>
     }>
       <SignupContent />

@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import { AuthProvider } from '@/components/auth'
+import './globals.css'
 
 // =============================================================================
 // SEO METADATA - MasteringReady
@@ -266,8 +267,11 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="es">
+    <html lang="es" suppressHydrationWarning>
       <head>
+        {/* Theme initialization — runs before paint to prevent flash */}
+        <script dangerouslySetInnerHTML={{ __html: `(function(){var s=localStorage.getItem('mr-theme');var q=window.matchMedia('(prefers-color-scheme:dark)').matches;var t=s==='dark'?'dark':s==='light'?'light':q?'dark':'light';document.documentElement.setAttribute('data-theme',t)})()` }} />
+
         {/* Prevent Safari text inflation on iOS accessibility text scaling */}
         <style dangerouslySetInnerHTML={{ __html: `
           html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
