@@ -5325,9 +5325,9 @@ by Matías Carvajal
           padding-bottom: 0;
         }
 
-        /* Bridge Statement — bottom compensates for features padding-top (1.75rem) */
+        /* Bridge Statement — tighter spacing, feels like hero closure */
         .bridge-section {
-          padding: 3.25rem 1.5rem 1.5rem 1.5rem;
+          padding: 1.75rem 1.5rem 0.5rem 1.5rem;
         }
         .bridge-text {
           font-size: 1.25rem;
@@ -5340,7 +5340,7 @@ by Matías Carvajal
 
         /* Features Section */
         .features-section {
-          padding: 1.75rem 1.5rem;
+          padding: 1rem 1.5rem;
         }
 
         .features-title-container {
@@ -5434,9 +5434,9 @@ by Matías Carvajal
              - Reaseguro: pegado al CTA
           */
           
-          /* Bridge Statement — bottom compensates for features padding-top (1.125rem) */
+          /* Bridge Statement — tighter spacing, feels like hero closure */
           .bridge-section {
-            padding: 2.5rem 1.5rem 1.375rem 1.5rem;
+            padding: 1.25rem 1.5rem 0.25rem 1.5rem;
           }
           .bridge-text {
             font-size: 1.065rem;
@@ -5445,7 +5445,7 @@ by Matías Carvajal
 
           /* Features Section */
           .features-section {
-            padding: 1.125rem 1.5rem 2rem 1.5rem;
+            padding: 0.625rem 1.5rem 2rem 1.5rem;
           }
 
           .features-title-container {
