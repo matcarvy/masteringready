@@ -618,32 +618,33 @@ function AdminLoginForm({ lang }: { lang: 'es' | 'en' }) {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      background: '#f3f4f6',
+      background: 'var(--mr-bg-elevated)',
       fontFamily: 'Inter, system-ui, sans-serif',
       padding: '1rem'
     }}>
       <div style={{
-        background: 'white',
+        background: 'var(--mr-bg-card)',
         borderRadius: '1rem',
         padding: '2.5rem',
-        boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
+        boxShadow: 'var(--mr-shadow)',
+        border: 'var(--mr-card-border)',
         maxWidth: '380px',
         width: '100%'
       }}>
         <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
-          <Shield size={40} style={{ color: '#667eea', marginBottom: '0.75rem' }} />
-          <h1 style={{ fontSize: '1.25rem', fontWeight: '700', color: '#111827', marginBottom: '0.25rem' }}>
+          <Shield size={40} style={{ color: 'var(--mr-primary)', marginBottom: '0.75rem' }} />
+          <h1 style={{ fontSize: '1.25rem', fontWeight: '700', color: 'var(--mr-text-primary)', marginBottom: '0.25rem' }}>
             {t.title}
           </h1>
-          <p style={{ color: '#9ca3af', fontSize: '0.85rem' }}>{t.subtitle}</p>
+          <p style={{ color: 'var(--mr-text-tertiary)', fontSize: '0.85rem' }}>{t.subtitle}</p>
         </div>
 
         <form onSubmit={handleSubmit}>
           {error && (
             <div style={{
-              background: '#fef2f2',
-              border: '1px solid #fecaca',
-              color: '#dc2626',
+              background: 'var(--mr-red-bg)',
+              border: '1px solid var(--mr-red)',
+              color: 'var(--mr-red-text)',
               padding: '0.5rem 0.75rem',
               borderRadius: '0.5rem',
               marginBottom: '0.75rem',
@@ -654,7 +655,7 @@ function AdminLoginForm({ lang }: { lang: 'es' | 'en' }) {
           )}
 
           <div style={{ marginBottom: '0.75rem', position: 'relative' }}>
-            <Mail size={16} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }} />
+            <Mail size={16} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--mr-text-tertiary)' }} />
             <input
               type="email"
               value={email}
@@ -664,17 +665,19 @@ function AdminLoginForm({ lang }: { lang: 'es' | 'en' }) {
               style={{
                 width: '100%',
                 padding: '0.625rem 0.75rem 0.625rem 2.5rem',
-                border: '1px solid #d1d5db',
+                border: '1px solid var(--mr-border-strong)',
                 borderRadius: '0.5rem',
                 fontSize: '0.875rem',
                 outline: 'none',
-                boxSizing: 'border-box'
+                boxSizing: 'border-box',
+                background: 'var(--mr-bg-input)',
+                color: 'var(--mr-text-primary)'
               }}
             />
           </div>
 
           <div style={{ marginBottom: '1rem', position: 'relative' }}>
-            <Lock size={16} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }} />
+            <Lock size={16} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--mr-text-tertiary)' }} />
             <input
               type={showPw ? 'text' : 'password'}
               value={password}
@@ -684,11 +687,13 @@ function AdminLoginForm({ lang }: { lang: 'es' | 'en' }) {
               style={{
                 width: '100%',
                 padding: '0.625rem 2.5rem 0.625rem 2.5rem',
-                border: '1px solid #d1d5db',
+                border: '1px solid var(--mr-border-strong)',
                 borderRadius: '0.5rem',
                 fontSize: '0.875rem',
                 outline: 'none',
-                boxSizing: 'border-box'
+                boxSizing: 'border-box',
+                background: 'var(--mr-bg-input)',
+                color: 'var(--mr-text-primary)'
               }}
             />
             <button
@@ -696,7 +701,7 @@ function AdminLoginForm({ lang }: { lang: 'es' | 'en' }) {
               onClick={() => setShowPw(!showPw)}
               style={{
                 position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)',
-                background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', padding: 0
+                background: 'none', border: 'none', cursor: 'pointer', color: 'var(--mr-text-tertiary)', padding: 0
               }}
             >
               {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -709,7 +714,7 @@ function AdminLoginForm({ lang }: { lang: 'es' | 'en' }) {
             style={{
               width: '100%',
               padding: '0.75rem',
-              background: loading ? '#9ca3af' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              background: loading ? 'var(--mr-text-tertiary)' : 'var(--mr-gradient)',
               color: 'white',
               border: 'none',
               borderRadius: '0.5rem',
@@ -1148,12 +1153,12 @@ export default function AdminPage() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: '#f3f4f6',
+        background: 'var(--mr-bg-elevated)',
         fontFamily: 'Inter, system-ui, sans-serif'
       }}>
         <div style={{ textAlign: 'center' }}>
-          <Shield size={48} style={{ color: '#667eea', marginBottom: '1rem' }} />
-          <p style={{ color: '#6b7280', fontSize: '1rem' }}>{t.loading}</p>
+          <Shield size={48} style={{ color: 'var(--mr-primary)', marginBottom: '1rem' }} />
+          <p style={{ color: 'var(--mr-text-secondary)', fontSize: '1rem' }}>{t.loading}</p>
         </div>
       </div>
     )
@@ -1172,24 +1177,25 @@ export default function AdminPage() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: '#f3f4f6',
+        background: 'var(--mr-bg-elevated)',
         fontFamily: 'Inter, system-ui, sans-serif'
       }}>
         <div style={{
           textAlign: 'center',
-          background: 'white',
+          background: 'var(--mr-bg-card)',
           borderRadius: '1rem',
           padding: '3rem',
-          boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
+          boxShadow: 'var(--mr-shadow)',
+          border: 'var(--mr-card-border)',
           maxWidth: '400px'
         }}>
-          <AlertCircle size={48} style={{ color: '#ef4444', marginBottom: '1rem' }} />
-          <h1 style={{ fontSize: '1.5rem', fontWeight: '700', color: '#111827', marginBottom: '0.5rem' }}>
+          <AlertCircle size={48} style={{ color: 'var(--mr-red)', marginBottom: '1rem' }} />
+          <h1 style={{ fontSize: '1.5rem', fontWeight: '700', color: 'var(--mr-text-primary)', marginBottom: '0.5rem' }}>
             {t.accessDenied}
           </h1>
-          <p style={{ color: '#6b7280', marginBottom: '1.5rem' }}>{t.accessDeniedMsg}</p>
+          <p style={{ color: 'var(--mr-text-secondary)', marginBottom: '1.5rem' }}>{t.accessDeniedMsg}</p>
           <Link href="/" style={{
-            color: '#667eea',
+            color: 'var(--mr-primary)',
             textDecoration: 'none',
             fontWeight: '500',
             display: 'inline-flex',
@@ -1221,8 +1227,8 @@ export default function AdminPage() {
   const renderOverview = () => {
     const kpi = statsData?.kpi
     const kpiCards = [
-      { label: t.kpi.totalUsers, value: kpi?.totalUsers ?? '-', icon: Users, color: '#667eea' },
-      { label: t.kpi.totalAnalyses, value: kpi?.totalAnalyses ?? '-', icon: FileAudio, color: '#764ba2' },
+      { label: t.kpi.totalUsers, value: kpi?.totalUsers ?? '-', icon: Users, color: 'var(--mr-primary)' },
+      { label: t.kpi.totalAnalyses, value: kpi?.totalAnalyses ?? '-', icon: FileAudio, color: 'var(--mr-primary-dark)' },
       { label: t.kpi.activeProSubs, value: kpi?.activeProSubscriptions ?? '-', icon: Crown, color: '#f59e0b' },
       { label: t.kpi.revenueThisMonth, value: kpi ? formatCurrency(kpi.revenueThisMonth) : '-', icon: DollarSign, color: '#10b981' },
       { label: t.kpi.analysesToday, value: kpi?.analysesToday ?? '-', icon: Activity, color: '#3b82f6' },
@@ -1241,11 +1247,11 @@ export default function AdminPage() {
               alignItems: 'center',
               gap: '0.5rem',
               padding: '0.5rem 1rem',
-              background: 'white',
-              border: '1px solid #e5e7eb',
+              background: 'var(--mr-bg-card)',
+              border: '1px solid var(--mr-border)',
               borderRadius: '0.5rem',
               cursor: statsLoading ? 'not-allowed' : 'pointer',
-              color: '#374151',
+              color: 'var(--mr-text-primary)',
               fontSize: '0.875rem',
               fontWeight: '500'
             }}
@@ -1264,10 +1270,11 @@ export default function AdminPage() {
         }}>
           {kpiCards.map((card, i) => (
             <div key={i} style={{
-              background: 'white',
+              background: 'var(--mr-bg-card)',
               borderRadius: '1rem',
               padding: '1.5rem',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+              boxShadow: 'var(--mr-shadow)',
+              border: 'var(--mr-card-border)'
             }}>
               <div style={{
                 display: 'flex',
@@ -1276,17 +1283,17 @@ export default function AdminPage() {
                 marginBottom: '0.75rem'
               }}>
                 <card.icon size={20} style={{ color: card.color }} />
-                <span style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: '500' }}>
+                <span style={{ fontSize: '0.8rem', color: 'var(--mr-text-secondary)', fontWeight: '500' }}>
                   {card.label}
                 </span>
               </div>
               <p style={{
                 fontSize: isMobile ? '1.25rem' : '1.75rem',
                 fontWeight: '700',
-                color: '#111827',
+                color: 'var(--mr-text-primary)',
                 margin: 0,
                 ...(statsLoading && !statsData && {
-                  background: 'linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%)',
+                  background: 'linear-gradient(90deg, var(--mr-bg-hover) 25%, var(--mr-bg-elevated) 50%, var(--mr-bg-hover) 75%)',
                   backgroundSize: '200% 100%',
                   animation: 'shimmer 1.5s ease-in-out infinite',
                   borderRadius: '0.25rem',
@@ -1311,39 +1318,39 @@ export default function AdminPage() {
           }}>
             {/* Performance */}
             <div style={{
-              background: 'white',
+              background: 'var(--mr-bg-card)',
               borderRadius: '1rem',
               padding: '1.5rem',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+              boxShadow: 'var(--mr-shadow)'
             }}>
-              <h3 style={{ fontSize: '1rem', fontWeight: '600', color: '#111827', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <h3 style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--mr-text-primary)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <Clock size={18} style={{ color: '#3b82f6' }} />
                 {t.analytics.performanceTitle}
               </h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 <div>
-                  <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>{t.analytics.avgProcessingTime}</span>
-                  <p style={{ fontSize: '1.5rem', fontWeight: '700', color: '#111827', margin: '0.125rem 0 0' }}>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--mr-text-secondary)' }}>{t.analytics.avgProcessingTime}</span>
+                  <p style={{ fontSize: '1.5rem', fontWeight: '700', color: 'var(--mr-text-primary)', margin: '0.125rem 0 0' }}>
                     {statsData.performance?.avgProcessingTime ?? '-'}
-                    <span style={{ fontSize: '0.875rem', fontWeight: '400', color: '#6b7280' }}> {t.analytics.seconds}</span>
+                    <span style={{ fontSize: '0.875rem', fontWeight: '400', color: 'var(--mr-text-secondary)' }}> {t.analytics.seconds}</span>
                   </p>
                 </div>
                 <div style={{ display: 'flex', gap: '1.5rem' }}>
                   <div>
-                    <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>{t.analytics.fastestAnalysis}</span>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--mr-text-secondary)' }}>{t.analytics.fastestAnalysis}</span>
                     <p style={{ fontSize: '1.125rem', fontWeight: '600', color: '#10b981', margin: '0.125rem 0 0' }}>
                       {statsData.performance?.fastestAnalysis ?? '-'}s
                     </p>
                   </div>
                   <div>
-                    <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>{t.analytics.longestAnalysis}</span>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--mr-text-secondary)' }}>{t.analytics.longestAnalysis}</span>
                     <p style={{ fontSize: '1.125rem', fontWeight: '600', color: '#f59e0b', margin: '0.125rem 0 0' }}>
                       {statsData.performance?.longestAnalysis ?? '-'}s
                     </p>
                   </div>
                 </div>
                 <div>
-                  <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>{t.analytics.chunkedPct}</span>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--mr-text-secondary)' }}>{t.analytics.chunkedPct}</span>
                   <p style={{ fontSize: '1.125rem', fontWeight: '600', color: '#8b5cf6', margin: '0.125rem 0 0' }}>
                     {statsData.performance?.chunkedPct ?? 0}%
                   </p>
@@ -1353,27 +1360,27 @@ export default function AdminPage() {
 
             {/* Files */}
             <div style={{
-              background: 'white',
+              background: 'var(--mr-bg-card)',
               borderRadius: '1rem',
               padding: '1.5rem',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+              boxShadow: 'var(--mr-shadow)'
             }}>
-              <h3 style={{ fontSize: '1rem', fontWeight: '600', color: '#111827', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <FileAudio size={18} style={{ color: '#764ba2' }} />
+              <h3 style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--mr-text-primary)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <FileAudio size={18} style={{ color: 'var(--mr-primary-dark)' }} />
                 {t.analytics.filesTitle}
               </h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 <div>
-                  <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>{t.analytics.avgDuration}</span>
-                  <p style={{ fontSize: '1.5rem', fontWeight: '700', color: '#111827', margin: '0.125rem 0 0' }}>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--mr-text-secondary)' }}>{t.analytics.avgDuration}</span>
+                  <p style={{ fontSize: '1.5rem', fontWeight: '700', color: 'var(--mr-text-primary)', margin: '0.125rem 0 0' }}>
                     {statsData.fileStats?.avgDuration ? formatDurationMmSs(statsData.fileStats.avgDuration) : '-'}
                   </p>
                 </div>
                 <div>
-                  <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>{t.analytics.avgFileSize}</span>
-                  <p style={{ fontSize: '1.5rem', fontWeight: '700', color: '#111827', margin: '0.125rem 0 0' }}>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--mr-text-secondary)' }}>{t.analytics.avgFileSize}</span>
+                  <p style={{ fontSize: '1.5rem', fontWeight: '700', color: 'var(--mr-text-primary)', margin: '0.125rem 0 0' }}>
                     {statsData.fileStats?.avgFileSize ?? '-'}
-                    <span style={{ fontSize: '0.875rem', fontWeight: '400', color: '#6b7280' }}> MB</span>
+                    <span style={{ fontSize: '0.875rem', fontWeight: '400', color: 'var(--mr-text-secondary)' }}> MB</span>
                   </p>
                 </div>
               </div>
@@ -1381,35 +1388,35 @@ export default function AdminPage() {
 
             {/* Engagement */}
             <div style={{
-              background: 'white',
+              background: 'var(--mr-bg-card)',
               borderRadius: '1rem',
               padding: '1.5rem',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+              boxShadow: 'var(--mr-shadow)'
             }}>
-              <h3 style={{ fontSize: '1rem', fontWeight: '600', color: '#111827', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <h3 style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--mr-text-primary)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <Activity size={18} style={{ color: '#10b981' }} />
                 {t.analytics.engagementTitle}
               </h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 <div style={{ display: 'flex', gap: '1.5rem' }}>
                   <div>
-                    <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>{t.analytics.activeUsers7d}</span>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--mr-text-secondary)' }}>{t.analytics.activeUsers7d}</span>
                     <p style={{ fontSize: '1.5rem', fontWeight: '700', color: '#10b981', margin: '0.125rem 0 0' }}>
                       {statsData.engagement?.activeUsers7d ?? '-'}
                     </p>
                   </div>
                   <div>
-                    <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>{t.analytics.activeUsers30d}</span>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--mr-text-secondary)' }}>{t.analytics.activeUsers30d}</span>
                     <p style={{ fontSize: '1.5rem', fontWeight: '700', color: '#3b82f6', margin: '0.125rem 0 0' }}>
                       {statsData.engagement?.activeUsers30d ?? '-'}
                     </p>
                   </div>
                 </div>
                 <div>
-                  <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>{t.analytics.usersWithMultiple}</span>
-                  <p style={{ fontSize: '1.25rem', fontWeight: '700', color: '#111827', margin: '0.125rem 0 0' }}>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--mr-text-secondary)' }}>{t.analytics.usersWithMultiple}</span>
+                  <p style={{ fontSize: '1.25rem', fontWeight: '700', color: 'var(--mr-text-primary)', margin: '0.125rem 0 0' }}>
                     {statsData.engagement?.usersWithMultiple ?? '-'}
-                    <span style={{ fontSize: '0.875rem', fontWeight: '400', color: '#6b7280' }}>
+                    <span style={{ fontSize: '0.875rem', fontWeight: '400', color: 'var(--mr-text-secondary)' }}>
                       {' '}({statsData.engagement?.usersWithMultiplePct ?? 0}%)
                     </span>
                   </p>
@@ -1422,15 +1429,15 @@ export default function AdminPage() {
         {/* Anonymous Funnel */}
         {statsData?.anonymousFunnel && statsData.anonymousFunnel.totalAnonymous > 0 && (
           <div style={{
-            background: 'white',
+            background: 'var(--mr-bg-card)',
             borderRadius: '1rem',
             padding: '1.5rem',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+            boxShadow: 'var(--mr-shadow)',
             marginBottom: '2rem'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
               <Eye size={18} style={{ color: '#8b5cf6' }} />
-              <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: '600', color: '#111827' }}>
+              <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: '600', color: 'var(--mr-text-primary)' }}>
                 {lang === 'es' ? 'Embudo de conversión' : 'Conversion Funnel'}
               </h3>
             </div>
@@ -1443,19 +1450,19 @@ export default function AdminPage() {
                 <p style={{ fontSize: '1.75rem', fontWeight: '700', color: '#8b5cf6', margin: '0 0 0.25rem' }}>
                   {statsData.anonymousFunnel.totalAnonymous}
                 </p>
-                <p style={{ fontSize: '0.8rem', color: '#6b7280', margin: 0 }}>{t.kpi.anonAnalyses}</p>
+                <p style={{ fontSize: '0.8rem', color: 'var(--mr-text-secondary)', margin: 0 }}>{t.kpi.anonAnalyses}</p>
               </div>
               <div style={{ textAlign: 'center' }}>
                 <p style={{ fontSize: '1.75rem', fontWeight: '700', color: '#10b981', margin: '0 0 0.25rem' }}>
                   {statsData.anonymousFunnel.converted}
                 </p>
-                <p style={{ fontSize: '0.8rem', color: '#6b7280', margin: 0 }}>{t.kpi.anonConverted}</p>
+                <p style={{ fontSize: '0.8rem', color: 'var(--mr-text-secondary)', margin: 0 }}>{t.kpi.anonConverted}</p>
               </div>
               <div style={{ textAlign: 'center' }}>
                 <p style={{ fontSize: '1.75rem', fontWeight: '700', color: '#f59e0b', margin: '0 0 0.25rem' }}>
                   {statsData.anonymousFunnel.conversionRate}%
                 </p>
-                <p style={{ fontSize: '0.8rem', color: '#6b7280', margin: 0 }}>{t.kpi.anonConversionRate}</p>
+                <p style={{ fontSize: '0.8rem', color: 'var(--mr-text-secondary)', margin: 0 }}>{t.kpi.anonConversionRate}</p>
               </div>
             </div>
 
@@ -1465,8 +1472,8 @@ export default function AdminPage() {
                 {statsData.anonymousFunnel.deviceBreakdown.map(d => (
                   <span key={d.device} style={{
                     padding: '0.25rem 0.75rem', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: '500',
-                    background: d.device === 'mobile' ? '#ede9fe' : d.device === 'tablet' ? '#fef3c7' : '#e0f2fe',
-                    color: d.device === 'mobile' ? '#6d28d9' : d.device === 'tablet' ? '#92400e' : '#0369a1'
+                    background: d.device === 'mobile' ? 'var(--mr-purple-bg)' : d.device === 'tablet' ? 'var(--mr-amber-bg)' : 'var(--mr-blue-bg)',
+                    color: d.device === 'mobile' ? 'var(--mr-purple-text)' : d.device === 'tablet' ? 'var(--mr-amber-text)' : 'var(--mr-blue-text)'
                   }}>
                     {d.device === 'mobile' ? '📱' : d.device === 'tablet' ? '📋' : '🖥️'} {d.device}: {d.count}
                   </span>
@@ -1476,39 +1483,39 @@ export default function AdminPage() {
 
             {/* Recent anonymous analyses table */}
             {statsData.anonymousFunnel.recentRecords && statsData.anonymousFunnel.recentRecords.length > 0 && (
-              <div style={{ marginTop: '1.25rem', borderTop: '1px solid #e5e7eb', paddingTop: '1.25rem' }}>
-                <h4 style={{ margin: '0 0 0.75rem', fontSize: '0.875rem', fontWeight: '600', color: '#374151' }}>
+              <div style={{ marginTop: '1.25rem', borderTop: '1px solid var(--mr-border)', paddingTop: '1.25rem' }}>
+                <h4 style={{ margin: '0 0 0.75rem', fontSize: '0.875rem', fontWeight: '600', color: 'var(--mr-text-primary)' }}>
                   {lang === 'es' ? 'Análisis recientes' : 'Recent analyses'}
                 </h4>
                 <div style={{ overflowX: 'auto' }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
                     <thead>
-                      <tr style={{ borderBottom: '1px solid #e5e7eb' }}>
-                        <th style={{ textAlign: 'left', padding: '0.5rem 0.75rem', color: '#6b7280', fontWeight: '500' }}>
+                      <tr style={{ borderBottom: '1px solid var(--mr-border)' }}>
+                        <th style={{ textAlign: 'left', padding: '0.5rem 0.75rem', color: 'var(--mr-text-secondary)', fontWeight: '500' }}>
                           {lang === 'es' ? 'Archivo' : 'File'}
                         </th>
-                        <th style={{ textAlign: 'center', padding: '0.5rem 0.75rem', color: '#6b7280', fontWeight: '500' }}>Score</th>
-                        <th style={{ textAlign: 'center', padding: '0.5rem 0.75rem', color: '#6b7280', fontWeight: '500' }}>
+                        <th style={{ textAlign: 'center', padding: '0.5rem 0.75rem', color: 'var(--mr-text-secondary)', fontWeight: '500' }}>Score</th>
+                        <th style={{ textAlign: 'center', padding: '0.5rem 0.75rem', color: 'var(--mr-text-secondary)', fontWeight: '500' }}>
                           {lang === 'es' ? 'Formato' : 'Format'}
                         </th>
-                        <th style={{ textAlign: 'center', padding: '0.5rem 0.75rem', color: '#6b7280', fontWeight: '500' }}>
+                        <th style={{ textAlign: 'center', padding: '0.5rem 0.75rem', color: 'var(--mr-text-secondary)', fontWeight: '500' }}>
                           {lang === 'es' ? 'País' : 'Country'}
                         </th>
-                        <th style={{ textAlign: 'center', padding: '0.5rem 0.75rem', color: '#6b7280', fontWeight: '500' }}>
+                        <th style={{ textAlign: 'center', padding: '0.5rem 0.75rem', color: 'var(--mr-text-secondary)', fontWeight: '500' }}>
                           {lang === 'es' ? 'Dispositivo' : 'Device'}
                         </th>
-                        <th style={{ textAlign: 'center', padding: '0.5rem 0.75rem', color: '#6b7280', fontWeight: '500' }}>
+                        <th style={{ textAlign: 'center', padding: '0.5rem 0.75rem', color: 'var(--mr-text-secondary)', fontWeight: '500' }}>
                           {lang === 'es' ? 'Convirtió' : 'Converted'}
                         </th>
-                        <th style={{ textAlign: 'right', padding: '0.5rem 0.75rem', color: '#6b7280', fontWeight: '500' }}>
+                        <th style={{ textAlign: 'right', padding: '0.5rem 0.75rem', color: 'var(--mr-text-secondary)', fontWeight: '500' }}>
                           {lang === 'es' ? 'Fecha' : 'Date'}
                         </th>
                       </tr>
                     </thead>
                     <tbody>
                       {statsData.anonymousFunnel.recentRecords.map((record) => (
-                        <tr key={record.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                          <td style={{ padding: '0.5rem 0.75rem', color: '#111827', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <tr key={record.id} style={{ borderBottom: '1px solid var(--mr-border)' }}>
+                          <td style={{ padding: '0.5rem 0.75rem', color: 'var(--mr-text-primary)', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {record.filename || '—'}
                           </td>
                           <td style={{ textAlign: 'center', padding: '0.5rem 0.75rem' }}>
@@ -1521,13 +1528,13 @@ export default function AdminPage() {
                               </span>
                             ) : '—'}
                           </td>
-                          <td style={{ textAlign: 'center', padding: '0.5rem 0.75rem', color: '#6b7280' }}>
+                          <td style={{ textAlign: 'center', padding: '0.5rem 0.75rem', color: 'var(--mr-text-secondary)' }}>
                             {record.format || '—'}
                           </td>
-                          <td style={{ textAlign: 'center', padding: '0.5rem 0.75rem', color: '#6b7280' }}>
+                          <td style={{ textAlign: 'center', padding: '0.5rem 0.75rem', color: 'var(--mr-text-secondary)' }}>
                             {record.client_country || '—'}
                           </td>
-                          <td style={{ textAlign: 'center', padding: '0.5rem 0.75rem', color: '#6b7280', fontSize: '0.75rem' }}>
+                          <td style={{ textAlign: 'center', padding: '0.5rem 0.75rem', color: 'var(--mr-text-secondary)', fontSize: '0.75rem' }}>
                             {record.device_type === 'mobile' ? '📱' : record.device_type === 'tablet' ? '📋' : record.device_type === 'desktop' ? '🖥️' : '—'}
                           </td>
                           <td style={{ textAlign: 'center', padding: '0.5rem 0.75rem' }}>
@@ -1537,15 +1544,15 @@ export default function AdminPage() {
                               borderRadius: '9999px',
                               fontSize: '0.7rem',
                               fontWeight: '500',
-                              background: record.converted_to_user ? '#d1fae5' : '#fef3c7',
-                              color: record.converted_to_user ? '#065f46' : '#92400e'
+                              background: record.converted_to_user ? 'var(--mr-green-bg)' : 'var(--mr-amber-bg)',
+                              color: record.converted_to_user ? 'var(--mr-green-text)' : 'var(--mr-amber-text)'
                             }}>
                               {record.converted_to_user
                                 ? (lang === 'es' ? 'Sí' : 'Yes')
                                 : 'No'}
                             </span>
                           </td>
-                          <td style={{ textAlign: 'right', padding: '0.5rem 0.75rem', color: '#6b7280', whiteSpace: 'nowrap' }}>
+                          <td style={{ textAlign: 'right', padding: '0.5rem 0.75rem', color: 'var(--mr-text-secondary)', whiteSpace: 'nowrap' }}>
                             {new Date(record.created_at).toLocaleDateString(lang === 'es' ? 'es-CO' : 'en-US', {
                               month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
                             })}
@@ -1569,12 +1576,12 @@ export default function AdminPage() {
           }}>
             {/* Score Distribution */}
             <div style={{
-              background: 'white',
+              background: 'var(--mr-bg-card)',
               borderRadius: '1rem',
               padding: '1.5rem',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+              boxShadow: 'var(--mr-shadow)'
             }}>
-              <h3 style={{ fontSize: '1rem', fontWeight: '600', color: '#111827', marginBottom: '1rem' }}>
+              <h3 style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--mr-text-primary)', marginBottom: '1rem' }}>
                 {t.analytics.scoreDistribution}
               </h3>
               {renderBarChart(statsData.scoreDistribution.map(s => ({
@@ -1586,12 +1593,12 @@ export default function AdminPage() {
 
             {/* Verdict Distribution */}
             <div style={{
-              background: 'white',
+              background: 'var(--mr-bg-card)',
               borderRadius: '1rem',
               padding: '1.5rem',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+              boxShadow: 'var(--mr-shadow)'
             }}>
-              <h3 style={{ fontSize: '1rem', fontWeight: '600', color: '#111827', marginBottom: '1rem' }}>
+              <h3 style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--mr-text-primary)', marginBottom: '1rem' }}>
                 {t.analytics.verdictDistribution}
               </h3>
               {renderBarChart(statsData.verdictDistribution.map(v => ({
@@ -1628,7 +1635,7 @@ export default function AdminPage() {
               <span style={{
                 width: isMobile ? '60px' : '100px',
                 fontSize: '0.8rem',
-                color: '#374151',
+                color: 'var(--mr-text-primary)',
                 flexShrink: 0,
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
@@ -1640,7 +1647,7 @@ export default function AdminPage() {
                 style={{
                   flex: 1,
                   height: '22px',
-                  background: '#f3f4f6',
+                  background: 'var(--mr-bg-elevated)',
                   borderRadius: '4px',
                   overflow: 'hidden',
                   cursor: 'pointer',
@@ -1670,7 +1677,7 @@ export default function AdminPage() {
                 textAlign: 'right',
                 fontSize: '0.8rem',
                 fontWeight: '600',
-                color: '#111827',
+                color: 'var(--mr-text-primary)',
                 flexShrink: 0
               }}>
                 {item.value}
@@ -1689,7 +1696,7 @@ export default function AdminPage() {
   const renderUsers = () => {
     const sortIcon = (field: string) => (
       <ArrowUpDown size={14} style={{
-        color: userSort.field === field ? '#667eea' : '#9ca3af',
+        color: userSort.field === field ? 'var(--mr-primary)' : 'var(--mr-text-tertiary)',
         cursor: 'pointer'
       }} />
     )
@@ -1698,7 +1705,7 @@ export default function AdminPage() {
       padding: '0.75rem',
       fontSize: '0.75rem',
       fontWeight: '600',
-      color: userSort.field === field ? '#667eea' : '#6b7280',
+      color: userSort.field === field ? 'var(--mr-primary)' : 'var(--mr-text-secondary)',
       textTransform: 'uppercase',
       cursor: 'pointer',
       display: 'flex',
@@ -1714,13 +1721,14 @@ export default function AdminPage() {
           display: 'flex',
           alignItems: 'center',
           gap: '0.75rem',
-          background: 'white',
+          background: 'var(--mr-bg-card)',
           borderRadius: '0.75rem',
           padding: '0.75rem 1rem',
           marginBottom: '1rem',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+          boxShadow: 'var(--mr-shadow)',
+          border: 'var(--mr-card-border)'
         }}>
-          <Search size={18} style={{ color: '#9ca3af' }} />
+          <Search size={18} style={{ color: 'var(--mr-text-tertiary)' }} />
           <input
             type="text"
             value={userSearch}
@@ -1731,8 +1739,9 @@ export default function AdminPage() {
               border: 'none',
               outline: 'none',
               fontSize: '0.9rem',
-              color: '#111827',
-              background: 'transparent'
+              color: 'var(--mr-text-primary)',
+              background: 'transparent',
+              caretColor: 'var(--mr-text-primary)'
             }}
           />
           {userSearch && (
@@ -1742,16 +1751,17 @@ export default function AdminPage() {
               cursor: 'pointer',
               padding: '0.25rem'
             }}>
-              <X size={16} style={{ color: '#9ca3af' }} />
+              <X size={16} style={{ color: 'var(--mr-text-tertiary)' }} />
             </button>
           )}
         </div>
 
         {/* Users Table */}
         <div style={{
-          background: 'white',
+          background: 'var(--mr-bg-card)',
           borderRadius: '1rem',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+          boxShadow: 'var(--mr-shadow)',
+          border: 'var(--mr-card-border)',
           overflow: 'hidden'
         }}>
           {/* Table header */}
@@ -1759,8 +1769,8 @@ export default function AdminPage() {
             <div style={{
               display: 'grid',
               gridTemplateColumns: '2fr 1.5fr 1fr 0.75fr 0.75fr 1fr',
-              borderBottom: '1px solid #e5e7eb',
-              background: '#f9fafb'
+              borderBottom: '1px solid var(--mr-border)',
+              background: 'var(--mr-bg-base)'
             }}>
               <div style={columnHeaderStyle('email')} onClick={() => toggleSort('email')}>
                 {t.users.email} {sortIcon('email')}
@@ -1785,11 +1795,11 @@ export default function AdminPage() {
 
           {/* User rows */}
           {usersLoading ? (
-            <div style={{ padding: '2rem', textAlign: 'center', color: '#6b7280' }}>
+            <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--mr-text-secondary)' }}>
               {t.loading}
             </div>
           ) : users.length === 0 ? (
-            <div style={{ padding: '2rem', textAlign: 'center', color: '#6b7280' }}>
+            <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--mr-text-secondary)' }}>
               {t.users.noUsers}
             </div>
           ) : (
@@ -1807,18 +1817,18 @@ export default function AdminPage() {
                     display: isMobile ? 'block' : 'grid',
                     gridTemplateColumns: isMobile ? undefined : '2fr 1.5fr 1fr 0.75fr 0.75fr 1fr',
                     padding: isMobile ? '1rem' : '0.75rem',
-                    borderBottom: '1px solid #f3f4f6',
+                    borderBottom: '1px solid var(--mr-border)',
                     cursor: 'pointer',
-                    background: expandedUser === u.id ? '#f9fafb' : 'white',
+                    background: expandedUser === u.id ? 'var(--mr-bg-base)' : 'var(--mr-bg-card)',
                     transition: 'background 0.15s'
                   }}
                 >
                   {isMobile ? (
                     <>
-                      <div style={{ fontWeight: '500', color: '#111827', fontSize: '0.9rem', marginBottom: '0.25rem' }}>
+                      <div style={{ fontWeight: '500', color: 'var(--mr-text-primary)', fontSize: '0.9rem', marginBottom: '0.25rem' }}>
                         {u.email}
                       </div>
-                      <div style={{ display: 'flex', gap: '0.75rem', fontSize: '0.8rem', color: '#6b7280' }}>
+                      <div style={{ display: 'flex', gap: '0.75rem', fontSize: '0.8rem', color: 'var(--mr-text-secondary)' }}>
                         <span>{u.subscription?.plan?.type || 'free'}</span>
                         <span>{u.total_analyses} {t.users.totalAnalyses.toLowerCase()}</span>
                         <span>{u.detected_country_code || '-'}</span>
@@ -1826,10 +1836,10 @@ export default function AdminPage() {
                     </>
                   ) : (
                     <>
-                      <div style={{ padding: '0.75rem', fontSize: '0.875rem', color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      <div style={{ padding: '0.75rem', fontSize: '0.875rem', color: 'var(--mr-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {u.email}
                       </div>
-                      <div style={{ padding: '0.75rem', fontSize: '0.875rem', color: '#374151' }}>
+                      <div style={{ padding: '0.75rem', fontSize: '0.875rem', color: 'var(--mr-text-primary)' }}>
                         {u.full_name || '-'}
                       </div>
                       <div style={{ padding: '0.75rem' }}>
@@ -1838,19 +1848,19 @@ export default function AdminPage() {
                           padding: '0.2rem 0.5rem',
                           borderRadius: '9999px',
                           fontWeight: '500',
-                          background: u.subscription?.plan?.type === 'pro' ? '#fef3c7' : '#f3f4f6',
-                          color: u.subscription?.plan?.type === 'pro' ? '#92400e' : '#374151'
+                          background: u.subscription?.plan?.type === 'pro' ? 'var(--mr-amber-bg)' : 'var(--mr-bg-elevated)',
+                          color: u.subscription?.plan?.type === 'pro' ? 'var(--mr-amber-text)' : 'var(--mr-text-primary)'
                         }}>
                           {u.subscription?.plan?.type || 'free'}
                         </span>
                       </div>
-                      <div style={{ padding: '0.75rem', fontSize: '0.875rem', color: '#374151', textAlign: 'center' }}>
+                      <div style={{ padding: '0.75rem', fontSize: '0.875rem', color: 'var(--mr-text-primary)', textAlign: 'center' }}>
                         {u.total_analyses}
                       </div>
-                      <div style={{ padding: '0.75rem', fontSize: '0.875rem', color: '#374151', textAlign: 'center' }}>
+                      <div style={{ padding: '0.75rem', fontSize: '0.875rem', color: 'var(--mr-text-primary)', textAlign: 'center' }}>
                         {u.detected_country_code || '-'}
                       </div>
-                      <div style={{ padding: '0.75rem', fontSize: '0.8rem', color: '#6b7280' }}>
+                      <div style={{ padding: '0.75rem', fontSize: '0.8rem', color: 'var(--mr-text-secondary)' }}>
                         {formatDate(u.created_at, lang)}
                       </div>
                     </>
@@ -1861,36 +1871,36 @@ export default function AdminPage() {
                 {expandedUser === u.id && (
                   <div style={{
                     padding: '1rem 1.5rem',
-                    background: '#f9fafb',
-                    borderBottom: '1px solid #e5e7eb',
+                    background: 'var(--mr-bg-base)',
+                    borderBottom: '1px solid var(--mr-border)',
                     display: 'grid',
                     gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr',
                     gap: '1rem'
                   }}>
                     <div>
-                      <span style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: '500' }}>ID</span>
-                      <p style={{ fontSize: '0.8rem', color: '#374151', margin: '0.25rem 0 0', wordBreak: 'break-all' }}>{u.id}</p>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--mr-text-secondary)', fontWeight: '500' }}>ID</span>
+                      <p style={{ fontSize: '0.8rem', color: 'var(--mr-text-primary)', margin: '0.25rem 0 0', wordBreak: 'break-all' }}>{u.id}</p>
                     </div>
                     <div>
-                      <span style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: '500' }}>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--mr-text-secondary)', fontWeight: '500' }}>
                         {t.users.lifetime}
                       </span>
-                      <p style={{ fontSize: '0.875rem', color: '#374151', margin: '0.25rem 0 0' }}>
+                      <p style={{ fontSize: '0.875rem', color: 'var(--mr-text-primary)', margin: '0.25rem 0 0' }}>
                         {u.analyses_lifetime_used}
                       </p>
                     </div>
                     <div>
-                      <span style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: '500' }}>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--mr-text-secondary)', fontWeight: '500' }}>
                         {t.users.thisMonth}
                       </span>
-                      <p style={{ fontSize: '0.875rem', color: '#374151', margin: '0.25rem 0 0' }}>
+                      <p style={{ fontSize: '0.875rem', color: 'var(--mr-text-primary)', margin: '0.25rem 0 0' }}>
                         {u.analyses_this_month}
                       </p>
                     </div>
                     {u.subscription && (
                       <>
                         <div>
-                          <span style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: '500' }}>
+                          <span style={{ fontSize: '0.75rem', color: 'var(--mr-text-secondary)', fontWeight: '500' }}>
                             {t.users.status}
                           </span>
                           <p style={{ margin: '0.25rem 0 0' }}>
@@ -1907,18 +1917,18 @@ export default function AdminPage() {
                           </p>
                         </div>
                         <div>
-                          <span style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: '500' }}>
+                          <span style={{ fontSize: '0.75rem', color: 'var(--mr-text-secondary)', fontWeight: '500' }}>
                             {t.users.periodEnd}
                           </span>
-                          <p style={{ fontSize: '0.875rem', color: '#374151', margin: '0.25rem 0 0' }}>
+                          <p style={{ fontSize: '0.875rem', color: 'var(--mr-text-primary)', margin: '0.25rem 0 0' }}>
                             {formatDate(u.subscription.current_period_end, lang)}
                           </p>
                         </div>
                         <div>
-                          <span style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: '500' }}>
+                          <span style={{ fontSize: '0.75rem', color: 'var(--mr-text-secondary)', fontWeight: '500' }}>
                             {t.users.usedThisCycle}
                           </span>
-                          <p style={{ fontSize: '0.875rem', color: '#374151', margin: '0.25rem 0 0' }}>
+                          <p style={{ fontSize: '0.875rem', color: 'var(--mr-text-primary)', margin: '0.25rem 0 0' }}>
                             {u.subscription.analyses_used_this_cycle}
                           </p>
                         </div>
@@ -1933,7 +1943,7 @@ export default function AdminPage() {
                           fetchUserAnalyses(u.id)
                         }}
                         style={{
-                          background: '#667eea',
+                          background: 'var(--mr-primary)',
                           color: 'white',
                           padding: '0.5rem 1rem',
                           borderRadius: '0.5rem',
@@ -1949,7 +1959,7 @@ export default function AdminPage() {
 
                     {/* User Analyses List */}
                     {userAnalysesLoading && (
-                      <div style={{ gridColumn: '1 / -1', color: '#6b7280', fontSize: '0.8rem' }}>
+                      <div style={{ gridColumn: '1 / -1', color: 'var(--mr-text-secondary)', fontSize: '0.8rem' }}>
                         {t.loading}
                       </div>
                     )}
@@ -1957,15 +1967,15 @@ export default function AdminPage() {
                       <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                         {userAnalyses.map((a: any) => (
                           <div key={a.id} style={{
-                            background: 'white',
+                            background: 'var(--mr-bg-card)',
                             borderRadius: '0.5rem',
                             padding: '0.75rem 1rem',
-                            border: '1px solid #e5e7eb',
+                            border: '1px solid var(--mr-border)',
                             fontSize: '0.8rem'
                           }}>
                             {/* Row 1: Filename, Score, Date */}
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.375rem' }}>
-                              <span style={{ fontWeight: '600', color: '#111827' }}>
+                              <span style={{ fontWeight: '600', color: 'var(--mr-text-primary)' }}>
                                 {a.filename || t.leads.unknown}
                               </span>
                               <span style={{
@@ -1976,14 +1986,14 @@ export default function AdminPage() {
                               </span>
                             </div>
                             {/* Row 2: File metadata */}
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', color: '#6b7280', fontSize: '0.75rem', marginBottom: '0.375rem' }}>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', color: 'var(--mr-text-secondary)', fontSize: '0.75rem', marginBottom: '0.375rem' }}>
                               {a.file_format && <span>{a.file_format.toUpperCase()}</span>}
                               {a.sample_rate && <span>{(a.sample_rate / 1000).toFixed(a.sample_rate % 1000 === 0 ? 0 : 1)} kHz</span>}
                               {a.bit_depth && <span>{a.bit_depth}-bit</span>}
                               {a.duration_seconds && <span>{Math.floor(a.duration_seconds / 60)}:{String(Math.round(a.duration_seconds % 60)).padStart(2, '0')}</span>}
                               {a.file_size_bytes && <span>{(a.file_size_bytes / 1048576).toFixed(1)} MB</span>}
-                              <span style={{ color: '#9ca3af' }}>{formatDate(a.created_at, lang)}</span>
-                              {a.analysis_version && <span style={{ color: '#9ca3af' }}>v{a.analysis_version}</span>}
+                              <span style={{ color: 'var(--mr-text-tertiary)' }}>{formatDate(a.created_at, lang)}</span>
+                              {a.analysis_version && <span style={{ color: 'var(--mr-text-tertiary)' }}>v{a.analysis_version}</span>}
                             </div>
                             {/* Row 3: Spectral 6-band */}
                             {a.spectral_6band && (
@@ -2010,8 +2020,8 @@ export default function AdminPage() {
                                   fontSize: '0.65rem',
                                   padding: '0.1rem 0.35rem',
                                   borderRadius: '0.25rem',
-                                  background: a.categorical_flags.headroom_ok ? '#ecfdf5' : '#fef2f2',
-                                  color: a.categorical_flags.headroom_ok ? '#059669' : '#dc2626'
+                                  background: a.categorical_flags.headroom_ok ? 'var(--mr-green-bg)' : 'var(--mr-red-bg)',
+                                  color: a.categorical_flags.headroom_ok ? 'var(--mr-green-text)' : 'var(--mr-red-text)'
                                 }}>
                                   Headroom {a.categorical_flags.headroom_ok ? 'OK' : 'X'}
                                 </span>
@@ -2019,8 +2029,8 @@ export default function AdminPage() {
                                   fontSize: '0.65rem',
                                   padding: '0.1rem 0.35rem',
                                   borderRadius: '0.25rem',
-                                  background: a.categorical_flags.true_peak_safe ? '#ecfdf5' : '#fef2f2',
-                                  color: a.categorical_flags.true_peak_safe ? '#059669' : '#dc2626'
+                                  background: a.categorical_flags.true_peak_safe ? 'var(--mr-green-bg)' : 'var(--mr-red-bg)',
+                                  color: a.categorical_flags.true_peak_safe ? 'var(--mr-green-text)' : 'var(--mr-red-text)'
                                 }}>
                                   TP {a.categorical_flags.true_peak_safe ? 'OK' : 'X'}
                                 </span>
@@ -2028,8 +2038,8 @@ export default function AdminPage() {
                                   fontSize: '0.65rem',
                                   padding: '0.1rem 0.35rem',
                                   borderRadius: '0.25rem',
-                                  background: a.categorical_flags.dynamic_ok ? '#ecfdf5' : '#fef2f2',
-                                  color: a.categorical_flags.dynamic_ok ? '#059669' : '#dc2626'
+                                  background: a.categorical_flags.dynamic_ok ? 'var(--mr-green-bg)' : 'var(--mr-red-bg)',
+                                  color: a.categorical_flags.dynamic_ok ? 'var(--mr-green-text)' : 'var(--mr-red-text)'
                                 }}>
                                   {lang === 'es' ? 'Dinámica' : 'Dynamics'} {a.categorical_flags.dynamic_ok ? 'OK' : 'X'}
                                 </span>
@@ -2037,8 +2047,8 @@ export default function AdminPage() {
                                   fontSize: '0.65rem',
                                   padding: '0.1rem 0.35rem',
                                   borderRadius: '0.25rem',
-                                  background: a.categorical_flags.stereo_risk === 'none' ? '#ecfdf5' : a.categorical_flags.stereo_risk === 'mild' ? '#fef9c3' : '#fef2f2',
-                                  color: a.categorical_flags.stereo_risk === 'none' ? '#059669' : a.categorical_flags.stereo_risk === 'mild' ? '#92400e' : '#dc2626'
+                                  background: a.categorical_flags.stereo_risk === 'none' ? 'var(--mr-green-bg)' : a.categorical_flags.stereo_risk === 'mild' ? 'var(--mr-amber-bg)' : 'var(--mr-red-bg)',
+                                  color: a.categorical_flags.stereo_risk === 'none' ? 'var(--mr-green-text)' : a.categorical_flags.stereo_risk === 'mild' ? 'var(--mr-amber-text)' : 'var(--mr-red-text)'
                                 }}>
                                   Stereo {a.categorical_flags.stereo_risk === 'none' ? 'OK' : a.categorical_flags.stereo_risk}
                                 </span>
@@ -2065,7 +2075,7 @@ export default function AdminPage() {
   const renderAnalytics = () => {
     if (!statsData) {
       return (
-        <div style={{ textAlign: 'center', padding: '3rem', color: '#6b7280' }}>
+        <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--mr-text-secondary)' }}>
           {statsLoading ? t.loading : t.analytics.noData}
         </div>
       )
@@ -2077,12 +2087,13 @@ export default function AdminPage() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
         {/* Analyses per day */}
         <div style={{
-          background: 'white',
+          background: 'var(--mr-bg-card)',
           borderRadius: '1rem',
           padding: '1.5rem',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+          boxShadow: 'var(--mr-shadow)',
+          border: 'var(--mr-card-border)'
         }}>
-          <h3 style={{ fontSize: '1rem', fontWeight: '600', color: '#111827', marginBottom: '1rem' }}>
+          <h3 style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--mr-text-primary)', marginBottom: '1rem' }}>
             {t.analytics.analysesPerDay}
           </h3>
           <div style={{
@@ -2099,8 +2110,8 @@ export default function AdminPage() {
                   flex: 1,
                   height: `${Math.max((day.count / maxDaily) * 100, 2)}%`,
                   background: day.count > 0
-                    ? 'linear-gradient(180deg, #667eea 0%, #764ba2 100%)'
-                    : '#e5e7eb',
+                    ? 'var(--mr-gradient)'
+                    : 'var(--mr-bg-hover)',
                   borderRadius: '2px 2px 0 0',
                   transition: 'height 0.3s ease, opacity 0.15s ease',
                   cursor: 'pointer',
@@ -2126,7 +2137,7 @@ export default function AdminPage() {
             display: 'flex',
             justifyContent: 'space-between',
             fontSize: '0.7rem',
-            color: '#9ca3af',
+            color: 'var(--mr-text-tertiary)',
             marginTop: '0.5rem'
           }}>
             <span>{statsData.analysesPerDay[0]?.date.slice(5)}</span>
@@ -2142,12 +2153,13 @@ export default function AdminPage() {
         }}>
           {/* Score Distribution */}
           <div style={{
-            background: 'white',
+            background: 'var(--mr-bg-card)',
             borderRadius: '1rem',
             padding: '1.5rem',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+            boxShadow: 'var(--mr-shadow)',
+            border: 'var(--mr-card-border)'
           }}>
-            <h3 style={{ fontSize: '1rem', fontWeight: '600', color: '#111827', marginBottom: '1rem' }}>
+            <h3 style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--mr-text-primary)', marginBottom: '1rem' }}>
               {t.analytics.scoreDistribution}
             </h3>
             {renderBarChart(statsData.scoreDistribution.map(s => ({
@@ -2159,12 +2171,13 @@ export default function AdminPage() {
 
           {/* Verdict Distribution */}
           <div style={{
-            background: 'white',
+            background: 'var(--mr-bg-card)',
             borderRadius: '1rem',
             padding: '1.5rem',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+            boxShadow: 'var(--mr-shadow)',
+            border: 'var(--mr-card-border)'
           }}>
-            <h3 style={{ fontSize: '1rem', fontWeight: '600', color: '#111827', marginBottom: '1rem' }}>
+            <h3 style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--mr-text-primary)', marginBottom: '1rem' }}>
               {t.analytics.verdictDistribution}
             </h3>
             {renderBarChart(statsData.verdictDistribution.map(v => ({
@@ -2176,12 +2189,13 @@ export default function AdminPage() {
 
           {/* Format Breakdown */}
           <div style={{
-            background: 'white',
+            background: 'var(--mr-bg-card)',
             borderRadius: '1rem',
             padding: '1.5rem',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+            boxShadow: 'var(--mr-shadow)',
+            border: 'var(--mr-card-border)'
           }}>
-            <h3 style={{ fontSize: '1rem', fontWeight: '600', color: '#111827', marginBottom: '1rem' }}>
+            <h3 style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--mr-text-primary)', marginBottom: '1rem' }}>
               {t.analytics.formatBreakdown}
             </h3>
             {renderBarChart(statsData.formatBreakdown.map(f => ({
@@ -2193,12 +2207,13 @@ export default function AdminPage() {
 
           {/* Top Countries */}
           <div style={{
-            background: 'white',
+            background: 'var(--mr-bg-card)',
             borderRadius: '1rem',
             padding: '1.5rem',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+            boxShadow: 'var(--mr-shadow)',
+            border: 'var(--mr-card-border)'
           }}>
-            <h3 style={{ fontSize: '1rem', fontWeight: '600', color: '#111827', marginBottom: '1rem' }}>
+            <h3 style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--mr-text-primary)', marginBottom: '1rem' }}>
               {t.analytics.topCountries}
             </h3>
             {statsData.topCountries.length > 0 ? renderBarChart(statsData.topCountries.map(c => ({
@@ -2206,13 +2221,13 @@ export default function AdminPage() {
               value: c.count,
               color: '#667eea'
             }))) : (
-              <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>{t.analytics.noData}</p>
+              <p style={{ color: 'var(--mr-text-secondary)', fontSize: '0.875rem' }}>{t.analytics.noData}</p>
             )}
           </div>
         </div>
 
         {/* Conversion Metrics Section */}
-        <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#111827', marginTop: '1rem' }}>
+        <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: 'var(--mr-text-primary)', marginTop: '1rem' }}>
           {t.analytics.conversionTitle}
         </h3>
 
@@ -2220,57 +2235,57 @@ export default function AdminPage() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
           {/* Satisfaction Rate */}
           <div style={{
-            background: 'white',
+            background: 'var(--mr-bg-card)',
             borderRadius: '1rem',
             padding: '1.5rem',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+            boxShadow: 'var(--mr-shadow)',
             textAlign: 'center'
           }}>
-            <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.5rem' }}>
+            <div style={{ fontSize: '0.875rem', color: 'var(--mr-text-secondary)', marginBottom: '0.5rem' }}>
               {t.analytics.satisfactionRate}
             </div>
             <div style={{ fontSize: '2rem', fontWeight: '700', color: (statsData.satisfaction?.rate || 0) >= 70 ? '#10b981' : (statsData.satisfaction?.rate || 0) >= 40 ? '#f59e0b' : '#ef4444' }}>
               {statsData.satisfaction?.rate || 0}%
             </div>
-            <div style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.25rem' }}>
+            <div style={{ fontSize: '0.75rem', color: 'var(--mr-text-tertiary)', marginTop: '0.25rem' }}>
               👍 {statsData.satisfaction?.thumbsUp || 0} / 👎 {statsData.satisfaction?.thumbsDown || 0}
             </div>
           </div>
 
           {/* CTA Clicks */}
           <div style={{
-            background: 'white',
+            background: 'var(--mr-bg-card)',
             borderRadius: '1rem',
             padding: '1.5rem',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+            boxShadow: 'var(--mr-shadow)',
             textAlign: 'center'
           }}>
-            <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.5rem' }}>
+            <div style={{ fontSize: '0.875rem', color: 'var(--mr-text-secondary)', marginBottom: '0.5rem' }}>
               {t.analytics.ctaClicks}
             </div>
             <div style={{ fontSize: '2rem', fontWeight: '700', color: '#6366f1' }}>
               {statsData.ctaStats?.totalClicks || 0}
             </div>
-            <div style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.25rem' }}>
+            <div style={{ fontSize: '0.75rem', color: 'var(--mr-text-tertiary)', marginTop: '0.25rem' }}>
               {statsData.ctaStats?.clickRate || 0}% {lang === 'es' ? 'de análisis' : 'of analyses'}
             </div>
           </div>
 
           {/* Contact Conversion */}
           <div style={{
-            background: 'white',
+            background: 'var(--mr-bg-card)',
             borderRadius: '1rem',
             padding: '1.5rem',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+            boxShadow: 'var(--mr-shadow)',
             textAlign: 'center'
           }}>
-            <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.5rem' }}>
+            <div style={{ fontSize: '0.875rem', color: 'var(--mr-text-secondary)', marginBottom: '0.5rem' }}>
               {t.analytics.contactConversion}
             </div>
-            <div style={{ fontSize: '2rem', fontWeight: '700', color: '#059669' }}>
+            <div style={{ fontSize: '2rem', fontWeight: '700', color: 'var(--mr-green-text)' }}>
               {statsData.contactStats?.conversionRate || 0}%
             </div>
-            <div style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.25rem' }}>
+            <div style={{ fontSize: '0.75rem', color: 'var(--mr-text-tertiary)', marginTop: '0.25rem' }}>
               {statsData.contactStats?.totalContacts || 0} {lang === 'es' ? 'contactos' : 'contacts'}
             </div>
           </div>
@@ -2280,12 +2295,13 @@ export default function AdminPage() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1rem' }}>
           {/* CTA by Type */}
           <div style={{
-            background: 'white',
+            background: 'var(--mr-bg-card)',
             borderRadius: '1rem',
             padding: '1.5rem',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+            boxShadow: 'var(--mr-shadow)',
+            border: 'var(--mr-card-border)'
           }}>
-            <h3 style={{ fontSize: '1rem', fontWeight: '600', color: '#111827', marginBottom: '1rem' }}>
+            <h3 style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--mr-text-primary)', marginBottom: '1rem' }}>
               {t.analytics.ctaByType}
             </h3>
             {(statsData.ctaStats?.byType || []).length > 0 ? renderBarChart(
@@ -2295,18 +2311,19 @@ export default function AdminPage() {
                 color: c.type === 'mastering' ? '#6366f1' : c.type === 'mix_help' ? '#8b5cf6' : '#a855f7'
               }))
             ) : (
-              <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>{t.analytics.noData}</p>
+              <p style={{ color: 'var(--mr-text-secondary)', fontSize: '0.875rem' }}>{t.analytics.noData}</p>
             )}
           </div>
 
           {/* CTA by Score Range */}
           <div style={{
-            background: 'white',
+            background: 'var(--mr-bg-card)',
             borderRadius: '1rem',
             padding: '1.5rem',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+            boxShadow: 'var(--mr-shadow)',
+            border: 'var(--mr-card-border)'
           }}>
-            <h3 style={{ fontSize: '1rem', fontWeight: '600', color: '#111827', marginBottom: '1rem' }}>
+            <h3 style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--mr-text-primary)', marginBottom: '1rem' }}>
               {t.analytics.ctaByScore}
             </h3>
             {(statsData.ctaStats?.byScore || []).some(s => s.count > 0) ? renderBarChart(
@@ -2316,20 +2333,20 @@ export default function AdminPage() {
                 color: s.range === '90-100' ? '#10b981' : s.range === '70-89' ? '#3b82f6' : s.range === '50-69' ? '#f59e0b' : '#ef4444'
               }))
             ) : (
-              <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>{t.analytics.noData}</p>
+              <p style={{ color: 'var(--mr-text-secondary)', fontSize: '0.875rem' }}>{t.analytics.noData}</p>
             )}
           </div>
         </div>
 
         {/* Contacts by Method */}
         <div style={{
-          background: 'white',
+          background: 'var(--mr-bg-card)',
           borderRadius: '1rem',
           padding: '1.5rem',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+          boxShadow: 'var(--mr-shadow)',
           maxWidth: isMobile ? '100%' : '400px'
         }}>
-          <h3 style={{ fontSize: '1rem', fontWeight: '600', color: '#111827', marginBottom: '1rem' }}>
+          <h3 style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--mr-text-primary)', marginBottom: '1rem' }}>
             {t.analytics.contactByMethod}
           </h3>
           {(statsData.contactStats?.byMethod || []).length > 0 ? renderBarChart(
@@ -2339,26 +2356,27 @@ export default function AdminPage() {
               color: m.method === 'whatsapp' ? '#25d366' : m.method === 'email' ? '#3b82f6' : '#e1306c'
             }))
           ) : (
-            <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>{t.analytics.noData}</p>
+            <p style={{ color: 'var(--mr-text-secondary)', fontSize: '0.875rem' }}>{t.analytics.noData}</p>
           )}
         </div>
 
         {/* Technical Insights Section */}
-        <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#111827', marginTop: '1rem' }}>
+        <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: 'var(--mr-text-primary)', marginTop: '1rem' }}>
           {t.analytics.techInsightsTitle}
         </h3>
 
         {/* Categorical Flags — Mix Health Status */}
         <div style={{
-          background: 'white',
+          background: 'var(--mr-bg-card)',
           borderRadius: '1rem',
           padding: '1.5rem',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+          boxShadow: 'var(--mr-shadow)',
+          border: 'var(--mr-card-border)'
         }}>
-          <h3 style={{ fontSize: '1rem', fontWeight: '600', color: '#111827', marginBottom: '1rem' }}>
+          <h3 style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--mr-text-primary)', marginBottom: '1rem' }}>
             {t.analytics.categoricalFlags}
             {statsData.technicalInsights?.categoricalFlags.total ? (
-              <span style={{ fontSize: '0.75rem', color: '#9ca3af', fontWeight: '400', marginLeft: '0.5rem' }}>
+              <span style={{ fontSize: '0.75rem', color: 'var(--mr-text-tertiary)', fontWeight: '400', marginLeft: '0.5rem' }}>
                 ({statsData.technicalInsights.categoricalFlags.total} {t.analytics.ofAnalyses})
               </span>
             ) : null}
@@ -2374,41 +2392,42 @@ export default function AdminPage() {
                 { label: t.analytics.stereoHigh, data: statsData.technicalInsights.categoricalFlags.stereoRiskHigh, color: '#ef4444' }
               ].map(item => (
                 <div key={item.label} style={{
-                  background: '#f9fafb',
+                  background: 'var(--mr-bg-base)',
                   borderRadius: '0.75rem',
                   padding: '1rem',
                   textAlign: 'center',
-                  border: '1px solid #f3f4f6'
+                  border: '1px solid var(--mr-border)'
                 }}>
                   <div style={{ fontSize: '1.5rem', fontWeight: '700', color: item.color }}>
                     {item.data.pct}%
                   </div>
-                  <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--mr-text-secondary)', marginTop: '0.25rem' }}>
                     {item.label}
                   </div>
-                  <div style={{ fontSize: '0.65rem', color: '#9ca3af' }}>
+                  <div style={{ fontSize: '0.65rem', color: 'var(--mr-text-tertiary)' }}>
                     ({item.data.count})
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>{t.analytics.noData}</p>
+            <p style={{ color: 'var(--mr-text-secondary)', fontSize: '0.875rem' }}>{t.analytics.noData}</p>
           )}
         </div>
 
         {/* Spectral Profile — Overall Average */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1rem' }}>
           <div style={{
-            background: 'white',
+            background: 'var(--mr-bg-card)',
             borderRadius: '1rem',
             padding: '1.5rem',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+            boxShadow: 'var(--mr-shadow)',
+            border: 'var(--mr-card-border)'
           }}>
-            <h3 style={{ fontSize: '1rem', fontWeight: '600', color: '#111827', marginBottom: '1rem' }}>
+            <h3 style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--mr-text-primary)', marginBottom: '1rem' }}>
               {t.analytics.spectralProfile}
               {statsData.technicalInsights?.spectral.totalAnalyzed ? (
-                <span style={{ fontSize: '0.75rem', color: '#9ca3af', fontWeight: '400', marginLeft: '0.5rem' }}>
+                <span style={{ fontSize: '0.75rem', color: 'var(--mr-text-tertiary)', fontWeight: '400', marginLeft: '0.5rem' }}>
                   ({statsData.technicalInsights.spectral.totalAnalyzed})
                 </span>
               ) : null}
@@ -2420,18 +2439,19 @@ export default function AdminPage() {
                 color: ['#ef4444', '#f97316', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6'][i]
               }))
             ) : (
-              <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>{t.analytics.noData}</p>
+              <p style={{ color: 'var(--mr-text-secondary)', fontSize: '0.875rem' }}>{t.analytics.noData}</p>
             )}
           </div>
 
           {/* Spectral by Score Range */}
           <div style={{
-            background: 'white',
+            background: 'var(--mr-bg-card)',
             borderRadius: '1rem',
             padding: '1.5rem',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+            boxShadow: 'var(--mr-shadow)',
+            border: 'var(--mr-card-border)'
           }}>
-            <h3 style={{ fontSize: '1rem', fontWeight: '600', color: '#111827', marginBottom: '1rem' }}>
+            <h3 style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--mr-text-primary)', marginBottom: '1rem' }}>
               {t.analytics.spectralByScore}
             </h3>
             {statsData.technicalInsights?.spectral.totalAnalyzed ? (
@@ -2444,7 +2464,7 @@ export default function AdminPage() {
                     <div key={range}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.375rem' }}>
                         <span style={{ fontSize: '0.75rem', fontWeight: '600', color: rangeColor }}>{range}</span>
-                        <span style={{ fontSize: '0.65rem', color: '#9ca3af' }}>({data.count})</span>
+                        <span style={{ fontSize: '0.65rem', color: 'var(--mr-text-tertiary)' }}>({data.count})</span>
                       </div>
                       <div style={{ display: 'flex', gap: '2px', height: '1.25rem', borderRadius: '0.25rem', overflow: 'hidden' }}>
                         {['sub', 'low', 'low_mid', 'mid', 'high_mid', 'high'].map((band, i) => {
@@ -2481,13 +2501,13 @@ export default function AdminPage() {
                   {['Sub', 'Low', 'Low Mid', 'Mid', 'High Mid', 'High'].map((label, i) => (
                     <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                       <div style={{ width: '8px', height: '8px', borderRadius: '2px', background: ['#ef4444', '#f97316', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6'][i] }} />
-                      <span style={{ fontSize: '0.65rem', color: '#6b7280' }}>{label}</span>
+                      <span style={{ fontSize: '0.65rem', color: 'var(--mr-text-secondary)' }}>{label}</span>
                     </div>
                   ))}
                 </div>
               </div>
             ) : (
-              <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>{t.analytics.noData}</p>
+              <p style={{ color: 'var(--mr-text-secondary)', fontSize: '0.875rem' }}>{t.analytics.noData}</p>
             )}
           </div>
         </div>
@@ -2496,15 +2516,16 @@ export default function AdminPage() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem' }}>
           {/* Peak Energy Position */}
           <div style={{
-            background: 'white',
+            background: 'var(--mr-bg-card)',
             borderRadius: '1rem',
             padding: '1.5rem',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+            boxShadow: 'var(--mr-shadow)',
+            border: 'var(--mr-card-border)'
           }}>
-            <h3 style={{ fontSize: '1rem', fontWeight: '600', color: '#111827', marginBottom: '1rem' }}>
+            <h3 style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--mr-text-primary)', marginBottom: '1rem' }}>
               {t.analytics.avgPeakPosition}
               {statsData.technicalInsights?.energy.totalAnalyzed ? (
-                <span style={{ fontSize: '0.75rem', color: '#9ca3af', fontWeight: '400', marginLeft: '0.5rem' }}>
+                <span style={{ fontSize: '0.75rem', color: 'var(--mr-text-tertiary)', fontWeight: '400', marginLeft: '0.5rem' }}>
                   ({statsData.technicalInsights.energy.totalAnalyzed})
                 </span>
               ) : null}
@@ -2514,11 +2535,11 @@ export default function AdminPage() {
                 <div style={{ fontSize: '2rem', fontWeight: '700', color: '#6366f1' }}>
                   {statsData.technicalInsights.energy.avgPeakPositionPct}%
                 </div>
-                <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem' }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--mr-text-secondary)', marginTop: '0.25rem' }}>
                   {t.analytics.ofTrack}
                 </div>
                 {/* Visual position indicator */}
-                <div style={{ position: 'relative', height: '0.5rem', background: '#e5e7eb', borderRadius: '9999px', marginTop: '0.75rem' }}>
+                <div style={{ position: 'relative', height: '0.5rem', background: 'var(--mr-bg-hover)', borderRadius: '9999px', marginTop: '0.75rem' }}>
                   <div style={{
                     position: 'absolute',
                     left: `${statsData.technicalInsights.energy.avgPeakPositionPct}%`,
@@ -2531,25 +2552,26 @@ export default function AdminPage() {
                     boxShadow: '0 2px 4px rgba(99,102,241,0.3)'
                   }} />
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.375rem', fontSize: '0.65rem', color: '#9ca3af' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.375rem', fontSize: '0.65rem', color: 'var(--mr-text-tertiary)' }}>
                   <span>{t.analytics.beginning}</span>
                   <span>{t.analytics.middle}</span>
                   <span>{t.analytics.end}</span>
                 </div>
               </div>
             ) : (
-              <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>{t.analytics.noData}</p>
+              <p style={{ color: 'var(--mr-text-secondary)', fontSize: '0.875rem' }}>{t.analytics.noData}</p>
             )}
           </div>
 
           {/* Temporal Energy Distribution */}
           <div style={{
-            background: 'white',
+            background: 'var(--mr-bg-card)',
             borderRadius: '1rem',
             padding: '1.5rem',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+            boxShadow: 'var(--mr-shadow)',
+            border: 'var(--mr-card-border)'
           }}>
-            <h3 style={{ fontSize: '1rem', fontWeight: '600', color: '#111827', marginBottom: '1rem' }}>
+            <h3 style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--mr-text-primary)', marginBottom: '1rem' }}>
               {t.analytics.energyDistribution}
             </h3>
             {statsData.technicalInsights?.energy.totalAnalyzed ? renderBarChart([
@@ -2557,7 +2579,7 @@ export default function AdminPage() {
               { label: lang === 'es' ? '2do tercio' : '2nd third', value: statsData.technicalInsights.energy.avgDistribution.mid, color: '#8b5cf6' },
               { label: lang === 'es' ? '3er tercio' : '3rd third', value: statsData.technicalInsights.energy.avgDistribution.high, color: '#6366f1' }
             ]) : (
-              <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>{t.analytics.noData}</p>
+              <p style={{ color: 'var(--mr-text-secondary)', fontSize: '0.875rem' }}>{t.analytics.noData}</p>
             )}
           </div>
         </div>
@@ -2582,7 +2604,7 @@ export default function AdminPage() {
         }}>
           {/* Total */}
           <div style={{
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            background: 'var(--mr-gradient)',
             borderRadius: '1rem',
             padding: '1.5rem',
             color: 'white'
@@ -2596,43 +2618,46 @@ export default function AdminPage() {
           </div>
           {/* Subscriptions */}
           <div style={{
-            background: 'white',
+            background: 'var(--mr-bg-card)',
             borderRadius: '1rem',
             padding: '1.5rem',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+            boxShadow: 'var(--mr-shadow)',
+            border: 'var(--mr-card-border)'
           }}>
-            <p style={{ fontSize: '0.8rem', color: '#6b7280', marginBottom: '0.5rem' }}>
+            <p style={{ fontSize: '0.8rem', color: 'var(--mr-text-secondary)', marginBottom: '0.5rem' }}>
               {t.revenue.subscriptions}
             </p>
-            <p style={{ fontSize: '1.5rem', fontWeight: '700', color: '#111827', margin: 0 }}>
+            <p style={{ fontSize: '1.5rem', fontWeight: '700', color: 'var(--mr-text-primary)', margin: 0 }}>
               {formatCurrency(rb?.subscriptions ?? 0)}
             </p>
           </div>
           {/* Single */}
           <div style={{
-            background: 'white',
+            background: 'var(--mr-bg-card)',
             borderRadius: '1rem',
             padding: '1.5rem',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+            boxShadow: 'var(--mr-shadow)',
+            border: 'var(--mr-card-border)'
           }}>
-            <p style={{ fontSize: '0.8rem', color: '#6b7280', marginBottom: '0.5rem' }}>
+            <p style={{ fontSize: '0.8rem', color: 'var(--mr-text-secondary)', marginBottom: '0.5rem' }}>
               {t.revenue.singlePurchases}
             </p>
-            <p style={{ fontSize: '1.5rem', fontWeight: '700', color: '#111827', margin: 0 }}>
+            <p style={{ fontSize: '1.5rem', fontWeight: '700', color: 'var(--mr-text-primary)', margin: 0 }}>
               {formatCurrency(rb?.single ?? 0)}
             </p>
           </div>
           {/* Addons */}
           <div style={{
-            background: 'white',
+            background: 'var(--mr-bg-card)',
             borderRadius: '1rem',
             padding: '1.5rem',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+            boxShadow: 'var(--mr-shadow)',
+            border: 'var(--mr-card-border)'
           }}>
-            <p style={{ fontSize: '0.8rem', color: '#6b7280', marginBottom: '0.5rem' }}>
+            <p style={{ fontSize: '0.8rem', color: 'var(--mr-text-secondary)', marginBottom: '0.5rem' }}>
               {t.revenue.addonPacks}
             </p>
-            <p style={{ fontSize: '1.5rem', fontWeight: '700', color: '#111827', margin: 0 }}>
+            <p style={{ fontSize: '1.5rem', fontWeight: '700', color: 'var(--mr-text-primary)', margin: 0 }}>
               {formatCurrency(rb?.addon ?? 0)}
             </p>
           </div>
@@ -2640,26 +2665,27 @@ export default function AdminPage() {
 
         {/* Recent payments */}
         <div style={{
-          background: 'white',
+          background: 'var(--mr-bg-card)',
           borderRadius: '1rem',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+          boxShadow: 'var(--mr-shadow)',
+          border: 'var(--mr-card-border)',
           overflow: 'hidden'
         }}>
           <div style={{
             padding: '1rem 1.5rem',
-            borderBottom: '1px solid #e5e7eb'
+            borderBottom: '1px solid var(--mr-border)'
           }}>
-            <h3 style={{ fontSize: '1rem', fontWeight: '600', color: '#111827', margin: 0 }}>
+            <h3 style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--mr-text-primary)', margin: 0 }}>
               {t.revenue.recentPayments}
             </h3>
           </div>
 
           {paymentsLoading ? (
-            <div style={{ padding: '2rem', textAlign: 'center', color: '#6b7280' }}>
+            <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--mr-text-secondary)' }}>
               {t.loading}
             </div>
           ) : payments.length === 0 ? (
-            <div style={{ padding: '2rem', textAlign: 'center', color: '#6b7280' }}>
+            <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--mr-text-secondary)' }}>
               {t.revenue.noPayments}
             </div>
           ) : (
@@ -2670,11 +2696,11 @@ export default function AdminPage() {
                   display: 'grid',
                   gridTemplateColumns: '1fr 2fr 1fr 1.5fr 1fr',
                   padding: '0.75rem 1rem',
-                  background: '#f9fafb',
-                  borderBottom: '1px solid #e5e7eb',
+                  background: 'var(--mr-bg-base)',
+                  borderBottom: '1px solid var(--mr-border)',
                   fontSize: '0.75rem',
                   fontWeight: '600',
-                  color: '#6b7280',
+                  color: 'var(--mr-text-secondary)',
                   textTransform: 'uppercase'
                 }}>
                   <span>{t.revenue.date}</span>
@@ -2689,13 +2715,13 @@ export default function AdminPage() {
                   display: isMobile ? 'block' : 'grid',
                   gridTemplateColumns: isMobile ? undefined : '1fr 2fr 1fr 1.5fr 1fr',
                   padding: isMobile ? '1rem' : '0.75rem 1rem',
-                  borderBottom: '1px solid #f3f4f6',
+                  borderBottom: '1px solid var(--mr-border)',
                   fontSize: '0.875rem'
                 }}>
                   {isMobile ? (
                     <>
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
-                        <span style={{ fontWeight: '500', color: '#111827' }}>
+                        <span style={{ fontWeight: '500', color: 'var(--mr-text-primary)' }}>
                           {formatCurrency(p.amount)}
                         </span>
                         <span style={{
@@ -2709,20 +2735,20 @@ export default function AdminPage() {
                           {p.status}
                         </span>
                       </div>
-                      <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--mr-text-secondary)' }}>
                         {p.profile?.email || '-'} | {formatDate(p.created_at, lang)}
                       </div>
                     </>
                   ) : (
                     <>
-                      <span style={{ color: '#6b7280' }}>{formatDate(p.created_at, lang)}</span>
-                      <span style={{ color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      <span style={{ color: 'var(--mr-text-secondary)' }}>{formatDate(p.created_at, lang)}</span>
+                      <span style={{ color: 'var(--mr-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {p.profile?.email || '-'}
                       </span>
-                      <span style={{ fontWeight: '500', color: '#111827' }}>
+                      <span style={{ fontWeight: '500', color: 'var(--mr-text-primary)' }}>
                         {formatCurrency(p.amount)}
                       </span>
-                      <span style={{ color: '#6b7280' }}>{p.description || '-'}</span>
+                      <span style={{ color: 'var(--mr-text-secondary)' }}>{p.description || '-'}</span>
                       <span>
                         <span style={{
                           fontSize: '0.75rem',
@@ -2824,42 +2850,42 @@ export default function AdminPage() {
           }}>
             {/* Total Leads */}
             <div style={{
-              background: 'white',
+              background: 'var(--mr-bg-card)',
               borderRadius: '12px',
               padding: '1.25rem',
-              border: '1px solid #e5e7eb'
+              border: '1px solid var(--mr-border)'
             }}>
-              <div style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '0.25rem' }}>
+              <div style={{ fontSize: '0.75rem', color: 'var(--mr-text-secondary)', marginBottom: '0.25rem' }}>
                 {t.leads.totalLeads}
               </div>
-              <div style={{ fontSize: '1.75rem', fontWeight: '700', color: '#111827' }}>
+              <div style={{ fontSize: '1.75rem', fontWeight: '700', color: 'var(--mr-text-primary)' }}>
                 {leadsKpi.total}
               </div>
             </div>
 
             {/* This Month */}
             <div style={{
-              background: 'white',
+              background: 'var(--mr-bg-card)',
               borderRadius: '12px',
               padding: '1.25rem',
-              border: '1px solid #e5e7eb'
+              border: '1px solid var(--mr-border)'
             }}>
-              <div style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '0.25rem' }}>
+              <div style={{ fontSize: '0.75rem', color: 'var(--mr-text-secondary)', marginBottom: '0.25rem' }}>
                 {t.leads.thisMonth}
               </div>
-              <div style={{ fontSize: '1.75rem', fontWeight: '700', color: '#111827' }}>
+              <div style={{ fontSize: '1.75rem', fontWeight: '700', color: 'var(--mr-text-primary)' }}>
                 {leadsKpi.thisMonth}
               </div>
             </div>
 
             {/* Method Breakdown */}
             <div style={{
-              background: 'white',
+              background: 'var(--mr-bg-card)',
               borderRadius: '12px',
               padding: '1.25rem',
-              border: '1px solid #e5e7eb'
+              border: '1px solid var(--mr-border)'
             }}>
-              <div style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '0.5rem' }}>
+              <div style={{ fontSize: '0.75rem', color: 'var(--mr-text-secondary)', marginBottom: '0.5rem' }}>
                 {t.leads.byMethod}
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
@@ -2872,8 +2898,8 @@ export default function AdminPage() {
                       background: getMethodColor(method),
                       flexShrink: 0
                     }} />
-                    <span style={{ color: '#374151' }}>{getMethodLabel(method)}</span>
-                    <span style={{ color: '#6b7280', marginLeft: 'auto', fontWeight: '600' }}>{count}</span>
+                    <span style={{ color: 'var(--mr-text-primary)' }}>{getMethodLabel(method)}</span>
+                    <span style={{ color: 'var(--mr-text-secondary)', marginLeft: 'auto', fontWeight: '600' }}>{count}</span>
                   </div>
                 ))}
               </div>
@@ -2881,18 +2907,18 @@ export default function AdminPage() {
 
             {/* Conversion Rate */}
             <div style={{
-              background: 'white',
+              background: 'var(--mr-bg-card)',
               borderRadius: '12px',
               padding: '1.25rem',
-              border: '1px solid #e5e7eb'
+              border: '1px solid var(--mr-border)'
             }}>
-              <div style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '0.25rem' }}>
+              <div style={{ fontSize: '0.75rem', color: 'var(--mr-text-secondary)', marginBottom: '0.25rem' }}>
                 {t.leads.conversionRate}
               </div>
-              <div style={{ fontSize: '1.75rem', fontWeight: '700', color: '#111827' }}>
+              <div style={{ fontSize: '1.75rem', fontWeight: '700', color: 'var(--mr-text-primary)' }}>
                 {leadsKpi.conversionRate}%
               </div>
-              <div style={{ fontSize: '0.7rem', color: '#9ca3af' }}>
+              <div style={{ fontSize: '0.7rem', color: 'var(--mr-text-tertiary)' }}>
                 {leadsKpi.total} / {leadsKpi.totalAnalyses} {t.leads.ofAnalyses}
               </div>
             </div>
@@ -2909,7 +2935,7 @@ export default function AdminPage() {
         }}>
           {/* Method filter */}
           <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
-            <Filter size={14} style={{ color: '#6b7280' }} />
+            <Filter size={14} style={{ color: 'var(--mr-text-secondary)' }} />
             {methodFilters.map(method => (
               <button
                 key={method}
@@ -2917,9 +2943,9 @@ export default function AdminPage() {
                 style={{
                   padding: '0.35rem 0.75rem',
                   borderRadius: '6px',
-                  border: leadsMethodFilter === method ? '1px solid #667eea' : '1px solid #e5e7eb',
-                  background: leadsMethodFilter === method ? '#667eea' : 'white',
-                  color: leadsMethodFilter === method ? 'white' : '#374151',
+                  border: leadsMethodFilter === method ? '1px solid var(--mr-primary)' : '1px solid var(--mr-border)',
+                  background: leadsMethodFilter === method ? 'var(--mr-primary)' : 'var(--mr-bg-card)',
+                  color: leadsMethodFilter === method ? 'white' : 'var(--mr-text-primary)',
                   fontSize: '0.8rem',
                   cursor: 'pointer',
                   fontWeight: leadsMethodFilter === method ? '600' : '400',
@@ -2933,7 +2959,7 @@ export default function AdminPage() {
 
           {/* Date filter */}
           <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
-            <Clock size={14} style={{ color: '#6b7280' }} />
+            <Clock size={14} style={{ color: 'var(--mr-text-secondary)' }} />
             {dateFilters.map(period => (
               <button
                 key={period}
@@ -2941,9 +2967,9 @@ export default function AdminPage() {
                 style={{
                   padding: '0.35rem 0.75rem',
                   borderRadius: '6px',
-                  border: leadsDateFilter === period ? '1px solid #667eea' : '1px solid #e5e7eb',
-                  background: leadsDateFilter === period ? '#667eea' : 'white',
-                  color: leadsDateFilter === period ? 'white' : '#374151',
+                  border: leadsDateFilter === period ? '1px solid var(--mr-primary)' : '1px solid var(--mr-border)',
+                  background: leadsDateFilter === period ? 'var(--mr-primary)' : 'var(--mr-bg-card)',
+                  color: leadsDateFilter === period ? 'white' : 'var(--mr-text-primary)',
                   fontSize: '0.8rem',
                   cursor: 'pointer',
                   fontWeight: leadsDateFilter === period ? '600' : '400',
@@ -2962,9 +2988,9 @@ export default function AdminPage() {
             style={{
               padding: '0.35rem 0.75rem',
               borderRadius: '6px',
-              border: '1px solid #e5e7eb',
-              background: 'white',
-              color: '#374151',
+              border: '1px solid var(--mr-border)',
+              background: 'var(--mr-bg-card)',
+              color: 'var(--mr-text-primary)',
               fontSize: '0.8rem',
               cursor: leadsLoading ? 'not-allowed' : 'pointer',
               display: 'flex',
@@ -2981,17 +3007,17 @@ export default function AdminPage() {
 
         {/* Leads List */}
         {leadsLoading ? (
-          <div style={{ textAlign: 'center', padding: '3rem', color: '#6b7280' }}>
+          <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--mr-text-secondary)' }}>
             {t.loading}
           </div>
         ) : filteredLeads.length === 0 ? (
           <div style={{
             textAlign: 'center',
             padding: '3rem',
-            color: '#6b7280',
-            background: 'white',
+            color: 'var(--mr-text-secondary)',
+            background: 'var(--mr-bg-card)',
             borderRadius: '12px',
-            border: '1px solid #e5e7eb'
+            border: '1px solid var(--mr-border)'
           }}>
             {t.leads.noLeads}
           </div>
@@ -3005,10 +3031,10 @@ export default function AdminPage() {
                 <div
                   key={lead.id}
                   style={{
-                    background: 'white',
+                    background: 'var(--mr-bg-card)',
                     borderRadius: '12px',
                     padding: '1rem 1.25rem',
-                    border: '1px solid #e5e7eb',
+                    border: '1px solid var(--mr-border)',
                     display: 'flex',
                     flexDirection: isMobile ? 'column' : 'row',
                     gap: isMobile ? '0.75rem' : '1.5rem',
@@ -3037,11 +3063,11 @@ export default function AdminPage() {
 
                   {/* User info */}
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: '0.875rem', fontWeight: '600', color: '#111827' }}>
+                    <div style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--mr-text-primary)' }}>
                       {userEmail}
                     </div>
                     {userName && (
-                      <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--mr-text-secondary)' }}>
                         {userName}
                       </div>
                     )}
@@ -3052,13 +3078,13 @@ export default function AdminPage() {
                     <div style={{
                       minWidth: isMobile ? 'auto' : '200px',
                       padding: '0.4rem 0.75rem',
-                      background: '#f9fafb',
+                      background: 'var(--mr-bg-base)',
                       borderRadius: '8px',
-                      border: '1px solid #f3f4f6'
+                      border: '1px solid var(--mr-border)'
                     }}>
                       <div style={{
                         fontSize: '0.75rem',
-                        color: '#374151',
+                        color: 'var(--mr-text-primary)',
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
                         whiteSpace: 'nowrap',
@@ -3067,12 +3093,12 @@ export default function AdminPage() {
                         {lead.analysis.filename}
                       </div>
                       <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.15rem' }}>
-                        <span style={{ fontSize: '0.7rem', color: '#6b7280' }}>
+                        <span style={{ fontSize: '0.7rem', color: 'var(--mr-text-secondary)' }}>
                           {t.leads.score}: <strong style={{ color: lead.analysis.score >= 70 ? '#10b981' : lead.analysis.score >= 50 ? '#f59e0b' : '#ef4444' }}>
                             {lead.analysis.score}
                           </strong>
                         </span>
-                        <span style={{ fontSize: '0.7rem', color: '#6b7280' }}>
+                        <span style={{ fontSize: '0.7rem', color: 'var(--mr-text-secondary)' }}>
                           {lead.analysis.verdict}
                         </span>
                       </div>
@@ -3081,7 +3107,7 @@ export default function AdminPage() {
                     <div style={{
                       minWidth: isMobile ? 'auto' : '200px',
                       fontSize: '0.75rem',
-                      color: '#9ca3af',
+                      color: 'var(--mr-text-tertiary)',
                       fontStyle: 'italic'
                     }}>
                       {t.leads.lastAnalysis}: —
@@ -3092,9 +3118,9 @@ export default function AdminPage() {
                   <div style={{
                     minWidth: '100px',
                     fontSize: '0.75rem',
-                    color: '#6b7280'
+                    color: 'var(--mr-text-secondary)'
                   }}>
-                    <span style={{ color: '#9ca3af' }}>{t.leads.source}:</span>{' '}
+                    <span style={{ color: 'var(--mr-text-tertiary)' }}>{t.leads.source}:</span>{' '}
                     {getSourceLabel(lead.cta_source)}
                   </div>
 
@@ -3102,7 +3128,7 @@ export default function AdminPage() {
                   {lead.client_country && (
                     <div style={{
                       fontSize: '0.75rem',
-                      color: '#6b7280',
+                      color: 'var(--mr-text-secondary)',
                       display: 'flex',
                       alignItems: 'center',
                       gap: '0.25rem'
@@ -3116,7 +3142,7 @@ export default function AdminPage() {
                   <div style={{
                     minWidth: '90px',
                     fontSize: '0.75rem',
-                    color: '#9ca3af',
+                    color: 'var(--mr-text-tertiary)',
                     textAlign: isMobile ? 'left' : 'right'
                   }}>
                     {formatDate(lead.created_at, lang)}
@@ -3161,10 +3187,10 @@ export default function AdminPage() {
                 fontWeight: '500',
                 flexShrink: 0,
                 background: feedbackFilter === status
-                  ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-                  : 'white',
-                color: feedbackFilter === status ? 'white' : '#374151',
-                boxShadow: feedbackFilter === status ? 'none' : '0 1px 3px rgba(0,0,0,0.1)'
+                  ? 'var(--mr-gradient)'
+                  : 'var(--mr-bg-card)',
+                color: feedbackFilter === status ? 'white' : 'var(--mr-text-primary)',
+                boxShadow: feedbackFilter === status ? 'none' : 'var(--mr-shadow)'
               }}
             >
               {t.feedback[status as keyof typeof t.feedback] as string}
@@ -3183,9 +3209,9 @@ export default function AdminPage() {
               fontSize: '0.8rem',
               fontWeight: '500',
               flexShrink: 0,
-              background: 'white',
-              color: '#374151',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+              background: 'var(--mr-bg-card)',
+              color: 'var(--mr-text-primary)',
+              boxShadow: 'var(--mr-shadow)',
               display: 'flex',
               alignItems: 'center',
               gap: '0.35rem',
@@ -3200,21 +3226,22 @@ export default function AdminPage() {
 
         {/* Feedback list */}
         {feedbackLoading ? (
-          <div style={{ textAlign: 'center', padding: '2rem', color: '#6b7280' }}>
+          <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--mr-text-secondary)' }}>
             {t.loading}
           </div>
         ) : feedbackList.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '2rem', color: '#6b7280' }}>
+          <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--mr-text-secondary)' }}>
             {t.feedback.noFeedback}
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             {feedbackList.map(fb => (
               <div key={fb.id} style={{
-                background: 'white',
+                background: 'var(--mr-bg-card)',
                 borderRadius: '0.75rem',
                 padding: '1.25rem',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                boxShadow: 'var(--mr-shadow)',
+                border: 'var(--mr-card-border)',
                 borderLeft: `4px solid ${getStatusColor(fb.status)}`
               }}>
                 {/* Header row */}
@@ -3256,15 +3283,15 @@ export default function AdminPage() {
                       padding: '0.15rem 0.5rem',
                       borderRadius: '9999px',
                       fontWeight: '600',
-                      background: '#fef2f2',
-                      color: '#dc2626'
+                      background: 'var(--mr-red-bg)',
+                      color: 'var(--mr-red-text)'
                     }}>
                       {t.feedback.priority}
                     </span>
                   )}
 
                   {fb.satisfaction && (
-                    <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--mr-text-secondary)' }}>
                       {'*'.repeat(parseInt(fb.satisfaction))}
                     </span>
                   )}
@@ -3281,36 +3308,36 @@ export default function AdminPage() {
                       padding: '0.1rem 0.4rem',
                       borderRadius: '9999px',
                       fontWeight: '500',
-                      background: '#ede9fe',
-                      color: '#7c3aed'
+                      background: 'var(--mr-purple-bg)',
+                      color: 'var(--mr-purple-text)'
                     }}>
                       {lang === 'es' ? 'Valoración' : 'Rating'}
                     </span>
                   )}
 
                   {fb.client_country && (
-                    <span style={{ fontSize: '0.75rem', color: '#9ca3af' }}>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--mr-text-tertiary)' }}>
                       {fb.client_country}
                     </span>
                   )}
 
-                  <span style={{ marginLeft: 'auto', fontSize: '0.75rem', color: '#9ca3af' }}>
+                  <span style={{ marginLeft: 'auto', fontSize: '0.75rem', color: 'var(--mr-text-tertiary)' }}>
                     {formatDate(fb.created_at, lang)}
                   </span>
                 </div>
 
                 {/* User */}
-                <p style={{ fontSize: '0.8rem', color: '#6b7280', marginBottom: '0.5rem' }}>
+                <p style={{ fontSize: '0.8rem', color: 'var(--mr-text-secondary)', marginBottom: '0.5rem' }}>
                   {fb.user?.email || 'Anonymous'}
                 </p>
 
                 {/* Subject + Message */}
-                <p style={{ fontSize: '0.95rem', fontWeight: '600', color: '#111827', marginBottom: '0.25rem' }}>
+                <p style={{ fontSize: '0.95rem', fontWeight: '600', color: 'var(--mr-text-primary)', marginBottom: '0.25rem' }}>
                   {fb.subject}
                 </p>
                 <p style={{
                   fontSize: '0.875rem',
-                  color: '#4b5563',
+                  color: 'var(--mr-text-secondary)',
                   lineHeight: '1.6',
                   marginBottom: '1rem',
                   whiteSpace: 'pre-line'
@@ -3321,12 +3348,12 @@ export default function AdminPage() {
                 {/* Admin notes (if any) */}
                 {fb.admin_notes && (
                   <div style={{
-                    background: '#fef3c7',
+                    background: 'var(--mr-amber-bg)',
                     borderRadius: '0.5rem',
                     padding: '0.75rem',
                     marginBottom: '0.75rem',
                     fontSize: '0.8rem',
-                    color: '#92400e'
+                    color: 'var(--mr-amber-text)'
                   }}>
                     <strong>{t.feedback.adminNotes}:</strong> {fb.admin_notes}
                   </div>
@@ -3335,12 +3362,12 @@ export default function AdminPage() {
                 {/* Previous response (if any) */}
                 {fb.responded_at && (fb.response_es || fb.response_en) && (
                   <div style={{
-                    background: '#ecfdf5',
+                    background: 'var(--mr-green-bg)',
                     borderRadius: '0.5rem',
                     padding: '0.75rem',
                     marginBottom: '0.75rem',
                     fontSize: '0.8rem',
-                    color: '#065f46'
+                    color: 'var(--mr-green-text)'
                   }}>
                     <strong>{lang === 'es' ? 'Respuesta enviada' : 'Response sent'}:</strong>{' '}
                     {lang === 'es' ? fb.response_es : fb.response_en}
@@ -3355,11 +3382,11 @@ export default function AdminPage() {
                       style={{
                         padding: '0.4rem 0.75rem',
                         borderRadius: '0.5rem',
-                        border: '1px solid #e5e7eb',
-                        background: 'white',
+                        border: '1px solid var(--mr-border)',
+                        background: 'var(--mr-bg-card)',
                         cursor: 'pointer',
                         fontSize: '0.8rem',
-                        color: '#374151',
+                        color: 'var(--mr-text-primary)',
                         display: 'flex',
                         alignItems: 'center',
                         gap: '0.35rem'
@@ -3385,10 +3412,10 @@ export default function AdminPage() {
                       padding: '0.4rem 0.75rem',
                       borderRadius: '0.5rem',
                       border: 'none',
-                      background: respondingTo === fb.id ? '#667eea' : '#f3f4f6',
+                      background: respondingTo === fb.id ? 'var(--mr-primary)' : 'var(--mr-bg-elevated)',
                       cursor: 'pointer',
                       fontSize: '0.8rem',
-                      color: respondingTo === fb.id ? 'white' : '#374151',
+                      color: respondingTo === fb.id ? 'white' : 'var(--mr-text-primary)',
                       display: 'flex',
                       alignItems: 'center',
                       gap: '0.35rem'
@@ -3405,10 +3432,10 @@ export default function AdminPage() {
                         padding: '0.4rem 0.75rem',
                         borderRadius: '0.5rem',
                         border: 'none',
-                        background: '#ecfdf5',
+                        background: 'var(--mr-green-bg)',
                         cursor: 'pointer',
                         fontSize: '0.8rem',
-                        color: '#059669',
+                        color: 'var(--mr-green-text)',
                         display: 'flex',
                         alignItems: 'center',
                         gap: '0.35rem'
@@ -3425,13 +3452,13 @@ export default function AdminPage() {
                   <div style={{
                     marginTop: '1rem',
                     padding: '1rem',
-                    background: '#f9fafb',
+                    background: 'var(--mr-bg-base)',
                     borderRadius: '0.75rem',
-                    border: '1px solid #e5e7eb'
+                    border: '1px solid var(--mr-border)'
                   }}>
                     {/* Admin notes */}
                     <div style={{ marginBottom: '0.75rem' }}>
-                      <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '500', color: '#374151', marginBottom: '0.35rem' }}>
+                      <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '500', color: 'var(--mr-text-primary)', marginBottom: '0.35rem' }}>
                         {t.feedback.adminNotes}
                       </label>
                       <textarea
@@ -3442,17 +3469,19 @@ export default function AdminPage() {
                           minHeight: '60px',
                           padding: '0.5rem',
                           borderRadius: '0.5rem',
-                          border: '1px solid #e5e7eb',
+                          border: '1px solid var(--mr-border)',
                           fontSize: '0.875rem',
                           fontFamily: 'inherit',
-                          resize: 'vertical'
+                          resize: 'vertical',
+                          background: 'var(--mr-bg-input)',
+                          color: 'var(--mr-text-primary)'
                         }}
                       />
                     </div>
 
                     {/* Response ES */}
                     <div style={{ marginBottom: '0.75rem' }}>
-                      <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '500', color: '#374151', marginBottom: '0.35rem' }}>
+                      <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '500', color: 'var(--mr-text-primary)', marginBottom: '0.35rem' }}>
                         {t.feedback.responseEs}
                       </label>
                       <textarea
@@ -3463,17 +3492,19 @@ export default function AdminPage() {
                           minHeight: '80px',
                           padding: '0.5rem',
                           borderRadius: '0.5rem',
-                          border: '1px solid #e5e7eb',
+                          border: '1px solid var(--mr-border)',
                           fontSize: '0.875rem',
                           fontFamily: 'inherit',
-                          resize: 'vertical'
+                          resize: 'vertical',
+                          background: 'var(--mr-bg-input)',
+                          color: 'var(--mr-text-primary)'
                         }}
                       />
                     </div>
 
                     {/* Response EN */}
                     <div style={{ marginBottom: '0.75rem' }}>
-                      <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '500', color: '#374151', marginBottom: '0.35rem' }}>
+                      <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '500', color: 'var(--mr-text-primary)', marginBottom: '0.35rem' }}>
                         {t.feedback.responseEn}
                       </label>
                       <textarea
@@ -3484,10 +3515,12 @@ export default function AdminPage() {
                           minHeight: '80px',
                           padding: '0.5rem',
                           borderRadius: '0.5rem',
-                          border: '1px solid #e5e7eb',
+                          border: '1px solid var(--mr-border)',
                           fontSize: '0.875rem',
                           fontFamily: 'inherit',
-                          resize: 'vertical'
+                          resize: 'vertical',
+                          background: 'var(--mr-bg-input)',
+                          color: 'var(--mr-text-primary)'
                         }}
                       />
                     </div>
@@ -3504,11 +3537,11 @@ export default function AdminPage() {
                         style={{
                           padding: '0.5rem 1rem',
                           borderRadius: '0.5rem',
-                          border: '1px solid #e5e7eb',
-                          background: 'white',
+                          border: '1px solid var(--mr-border)',
+                          background: 'var(--mr-bg-card)',
                           cursor: 'pointer',
                           fontSize: '0.8rem',
-                          color: '#374151'
+                          color: 'var(--mr-text-primary)'
                         }}
                       >
                         {t.feedback.cancel}
@@ -3524,7 +3557,7 @@ export default function AdminPage() {
                           padding: '0.5rem 1rem',
                           borderRadius: '0.5rem',
                           border: 'none',
-                          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                          background: 'var(--mr-gradient)',
                           cursor: 'pointer',
                           fontSize: '0.8rem',
                           fontWeight: '500',
@@ -3551,7 +3584,7 @@ export default function AdminPage() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: '#f3f4f6',
+      background: 'var(--mr-bg-elevated)',
       fontFamily: 'Inter, system-ui, sans-serif',
       overflowX: 'hidden'
     }}>
@@ -3574,7 +3607,7 @@ export default function AdminPage() {
           left: chartTooltip.x,
           top: chartTooltip.y,
           transform: 'translate(-50%, -100%)',
-          background: '#1f2937',
+          background: 'var(--mr-text-primary)',
           color: 'white',
           padding: '6px 12px',
           borderRadius: '6px',
@@ -3583,7 +3616,7 @@ export default function AdminPage() {
           whiteSpace: 'nowrap',
           pointerEvents: 'none',
           zIndex: 9999,
-          boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+          boxShadow: 'var(--mr-shadow-lg)'
         }}>
           {chartTooltip.content}
         </div>
@@ -3591,8 +3624,8 @@ export default function AdminPage() {
 
       {/* Header */}
       <header style={{
-        background: 'white',
-        borderBottom: '1px solid #e5e7eb',
+        background: 'var(--mr-bg-card)',
+        borderBottom: '1px solid var(--mr-border)',
         padding: isMobile ? '0.75rem 0.75rem' : '0.75rem 1.5rem',
         position: 'sticky',
         top: 0,
@@ -3610,7 +3643,7 @@ export default function AdminPage() {
               display: 'flex',
               alignItems: 'center',
               gap: '0.5rem',
-              color: '#667eea',
+              color: 'var(--mr-primary)',
               textDecoration: 'none',
               fontSize: '0.875rem',
               fontWeight: '500'
@@ -3627,7 +3660,7 @@ export default function AdminPage() {
                 width: '32px',
                 height: '32px',
                 borderRadius: '0.5rem',
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                background: 'var(--mr-gradient)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center'
@@ -3637,7 +3670,7 @@ export default function AdminPage() {
               <h1 style={{
                 fontSize: isMobile ? '1rem' : '1.25rem',
                 fontWeight: '700',
-                color: '#111827',
+                color: 'var(--mr-text-primary)',
                 margin: 0
               }}>
                 {t.adminPanel}
@@ -3653,14 +3686,14 @@ export default function AdminPage() {
                 setLanguageCookie(newLang)
               }}
               style={{
-                background: '#f3f4f6',
+                background: 'var(--mr-bg-elevated)',
                 border: 'none',
                 padding: '0.5rem 1rem',
                 borderRadius: '0.5rem',
                 cursor: 'pointer',
                 fontSize: '0.875rem',
                 fontWeight: '500',
-                color: '#374151'
+                color: 'var(--mr-text-primary)'
               }}
             >
               {lang === 'es' ? 'EN' : 'ES'}
@@ -3676,14 +3709,14 @@ export default function AdminPage() {
                 }
               }}
               style={{
-                background: '#fee2e2',
+                background: 'var(--mr-red-bg)',
                 border: 'none',
                 padding: '0.5rem 1rem',
                 borderRadius: '0.5rem',
                 cursor: 'pointer',
                 fontSize: '0.875rem',
                 fontWeight: '500',
-                color: '#dc2626',
+                color: 'var(--mr-red-text)',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.375rem'
@@ -3698,8 +3731,8 @@ export default function AdminPage() {
 
       {/* Tab navigation */}
       <div style={{
-        background: 'white',
-        borderBottom: '1px solid #e5e7eb',
+        background: 'var(--mr-bg-card)',
+        borderBottom: '1px solid var(--mr-border)',
         position: 'sticky',
         top: '53px',
         zIndex: 40
@@ -3725,8 +3758,8 @@ export default function AdminPage() {
                 cursor: 'pointer',
                 fontSize: isMobile ? '0.8rem' : '0.875rem',
                 fontWeight: activeTab === tab.key ? '600' : '500',
-                color: activeTab === tab.key ? '#667eea' : '#6b7280',
-                borderBottom: activeTab === tab.key ? '2px solid #667eea' : '2px solid transparent',
+                color: activeTab === tab.key ? 'var(--mr-primary)' : 'var(--mr-text-secondary)',
+                borderBottom: activeTab === tab.key ? '2px solid var(--mr-primary)' : '2px solid transparent',
                 transition: 'color 0.15s, border-color 0.15s',
                 flexShrink: 0,
                 whiteSpace: 'nowrap'
@@ -3747,9 +3780,9 @@ export default function AdminPage() {
       }}>
         {fetchError && (
           <div style={{
-            background: '#fef2f2',
-            border: '1px solid #fecaca',
-            color: '#991b1b',
+            background: 'var(--mr-red-bg)',
+            border: '1px solid var(--mr-red)',
+            color: 'var(--mr-red-text)',
             padding: '0.75rem 1rem',
             borderRadius: '0.5rem',
             marginBottom: '1rem',
@@ -3762,7 +3795,7 @@ export default function AdminPage() {
             {fetchError}
             <button
               onClick={() => setFetchError(null)}
-              style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: '#991b1b', padding: '0.25rem' }}
+              style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--mr-red-text)', padding: '0.25rem' }}
               aria-label={lang === 'es' ? 'Cerrar' : 'Close'}
             >
               <X size={14} />
