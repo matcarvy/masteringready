@@ -28,6 +28,65 @@ const getSupabaseUrl = () => process.env.NEXT_PUBLIC_SUPABASE_URL || supabaseUrl
 const getSupabaseAnonKey = () => process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || supabaseAnonKey
 
 // ============================================================================
+// AUTH STORAGE ADAPTER / ADAPTADOR DE ALMACENAMIENTO DE AUTH
+// ============================================================================
+
+/**
+ * Custom storage that delegates to localStorage or sessionStorage
+ * based on the "remember device" preference.
+ *
+ * - No flag (default): localStorage → session persists across browser restarts
+ * - Flag set: sessionStorage → session clears when browser closes
+ */
+const EPHEMERAL_FLAG = 'mr_session_ephemeral'
+
+function isEphemeral(): boolean {
+  if (typeof window === 'undefined') return false
+  return localStorage.getItem(EPHEMERAL_FLAG) === 'true'
+}
+
+const authStorage = {
+  getItem: (key: string): string | null => {
+    if (typeof window === 'undefined') return null
+    return isEphemeral() ? sessionStorage.getItem(key) : localStorage.getItem(key)
+  },
+  setItem: (key: string, value: string): void => {
+    if (typeof window === 'undefined') return
+    if (isEphemeral()) {
+      sessionStorage.setItem(key, value)
+    } else {
+      localStorage.setItem(key, value)
+    }
+  },
+  removeItem: (key: string): void => {
+    if (typeof window === 'undefined') return
+    localStorage.removeItem(key)
+    sessionStorage.removeItem(key)
+  }
+}
+
+/**
+ * Set whether the current session should be ephemeral (not remembered).
+ * Call BEFORE signIn so the session is stored in the correct place.
+ */
+export function setRememberDevice(remember: boolean): void {
+  if (typeof window === 'undefined') return
+  if (remember) {
+    localStorage.removeItem(EPHEMERAL_FLAG)
+  } else {
+    localStorage.setItem(EPHEMERAL_FLAG, 'true')
+  }
+}
+
+/**
+ * Check if "remember device" is currently enabled.
+ */
+export function getRememberDevice(): boolean {
+  if (typeof window === 'undefined') return true
+  return localStorage.getItem(EPHEMERAL_FLAG) !== 'true'
+}
+
+// ============================================================================
 // CLIENT-SIDE SUPABASE CLIENT / CLIENTE SUPABASE PARA NAVEGADOR
 // ============================================================================
 
@@ -39,7 +98,8 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
-    detectSessionInUrl: true
+    detectSessionInUrl: true,
+    storage: authStorage
   }
 })
 

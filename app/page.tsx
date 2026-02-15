@@ -5335,7 +5335,7 @@ by Matías Carvajal
           color: #667eea;
         }
         [data-theme="dark"] .bridge-text {
-          color: rgba(255, 255, 255, 0.6);
+          color: #8b9cf5;
         }
 
         /* Features Section */

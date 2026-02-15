@@ -2652,6 +2652,61 @@ const hasFullAccess = isPro || isAdmin || (() => {
 
 **Git state**: main on `91ed104`, pushed. Build clean. All 23 routes compiled.
 
+### Session 2026-02-15 — Dark Mode Refinement, Bridge Statement, CTA Sublines
+
+#### 1. Bridge Statement Added (`85eead3`)
+- Single-line positioning anchor between hero and "¿Por qué Mastering Ready?" section
+- ES: "Lo importante no es la métrica. Es saber qué hacer con ella."
+- EN: "The metric isn't what matters. Knowing what to do with it is."
+- Own `<div>` with `bridge-section` / `bridge-text` CSS classes
+- Desktop: 1.25rem, max-width 600px, `#667eea` indigo (light) / `rgba(255,255,255,0.6)` (dark)
+- Mobile: 1.065rem (17px), max-width 85vw
+
+#### 2. Bridge Spacing Fix (`86921c8`, `6896060`)
+- Initial 64px padding was asymmetric — features section padding-top added extra space below
+- Fix: bridge bottom padding compensates for features top padding
+- Desktop: 52px above = 24px bridge-bottom + 28px features-top = 52px below
+- Mobile: 40px above = 22px bridge-bottom + 18px features-top = 40px below
+
+#### 3. Dark Mode Refinement (`85eead3`)
+- **Problem**: Dark mode hero looked like "X-ray" / inverted colors. Status backgrounds too saturated, cards lacked depth separation.
+- **globals.css dark theme overhaul**:
+  - Status backgrounds desaturated: `#052e16` → `#121e18` (green), `#450a0a` → `#1e1315` (red), `#2e1065` → `#1a1528` (purple) — muted tints instead of deep saturated darks
+  - Status text softened: `#86efac` → `#6ee7a0` (green), less neon across all colors
+  - Shadows: added `0 0 0 1px rgba(255,255,255,0.04)` inset ring — gives all shadowed cards subtle edge definition on dark surfaces
+  - New `--mr-card-border`: `1px solid #282d3a` in dark, transparent in light
+- **page.tsx**: `border: var(--mr-card-border)` on hero demo card, feature cards, upload area card
+- **Hero CTA button**: Hardcoded `#ffffff` / `#667eea` instead of `var(--mr-bg-card)` / `var(--mr-primary)` — always pops on gradient in both themes
+
+#### 4. CTA Sublines per Score Range (`ba94313`)
+- **Problem**: User clicks CTA after analysis but unsure if it connects to a person or automated feature
+- **Solution**: Added `subline` field to `generate_cta()` in `analyzer.py` — small text under button setting expectation
+
+| Score | ES Button | ES Subline | EN Button | EN Subline |
+|-------|-----------|------------|-----------|------------|
+| 95-100 | Masterizar este track | Escríbenos y coordinamos | Master this track | Let's coordinate |
+| 85-94 | Masterizar este track | Escríbenos y coordinamos | Master this track | Let's coordinate |
+| 75-84 | Preparar mi mezcla | Te orientamos antes del mastering | Prepare my mix | We'll guide you before mastering |
+| 60-74 | Revisar mi mezcla | Te ayudamos a identificar los ajustes | Review my mix | We'll help identify the adjustments |
+| 40-59 | **Trabajar mi mezcla** (was Revisar) | Escríbenos y revisamos juntos | **Work on my mix** | Write us and we'll review together |
+| 20-39 | Trabajar mi mezcla | Escríbenos y revisamos juntos | Work on my mix | Write us and we'll review together |
+| 0-19 | Revisar mi proyecto | Escríbenos, te ayudamos a armar un plan | Review my project | Write us, we'll help you build a plan |
+
+- **Contact messages enriched**: WhatsApp/email now differentiate 3 actions (mastering/preparation/review) instead of 2
+- **Backend**: `cta_subline` field added to `main.py` async job result
+- **Frontend**: Subline displayed as small muted text under CTA button
+
+#### 5. Admin Privileges Restored
+- `is_admin` and `analyses_lifetime_used` reset via Supabase SQL Editor for admin user
+
+#### Commits to main (Session 2026-02-15)
+1. `85eead3` - ux: dark mode refinement + bridge statement
+2. `86921c8` - ux: bridge statement spacing per spec — desktop 64px, mobile 40px, indigo color
+3. `6896060` - fix: equalize bridge statement spacing — compensate for features section padding
+4. `ba94313` - ux: CTA sublines per score range + enriched contact messages
+
+**Git state**: main on `ba94313`, pushed. Build clean. Vercel + Render both deployed.
+
 ---
 
 **MR next steps (priority order):**

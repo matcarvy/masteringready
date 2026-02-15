@@ -8,7 +8,7 @@
  */
 
 import { useState, useEffect, useRef } from 'react'
-import { supabase } from '@/lib/supabase'
+import { supabase, setRememberDevice, getRememberDevice } from '@/lib/supabase'
 import { SocialLoginButtons } from './SocialLoginButtons'
 import { X, Mail, Lock, User, Eye, EyeOff, Check, Headphones, Music } from 'lucide-react'
 
@@ -44,6 +44,7 @@ const translations = {
     password: 'Contraseña',
     confirmPassword: 'Confirmar contraseña',
     forgotPassword: '¿Olvidaste tu contraseña?',
+    rememberDevice: 'Recordar este dispositivo',
     // Buttons
     loginButton: 'Iniciar Sesión',
     signupButton: 'Crear Cuenta',
@@ -83,6 +84,7 @@ const translations = {
     password: 'Password',
     confirmPassword: 'Confirm password',
     forgotPassword: 'Forgot password?',
+    rememberDevice: 'Remember this device',
     // Buttons
     loginButton: 'Sign In',
     signupButton: 'Create Account',
@@ -126,6 +128,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, lang }: AuthModalProps) 
   const [confirmPassword, setConfirmPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [rememberDevice, setRememberDevice_] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [authSuccess, setAuthSuccess] = useState(false)
@@ -142,6 +145,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, lang }: AuthModalProps) 
       setSuccessMessage(null)
       setAuthSuccess(false)
       setLockAnimationPhase('idle')
+      setRememberDevice_(getRememberDevice())
     }
   }, [isOpen])
 
@@ -163,6 +167,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, lang }: AuthModalProps) 
     }
 
     setLoading(true)
+    setRememberDevice(rememberDevice)
 
     try {
       const { data, error: signInError } = await supabase.auth.signInWithPassword({
@@ -694,9 +699,18 @@ export function AuthModal({ isOpen, onClose, onSuccess, lang }: AuthModalProps) 
                 </div>
               )}
 
-              {/* Forgot Password (login only) */}
+              {/* Forgot Password + Remember Device (login only) */}
               {mode === 'login' && (
-                <div style={{ textAlign: 'right', marginBottom: '1rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', cursor: 'pointer', fontSize: '0.75rem', color: 'var(--mr-text-secondary)' }}>
+                    <input
+                      type="checkbox"
+                      checked={rememberDevice}
+                      onChange={(e) => setRememberDevice_(e.target.checked)}
+                      style={{ accentColor: 'var(--mr-primary)', width: '14px', height: '14px', cursor: 'pointer' }}
+                    />
+                    {t.rememberDevice}
+                  </label>
                   <a
                     href="/auth/forgot-password"
                     style={{
