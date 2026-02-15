@@ -26,7 +26,7 @@
 - Pro plan copy: NEVER say "ilimitados/unlimited" — always "30 análisis al mes"
 
 ## Pricing Plans
-- **Free (Gratis)**: 2 lifetime analyses (Rápido + Resumen only, no PDF)
+- **Free (Gratis)**: 2 full analyses (Completo + PDF included). Anonymous gets 1 Rápido trial before signup prompt.
 - **Single (Análisis individual)**: $5.99 USD one-off, 1 analysis (includes Completo + PDF)
 - **Pro Monthly (MasteringReady Pro)**: $9.99/mo USD, 30/month (includes Completo + PDF + priority processing)
 - **Pro Add-on Pack (Pack adicional)**: $3.99 USD, 10 extra analyses (Pro only, max 2 packs/cycle)
@@ -234,15 +234,14 @@ Watch these metrics in admin dashboard before making changes:
 
 ## NEXT STEPS (Priority Order)
 
-### Immediate (active bugs / quick wins)
-- [ ] **Verify progress bar fix** — Direct DOM manipulation approach deployed (`7be3f46`). User to test. If still broken, debug whether the `useEffect([loading])` interval fires at all.
-- [ ] **Remove diagnostic code** — Once progress bar confirmed, clean up `progressRef`, `console.error` remnants, and any leftover debugging artifacts.
+### Immediate (next session)
+- [ ] **Dark/Light mode toggle** — System-aware with manual override, similar to Mind2Magic CRM. Must preserve all text legibility across both themes.
+- [ ] **eBook Migration** — Move from Payhip ($15 USD) to MasteringReady platform. Scope: `ebook` plan type, checkout + webhook case, protected PDF download (`/api/ebook/download` with signed URLs), `/ebook` page, cross-sell CTA.
+
+### Short-term (Week 2-4 post-launch)
 - [ ] **Shared secret Vercel ↔ Render** (~15 min) — `X-API-Secret` header prevents direct Render API abuse. Requires coordinated env var deploy.
 - [ ] **Google Search Console** — Add verification ID in `app/layout.tsx` line ~117. Submit sitemap.
 - [ ] **Facebook OAuth** — Submit Meta App Review + Business Verification → re-enable button in `SocialLoginButtons.tsx`
-
-### Short-term (Week 2-4 post-launch)
-- [ ] **eBook Migration** — Move from Payhip ($15 USD) to MasteringReady platform. Scope: `ebook` plan type, checkout + webhook case, protected PDF download (`/api/ebook/download` with signed URLs), `/ebook` page, cross-sell CTA.
 - [ ] **Transactional emails** — Welcome, receipt, renewal reminders. Currently Supabase handles only auth emails.
 - [ ] **Google Analytics** (`NEXT_PUBLIC_GA_MEASUREMENT_ID`)
 - [ ] **Stream Ready deploy** — Backend endpoints ready in `main.py` (`_sr_` prefix). Frontend at `~/streamready/`. Needs: GitHub repo, Vercel project (`stream.masteringready.com`), env vars, Supabase project (post-launch). See `~/streamready/CLAUDE.md`.
@@ -2421,12 +2420,254 @@ Continued from Session 2026-02-13 (context compaction). Main task: fix progress 
 ---
 
 **MR next steps (priority order):**
-1. **Verify progress bar fix** — User to test after Vercel deploy. If still stuck, add console.error inside the interval to confirm it fires.
-2. **Remove diagnostic code** — Once progress bar is confirmed working, clean up: remove `progressRef` if not needed, remove `console.error` remnants.
-3. **GoTrueClient warning** — "Multiple GoTrueClient instances detected" still appears. Cached fresh client may not fully prevent this. Low priority (Supabase says "not an error").
-4. **SEO audit + Google Search Console** — Add verification ID in `app/layout.tsx` line ~117. Submit sitemap.
-5. **Shared secret Vercel ↔ Render** (~15 min) — `X-API-Secret` header prevents direct Render API abuse.
-6. **Facebook OAuth** — Meta App Review + Business Verification → re-enable button.
-7. **eBook Migration** — Move from Payhip ($15 USD) to MasteringReady platform.
-8. **Monitor**: anonymous funnel, UTM attribution, Render analysis times (benchmark: 68-73s), device breakdown.
-9. **Stream Ready deploy** — Backend endpoints ready in `main.py`. Frontend at `~/streamready/`. Needs GitHub repo + Vercel project + Supabase project.
+
+### PRIORITY 1: Free Tier Change — 2 Rápido → 1 Full (Completo + PDF)
+Change free tier from "2 lifetime Rápido-only" to "1 full analysis with Completo + PDF". Better conversion — full product experience, then upsell.
+
+**Current implementation:**
+- Supabase RPC `can_user_analyze`: checks `profiles.analyses_lifetime_used` against limit of 2
+- Backend already generates ALL 3 reports (Rápido/Resumen/Completo) for every analysis — gating is frontend-only
+- `hasPaidAccess` state controls Completo tab + PDF: true for admin/Pro/Single, always false for free users
+- Tab gating: `app/page.tsx` lines 2640-2656. PDF gating: lines 3160-3224.
+
+**Changes needed:**
+1. Supabase migration: limit 2 → 1
+2. `app/page.tsx`: Update `hasPaidAccess` to grant free users full access when viewing their analysis result (Option A: `result !== null` for free users → true)
+3. Timing: counter increments after analysis (background save), must not flicker tabs
+4. Copy: "2 análisis gratis" → "1 análisis completo gratis" across page.tsx, subscription, AuthModal
+
+**Open question:** Does "1 full" include PDF download? Likely yes for max conversion.
+
+### PRIORITY 2: Analysis Flow Audit — Clean & Fast
+Verify analysis flow is optimized before adding features. Previous session fixed: module-level quota cache, timeout wrappers, mutex leak, progress desync, non-blocking DB save. Audit for: remaining unnecessary awaits, redundant API calls, leftover debug code, parallelization opportunities.
+
+### PRIORITY 3: Dark/Light Mode Toggle
+CSS variables approach (`[data-theme="dark"]`/`[data-theme="light"]` in `app/globals.css`). Works with existing inline styles: `style={{ background: 'var(--mr-bg-card)' }}`. Blocking `<script>` in `<head>` prevents flash. `localStorage('mr-theme')` + `prefers-color-scheme` fallback. `ThemeToggle` component (sun/moon SVG) next to lang toggle. ~30 CSS variables, 700+ hardcoded hex values to migrate across 8+ files. Mind2Magic CRM reference: `data-theme` attribute, 5-layer bg system.
+
+### PRIORITY 4: eBook Migration from Payhip
+New Stripe product `ebook` at $15 USD flat. DB: `has_ebook BOOLEAN` on profiles. Checkout + webhook + protected PDF download API. New `/ebook` page. Replace 3 Payhip links (page.tsx lines 3753, 3946 + layout.tsx line 248).
+
+### Other
+5. **SEO audit + Google Search Console** — Submit sitemap, add verification ID.
+6. **Shared secret Vercel ↔ Render** — `X-API-Secret` header.
+7. **Facebook OAuth** — Meta App Review + Business Verification.
+8. **Monitor**: anonymous funnel, UTM attribution, Render analysis times, device breakdown.
+9. **Stream Ready deploy** — Backend ready in `main.py`. Frontend at `~/streamready/`.
+
+---
+
+### Session 2026-02-14 — Second Analysis Hang Fix + Progress Desync + Admin Tooltip
+
+#### 1. Second Analysis Hang (PRIMARY BUG — FIXED)
+
+**Symptom**: First analysis works, second one hangs — progress bar shows but no POST request reaches Render.
+
+**Root cause (confirmed via diagnostics)**:
+- GoTrueClient conflicts cause auth state flicker between analyses
+- `userAnalysisStatus` (React useState) resets to null
+- Second analysis falls through to `await checkCanAnalyze()` on stale Supabase singleton, which hangs indefinitely
+
+**Diagnostic evidence** (added in `070320e`):
+- First analysis: `{ cached: true, can: true, reason: "ADMIN" }`
+- Second analysis: `{ cached: false, can: undefined, reason: undefined }` → hung on checkCanAnalyze()
+
+**Fix — Module-level quota cache** (`e8ad4a5`):
+- `let _quotaCache: AnalysisStatus | null = null` outside the component (survives React state resets)
+- All 6 `setUserAnalysisStatus()` calls also write to `_quotaCache`
+- `handleAnalyze` checks `userAnalysisStatus || _quotaCache` before falling through to RPC
+- `handleReset` quota check uses same fallback
+
+**Supporting fix — Mutex leak** (`070320e`):
+- `isAnalyzingRef.current = true` at line 670 but early return at line 680 (before try/finally) didn't reset it
+- Added `isAnalyzingRef.current = false` before early return
+
+**Supporting fix — Timeout wrappers** (`070320e`):
+- `checkCanAnalyze()` wrapped in 8s `Promise.race` timeout
+- `checkIpLimit()` wrapped in 8s timeout
+- Prevents indefinite hang if stale singleton is reached
+
+#### 2. Progress Percentage Desync After Compression (FIXED)
+
+**Symptom**: Large files showed ~45% when analysis just started, because CSS animation began when Analyze was clicked (before 10-15s compression).
+
+**Fix** (`13e5dbd`): Reset `progressAnimDuration`, `progressKey`, and `progressStartRef` AFTER compression completes, not when button is clicked.
+
+#### 3. Admin Spectral Tooltip Delay (FIXED)
+
+**Symptom**: "Perfil espectral por rango de puntuación" bars took ~500ms to show percentage on hover vs instant for other bars.
+
+**Root cause**: Used native HTML `title` attribute (browser-imposed delay) instead of custom React tooltip.
+
+**Fix** (`13e5dbd`): Switched to `onMouseEnter`/`onMouseLeave` → `setChartTooltip()` pattern matching `renderBarChart`.
+
+#### 4. Diagnostic Log Cleanup (DONE)
+
+Removed all `[MR-Q]`, `[MR-1]`, `[MR-2]`, `[MR] Uploading` console.error logs added during debugging (`13e5dbd`).
+
+#### Commits to main (Session 2026-02-14 Part 1)
+1. `070320e` - fix: timeout on quota check + mutex leak fix + diagnostic logs
+2. `e8ad4a5` - fix: module-level quota cache (actual fix for second analysis hang)
+3. `13e5dbd` - fix: progress desync after compression + admin tooltip + diagnostic cleanup
+
+**Key architectural insight**: React state (`useState`) is unreliable when GoTrueClient conflicts cause auth state flicker → component re-renders → state loss. Module-level variables outside the component persist for the entire page lifecycle and serve as a reliable fallback.
+
+---
+
+### Session 2026-02-14 Part 2 — Free Tier Change: 2 Rápido → 1 Full (Completo + PDF)
+
+#### Problem
+Free tier gave 2 Rápido+Resumen-only analyses — undersells the product. Users never experience the full Completo report or PDF download before hitting the paywall.
+
+#### Solution
+Changed to 1 full analysis (Completo + PDF included) for better conversion. Anonymous users get 1 trial, then IP block funnels them to account creation.
+
+#### Changes
+
+**Supabase migration** (`20260214000001_free_tier_to_1_full.sql`):
+- `can_user_analyze`: free limit `>= 2` → `>= 1`, returns `analyses_limit: 1`. Admin bypass preserved.
+- `check_ip_limit`: IP limit `>= 2` → `>= 1`
+
+**Backend** (`ip_limiter.py`):
+- `MAX_FREE_ANALYSES_PER_IP`: 2 → 1
+
+**Main page** (`app/page.tsx`):
+- Added `effectiveHasPaidAccess` computed boolean: `hasPaidAccess || (isLoggedIn && result !== null && userAnalysisStatus?.analyses_used <= 1)`
+- Grants Completo tab + PDF download for free user viewing their 1st analysis result
+- Replaced `hasPaidAccess` with `effectiveHasPaidAccess` in 8 gating locations (tab click, crown icon, PDF button styling/click/label)
+- IpLimitModal copy: "1 análisis de prueba" + benefits "1 análisis completo gratis" + "Informe Completo + PDF"
+- FreeLimitModal copy: "Has usado tu análisis completo gratis"
+
+**Dashboard** (`app/dashboard/page.tsx`):
+- Added `hasFullAccess = isPro || (!isPro && userStatus?.analyses_used <= 1)`
+- Replaced `isPro` with `hasFullAccess` in 9 gating locations (Completo tab click, crown icon, content gate, text download, PDF download, upgrade prompt)
+- Counter display: `/ 2` → `/ 1`, `2 -` → `1 -`
+- Free limit threshold: `>= 2` → `>= 1`
+- Welcome bonus cap: `Math.min(..., 2)` → `Math.min(..., 1)`
+
+**Copy updates** (4 files):
+- `components/auth/AuthModal.tsx`: benefits → "1 análisis completo gratis", "Informe Completo + PDF", "Guardar en Mis Análisis"
+- `app/auth/signup/page.tsx`: subtitle + benefit → "1 análisis completo gratis" / "1 free full analysis"
+- `app/terms/page.tsx`: "1 análisis completo para empezar, incluye informe completo y PDF"
+- `app/layout.tsx`: SEO meta descriptions → "1 free full analysis"
+
+**Config cleanup** (`supabase/config.toml`):
+- Removed deprecated keys (`[project]`, `db.password`, `auth.enable_confirmations`, `realtime.poll_*`) for Supabase CLI v2 compatibility
+
+#### Auth redirect flow (verified safe)
+Anonymous → analyze → result + `localStorage('pendingAnalysis')` → signup (OAuth redirect) → `AuthProvider.savePendingAnalysisForUser()` → DB save → redirect to `/dashboard` → `hasFullAccess` checks `userStatus.analyses_used <= 2` from DB → Completo + PDF unlocked. No dependency on in-memory `result` state.
+
+#### Supabase CLI installed
+- `supabase` v2.75.0 via Homebrew. Not yet linked (needs access token for `supabase login`).
+- Migrations run manually via SQL Editor in Supabase Dashboard.
+
+#### Analysis Flow Audit — CLEAN (no issues)
+Full audit of `handleAnalyze`, `handleReset`, `saveAnalysisToDatabase`, `lib/api.ts`, `AuthProvider`, and backend `main.py`. 37 checks passing, 0 issues. All `console.error` (13) and `console.warn` (2) are intentional production error tracking. Zero `console.log`/`console.debug` remaining. Flow is optimized: cached quota, parallel DB ops, non-blocking saves, timeout wrappers, adaptive polling.
+
+#### Anonymous CTA Simplification
+Removed premature "$5.99 Detailed analysis" button from anonymous view. Anonymous users see single CTA: "View my analysis — Free. No credit card." → signup. The $5.99 upsell only appears for logged-in users who've exhausted free analyses.
+
+#### Free Tier Final Decision: 2 Full Analyses (not 1)
+Initial change was 1 full analysis. After research, determined the **aha moment** for audio analysis SaaS is the **improvement loop** (analyze → fix in DAW → re-analyze → see score improve), not the first score alone. 1 analysis = user sees problem but never experiences solution. 2 analyses = complete value loop, user is emotionally invested when paywall hits on 3rd.
+
+**Final flow:**
+- **Anonymous**: 1 Rápido analysis → IP blocks (`check_ip_limit >= 1`) → signup modal
+- **Registered free**: 2 full analyses (Completo + PDF) via `can_user_analyze >= 2` → paywall on 3rd
+- **Pro/Single/Admin**: unchanged
+
+**Key implementation details:**
+- `effectiveHasPaidAccess` (page.tsx): `hasPaidAccess || (isLoggedIn && result !== null && analyses_used <= 2)`
+- `hasFullAccess` (dashboard): `isPro || (!isPro && userStatus.analyses_used <= 2)`
+- IP limit: `MAX_FREE_ANALYSES_PER_IP = 1` (ip_limiter.py) + `check_ip_limit >= 1` (Supabase)
+- User limit: `can_user_analyze >= 2` (Supabase) — admin bypass preserved
+- Download Full Report button hidden for anonymous (single CTA funnel), visible for logged-in
+
+#### Commits to main (Session 2026-02-14 Part 2)
+1. `48273e8` - feat: free tier change — full access (Completo + PDF) instead of Rápido-only
+2. `8a54579` - fix: single CTA for anonymous users — remove premature $5.99 upsell
+3. `4e7532d` - fix: 2 free full analyses for registered users, IP limit stays at 1
+
+**Git state**: main on `4e7532d`, pushed. Build clean. All 3 Supabase migrations ran via SQL Editor.
+
+### Session 2026-02-14 Part 3 — Dark/Light Mode + Free Tier Dashboard Fix
+
+#### Dark/Light Mode — Phases 1-4 COMPLETE (`4d08cb9`)
+
+Full dark/light mode implementation across all user-facing pages. 5 parallel background agents migrated ~900+ hardcoded hex colors to CSS variables.
+
+**Foundation (Phase 1):**
+- `app/globals.css` (NEW): 25 CSS variables with `--mr-` prefix. 5-layer bg system (base, card, elevated, hover, input), 3-layer text hierarchy (primary, secondary, tertiary), status color pairs (green/red/amber/blue/purple with bg+text variants for both themes), semantic constants (green, red, amber, blue, purple), layout vars (radius, shadow).
+- `lib/theme.ts` (NEW): `useTheme()` hook → `{ theme, resolvedTheme, setTheme }`. `ThemePreference` = 'system' | 'light' | 'dark'. Persists to `localStorage('mr-theme')`. Listens to `prefers-color-scheme` media query. Sets `data-theme` on `<html>`.
+- `components/ThemeToggle.tsx` (NEW): Sun/Moon toggle button (Lucide icons), 36px circle, bilingual aria-labels.
+- `app/layout.tsx`: Blocking `<script>` in `<head>` reads localStorage before first paint → prevents flash. `import './globals.css'`. `suppressHydrationWarning` on `<html>`.
+
+**Pages migrated (Phases 2-4):**
+- `app/page.tsx` (~357 colors): All backgrounds, text, borders, shadows, gradients → CSS vars. ThemeToggle in header.
+- `app/dashboard/page.tsx` (~146 colors): Same migration + ThemeToggle. Score/status conditional colors preserved.
+- `app/history/page.tsx` (~96 colors): Same migration + ThemeToggle.
+- `app/subscription/page.tsx` (~89 colors): Same migration + ThemeToggle.
+- `app/settings/page.tsx` (~82 colors): Same migration + ThemeToggle + **3-way theme selector** (Sistema/Claro/Oscuro) in new "Apariencia"/"Appearance" section using Lucide Monitor/Sun/Moon icons.
+- `components/auth/AuthModal.tsx` (~36 colors): Modal bg, inputs, borders, error/success states.
+- `components/auth/UserMenu.tsx` (~15 colors): Dropdown bg, menu items, hover states.
+- All 4 auth pages (login, signup, forgot-password, reset-password): Card bg, inputs, gradients.
+
+**Intentionally preserved (not migrated):**
+- Score/status conditional colors (green/blue/amber/red by score range)
+- Brand/decorative gradients (footer dark indigo, CTA purple, modal amber circles)
+- Social platform brand colors (WhatsApp green, Instagram pink)
+- `rgba()` modal backdrops
+- White text on dark/gradient surfaces
+
+**Phase 5 (deferred — later session):**
+- `app/admin/page.tsx` (343 hex colors — admin-only)
+- `app/privacy/page.tsx`, `app/terms/page.tsx` (legal pages)
+- Error pages (`not-found`, `error`, `global-error`)
+- `components/PrivacyBadge.tsx`
+- Supabase migration: `ALTER TABLE profiles ADD COLUMN preferred_theme TEXT DEFAULT 'system'`
+
+#### Free Tier Dashboard Fix — Per-Analysis Full Access (`91ed104`)
+
+**Problem**: Free user's first 2 analyses lost Completo + PDF access on dashboard/history when `analyses_used > 2` (which shouldn't happen, but safety net matters).
+
+**Root cause**: `hasFullAccess` checked global `userStatus.analyses_used <= 2` — once any analysis pushed count past 2, ALL analyses lost full access.
+
+**Fix**: Per-analysis ordinal check on both dashboard and history pages:
+```typescript
+const hasFullAccess = isPro || isAdmin || (() => {
+  if (!selectedAnalysis || analyses.length === 0) return false
+  const sorted = [...analyses].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+  const idx = sorted.findIndex(a => a.id === selectedAnalysis.id)
+  return idx >= 0 && idx < 2
+})()
+```
+
+- Sorts analyses by creation date, grants full access to first 2 only
+- Pro and admin always get full access
+- `can_user_analyze` RPC already blocks the 3rd analysis from running — this is belt-and-suspenders
+- Added `isAdmin` to `useAuth()` destructuring in both pages
+- History page: replaced all `isPro` gating references with `hasFullAccess`
+
+#### Commits to main (Session 2026-02-14 Part 3)
+1. `4d08cb9` - feat: dark/light mode — CSS variable system + color migration across all user-facing pages
+2. `91ed104` - fix: first 2 analyses get Completo + PDF on dashboard/history, rest need Pro
+
+**Git state**: main on `91ed104`, pushed. Build clean. All 23 routes compiled.
+
+---
+
+**MR next steps (priority order):**
+
+### PRIORITY 1: Dark Mode Phase 5 — Admin + Secondary Pages
+Admin page (343 colors), privacy, terms, error pages, PrivacyBadge. Supabase `preferred_theme` column migration.
+
+### PRIORITY 2: Persona Mode (Músico/Productor/Ingeniero)
+Two-step disclosure: "más simple o más detallado?" after first result → full 3-tier in settings. Maps to both display mode and scoring strictness. Default: Productor (current behavior).
+
+### PRIORITY 3: eBook Migration from Payhip
+New Stripe product `ebook` at $15 USD flat. DB: `has_ebook BOOLEAN` on profiles. Checkout + webhook + protected PDF download API. New `/ebook` page.
+
+### Other
+4. **SEO audit + Google Search Console** — Submit sitemap, add verification ID.
+5. **Shared secret Vercel ↔ Render** — `X-API-Secret` header.
+6. **Facebook OAuth** — Meta App Review + Business Verification.
+7. **Monitor**: anonymous funnel, UTM attribution, Render analysis times, device breakdown.
+8. **Stream Ready deploy** — Backend ready in `main.py`. Frontend at `~/streamready/`.
