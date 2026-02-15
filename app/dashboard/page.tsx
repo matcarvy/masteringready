@@ -374,7 +374,7 @@ const cleanReportText = (text: string): string => {
 function DashboardContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { user, session, loading: authLoading } = useAuth()
+  const { user, session, loading: authLoading, isAdmin } = useAuth()
 
   const [lang, setLang] = useState<'es' | 'en'>('es')
   const [analyses, setAnalyses] = useState<Analysis[]>([])
@@ -395,8 +395,13 @@ function DashboardContent() {
   const { geo } = useGeo()
   const t = translations[lang]
   const isPro = subscription?.plan?.type === 'pro' || subscription?.plan?.type === 'studio'
-  // Free user gets full access (Completo + PDF) for their 2 free analyses
-  const hasFullAccess = isPro || (!isPro && userStatus !== null && userStatus.analyses_used <= 2)
+  // Free users get Completo + PDF for their first 2 analyses (by creation date). Pro/admin get all.
+  const hasFullAccess = isPro || isAdmin || (() => {
+    if (!selectedAnalysis || analyses.length === 0) return false
+    const sorted = [...analyses].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+    const idx = sorted.findIndex(a => a.id === selectedAnalysis.id)
+    return idx >= 0 && idx < 2
+  })()
 
   const prices = getAllPricesForCountry(geo?.countryCode || 'US')
 

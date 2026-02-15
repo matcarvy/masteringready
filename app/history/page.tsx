@@ -230,7 +230,7 @@ const cleanReportText = (text: string): string => {
 
 export default function HistoryPage() {
   const router = useRouter()
-  const { user, session, loading: authLoading } = useAuth()
+  const { user, session, loading: authLoading, isAdmin } = useAuth()
 
   const [lang, setLang] = useState<'es' | 'en'>('es')
   const [isMobile, setIsMobile] = useState(false)
@@ -246,6 +246,14 @@ export default function HistoryPage() {
 
   // Check if Pro (for complete tab)
   const [isPro, setIsPro] = useState(false)
+
+  // Free users get Completo + PDF for their first 2 analyses (by creation date). Pro/admin get all.
+  const hasFullAccess = isPro || isAdmin || (() => {
+    if (!selectedAnalysis || analyses.length === 0) return false
+    const sorted = [...analyses].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+    const idx = sorted.findIndex(a => a.id === selectedAnalysis.id)
+    return idx >= 0 && idx < 2
+  })()
 
   const t = translations[lang]
 
@@ -378,7 +386,7 @@ export default function HistoryPage() {
   }
 
   const handleTabClick = (tab: 'rapid' | 'summary' | 'complete') => {
-    if (tab === 'complete' && !isPro) return
+    if (tab === 'complete' && !hasFullAccess) return
     setReportTab(tab)
   }
 
@@ -971,9 +979,9 @@ export default function HistoryPage() {
                 >
                   {tab === 'rapid' && <Zap size={16} />}
                   {tab === 'summary' && <FileText size={16} />}
-                  {tab === 'complete' && (!isPro ? <Crown size={16} style={{ color: '#d97706' }} /> : <TrendingUp size={16} />)}
+                  {tab === 'complete' && (!hasFullAccess ? <Crown size={16} style={{ color: '#d97706' }} /> : <TrendingUp size={16} />)}
                   {t.tabs[tab]}
-                  {tab === 'complete' && !isPro && (
+                  {tab === 'complete' && !hasFullAccess && (
                     <span style={{
                       fontSize: '0.625rem',
                       background: 'var(--mr-amber-bg)',
@@ -1140,7 +1148,7 @@ export default function HistoryPage() {
                   {cleanReportText(selectedAnalysis.report_short || '') || (lang === 'es' ? 'No hay datos de resumen disponibles.' : 'No summary data available.')}
                 </div>
               )}
-              {reportTab === 'complete' && isPro && (
+              {reportTab === 'complete' && hasFullAccess && (
                 <div style={{
                   whiteSpace: 'pre-wrap',
                   wordBreak: 'break-word',
@@ -1295,7 +1303,7 @@ export default function HistoryPage() {
                     {lang === 'es' ? 'Descargar Resumen' : 'Download Summary'}
                   </button>
                 )}
-                {reportTab === 'complete' && isPro && selectedAnalysis.report_write && (
+                {reportTab === 'complete' && hasFullAccess && selectedAnalysis.report_write && (
                   <button
                     onClick={() => {
                       const content = `Mastering Ready - Análisis Completo\n${'='.repeat(40)}\n\nArchivo: ${selectedAnalysis.filename}\nPuntuación: ${selectedAnalysis.score}/100\nFecha: ${new Date(selectedAnalysis.created_at).toLocaleDateString()}\n\n${selectedAnalysis.report_write}`
@@ -1327,7 +1335,7 @@ export default function HistoryPage() {
                     {lang === 'es' ? 'Descargar Completo' : 'Download Complete'}
                   </button>
                 )}
-                {reportTab === 'complete' && !isPro && (
+                {reportTab === 'complete' && !hasFullAccess && (
                   <button
                     onClick={() => {/* Could open upgrade modal */}}
                     style={{
@@ -1352,7 +1360,7 @@ export default function HistoryPage() {
                 )}
 
                 {/* Download PDF - Pro only */}
-                {isPro && (
+                {hasFullAccess && (
                   <button
                     onClick={async () => {
                       try {
