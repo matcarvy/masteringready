@@ -3905,7 +3905,6 @@ def generate_cta(score: int, strict: bool, lang: str, mode: str = "write") -> Di
     if lang == 'es':
         # Spanish CTAs - ES LATAM Neutro (sounds like an engineer, not an app)
         if score >= 95:
-            # Perfect — offer mastering directly
             return {
                 "message": (
                     "🎧 Tu mezcla tiene buen balance técnico.\n"
@@ -3913,11 +3912,11 @@ def generate_cta(score: int, strict: bool, lang: str, mode: str = "write") -> Di
                     "imagen estéreo definida y translate consistente en cualquier sistema de reproducción."
                 ),
                 "button": "Masterizar este track",
+                "subline": "Escríbenos y coordinamos",
                 "action": "mastering"
             }
 
         elif score >= 85:
-            # Ready for mastering
             return {
                 "message": (
                     "🎧 Tu mezcla está técnicamente lista.\n"
@@ -3925,11 +3924,11 @@ def generate_cta(score: int, strict: bool, lang: str, mode: str = "write") -> Di
                     "de distribución manteniendo la intención de la mezcla."
                 ),
                 "button": "Masterizar este track",
+                "subline": "Escríbenos y coordinamos",
                 "action": "mastering"
             }
 
         elif score >= 75:
-            # Needs some prep before mastering
             return {
                 "message": (
                     "🔧 Hay algunos aspectos técnicos por ajustar antes del mastering.\n"
@@ -3937,11 +3936,11 @@ def generate_cta(score: int, strict: bool, lang: str, mode: str = "write") -> Di
                     "mejor desde la mezcla. Puedo revisar contigo qué ajustes harían la diferencia."
                 ),
                 "button": "Preparar mi mezcla",
+                "subline": "Te orientamos antes del mastering",
                 "action": "preparation"
             }
 
         elif score >= 60:
-            # Needs more work
             return {
                 "message": (
                     "🔧 Tu mezcla necesita trabajo antes del mastering.\n"
@@ -3949,23 +3948,23 @@ def generate_cta(score: int, strict: bool, lang: str, mode: str = "write") -> Di
                     "Puedo ayudarte a identificar qué ajustar."
                 ),
                 "button": "Revisar mi mezcla",
+                "subline": "Te ayudamos a identificar los ajustes",
                 "action": "preparation"
             }
 
         elif score >= 40:
-            # Significant work needed
             return {
                 "message": (
                     "🔧 Tu mezcla necesita atención en varios puntos.\n"
                     "El mastering no corrige problemas de mezcla, los expone. Antes de pensar "
                     "en mastering, hay que resolver lo que el análisis señala."
                 ),
-                "button": "Revisar mi mezcla",
+                "button": "Trabajar mi mezcla",
+                "subline": "Escríbenos y revisamos juntos",
                 "action": "review"
             }
 
         elif score >= 20:
-            # Urgent correction required
             return {
                 "message": (
                     "🔧 Tu mezcla tiene problemas técnicos importantes.\n"
@@ -3973,11 +3972,11 @@ def generate_cta(score: int, strict: bool, lang: str, mode: str = "write") -> Di
                     "Puedo ayudarte a trabajar los puntos críticos desde la sesión."
                 ),
                 "button": "Trabajar mi mezcla",
+                "subline": "Escríbenos y revisamos juntos",
                 "action": "review"
             }
 
         else:
-            # Critical - multiple issues
             return {
                 "message": (
                     "🔧 El análisis detectó problemas en varias áreas del mix.\n"
@@ -3985,13 +3984,13 @@ def generate_cta(score: int, strict: bool, lang: str, mode: str = "write") -> Di
                     "Puedo ayudarte a planificar los pasos para llevarla a un nivel profesional."
                 ),
                 "button": "Revisar mi proyecto",
+                "subline": "Escríbenos, te ayudamos a armar un plan",
                 "action": "review"
             }
 
     else:
         # English CTAs - US English (sounds like an engineer, not an app)
         if score >= 95:
-            # Perfect — offer mastering directly
             return {
                 "message": (
                     "🎧 Your mix has solid technical balance.\n"
@@ -3999,11 +3998,11 @@ def generate_cta(score: int, strict: bool, lang: str, mode: str = "write") -> Di
                     "defined stereo image, and consistent translation across playback systems."
                 ),
                 "button": "Master this track",
+                "subline": "Let's coordinate",
                 "action": "mastering"
             }
 
         elif score >= 85:
-            # Ready for mastering
             return {
                 "message": (
                     "🎧 Your mix is technically ready.\n"
@@ -4011,11 +4010,11 @@ def generate_cta(score: int, strict: bool, lang: str, mode: str = "write") -> Di
                     "distribution level while preserving the intent of the mix."
                 ),
                 "button": "Master this track",
+                "subline": "Let's coordinate",
                 "action": "mastering"
             }
 
         elif score >= 75:
-            # Needs some prep before mastering
             return {
                 "message": (
                     "🔧 There are some technical aspects to address before mastering.\n"
@@ -4023,11 +4022,11 @@ def generate_cta(score: int, strict: bool, lang: str, mode: str = "write") -> Di
                     "resolved in the mix. I can review with you what adjustments would make the difference."
                 ),
                 "button": "Prepare my mix",
+                "subline": "We'll guide you before mastering",
                 "action": "preparation"
             }
 
         elif score >= 60:
-            # Needs more work
             return {
                 "message": (
                     "🔧 Your mix needs work before mastering.\n"
@@ -4035,23 +4034,23 @@ def generate_cta(score: int, strict: bool, lang: str, mode: str = "write") -> Di
                     "in the mix. I can help you identify what to adjust."
                 ),
                 "button": "Review my mix",
+                "subline": "We'll help identify the adjustments",
                 "action": "preparation"
             }
 
         elif score >= 40:
-            # Significant work needed
             return {
                 "message": (
                     "🔧 Your mix needs attention in several areas.\n"
                     "Mastering doesn't fix mix problems, it exposes them. Before thinking about "
                     "mastering, the issues flagged in the analysis need to be resolved."
                 ),
-                "button": "Review my mix",
+                "button": "Work on my mix",
+                "subline": "Write us and we'll review together",
                 "action": "review"
             }
 
         elif score >= 20:
-            # Urgent correction required
             return {
                 "message": (
                     "🔧 Your mix has significant technical issues.\n"
@@ -4059,11 +4058,11 @@ def generate_cta(score: int, strict: bool, lang: str, mode: str = "write") -> Di
                     "I can help you work through the critical points from the session."
                 ),
                 "button": "Work on my mix",
+                "subline": "Write us and we'll review together",
                 "action": "review"
             }
 
         else:
-            # Critical - multiple issues
             return {
                 "message": (
                     "🔧 The analysis flagged problems across multiple areas of the mix.\n"
@@ -4071,6 +4070,7 @@ def generate_cta(score: int, strict: bool, lang: str, mode: str = "write") -> Di
                     "I can help you plan the steps to bring it to a professional level."
                 ),
                 "button": "Review my project",
+                "subline": "Write us, we'll help you build a plan",
                 "action": "review"
             }
 

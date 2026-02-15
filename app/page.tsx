@@ -3338,6 +3338,16 @@ by Matías Carvajal
                     >
                       {result.cta_button}
                     </button>
+                    {(result as any).cta_subline && (
+                      <p style={{
+                        fontSize: '0.85rem',
+                        color: 'var(--mr-text-secondary)',
+                        marginTop: '0.5rem',
+                        textAlign: 'center'
+                      }}>
+                        {(result as any).cta_subline}
+                      </p>
+                    )}
                   </div>
                 </div>
               )}
@@ -4127,8 +4137,8 @@ by Matías Carvajal
               <a
                 href={`https://wa.me/573155576115?text=${encodeURIComponent(
                   lang === 'es'
-                    ? `Hola Matías, acabo de analizar "${result?.filename || 'mi mezcla'}" en Mastering Ready (${result?.score || 'N/A'}/100). ${ctaSource === 'mastering' ? 'Me interesa el mastering.' : 'Me gustaría revisar algunos puntos de la mezcla.'}`
-                    : `Hi Matías, I just analyzed "${result?.filename || 'my mix'}" on Mastering Ready (${result?.score || 'N/A'}/100). ${ctaSource === 'mastering' ? 'I\'m interested in mastering.' : 'I\'d like to review some mix points.'}`
+                    ? `Hola Matías, acabo de analizar "${result?.filename || 'mi mezcla'}" en Mastering Ready (${result?.score || 'N/A'}/100). ${ctaSource === 'mastering' ? 'Me interesa el mastering de este track.' : ctaSource === 'preparation' ? 'Me gustaría preparar mi mezcla antes del mastering.' : 'Me gustaría revisar mi mezcla con ayuda profesional.'}`
+                    : `Hi Matías, I just analyzed "${result?.filename || 'my mix'}" on Mastering Ready (${result?.score || 'N/A'}/100). ${ctaSource === 'mastering' ? 'I\'m interested in mastering this track.' : ctaSource === 'preparation' ? 'I\'d like to prepare my mix before mastering.' : 'I\'d like to review my mix with professional help.'}`
                 )}`}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -4170,12 +4180,12 @@ by Matías Carvajal
               <a
                 href={`mailto:mat@matcarvy.com?subject=${encodeURIComponent(
                   lang === 'es'
-                    ? `${ctaSource === 'mastering' ? 'Mastering' : 'Revisión de mezcla'}: ${result?.filename || 'Mi track'}`
-                    : `${ctaSource === 'mastering' ? 'Mastering' : 'Mix review'}: ${result?.filename || 'My track'}`
+                    ? `${ctaSource === 'mastering' ? 'Mastering' : ctaSource === 'preparation' ? 'Preparación de mezcla' : 'Revisión de mezcla'}: ${result?.filename || 'Mi track'}`
+                    : `${ctaSource === 'mastering' ? 'Mastering' : ctaSource === 'preparation' ? 'Mix preparation' : 'Mix review'}: ${result?.filename || 'My track'}`
                 )}&body=${encodeURIComponent(
                   lang === 'es'
-                    ? `Hola Matías,\n\nAnalicé "${result?.filename || 'mi mezcla'}" en Mastering Ready.\nPuntuación: ${result?.score || 'N/A'}/100\n\n${ctaSource === 'mastering' ? 'Me interesa el mastering de este track.' : 'Me gustaría revisar algunos aspectos técnicos de la mezcla.'}\n\nGracias.`
-                    : `Hi Matías,\n\nI analyzed "${result?.filename || 'my mix'}" on Mastering Ready.\nScore: ${result?.score || 'N/A'}/100\n\n${ctaSource === 'mastering' ? 'I\'m interested in mastering this track.' : 'I\'d like to review some technical aspects of the mix.'}\n\nThanks.`
+                    ? `Hola Matías,\n\nAnalicé "${result?.filename || 'mi mezcla'}" en Mastering Ready.\nPuntuación: ${result?.score || 'N/A'}/100\n\n${ctaSource === 'mastering' ? 'Me interesa el mastering de este track.' : ctaSource === 'preparation' ? 'Me gustaría preparar mi mezcla antes del mastering.' : 'Me gustaría revisar mi mezcla con ayuda profesional.'}\n\nGracias.`
+                    : `Hi Matías,\n\nI analyzed "${result?.filename || 'my mix'}" on Mastering Ready.\nScore: ${result?.score || 'N/A'}/100\n\n${ctaSource === 'mastering' ? 'I\'m interested in mastering this track.' : ctaSource === 'preparation' ? 'I\'d like to prepare my mix before mastering.' : 'I\'d like to review my mix with professional help.'}\n\nThanks.`
                 )}`}
                 onClick={() => logContactRequest('email')}
                 style={{

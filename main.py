@@ -979,14 +979,16 @@ async def start_analysis(
                     # Extract CTA fields separately to avoid serialization issues
                     cta_message = ""
                     cta_button = ""
+                    cta_subline = ""
                     cta_action = ""
-                    
+
                     if cta_data and isinstance(cta_data, dict):
                         cta_message = str(cta_data.get("message", ""))
                         cta_button = str(cta_data.get("button", ""))
+                        cta_subline = str(cta_data.get("subline", ""))
                         cta_action = str(cta_data.get("action", ""))
                         logger.info(f"🔍 [{job_id}] CTA fields - message: {len(cta_message)} chars, button: {cta_button}, action: {cta_action}")
-                    
+
                     jobs[job_id]['result'] = {
                         "success": True,
                         "request_id": job_id,  # Add job_id for PDF download
@@ -995,6 +997,7 @@ async def start_analysis(
                         # Store CTA as separate fields instead of nested object
                         "cta_message": cta_message,
                         "cta_button": cta_button,
+                        "cta_subline": cta_subline,
                         "cta_action": cta_action,
                         "report": report,
                         "report_visual": report_visual,  # NEW: Bullets mode
