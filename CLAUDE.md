@@ -2781,41 +2781,75 @@ const hasFullAccess = isPro || isAdmin || (() => {
 
 **Git state**: main on `8d50580`, pushed. Build clean.
 
+#### 4. Growth Plan + Financial Model Added to Project (`52cb459`)
+- `docs/MR-Dual-Engine-Growth-Plan-v2.docx` — 90-day dual-engine strategy (LATAM 70% / US 30%)
+- `docs/MR-Execution-Calendar.docx` — Day-by-day 12-week execution calendar
+- `docs/MR-Financial-Model-v2.xlsx` — P&L base + optimista scenarios, 12-month projection
+
+**Financial model summary:**
+- Base: 77 active subs M12, $570 MRR, $1,427 net Y1. Cash-flow positive Month 4.
+- Optimista: 197 active subs M12, $1,454 MRR, $4,403 net Y1. Cash-flow positive Month 3.
+- Both: 6% monthly churn, $13/mo COGS, Stripe fees per-transaction.
+- Optimista would likely trigger Render Standard (~Month 8-9, 60-80 daily analyses).
+
+**Git state**: main on `52cb459`, pushed. Build clean.
+
 ---
 
-**MR next steps (priority order) — DISTRIBUTION + VALIDATION PHASE:**
+## CURRENT PHASE: DISTRIBUTION + VALIDATION
 
-Design polishing complete. Product is live and stable. All infrastructure documented. Only tweak based on real user behavior data.
+**Status**: Product complete and stable. Design polishing done. Now building what drives leads, users, and paying customers. All dev work serves the 90-day growth plan (Week 1 starts Feb 17, 2026).
 
-### PRIORITY 1: SEO + Google Search Console
-Add verification ID in `app/layout.tsx` line ~117. Submit sitemap. Review meta tags. Critical for organic discovery — zero cost, high leverage. This is the #1 thing to do before spending any money on traffic.
+### Growth Plan Context (read `docs/MR-Dual-Engine-Growth-Plan-v2.docx` for full details)
+- **Engine A** (US/EU, 30%): Reddit Month 1 → Meta Ads + forums Month 2 → Product Hunt Weeks 6-7
+- **Engine B** (LATAM, 70%): FB groups + IG Reels + influencer outreach Month 1 → Meta Ads Month 2
+- **Month 1 goal**: 25-40 registered users, $0-70 budget, organic only until Week 4
+- **Month 3 goal**: 100+ users, 15-25 paid, $100-200 MRR
+- **Decision trigger**: Engine data at Month 1 end → shift budget 80/20 toward winner
 
-### PRIORITY 2: Drive Traffic + Collect Data
-Instagram campaigns (UTM-tracked), Reddit/forums (r/mixingmastering, r/WeAreTheMusicMakers), producer Discord servers. Monitor anonymous funnel conversion, UTM attribution, device breakdown in admin dashboard. Decision-making based on data, not intuition.
+### DEV PRIORITIES — Aligned to Growth Calendar
 
-### PRIORITY 3: eBook Migration from Payhip
-New Stripe product `ebook` at $15 USD flat. DB: `has_ebook BOOLEAN` on profiles. Checkout + webhook + protected PDF download API. New `/ebook` page. Replace 3 Payhip links. Revenue diversification.
+#### Week 1 (Feb 17-23) — Foundation
+- [ ] **Meta Pixel installation** — Required for both engines. Without it, paid ads and retargeting are blind. Add to `app/layout.tsx`.
+- [ ] **Google Search Console** — Add verification ID in `app/layout.tsx` ~line 117. Submit sitemap. Zero cost, high leverage for organic discovery.
 
-### PRIORITY 4: Shared Secret Vercel ↔ Render
-`X-API-Secret` header prevents direct Render API abuse. ~15 min coordinated env var deploy. Low effort, high security value.
+#### Weeks 5-6 (Mar 17-30) — Conversion Layer
+- [ ] **Email onboarding sequence** — THE highest-leverage dev work. 4 bilingual triggered emails:
+  1. Welcome (on signup): "Here's how to get the most from your analysis"
+  2. Score explained (24h after first analysis): "Your mix scored [X] — here's what that means"
+  3. Upgrade nudge (after 2 free analyses): "Here's what Pro gives you" + local currency price
+  4. Re-analysis (14 days inactive): "Upload your latest version and see if your score improved"
+  - Needs: email service integration (Resend or SendGrid, ~$10-20/mo)
+  - This is what turns free signups into paying users. Without it the funnel leaks.
+
+#### When Engine B wins (Month 2-3 data)
+- [ ] **DLocal integration** — Unlocks OXXO (MX), Pix (BR), Mercado Pago (AR/CO). Critical for LATAM paid conversion. If LATAM signups are high but paid conversion <3%, that's the payment method signal — not a PMF failure.
+
+#### Ongoing (supports both engines)
+- [ ] **eBook migration from Payhip** — Stripe product `ebook` at $15 USD flat. Revenue diversification.
+- [ ] **Shared secret Vercel ↔ Render** — `X-API-Secret` header, ~15 min. Low effort, high security value.
+- [ ] **SEO blog posts** — ES keywords have zero competition: "cómo saber si mi mezcla está lista," "analizar mezcla antes de mastering." EN keywords: "is my mix ready for mastering," "mix analysis tool."
 
 ### Phase 2 (data-driven, trigger on evidence)
-- **Dark Mode Phase 5** — Admin secondary pages (privacy, terms, error pages). Low priority — admin-only + rarely visited.
-- **Facebook OAuth** — Meta App Review + Business Verification → re-enable button. Only if data shows demand.
-- **Persona Mode** (Músico/Productor/Ingeniero) — Only if funnel data shows users need guidance on report interpretation.
+- **Dark Mode Phase 5** — Admin secondary pages (privacy, terms, error pages). Low priority.
+- **Facebook OAuth** — Meta App Review + Business Verification. Only if data shows demand.
+- **Persona Mode** (Músico/Productor/Ingeniero) — Only if funnel data shows users need guidance.
 - **Priority Queue System** — Only if OOM errors return or queue depth >5.
-- **Transactional emails** — Only if users ask questions post-analysis or churn data warrants.
-- **Stream Ready deploy** — Backend ready in `main.py`. Frontend at `~/streamready/`. Target: when MR has stable traffic.
-- **Supabase `preferred_theme` column** — Persist theme choice across devices. Low priority.
+- **Referral program** — "Give a friend 2 free analyses, get 2 yourself." Manual Month 3, automate after.
+- **Stream Ready deploy** — Backend ready in `main.py`. Target: when MR has stable traffic.
+- **Product Hunt** — Weeks 6-7. Bilingual + privacy-first angle. Prep: 2-min demo video, 10-20 supporters.
 
 ### Infrastructure Upgrade Triggers (documented in `docs/MR-Infrastructure-Scaling.md`)
-- **Render Standard ($25)**: 20-30 daily analyses overlapping, or analysis times >80s, or OOM errors
-- **Supabase Pro ($25)**: DB approaching 400MB (~8K users), or want backups/no pause risk
-- **Render Pro ($85)**: 100+ daily analyses, or Smart Leveler / Stream Ready video processing
-- **Vercel**: Already on Pro ($5/mo shared), no upgrade needed
-- **Stripe/Domain/Cron**: Never need tier upgrades
+- **Render Standard ($25)**: 20-30 daily analyses overlapping, or analysis times >80s, or OOM errors. Optimista model: ~Month 8-9.
+- **Supabase Pro ($25)**: DB approaching 400MB (~8K users), or want backups/no pause risk.
+- **Render Pro ($85)**: 100+ daily analyses, or Smart Leveler / Stream Ready video processing.
+- **Vercel**: Already on Pro ($5/mo shared), no upgrade needed.
+- **Stripe/Domain/Cron**: Never need tier upgrades.
 
 ### Reference Documents
+- `docs/MR-Dual-Engine-Growth-Plan-v2.docx` — Full 90-day dual-engine growth strategy
+- `docs/MR-Execution-Calendar.docx` — Day-by-day 12-week execution calendar
+- `docs/MR-Financial-Model-v2.xlsx` — P&L base + optimista, 12-month projection
 - `docs/MR-Pricing-System.md` — All plans, tiers, local currency, technical flow, quota system
-- `docs/MR-Infrastructure-Scaling.md` — When each service needs upgrading, break-even tables, monitoring signals
+- `docs/MR-Infrastructure-Scaling.md` — When each service needs upgrading, break-even tables
 - `docs/MR-Product-Rundown.md` — Full product briefing for marketing/external use
