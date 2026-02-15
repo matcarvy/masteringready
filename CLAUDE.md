@@ -2707,22 +2707,115 @@ const hasFullAccess = isPro || isAdmin || (() => {
 
 **Git state**: main on `ba94313`, pushed. Build clean. Vercel + Render both deployed.
 
+#### 6. Remember Device Checkbox (`47f947b`)
+- **Purpose**: Toggle session persistence — localStorage (remember, default) vs sessionStorage (forget on browser close)
+- **Implementation**:
+  - `lib/supabase.ts`: Custom `authStorage` adapter delegates `getItem`/`setItem`/`removeItem` to localStorage or sessionStorage based on `mr_session_ephemeral` flag in localStorage
+  - `setRememberDevice(bool)` and `getRememberDevice()` exported helpers
+  - Supabase client singleton uses `storage: authStorage` — no client recreation needed, flag checked dynamically on each storage operation
+  - `AuthModal.tsx`: `rememberDevice` state initialized from stored preference on modal open, checkbox in login form between "Recordar este dispositivo" and "¿Olvidaste tu contraseña?"
+  - `setRememberDevice(rememberDevice)` called before `signInWithPassword()` so session tokens go to correct storage
+- **No Supabase changes needed** — entirely client-side
+- **Signup**: no checkbox (signup always remembers — user will see checkbox on subsequent logins)
+
+#### 7. Bridge Text Dark Mode Color (`47f947b`)
+- Changed `[data-theme="dark"] .bridge-text` from `rgba(255,255,255,0.6)` (muted white) to `#8b9cf5` (lighter indigo)
+- Maintains brand consistency with `#667eea` light mode color
+
+#### 8. Product Rundown for Marketing (`47f947b`)
+- `docs/MR-Product-Rundown.md` — comprehensive briefing document covering product, features, pricing, tech stack, funnel, CTAs, brand voice, upcoming features
+- For pasting into Claude Online for marketing planning
+
+#### Commits to main (Session 2026-02-15 continued)
+5. `47f947b` - feat: remember device checkbox + bridge dark mode color + product rundown
+
+### Session 2026-02-15 Part 2 — Admin Dark Mode + Bridge Spacing + Pricing Doc
+
+#### 1. Admin Dark Mode Migration (`e326516`)
+- Background agent migrated ~286 hardcoded hex colors in `app/admin/page.tsx` to CSS variables
+- All backgrounds, text, borders, shadows, gradients, inputs, shimmer, status badges themed
+- 57 colors intentionally preserved (chart/data visualization, status functions, score conditionals)
+- Login form, loading state, access denied screen all themed
+- Build clean, deployed
+
+#### 2. Bridge-to-Features Spacing (`0dc7231`, `f2d4a0c`, `4da3d8f`)
+- User feedback: too much space between bridge statement and "Why Mastering Ready?" section
+- Three incremental tightenings: ~40% reduction, then micro-tune (~20px more), then final 25% shave
+- Bridge now feels like hero closure, not isolated floating section
+- Desktop total gap: ~5rem → ~0.75rem. Mobile: ~3.6rem → ~0.44rem.
+
+#### 3. Pricing System Document (`docs/MR-Pricing-System.md`)
+- Comprehensive pricing briefing: all 4 plans, 6 tiers, local currency examples, technical flow, exchange rates, quota system, key files, important rules
+
+#### Commits to main (Session 2026-02-15 Part 2)
+1. `e326516` - feat: dark mode migration for admin dashboard — 286 hardcoded colors to CSS variables
+2. `0dc7231` - ux: tighten bridge-to-features spacing — reduce gap ~40%
+3. `f2d4a0c` - ux: micro-tighten bridge-to-features spacing — shave ~20px more
+4. `4da3d8f` - ux: reduce bridge-to-features gap by 25% — tighter transition
+
+**Git state**: main on `4da3d8f`, pushed. Build clean.
+
+**Phase shift**: Design polishing complete. Now entering **distribution + validation phase**. Only tweak based on real user behavior data, not taste/intuition/aesthetics.
+
+### Session 2026-02-15 Part 3 — Remember Device on Login Page + Docs
+
+#### 1. Remember Device Checkbox on `/auth/login` (`8d50580`)
+- **Problem**: Standalone login page (`/auth/login`) was missing the "Remember this device" checkbox that AuthModal already had
+- **Fix**: Added checkbox between password field and forgot password link, matching AuthModal pattern exactly
+- `setRememberDevice(rememberDevice)` called before `signInWithPassword()` so session tokens go to correct storage
+- Translations: "Recordar este dispositivo" (ES) / "Remember this device" (EN)
+- Verified working on both mobile and desktop
+- Text choice: "Recordar este dispositivo" over generic "Remember me" — more precise, on-brand (technical but clear, tells user exactly what it does)
+
+#### 2. Infrastructure Scaling Document Updated (`docs/MR-Infrastructure-Scaling.md`)
+- Restructured around **when each plan is needed** with clear triggers
+- Vercel updated to Pro at $5/mo (shared across 4 projects: MR, CRM, Stream Ready, Nakar)
+- Current total: $13/mo (was $8)
+- Phase timeline: $13 → $31 (Render Standard) → $56 (Supabase Pro) → $116 (Render Pro) → $157 (optional Sentry + email)
+
+#### 3. Pricing System Document (`docs/MR-Pricing-System.md`)
+- Created in Part 2, committed in this batch
+
+#### Commits to main (Session 2026-02-15 Part 3)
+1. `8d50580` - feat: remember device checkbox on standalone login page + docs
+
+**Git state**: main on `8d50580`, pushed. Build clean.
+
 ---
 
-**MR next steps (priority order):**
+**MR next steps (priority order) — DISTRIBUTION + VALIDATION PHASE:**
 
-### PRIORITY 1: Dark Mode Phase 5 — Admin + Secondary Pages
-Admin page (343 colors), privacy, terms, error pages, PrivacyBadge. Supabase `preferred_theme` column migration.
+Design polishing complete. Product is live and stable. All infrastructure documented. Only tweak based on real user behavior data.
 
-### PRIORITY 2: Persona Mode (Músico/Productor/Ingeniero)
-Two-step disclosure: "más simple o más detallado?" after first result → full 3-tier in settings. Maps to both display mode and scoring strictness. Default: Productor (current behavior).
+### PRIORITY 1: SEO + Google Search Console
+Add verification ID in `app/layout.tsx` line ~117. Submit sitemap. Review meta tags. Critical for organic discovery — zero cost, high leverage. This is the #1 thing to do before spending any money on traffic.
+
+### PRIORITY 2: Drive Traffic + Collect Data
+Instagram campaigns (UTM-tracked), Reddit/forums (r/mixingmastering, r/WeAreTheMusicMakers), producer Discord servers. Monitor anonymous funnel conversion, UTM attribution, device breakdown in admin dashboard. Decision-making based on data, not intuition.
 
 ### PRIORITY 3: eBook Migration from Payhip
-New Stripe product `ebook` at $15 USD flat. DB: `has_ebook BOOLEAN` on profiles. Checkout + webhook + protected PDF download API. New `/ebook` page.
+New Stripe product `ebook` at $15 USD flat. DB: `has_ebook BOOLEAN` on profiles. Checkout + webhook + protected PDF download API. New `/ebook` page. Replace 3 Payhip links. Revenue diversification.
 
-### Other
-4. **SEO audit + Google Search Console** — Submit sitemap, add verification ID.
-5. **Shared secret Vercel ↔ Render** — `X-API-Secret` header.
-6. **Facebook OAuth** — Meta App Review + Business Verification.
-7. **Monitor**: anonymous funnel, UTM attribution, Render analysis times, device breakdown.
-8. **Stream Ready deploy** — Backend ready in `main.py`. Frontend at `~/streamready/`.
+### PRIORITY 4: Shared Secret Vercel ↔ Render
+`X-API-Secret` header prevents direct Render API abuse. ~15 min coordinated env var deploy. Low effort, high security value.
+
+### Phase 2 (data-driven, trigger on evidence)
+- **Dark Mode Phase 5** — Admin secondary pages (privacy, terms, error pages). Low priority — admin-only + rarely visited.
+- **Facebook OAuth** — Meta App Review + Business Verification → re-enable button. Only if data shows demand.
+- **Persona Mode** (Músico/Productor/Ingeniero) — Only if funnel data shows users need guidance on report interpretation.
+- **Priority Queue System** — Only if OOM errors return or queue depth >5.
+- **Transactional emails** — Only if users ask questions post-analysis or churn data warrants.
+- **Stream Ready deploy** — Backend ready in `main.py`. Frontend at `~/streamready/`. Target: when MR has stable traffic.
+- **Supabase `preferred_theme` column** — Persist theme choice across devices. Low priority.
+
+### Infrastructure Upgrade Triggers (documented in `docs/MR-Infrastructure-Scaling.md`)
+- **Render Standard ($25)**: 20-30 daily analyses overlapping, or analysis times >80s, or OOM errors
+- **Supabase Pro ($25)**: DB approaching 400MB (~8K users), or want backups/no pause risk
+- **Render Pro ($85)**: 100+ daily analyses, or Smart Leveler / Stream Ready video processing
+- **Vercel**: Already on Pro ($5/mo shared), no upgrade needed
+- **Stripe/Domain/Cron**: Never need tier upgrades
+
+### Reference Documents
+- `docs/MR-Pricing-System.md` — All plans, tiers, local currency, technical flow, quota system
+- `docs/MR-Infrastructure-Scaling.md` — When each service needs upgrading, break-even tables, monitoring signals
+- `docs/MR-Product-Rundown.md` — Full product briefing for marketing/external use
