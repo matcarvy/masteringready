@@ -1749,8 +1749,8 @@ by Matías Carvajal
                 onClick={scrollToAnalyzer}
                 className="hero-cta-button"
                 style={{
-                  background: 'var(--mr-bg-card)',
-                  color: 'var(--mr-primary)',
+                  background: '#ffffff',
+                  color: '#667eea',
                   padding: 'clamp(0.75rem, 1.5vw, 1rem) clamp(1.5rem, 3vw, 2rem)',
                   borderRadius: '9999px',
                   fontWeight: 'bold',
@@ -1759,7 +1759,7 @@ by Matías Carvajal
                   cursor: 'pointer',
                   marginBottom: '1.5rem',
                   transition: 'all 0.3s',
-                  boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
                   minHeight: '44px'
                 }}
                 onMouseEnter={(e) => {
@@ -1803,6 +1803,7 @@ by Matías Carvajal
             <div className="demo-card-container">
               <div style={{
                 background: 'var(--mr-bg-card)',
+                border: 'var(--mr-card-border)',
                 borderRadius: '1rem',
                 boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
                 padding: '2rem',
@@ -1880,6 +1881,26 @@ by Matías Carvajal
         </div>
       </section>
 
+      {/* Bridge Statement */}
+      <div style={{
+        textAlign: 'center',
+        padding: '2.5rem 1.5rem',
+        background: 'var(--mr-bg-base)'
+      }}>
+        <p style={{
+          fontSize: 'clamp(1.1rem, 2.5vw, 1.35rem)',
+          color: 'var(--mr-text-secondary)',
+          fontStyle: 'italic',
+          maxWidth: '720px',
+          margin: '0 auto',
+          lineHeight: '1.6'
+        }}>
+          {lang === 'es'
+            ? 'Lo importante no es la métrica. Es saber qué hacer con ella.'
+            : 'The metric isn\u2019t what matters. Knowing what to do with it is.'}
+        </p>
+      </div>
+
       {/* Features Section */}
       <section id="features" className="features-section" style={{
         background: 'var(--mr-bg-base)'
@@ -1928,6 +1949,7 @@ by Matías Carvajal
             ].map((feature, i) => (
               <div key={i} style={{
                 background: 'var(--mr-bg-card)',
+                border: 'var(--mr-card-border)',
                 padding: '2rem',
                 borderRadius: '1rem',
                 boxShadow: 'var(--mr-shadow)',
@@ -1995,6 +2017,7 @@ by Matías Carvajal
               {/* File Upload */}
               <div style={{
                 background: 'var(--mr-bg-card)',
+                border: 'var(--mr-card-border)',
                 borderRadius: '1rem',
                 boxShadow: 'var(--mr-shadow-lg)',
                 padding: '2rem',

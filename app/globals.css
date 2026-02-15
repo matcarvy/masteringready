@@ -43,9 +43,10 @@
   --mr-text-tertiary: #9ca3af;
   --mr-text-inverse: #ffffff;
 
-  /* Borders */
+  /* Borders & card outline */
   --mr-border: #e5e7eb;
   --mr-border-strong: #d1d5db;
+  --mr-card-border: 1px solid transparent;
 
   /* Shadows */
   --mr-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
@@ -70,38 +71,39 @@
 [data-theme="dark"] {
   /* Backgrounds (5-layer depth system) */
   --mr-bg-base: #0f1117;
-  --mr-bg-card: #1a1d27;
-  --mr-bg-elevated: #242836;
-  --mr-bg-hover: #2e3345;
-  --mr-bg-input: #1a1d27;
+  --mr-bg-card: #191c26;
+  --mr-bg-elevated: #222632;
+  --mr-bg-hover: #2a2f3d;
+  --mr-bg-input: #191c26;
 
   /* Text (3-layer hierarchy) */
-  --mr-text-primary: #f1f3f9;
-  --mr-text-secondary: #a0a6b8;
-  --mr-text-tertiary: #6b7280;
+  --mr-text-primary: #edf0f7;
+  --mr-text-secondary: #9ba2b4;
+  --mr-text-tertiary: #636b7e;
   --mr-text-inverse: #0f1117;
 
-  /* Borders */
-  --mr-border: #2e3345;
-  --mr-border-strong: #3d4358;
+  /* Borders & card outline */
+  --mr-border: #282d3a;
+  --mr-border-strong: #363c4d;
+  --mr-card-border: 1px solid #282d3a;
 
-  /* Shadows */
-  --mr-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
-  --mr-shadow-lg: 0 10px 40px rgba(0, 0, 0, 0.5);
+  /* Shadows (subtle glow for depth on dark surfaces) */
+  --mr-shadow: 0 2px 8px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.04);
+  --mr-shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.05);
 
-  /* Status backgrounds (dark, saturated) */
-  --mr-green-bg: #052e16;
-  --mr-red-bg: #450a0a;
-  --mr-amber-bg: #451a03;
-  --mr-blue-bg: #172554;
-  --mr-purple-bg: #2e1065;
+  /* Status backgrounds (muted tints, not saturated) */
+  --mr-green-bg: #121e18;
+  --mr-red-bg: #1e1315;
+  --mr-amber-bg: #1e1912;
+  --mr-blue-bg: #131a28;
+  --mr-purple-bg: #1a1528;
 
-  /* Status text (light on dark bg) */
-  --mr-green-text: #86efac;
-  --mr-red-text: #fca5a5;
-  --mr-amber-text: #fcd34d;
-  --mr-blue-text: #93c5fd;
-  --mr-purple-text: #c4b5fd;
+  /* Status text (softer, less neon) */
+  --mr-green-text: #6ee7a0;
+  --mr-red-text: #f09898;
+  --mr-amber-text: #f0c840;
+  --mr-blue-text: #82b4f4;
+  --mr-purple-text: #b8a8f0;
 }
 
 /* ===== BASE STYLES ===== */
