@@ -9,7 +9,7 @@
 import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { supabase } from '@/lib/supabase'
+import { supabase, setRememberDevice, getRememberDevice } from '@/lib/supabase'
 import { detectLanguage, setLanguageCookie } from '@/lib/language'
 import { SocialLoginButtons } from '@/components/auth/SocialLoginButtons'
 import { Headphones, Mail, Lock, ArrowLeft, Eye, EyeOff } from 'lucide-react'
@@ -34,7 +34,8 @@ const translations = {
     invalidCredentials: 'Credenciales inválidas. Verifica tu email y contraseña.',
     error: 'Error al iniciar sesión. Intenta de nuevo.',
     emailRequired: 'El correo electrónico es requerido',
-    passwordRequired: 'La contraseña es requerida'
+    passwordRequired: 'La contraseña es requerida',
+    rememberDevice: 'Recordar este dispositivo'
   },
   en: {
     title: 'Sign In',
@@ -51,7 +52,8 @@ const translations = {
     invalidCredentials: 'Invalid credentials. Check your email and password.',
     error: 'Error signing in. Please try again.',
     emailRequired: 'Email is required',
-    passwordRequired: 'Password is required'
+    passwordRequired: 'Password is required',
+    rememberDevice: 'Remember this device'
   }
 }
 
@@ -71,6 +73,12 @@ function LoginContent() {
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [rememberDevice, setRememberDevice_] = useState(true)
+
+  // Initialize remember device from stored preference
+  useEffect(() => {
+    setRememberDevice_(getRememberDevice())
+  }, [])
 
   // Detect language: URL param > cookie > browser
   useEffect(() => {
@@ -101,6 +109,9 @@ function LoginContent() {
     setLoading(true)
 
     try {
+      // Set session storage preference before signing in
+      setRememberDevice(rememberDevice)
+
       const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password
@@ -361,8 +372,34 @@ function LoginContent() {
             </div>
           </div>
 
-          {/* Forgot Password */}
-          <div style={{ textAlign: 'right', marginBottom: '1.5rem' }}>
+          {/* Remember Device + Forgot Password */}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: '1.5rem'
+          }}>
+            <label style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.375rem',
+              cursor: 'pointer',
+              fontSize: '0.75rem',
+              color: 'var(--mr-text-secondary)'
+            }}>
+              <input
+                type="checkbox"
+                checked={rememberDevice}
+                onChange={(e) => setRememberDevice_(e.target.checked)}
+                style={{
+                  accentColor: 'var(--mr-primary)',
+                  width: '14px',
+                  height: '14px',
+                  cursor: 'pointer'
+                }}
+              />
+              {t.rememberDevice}
+            </label>
             <Link
               href="/auth/forgot-password"
               style={{
