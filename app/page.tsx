@@ -1882,18 +1882,15 @@ by Matías Carvajal
       </section>
 
       {/* Bridge Statement */}
-      <div style={{
+      <div className="bridge-section" style={{
         textAlign: 'center',
-        padding: '2.5rem 1.5rem',
         background: 'var(--mr-bg-base)'
       }}>
-        <p style={{
-          fontSize: 'clamp(1.1rem, 2.5vw, 1.35rem)',
-          color: 'var(--mr-text-secondary)',
+        <p className="bridge-text" style={{
+          fontWeight: '400',
           fontStyle: 'italic',
-          maxWidth: '720px',
-          margin: '0 auto',
-          lineHeight: '1.6'
+          lineHeight: '1.6',
+          margin: '0 auto'
         }}>
           {lang === 'es'
             ? 'Lo importante no es la métrica. Es saber qué hacer con ella.'
@@ -5318,11 +5315,24 @@ by Matías Carvajal
           padding-bottom: 0;
         }
 
+        /* Bridge Statement */
+        .bridge-section {
+          padding: 4rem 1.5rem;
+        }
+        .bridge-text {
+          font-size: 1.25rem;
+          max-width: 600px;
+          color: #667eea;
+        }
+        [data-theme="dark"] .bridge-text {
+          color: rgba(255, 255, 255, 0.6);
+        }
+
         /* Features Section */
         .features-section {
           padding: 1.75rem 1.5rem;
         }
-        
+
         .features-title-container {
           margin-bottom: 2.5rem;
         }
@@ -5414,11 +5424,20 @@ by Matías Carvajal
              - Reaseguro: pegado al CTA
           */
           
+          /* Bridge Statement */
+          .bridge-section {
+            padding: 2.5rem 1.5rem;
+          }
+          .bridge-text {
+            font-size: 1.065rem;
+            max-width: 85vw;
+          }
+
           /* Features Section */
           .features-section {
             padding: 1.125rem 1.5rem 2rem 1.5rem;
           }
-          
+
           .features-title-container {
             margin-bottom: 1.5rem;
           }
