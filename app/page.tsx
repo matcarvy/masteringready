@@ -5315,9 +5315,9 @@ by Matías Carvajal
           padding-bottom: 0;
         }
 
-        /* Bridge Statement */
+        /* Bridge Statement — bottom compensates for features padding-top (1.75rem) */
         .bridge-section {
-          padding: 4rem 1.5rem;
+          padding: 3.25rem 1.5rem 1.5rem 1.5rem;
         }
         .bridge-text {
           font-size: 1.25rem;
@@ -5424,9 +5424,9 @@ by Matías Carvajal
              - Reaseguro: pegado al CTA
           */
           
-          /* Bridge Statement */
+          /* Bridge Statement — bottom compensates for features padding-top (1.125rem) */
           .bridge-section {
-            padding: 2.5rem 1.5rem;
+            padding: 2.5rem 1.5rem 1.375rem 1.5rem;
           }
           .bridge-text {
             font-size: 1.065rem;
