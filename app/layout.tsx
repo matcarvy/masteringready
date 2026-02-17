@@ -55,7 +55,6 @@ export const metadata: Metadata = {
   // ─────────────────────────────────────────────────────────────────────────────
   metadataBase: new URL(siteConfig.url),
   alternates: {
-    canonical: '/',
     languages: {
       'es': '/',
       'en': '/?lang=en'
@@ -222,7 +221,7 @@ const structuredData = {
     '@type': 'Organization',
     name: 'Mastering Ready',
     url: 'https://masteringready.com',
-    logo: 'https://masteringready.com/logo.png',
+    logo: 'https://masteringready.com/icon-512.png',
     contactPoint: {
       '@type': 'ContactPoint',
       email: 'mat@matcarvy.com',
@@ -252,7 +251,8 @@ const structuredData = {
       priceCurrency: 'USD',
       availability: 'https://schema.org/InStock'
     },
-    inLanguage: 'es'
+    inLanguage: 'es',
+    bookFormat: 'https://schema.org/EBook'
   }
 }
 

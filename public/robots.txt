@@ -1,4 +1,11 @@
 User-agent: *
 Allow: /
 
+Disallow: /dashboard
+Disallow: /history
+Disallow: /settings
+Disallow: /admin
+Disallow: /auth/callback
+Disallow: /api/
+
 Sitemap: https://masteringready.com/sitemap.xml

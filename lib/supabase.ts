@@ -515,7 +515,6 @@ export async function saveAnalysis(analysisData: {
   if (user) {
     const { data: incrementResult } = await supabase.rpc('increment_analysis_count', { p_user_id: user.id })
     // incrementResult contains { success: boolean, source: 'free' | 'pro' | 'addon' | 'single' }
-    console.log('Analysis count incremented:', incrementResult)
   }
 
   return data
