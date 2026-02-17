@@ -98,6 +98,75 @@ export function NotificationBadge({ lang, isMobile }: NotificationBadgeProps) {
     }, 200)
   }
 
+  // Mobile: compact icon-only with dot indicator + X dismiss
+  // Desktop: full pill with text + X dismiss
+  if (isMobile) {
+    return (
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '2px',
+        opacity: isVisible ? 1 : 0,
+        transform: isVisible ? 'scale(1)' : 'scale(0.8)',
+        transition: 'all 0.2s ease'
+      }}>
+        <button
+          onClick={handleClick}
+          style={{
+            position: 'relative',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '36px',
+            height: '36px',
+            background: 'rgba(102, 126, 234, 0.15)',
+            color: 'var(--mr-primary)',
+            border: '1px solid rgba(102, 126, 234, 0.3)',
+            borderRadius: '50%',
+            cursor: 'pointer',
+            transition: 'background 0.15s',
+            padding: 0
+          }}
+          aria-label={message}
+        >
+          <BarChart3 size={16} />
+          {/* Notification dot */}
+          <span style={{
+            position: 'absolute',
+            top: '2px',
+            right: '2px',
+            width: '8px',
+            height: '8px',
+            background: '#667eea',
+            borderRadius: '50%',
+            border: '1.5px solid var(--mr-bg-card)'
+          }} />
+        </button>
+        <button
+          onClick={handleDismiss}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '20px',
+            height: '20px',
+            borderRadius: '50%',
+            background: 'rgba(102, 126, 234, 0.15)',
+            border: 'none',
+            color: 'var(--mr-primary)',
+            cursor: 'pointer',
+            padding: 0,
+            transition: 'background 0.15s'
+          }}
+          aria-label={lang === 'es' ? 'Cerrar notificación' : 'Dismiss notification'}
+        >
+          <X size={10} />
+        </button>
+      </div>
+    )
+  }
+
+  // Desktop: full pill with text
   return (
     <button
       onClick={handleClick}
@@ -109,17 +178,14 @@ export function NotificationBadge({ lang, isMobile }: NotificationBadgeProps) {
         color: 'var(--mr-primary)',
         border: '1px solid rgba(102, 126, 234, 0.3)',
         borderRadius: '9999px',
-        padding: isMobile ? '0.3rem 0.5rem 0.3rem 0.6rem' : '0.35rem 0.6rem 0.35rem 0.75rem',
-        fontSize: isMobile ? '0.7rem' : '0.8rem',
+        padding: '0.35rem 0.6rem 0.35rem 0.75rem',
+        fontSize: '0.8rem',
         fontWeight: '600',
         cursor: 'pointer',
         whiteSpace: 'nowrap',
         transition: 'all 0.2s ease',
         opacity: isVisible ? 1 : 0,
         transform: isVisible ? 'translateY(0) scale(1)' : 'translateY(-4px) scale(0.95)',
-        maxWidth: isMobile ? '180px' : 'none',
-        overflow: 'hidden',
-        textOverflow: 'ellipsis',
         minHeight: '32px'
       }}
       onMouseEnter={(e) => {
@@ -130,7 +196,7 @@ export function NotificationBadge({ lang, isMobile }: NotificationBadgeProps) {
       }}
       aria-label={message}
     >
-      <BarChart3 size={isMobile ? 13 : 14} style={{ flexShrink: 0 }} />
+      <BarChart3 size={14} style={{ flexShrink: 0 }} />
       <span style={{
         overflow: 'hidden',
         textOverflow: 'ellipsis'
