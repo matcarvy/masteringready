@@ -45,26 +45,42 @@ function isEphemeral(): boolean {
   return localStorage.getItem(EPHEMERAL_FLAG) === 'true'
 }
 
+// One-time recovery: if iOS Safari evicted localStorage under memory pressure
+// but sessionStorage still has the auth token (tab stayed alive), copy it back.
+// Runs once on module load, BEFORE Supabase client is created.
+function recoverEvictedSession(): void {
+  if (typeof window === 'undefined') return
+  if (isEphemeral()) return
+  try {
+    for (let i = 0; i < sessionStorage.length; i++) {
+      const key = sessionStorage.key(i)
+      if (key && key.startsWith('sb-') && key.endsWith('-auth-token')) {
+        if (!localStorage.getItem(key)) {
+          const val = sessionStorage.getItem(key)
+          if (val) localStorage.setItem(key, val)
+        }
+      }
+    }
+  } catch { /* ignore */ }
+}
+recoverEvictedSession()
+
 const authStorage = {
   getItem: (key: string): string | null => {
     if (typeof window === 'undefined') return null
-    if (isEphemeral()) {
-      return sessionStorage.getItem(key)
-    }
-    // "Remember" mode: read localStorage first, fall back to sessionStorage.
-    // iOS Safari can evict localStorage under memory pressure while the tab
-    // is backgrounded — sessionStorage survives as long as the tab is alive.
-    return localStorage.getItem(key) || sessionStorage.getItem(key)
+    // Read from primary storage only — recovery already ran on module load
+    return isEphemeral() ? sessionStorage.getItem(key) : localStorage.getItem(key)
   },
   setItem: (key: string, value: string): void => {
     if (typeof window === 'undefined') return
     if (isEphemeral()) {
       sessionStorage.setItem(key, value)
     } else {
-      // Write to BOTH storages so session survives iOS localStorage eviction.
-      // sessionStorage acts as a hot backup while the tab is open.
+      // Write to BOTH storages. sessionStorage is a hot backup in case
+      // iOS Safari evicts localStorage while the tab is backgrounded.
+      // On next page load, recoverEvictedSession() copies it back.
       localStorage.setItem(key, value)
-      sessionStorage.setItem(key, value)
+      try { sessionStorage.setItem(key, value) } catch { /* quota or private mode */ }
     }
   },
   removeItem: (key: string): void => {
