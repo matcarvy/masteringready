@@ -15,6 +15,7 @@ import { useGeo } from '@/lib/useGeo'
 import { getAllPricesForCountry } from '@/lib/pricing-config'
 import { detectLanguage, setLanguageCookie } from '@/lib/language'
 import { ThemeToggle } from '@/components/ThemeToggle'
+import { clearNotification } from '@/components/NotificationBadge'
 import {
   Music,
   Zap,
@@ -209,6 +210,7 @@ export default function SubscriptionPage() {
 
     async function fetchData() {
       if (!user) return
+      clearNotification()
       setLoading(true)
 
       try {
