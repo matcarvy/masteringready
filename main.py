@@ -454,11 +454,12 @@ async def health_check():
 # ============== MAIN ANALYZER ENDPOINT ==============
 @app.post("/api/analyze/mix")
 async def analyze_mix_endpoint(
+    request: Request,
     file: UploadFile = File(...),
     lang: str = Form("es"),
     mode: str = Form("write"),
     strict: bool = Form(False),
-    original_metadata_json: Optional[str] = Form(None)  # NEW: Original file metadata from frontend
+    original_metadata_json: Optional[str] = Form(None)  # Original file metadata from frontend
 ):
     """
     Analyze audio mix for mastering readiness.
@@ -523,9 +524,34 @@ async def analyze_mix_endpoint(
             status_code=400,
             detail=bilingual_error('corrupt_file', lang)
         )
-    
+
+    # Server-side IP rate limit enforcement (sync endpoint)
+    if IP_LIMITER_AVAILABLE and ip_limiter and ip_limiter.is_enabled():
+        try:
+            client_ip = get_client_ip(request)
+            user_agent = request.headers.get('User-Agent')
+            can_analyze, message, details = await ip_limiter.check_ip_limit(client_ip, user_agent)
+            if not can_analyze:
+                logger.warning(f"🚫 [{client_ip[:16]}...] IP limit reached — rejected at /api/analyze/mix")
+                raise HTTPException(
+                    status_code=429,
+                    detail='Has alcanzado el límite de análisis gratuitos. Crea una cuenta para continuar.'
+                    if lang == 'es'
+                    else 'You have reached the free analysis limit. Create an account to continue.'
+                )
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.warning(f"⚠️ Server-side IP check failed (sync): {e}")
+            raise HTTPException(
+                status_code=429,
+                detail='No se pudo verificar el acceso. Intenta de nuevo.'
+                if lang == 'es'
+                else 'Could not verify access. Please try again.'
+            )
+
     logger.info(f"📊 File size: {file_size / 1024 / 1024:.2f} MB")
-    
+
     # Use temporary file (auto-deleted)
     with tempfile.NamedTemporaryFile(
         delete=True,
@@ -706,7 +732,31 @@ async def start_analysis(
             status_code=413,
             detail=bilingual_error('file_too_large', lang)
         )
-    
+
+    # Server-side IP rate limit enforcement (prevents direct API bypass)
+    if not is_authenticated and IP_LIMITER_AVAILABLE and ip_limiter and ip_limiter.is_enabled():
+        try:
+            can_analyze, message, details = await ip_limiter.check_ip_limit(client_ip, user_agent)
+            if not can_analyze:
+                logger.warning(f"🚫 [{client_ip[:16]}...] IP limit reached — rejected at /api/analyze/start")
+                raise HTTPException(
+                    status_code=429,
+                    detail='Has alcanzado el límite de análisis gratuitos. Crea una cuenta para continuar.'
+                    if lang == 'es'
+                    else 'You have reached the free analysis limit. Create an account to continue.'
+                )
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.warning(f"⚠️ Server-side IP check failed: {e}")
+            # Fail-closed: deny analysis if IP check fails
+            raise HTTPException(
+                status_code=429,
+                detail='No se pudo verificar el acceso. Intenta de nuevo.'
+                if lang == 'es'
+                else 'Could not verify access. Please try again.'
+            )
+
     # Generate unique job ID
     job_id = str(uuid.uuid4())
     

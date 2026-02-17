@@ -333,7 +333,7 @@ export default function ForgotPasswordPage() {
         alignItems: 'center',
         justifyContent: 'center'
       }}>
-        <div style={{ color: 'var(--mr-text-inverse)', fontSize: '1.25rem' }}>Loading...</div>
+        <div style={{ color: 'var(--mr-text-inverse)', fontSize: '1.25rem' }}>Cargando...</div>
       </div>
     }>
       <ForgotPasswordContent />
