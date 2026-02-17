@@ -48,14 +48,23 @@ function isEphemeral(): boolean {
 const authStorage = {
   getItem: (key: string): string | null => {
     if (typeof window === 'undefined') return null
-    return isEphemeral() ? sessionStorage.getItem(key) : localStorage.getItem(key)
+    if (isEphemeral()) {
+      return sessionStorage.getItem(key)
+    }
+    // "Remember" mode: read localStorage first, fall back to sessionStorage.
+    // iOS Safari can evict localStorage under memory pressure while the tab
+    // is backgrounded — sessionStorage survives as long as the tab is alive.
+    return localStorage.getItem(key) || sessionStorage.getItem(key)
   },
   setItem: (key: string, value: string): void => {
     if (typeof window === 'undefined') return
     if (isEphemeral()) {
       sessionStorage.setItem(key, value)
     } else {
+      // Write to BOTH storages so session survives iOS localStorage eviction.
+      // sessionStorage acts as a hot backup while the tab is open.
       localStorage.setItem(key, value)
+      sessionStorage.setItem(key, value)
     }
   },
   removeItem: (key: string): void => {

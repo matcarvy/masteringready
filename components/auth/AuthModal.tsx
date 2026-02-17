@@ -297,7 +297,9 @@ export function AuthModal({ isOpen, onClose, onSuccess, lang }: AuthModalProps) 
   }
 
   // Handle OAuth before redirect - store flag for animation on return
+  // Also persist remember-device preference so tokens go to correct storage
   const handleBeforeOAuthRedirect = () => {
+    setRememberDevice(rememberDevice)
     localStorage.setItem('authModalFlow', JSON.stringify({
       fromModal: true,
       timestamp: Date.now()

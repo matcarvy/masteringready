@@ -9,7 +9,7 @@
 import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { supabase } from '@/lib/supabase'
+import { supabase, setRememberDevice } from '@/lib/supabase'
 import { detectLanguage, setLanguageCookie } from '@/lib/language'
 import { SocialLoginButtons } from '@/components/auth/SocialLoginButtons'
 import { Headphones, Mail, Lock, User, ArrowLeft, Eye, EyeOff, Check } from 'lucide-react'
@@ -375,6 +375,7 @@ function SignupContent() {
         <SocialLoginButtons
           lang={lang}
           onError={setError}
+          onBeforeRedirect={() => setRememberDevice(true)}
         />
 
         {/* Divider */}

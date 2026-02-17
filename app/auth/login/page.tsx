@@ -236,6 +236,7 @@ function LoginContent() {
         <SocialLoginButtons
           lang={lang}
           onError={setError}
+          onBeforeRedirect={() => setRememberDevice(rememberDevice)}
         />
 
         {/* Divider */}
