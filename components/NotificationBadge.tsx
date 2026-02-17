@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { X, BarChart3 } from 'lucide-react'
+import { X, Bell } from 'lucide-react'
 
 interface NotificationBadgeProps {
   lang: 'es' | 'en'
@@ -129,7 +129,7 @@ export function NotificationBadge({ lang, isMobile }: NotificationBadgeProps) {
           }}
           aria-label={message}
         >
-          <BarChart3 size={16} />
+          <Bell size={16} />
           {/* Notification dot */}
           <span style={{
             position: 'absolute',
@@ -196,7 +196,7 @@ export function NotificationBadge({ lang, isMobile }: NotificationBadgeProps) {
       }}
       aria-label={message}
     >
-      <BarChart3 size={14} style={{ flexShrink: 0 }} />
+      <Bell size={14} style={{ flexShrink: 0 }} />
       <span style={{
         overflow: 'hidden',
         textOverflow: 'ellipsis'
