@@ -115,8 +115,7 @@ export const metadata: Metadata = {
   // VERIFICATION (agregar tus IDs cuando los tengas)
   // ─────────────────────────────────────────────────────────────────────────────
   verification: {
-    // google: 'tu-google-site-verification-id',
-    // yandex: 'tu-yandex-verification-id',
+    google: '8PArBzTf2vdnQ0brJTy7sYNQU0ySC5qGPkDa4EMD-z4',
   },
 
   // ─────────────────────────────────────────────────────────────────────────────
