@@ -69,36 +69,36 @@
 
 /* ===== DARK THEME ===== */
 [data-theme="dark"] {
-  /* Backgrounds (5-layer depth system) */
-  --mr-bg-base: #0f1117;
-  --mr-bg-card: #191c26;
-  --mr-bg-elevated: #222632;
-  --mr-bg-hover: #2a2f3d;
-  --mr-bg-input: #191c26;
+  /* Backgrounds (5-layer depth system — warm purple-tinted, M2M-inspired) */
+  --mr-bg-base: #0D0D14;
+  --mr-bg-card: #161620;
+  --mr-bg-elevated: #1E1E2A;
+  --mr-bg-hover: #282836;
+  --mr-bg-input: #161620;
 
-  /* Text (3-layer hierarchy) */
-  --mr-text-primary: #edf0f7;
-  --mr-text-secondary: #9ba2b4;
-  --mr-text-tertiary: #636b7e;
-  --mr-text-inverse: #0f1117;
+  /* Text (3-layer hierarchy — brighter primary) */
+  --mr-text-primary: #f5f5f7;
+  --mr-text-secondary: #a0a0b2;
+  --mr-text-tertiary: #6b6b7e;
+  --mr-text-inverse: #0D0D14;
 
-  /* Borders & card outline */
-  --mr-border: #282d3a;
-  --mr-border-strong: #363c4d;
-  --mr-card-border: 1px solid #282d3a;
+  /* Borders & card outline (rgba for organic feel) */
+  --mr-border: rgba(255, 255, 255, 0.08);
+  --mr-border-strong: rgba(255, 255, 255, 0.14);
+  --mr-card-border: 1px solid rgba(255, 255, 255, 0.08);
 
   /* Shadows (subtle glow for depth on dark surfaces) */
   --mr-shadow: 0 2px 8px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.04);
   --mr-shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.05);
 
-  /* Status backgrounds (muted tints, not saturated) */
-  --mr-green-bg: #121e18;
-  --mr-red-bg: #1e1315;
-  --mr-amber-bg: #1e1912;
-  --mr-blue-bg: #131a28;
-  --mr-purple-bg: #1a1528;
+  /* Status backgrounds (visible tints — 15-20% opacity range) */
+  --mr-green-bg: rgba(16, 185, 129, 0.15);
+  --mr-red-bg: rgba(239, 68, 68, 0.12);
+  --mr-amber-bg: rgba(245, 158, 11, 0.14);
+  --mr-blue-bg: rgba(59, 130, 246, 0.14);
+  --mr-purple-bg: rgba(124, 58, 237, 0.14);
 
-  /* Status text (softer, less neon) */
+  /* Status text (vivid but not neon) */
   --mr-green-text: #6ee7a0;
   --mr-red-text: #f09898;
   --mr-amber-text: #f0c840;
