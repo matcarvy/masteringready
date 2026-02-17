@@ -244,9 +244,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
           console.error('Error getting session:', error)
         } else {
           setSession(session)
-          setUser(session?.user ?? null)
 
-          // Load admin status for existing session
+          // Load admin status BEFORE setting user and clearing loading
+          // — prevents race condition where page.tsx renders with user but isAdmin=false
           if (session?.user) {
             const { data: profile } = await supabase
               .from('profiles')
@@ -255,6 +255,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
               .single()
             setIsAdmin(profile?.is_admin === true)
           }
+
+          setUser(session?.user ?? null)
         }
       } catch (err) {
         console.error('Auth error:', err)
@@ -269,8 +271,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         setSession(session)
-        setUser(session?.user ?? null)
-        setLoading(false)
+
+        // For SIGNED_IN/USER_UPDATED, defer setUser until after admin status is loaded
+        // — prevents race condition where page.tsx renders with user but isAdmin=false
+        if (!((event === 'SIGNED_IN' || event === 'USER_UPDATED') && session?.user)) {
+          setUser(session?.user ?? null)
+          setLoading(false)
+        }
 
         // Ensure profile + subscription exist on sign in (handles trigger bypass)
         if ((event === 'SIGNED_IN' || event === 'USER_UPDATED') && session?.user) {
@@ -346,9 +353,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
             }
           }
 
-          // Set admin status from profile
+          // Set admin status from profile, THEN set user — so page.tsx useEffects
+          // see isAdmin=true on their first run (prevents purchase modal flash)
           const adminStatus = existingProfile?.is_admin === true
           setIsAdmin(adminStatus)
+          setUser(session?.user ?? null)
+          setLoading(false)
 
           // Check for pending analysis after login/signup
           const saveResult = await savePendingAnalysisForUser(u.id, adminStatus)
