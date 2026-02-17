@@ -13,6 +13,7 @@ import { useGeo } from '@/lib/useGeo'
 import { getAllPricesForCountry } from '@/lib/pricing-config'
 import { detectLanguage, setLanguageCookie } from '@/lib/language'
 import { getErrorMessage, ERROR_MESSAGES } from '@/lib/error-messages'
+import { NotificationBadge, setNotification, clearNotification } from '@/components/NotificationBadge'
 
 // Module-level quota cache — survives React state resets / component remounts
 // (GoTrueClient conflicts cause auth state flicker → state loss)
@@ -571,6 +572,19 @@ function Home() {
           // On error, show FreeLimitModal as safety fallback
           setShowFreeLimitModal(true)
         })
+      } else {
+        // No pending analysis — check if user has existing analyses to nudge them
+        supabase.from('analyses').select('id', { count: 'exact', head: true }).eq('user_id', user.id)
+          .then(({ count }) => {
+            if (count && count > 0) {
+              setNotification({
+                type: 'has_analyses',
+                message_es: `Tienes ${count} análisis`,
+                message_en: `You have ${count} ${count === 1 ? 'analysis' : 'analyses'}`,
+                href: `/dashboard?lang=${lang}`
+              })
+            }
+          })
       }
     }
   }, [user, result])
@@ -985,6 +999,12 @@ const handleAnalyze = async () => {
         }, file, geo?.countryCode, isAdmin, session ? { access_token: session.access_token, refresh_token: session.refresh_token } : undefined)
           .then(savedData => {
             setSavedAnalysisId(savedData?.[0]?.id || null)
+            setNotification({
+              type: 'analysis_ready',
+              message_es: 'Tu análisis está listo',
+              message_en: 'Your analysis is ready',
+              href: `/dashboard?lang=${lang}`
+            })
           })
           .catch(saveErr => {
             console.error('[Analysis] Failed to save to database:', saveErr)
@@ -1583,6 +1603,9 @@ by Matías Carvajal
 
               {/* Theme Toggle */}
               <ThemeToggle lang={lang} />
+
+              {/* Notification Badge — persistent until clicked or dismissed */}
+              {user && <NotificationBadge lang={lang} isMobile={isMobile} />}
 
               {/* User Menu — hidden on mobile when not logged in (hamburger handles it) */}
               <UserMenu lang={lang} isMobile={isMobile} />

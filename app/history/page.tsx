@@ -13,6 +13,7 @@ import { useAuth, UserMenu } from '@/components/auth'
 import { supabase, createFreshQueryClient } from '@/lib/supabase'
 import { detectLanguage, setLanguageCookie } from '@/lib/language'
 import { ThemeToggle } from '@/components/ThemeToggle'
+import { clearNotification } from '@/components/NotificationBadge'
 import {
   Music,
   FileAudio,
@@ -281,6 +282,7 @@ export default function HistoryPage() {
   useEffect(() => {
     async function fetchData() {
       if (!user || !session?.access_token) return
+      clearNotification()
       setLoading(true)
 
       try {

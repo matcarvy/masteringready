@@ -33,6 +33,7 @@ import {
   HardDrive
 } from 'lucide-react'
 import { ThemeToggle } from '@/components/ThemeToggle'
+import { clearNotification } from '@/components/NotificationBadge'
 
 // ============================================================================
 // TRANSLATIONS / TRADUCCIONES
@@ -442,6 +443,9 @@ function DashboardContent() {
 
     async function fetchData() {
       if (!user) return
+
+      // User arrived at dashboard — clear any pending notification
+      clearNotification()
 
       setLoading(true)
 
