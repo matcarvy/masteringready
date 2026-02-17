@@ -348,8 +348,8 @@ function Home() {
     return () => { cancelled = true }
   }, [user, isAdmin])
 
-  // Free user gets full access (Completo + PDF) for their 2 free analyses
-  const effectiveHasPaidAccess = hasPaidAccess ||
+  // Free user gets full access (Completo + PDF) for their 2 free analyses. Admin always has full access.
+  const effectiveHasPaidAccess = hasPaidAccess || isAdmin ||
     (isLoggedIn && result !== null && userAnalysisStatus?.analyses_used !== undefined && userAnalysisStatus.analyses_used <= 2)
 
   // Mobile detection
@@ -698,7 +698,7 @@ const handleAnalyze = async () => {
   // Quick check: if cached status already says quota is exhausted, block immediately
   // (prevents re-click after closing FreeLimitModal with file still loaded)
   // Skip if reason is NO_PLAN (new user profile may not exist yet — let RPC re-check)
-  if (isLoggedIn && userAnalysisStatus && !userAnalysisStatus.can_analyze && userAnalysisStatus.reason !== 'NO_PLAN') {
+  if (isLoggedIn && !isAdmin && userAnalysisStatus && !userAnalysisStatus.can_analyze && userAnalysisStatus.reason !== 'NO_PLAN') {
     isAnalyzingRef.current = false // Release mutex — this return is before try/finally
     setShowFreeLimitModal(true)
     return
@@ -1076,8 +1076,9 @@ const handleAnalyze = async () => {
 
   const handleReset = () => {
     // Check quota before allowing new upload — don't let user waste time uploading
+    // Admin always passes (unlimited analyses)
     const quotaForReset = userAnalysisStatus || _quotaCache
-    if (isLoggedIn && quotaForReset && !quotaForReset.can_analyze && quotaForReset.reason !== 'NO_PLAN') {
+    if (isLoggedIn && !isAdmin && quotaForReset && !quotaForReset.can_analyze && quotaForReset.reason !== 'NO_PLAN') {
       setShowFreeLimitModal(true)
       return
     }
