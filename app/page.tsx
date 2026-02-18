@@ -574,7 +574,7 @@ function Home() {
         })
       } else {
         // No pending analysis — check if user has existing analyses to nudge them
-        supabase.from('analyses').select('id', { count: 'exact', head: true }).eq('user_id', user.id)
+        supabase.from('analyses').select('id', { count: 'exact', head: true }).eq('user_id', user.id).eq('is_test_analysis', false)
           .then(({ count }) => {
             if (count && count > 0) {
               setNotification({
@@ -1004,7 +1004,7 @@ const handleAnalyze = async () => {
             try {
               const freshClient = session ? await createFreshQueryClient({ access_token: session.access_token, refresh_token: session.refresh_token }) : null
               const queryClient = freshClient || supabase
-              const { count: total } = await queryClient.from('analyses').select('id', { count: 'exact', head: true }).eq('user_id', user.id)
+              const { count: total } = await queryClient.from('analyses').select('id', { count: 'exact', head: true }).eq('user_id', user.id).eq('is_test_analysis', false)
               if (total && total > 0) count = total
             } catch { /* use default count = 1 */ }
             setNotification({
