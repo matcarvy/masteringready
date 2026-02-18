@@ -2794,6 +2794,58 @@ const hasFullAccess = isPro || isAdmin || (() => {
 
 **Git state**: main on `52cb459`, pushed. Build clean.
 
+### Session 2026-02-17 — Pre-Promotion Audit + Security Hardening + Bilingual Fixes
+
+#### Context
+Pre-promotion audit before distributing the site. Meta Pixel and Google Search Console already installed in previous session.
+
+#### 1. Comprehensive Pre-Promotion Audit (7 areas)
+- **Build**: PASS — 23 routes, 0 errors
+- **Security/secrets**: PASS — found stale `console.log` in `lib/supabase.ts:518` leaking quota data
+- **Live headers**: PASS — CSP, HSTS, X-Frame-Options, nosniff all present
+- **SEO**: Found 3 critical issues (logo.png 404, root canonical bleeding, robots.txt missing Disallows)
+- **Public assets**: All exist except logo.png (referenced in Organization schema)
+- **Sitemap**: Had non-indexable pages (auth, subscription)
+
+#### 2. Audit Fixes Applied (`655cc64`)
+1. Removed root canonical from `layout.tsx` (was bleeding to all sub-pages, telling Google they're duplicates of homepage)
+2. Fixed Organization schema logo → existing `icon-512.png` (was referencing non-existent `logo.png`)
+3. Added `bookFormat: 'https://schema.org/EBook'` to Book schema
+4. Removed stale `console.log('Analysis count incremented:', incrementResult)` from `lib/supabase.ts`
+5. Added Disallow rules to `robots.txt`: `/dashboard`, `/history`, `/settings`, `/admin`, `/auth/callback`, `/api/`
+6. Cleaned `sitemap.xml` to 3 indexable pages only (`/`, `/privacy`, `/terms`), updated lastmod dates
+
+#### 3. Server-Side IP Rate Limit Enforcement (`6584f50`)
+- **Problem**: IP limit was frontend-only. Direct API calls to Render (`/api/analyze/start` or `/api/analyze/mix`) bypassed all limits entirely.
+- **Fix**: Added `ip_limiter.check_ip_limit()` check INSIDE both endpoints:
+  - `/api/analyze/start` (polling endpoint): checks before creating job, returns 429 if limit reached
+  - `/api/analyze/mix` (sync endpoint): same enforcement, added `request: Request` parameter
+  - Both are fail-closed: if IP check itself fails, analysis is denied
+- **Remaining gap**: `is_authenticated` form param is self-reported. Will be fixed by signed token system (next session, requires Vercel Pro).
+
+#### 4. Spanish Accent Fixes (~55 strings)
+- `settings/page.tsx`: 12 strings — contraseña (×7), configuración, electrónico, acción, eliminarán, análisis
+- `subscription/page.tsx`: 25+ strings — suscripción (×5), análisis (×9), más, información, facturación, próximo, método (×2), cancelación, descripción, máximo, mantendrás, aún
+
+#### 5. Forbidden Word Fix
+- `subscription/page.tsx`: "Fallido" → "No procesado" (ES) / "Failed" → "Not processed" (EN)
+
+#### 6. Auth Page Loading Text
+- 4 Suspense fallbacks changed: "Loading..." → "Cargando..." (login, signup, forgot-password, reset-password)
+
+#### 7. Accuracy Validation: MR vs iZotope RX 11
+- Tested same file: Billie Jean (Michael Jackson, 128kbit AAC from vinyl)
+- **LUFS**: RX -16.1 vs MR -16.20 (0.1 difference — within tolerance)
+- **True Peak**: RX +0.5 dBTP vs MR +0.28 dBTP (both detect clipping, ~0.22 dB difference likely from oversampling rate)
+- **Dynamic Range**: RX shows LRA 2.9 LU (section-to-section variation), MR shows PLR 16.47 (transient headroom). Different metrics, both valid.
+- **Conclusion**: Core measurements align with $399 industry tool. PLR is the right metric for mastering prep. LRA deferred to Phase 2 / Stream Ready.
+
+#### Commits to main (Session 2026-02-17)
+1. `655cc64` - fix: pre-promotion audit — SEO, security, and indexing cleanup
+2. `6584f50` - fix: server-side IP enforcement + Spanish accent fixes across site
+
+**Git state**: main on `6584f50`, pushed. Build clean.
+
 ---
 
 ## CURRENT PHASE: DISTRIBUTION + VALIDATION
@@ -2810,8 +2862,9 @@ const hasFullAccess = isPro || isAdmin || (() => {
 ### DEV PRIORITIES — Aligned to Growth Calendar
 
 #### Week 1 (Feb 17-23) — Foundation
-- [ ] **Meta Pixel installation** — Required for both engines. Without it, paid ads and retargeting are blind. Add to `app/layout.tsx`.
-- [ ] **Google Search Console** — Add verification ID in `app/layout.tsx` ~line 117. Submit sitemap. Zero cost, high leverage for organic discovery.
+- [x] **Meta Pixel installation** — DONE (Session 2026-02-17). Pixel ID `1634157831233542` in `layout.tsx`. CSP updated for Facebook domains.
+- [x] **Google Search Console** — DONE (Session 2026-02-17). Verification tag + file added. Sitemap submitted.
+- [ ] **Signed token system (bulletproof IP enforcement)** — HMAC-signed short-lived tokens via Vercel API route `/api/analyze-token`. Render validates signature. Secret never in browser. Requires Vercel Pro (user setting up billing). ~30 min implementation.
 
 #### Weeks 5-6 (Mar 17-30) — Conversion Layer
 - [ ] **Email onboarding sequence** — THE highest-leverage dev work. 4 bilingual triggered emails:
@@ -2827,10 +2880,11 @@ const hasFullAccess = isPro || isAdmin || (() => {
 
 #### Ongoing (supports both engines)
 - [ ] **eBook migration from Payhip** — Stripe product `ebook` at $15 USD flat. Revenue diversification.
-- [ ] **Shared secret Vercel ↔ Render** — `X-API-Secret` header, ~15 min. Low effort, high security value.
+- [ ] **Shared secret Vercel ↔ Render** — Superseded by signed token system (Week 1). HMAC approach is bulletproof vs static secret in JS bundle.
 - [ ] **SEO blog posts** — ES keywords have zero competition: "cómo saber si mi mezcla está lista," "analizar mezcla antes de mastering." EN keywords: "is my mix ready for mastering," "mix analysis tool."
 
 ### Phase 2 (data-driven, trigger on evidence)
+- **LRA (Loudness Range) metric** — EBU R 128 LRA as informational metric in MR (no score impact). ~2-3h. PLR is the right metric for mastering prep; LRA is more relevant for Stream Ready (section-to-section loudness variation = what platforms normalize). Add to SR first, MR later if users ask.
 - **Dark Mode Phase 5** — Admin secondary pages (privacy, terms, error pages). Low priority.
 - **Facebook OAuth** — Meta App Review + Business Verification. Only if data shows demand.
 - **Persona Mode** (Músico/Productor/Ingeniero) — Only if funnel data shows users need guidance.
@@ -2853,3 +2907,19 @@ const hasFullAccess = isPro || isAdmin || (() => {
 - `docs/MR-Pricing-System.md` — All plans, tiers, local currency, technical flow, quota system
 - `docs/MR-Infrastructure-Scaling.md` — When each service needs upgrading, break-even tables
 - `docs/MR-Product-Rundown.md` — Full product briefing for marketing/external use
+
+### Session 2026-02-18 — Notification Reset Bug Fix
+
+#### 1. Notification Bell Not Resetting After Dismiss (`NotificationBadge.tsx`)
+- **Problem**: Bell notification kept reappearing after being dismissed (clicked or X'd)
+- **Root cause**: `page.tsx` line 577-587 queries analyses count on every page load / auth state change. If count > 0, calls `setNotification({ type: 'has_analyses' })` — overwrites the dismissed notification. No "already seen" tracking existed.
+- **Fix**: Added dismissed-type tracking in `sessionStorage` (`mr_notif_dismissed`):
+  - `has_analyses`: Shows once per session. Once dismissed, `wasDismissed()` returns true → `setNotification()` skips it
+  - `analysis_ready`: Always shows (new event). Clears its own dismissed state so it always breaks through
+  - `clearNotification()` now calls `markDismissed(type)` before removing notification — so the dismiss persists even when `setNotification` re-fires
+  - Dashboard/history/settings/subscription `clearNotification()` calls also mark as dismissed
+  - New browser session → `sessionStorage` fresh → clean slate
+
+**Commit**: `fix: notification bell stays dismissed after user clears it`
+
+**Git state**: main, pushed. Build clean.

@@ -9,8 +9,9 @@ interface NotificationBadgeProps {
   isMobile: boolean
 }
 
-// Session storage key for notification
+// Session storage keys
 const NOTIF_KEY = 'mr_notif'
+const DISMISSED_KEY = 'mr_notif_dismissed'
 
 // Notification data shape
 interface NotifData {
@@ -21,21 +22,68 @@ interface NotifData {
 }
 
 /**
- * Set a notification (call from anywhere)
+ * Check if a notification type was already dismissed this session.
  */
-export function setNotification(data: NotifData) {
-  if (typeof window !== 'undefined') {
-    sessionStorage.setItem(NOTIF_KEY, JSON.stringify(data))
-  }
+function wasDismissed(type: string): boolean {
+  if (typeof window === 'undefined') return false
+  const dismissed = sessionStorage.getItem(DISMISSED_KEY)
+  if (!dismissed) return false
+  try {
+    const set: string[] = JSON.parse(dismissed)
+    return set.includes(type)
+  } catch { return false }
 }
 
 /**
- * Clear the notification (call when user visits dashboard)
+ * Mark a notification type as dismissed for this session.
+ */
+function markDismissed(type: string) {
+  if (typeof window === 'undefined') return
+  const dismissed = sessionStorage.getItem(DISMISSED_KEY)
+  let set: string[] = []
+  try { set = dismissed ? JSON.parse(dismissed) : [] } catch { /* */ }
+  if (!set.includes(type)) set.push(type)
+  sessionStorage.setItem(DISMISSED_KEY, JSON.stringify(set))
+}
+
+/**
+ * Set a notification (call from anywhere).
+ * - 'analysis_ready': always shows (new event, clears any prior dismissed state for it)
+ * - 'has_analyses': only shows once per session — skipped if already dismissed
+ */
+export function setNotification(data: NotifData) {
+  if (typeof window === 'undefined') return
+
+  if (data.type === 'has_analyses' && wasDismissed('has_analyses')) return
+
+  if (data.type === 'analysis_ready') {
+    // New event — clear dismissed state so it always appears
+    const dismissed = sessionStorage.getItem(DISMISSED_KEY)
+    if (dismissed) {
+      try {
+        const set: string[] = JSON.parse(dismissed)
+        const filtered = set.filter(t => t !== 'analysis_ready')
+        sessionStorage.setItem(DISMISSED_KEY, JSON.stringify(filtered))
+      } catch { /* */ }
+    }
+  }
+
+  sessionStorage.setItem(NOTIF_KEY, JSON.stringify(data))
+}
+
+/**
+ * Clear the notification and mark its type as dismissed.
  */
 export function clearNotification() {
-  if (typeof window !== 'undefined') {
-    sessionStorage.removeItem(NOTIF_KEY)
+  if (typeof window === 'undefined') return
+  const raw = sessionStorage.getItem(NOTIF_KEY)
+  if (raw) {
+    try {
+      const data = JSON.parse(raw) as NotifData
+      markDismissed(data.type)
+    } catch { /* */ }
   }
+  sessionStorage.removeItem(NOTIF_KEY)
 }
 
 /**
