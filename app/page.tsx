@@ -574,17 +574,16 @@ function Home() {
         })
       } else {
         // No pending analysis — check if user has existing analyses to nudge them
-        supabase.from('analyses').select('id', { count: 'exact', head: true }).eq('user_id', user.id).eq('is_test_analysis', false)
-          .then(({ count }) => {
-            if (count && count > 0) {
-              setNotification({
-                type: 'has_analyses',
-                message_es: `Tienes ${count} análisis`,
-                message_en: `You have ${count} ${count === 1 ? 'analysis' : 'analyses'}`,
-                href: `/dashboard?lang=${lang}`
-              })
-            }
+        // Show notification only if user has unseen analyses from this session
+        const unseen = parseInt(sessionStorage.getItem('mr_new_analyses') || '0', 10)
+        if (unseen > 0) {
+          setNotification({
+            type: 'has_analyses',
+            message_es: unseen === 1 ? 'Tu análisis está listo' : `Tienes ${unseen} análisis listos`,
+            message_en: unseen === 1 ? 'Your analysis is ready' : `You have ${unseen} ${unseen === 1 ? 'analysis' : 'analyses'} ready`,
+            href: `/dashboard?lang=${lang}`
           })
+        }
       }
     }
   }, [user, result])
@@ -997,16 +996,12 @@ const handleAnalyze = async () => {
           strict,
           api_request_id: requestIdRef.current || null
         }, file, geo?.countryCode, isAdmin, session ? { access_token: session.access_token, refresh_token: session.refresh_token } : undefined)
-          .then(async savedData => {
+          .then(savedData => {
             setSavedAnalysisId(savedData?.[0]?.id || null)
-            // Query total analysis count for notification
-            let count = 1
-            try {
-              const freshClient = session ? await createFreshQueryClient({ access_token: session.access_token, refresh_token: session.refresh_token }) : null
-              const queryClient = freshClient || supabase
-              const { count: total } = await queryClient.from('analyses').select('id', { count: 'exact', head: true }).eq('user_id', user.id).eq('is_test_analysis', false)
-              if (total && total > 0) count = total
-            } catch { /* use default count = 1 */ }
+            // Session counter: increments per analysis, resets on dashboard visit
+            const prev = parseInt(sessionStorage.getItem('mr_new_analyses') || '0', 10)
+            const count = prev + 1
+            sessionStorage.setItem('mr_new_analyses', String(count))
             setNotification({
               type: 'analysis_ready',
               message_es: count === 1 ? 'Tu análisis está listo' : `Tienes ${count} análisis listos`,

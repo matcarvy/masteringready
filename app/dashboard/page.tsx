@@ -444,8 +444,9 @@ function DashboardContent() {
     async function fetchData() {
       if (!user) return
 
-      // User arrived at dashboard — clear any pending notification
+      // User arrived at dashboard — clear any pending notification + reset counter
       clearNotification()
+      sessionStorage.removeItem('mr_new_analyses')
 
       setLoading(true)
 

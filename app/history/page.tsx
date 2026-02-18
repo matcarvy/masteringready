@@ -283,6 +283,7 @@ export default function HistoryPage() {
     async function fetchData() {
       if (!user || !session?.access_token) return
       clearNotification()
+      sessionStorage.removeItem('mr_new_analyses')
       setLoading(true)
 
       try {
