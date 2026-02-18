@@ -826,15 +826,20 @@ async def start_analysis(
                     try:
                         file_info = sf.info(analysis_path)
 
-                        # Extract bit depth safely (MP3 and other formats don't have bits_per_sample)
+                        # Extract bit depth from subtype (same logic as analyzer.py)
                         bit_depth = None
-                        if hasattr(file_info, 'subtype_info'):
-                            if hasattr(file_info.subtype_info, 'bits_per_sample'):
-                                bit_depth = file_info.subtype_info.bits_per_sample
-                            elif isinstance(file_info.subtype_info, str):
-                                # For MP3 and other compressed formats, estimate bit depth
-                                # Most MP3s decode to 16-bit, high-quality to 24-bit
-                                bit_depth = 16  # Default for lossy formats
+                        subtype = file_info.subtype if hasattr(file_info, 'subtype') else ''
+                        if 'PCM_' in subtype:
+                            try:
+                                bit_depth = int(subtype.split('_')[1])
+                            except (ValueError, IndexError):
+                                bit_depth = 16
+                        elif subtype == 'DOUBLE':
+                            bit_depth = 64
+                        elif 'FLOAT' in subtype:
+                            bit_depth = 32
+                        else:
+                            bit_depth = 16  # Default for lossy formats (MP3, AAC, etc.)
                         
                         original_metadata = {
                             'sample_rate': file_info.samplerate,

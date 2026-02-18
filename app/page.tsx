@@ -997,12 +997,20 @@ const handleAnalyze = async () => {
           strict,
           api_request_id: requestIdRef.current || null
         }, file, geo?.countryCode, isAdmin, session ? { access_token: session.access_token, refresh_token: session.refresh_token } : undefined)
-          .then(savedData => {
+          .then(async savedData => {
             setSavedAnalysisId(savedData?.[0]?.id || null)
+            // Query total analysis count for notification
+            let count = 1
+            try {
+              const freshClient = session ? await createFreshQueryClient({ access_token: session.access_token, refresh_token: session.refresh_token }) : null
+              const queryClient = freshClient || supabase
+              const { count: total } = await queryClient.from('analyses').select('id', { count: 'exact', head: true }).eq('user_id', user.id)
+              if (total && total > 0) count = total
+            } catch { /* use default count = 1 */ }
             setNotification({
               type: 'analysis_ready',
-              message_es: 'Tu análisis está listo',
-              message_en: 'Your analysis is ready',
+              message_es: count === 1 ? 'Tu análisis está listo' : `Tienes ${count} análisis listos`,
+              message_en: count === 1 ? 'Your analysis is ready' : `You have ${count} ${count === 1 ? 'analysis' : 'analyses'} ready`,
               href: `/dashboard?lang=${lang}`
             })
           })
