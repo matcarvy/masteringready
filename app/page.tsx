@@ -3367,10 +3367,11 @@ by Matías Carvajal
                     </button>
                     {(result as any).cta_subline && (
                       <p style={{
-                        fontSize: '0.85rem',
-                        color: 'var(--mr-text-secondary)',
-                        marginTop: '0.5rem',
-                        textAlign: 'center'
+                        fontSize: '0.8rem',
+                        color: 'rgba(255, 255, 255, 0.7)',
+                        marginTop: '0.75rem',
+                        textAlign: 'center',
+                        letterSpacing: '0.01em'
                       }}>
                         {(result as any).cta_subline}
                       </p>
