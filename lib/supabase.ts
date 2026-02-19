@@ -278,7 +278,7 @@ export interface AnalysisStatus {
  * Returns detailed status including reason and limits
  * Verificar si el usuario puede realizar análisis (dentro de límites)
  */
-export async function checkCanAnalyze(): Promise<AnalysisStatus> {
+export async function checkCanAnalyze(attempt = 1): Promise<AnalysisStatus> {
   try {
     const user = await getCurrentUser()
 
@@ -318,6 +318,11 @@ export async function checkCanAnalyze(): Promise<AnalysisStatus> {
       is_lifetime: false
     }
   } catch (err) {
+    // GoTrueClient abort — retry once after short delay
+    if (attempt < 2 && err instanceof DOMException && (err as DOMException).name === 'AbortError') {
+      await new Promise(r => setTimeout(r, 500))
+      return checkCanAnalyze(attempt + 1)
+    }
     console.error('checkCanAnalyze threw unexpectedly:', err)
     return {
       can_analyze: false,

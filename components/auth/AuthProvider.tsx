@@ -236,7 +236,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   useEffect(() => {
     // Get initial session / Obtener sesión inicial
-    const getSession = async () => {
+    const getSession = async (attempt = 1) => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession()
 
@@ -259,6 +259,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
           setUser(session?.user ?? null)
         }
       } catch (err) {
+        // GoTrueClient abort — retry once after short delay
+        if (attempt < 2 && err instanceof DOMException && err.name === 'AbortError') {
+          await new Promise(r => setTimeout(r, 500))
+          return getSession(attempt + 1)
+        }
         console.error('Auth error:', err)
       } finally {
         setLoading(false)
