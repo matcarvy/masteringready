@@ -1386,7 +1386,8 @@ function DashboardContent() {
               if (selectedAnalysis.sample_rate != null) items.push({ label: t.fileInfo.sampleRate, value: formatSampleRate(selectedAnalysis.sample_rate) })
               if (selectedAnalysis.bit_depth != null) items.push({ label: t.fileInfo.bitDepth, value: `${selectedAnalysis.bit_depth} bit` })
               if (selectedAnalysis.file_size_bytes != null) items.push({ label: t.fileInfo.fileSize, value: formatFileSize(selectedAnalysis.file_size_bytes) })
-              if (selectedAnalysis.file_format != null) items.push({ label: t.fileInfo.format, value: selectedAnalysis.file_format.toUpperCase() })
+              const format = selectedAnalysis.file_format || selectedAnalysis.filename?.split('.').pop() || null
+              if (format != null) items.push({ label: t.fileInfo.format, value: format.toUpperCase() })
               if (selectedAnalysis.channels != null) items.push({ label: t.fileInfo.channels, value: selectedAnalysis.channels === 2 ? t.fileInfo.stereo : selectedAnalysis.channels === 1 ? t.fileInfo.mono : `${selectedAnalysis.channels}` })
               // processing_time_seconds — admin-only metric, not shown to regular users
               if (items.length === 0) return null
@@ -1723,78 +1724,6 @@ function DashboardContent() {
                 </div>
               )}
 
-              {/* CTA — dynamic based on score */}
-              {(() => {
-                const cta = getCtaForScore(selectedAnalysis.score, lang)
-                const score = selectedAnalysis.score
-                const emoji = score >= 85 ? '🎧' : score >= 60 ? '🔧' : score >= 40 ? '🔍' : score >= 20 ? '🔍' : '💬'
-                return (
-                  <div style={{
-                    background: 'linear-gradient(to bottom right, #818cf8 0%, #6366f1 100%)',
-                    borderRadius: '1rem',
-                    padding: '1.25rem',
-                    marginTop: '1.5rem',
-                    color: 'white',
-                    boxShadow: '0 10px 25px rgba(99, 102, 241, 0.15)'
-                  }}>
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'flex-start',
-                      gap: '0.75rem',
-                      marginBottom: '1rem'
-                    }}>
-                      {/* Icon circle — dynamic */}
-                      <div style={{
-                        width: '2.75rem',
-                        height: '2.75rem',
-                        background: 'rgba(255,255,255,0.2)',
-                        borderRadius: '50%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        flexShrink: 0
-                      }}>
-                        <span style={{ fontSize: '1.375rem' }}>{emoji}</span>
-                      </div>
-                      <div style={{ flex: 1 }}>
-                        <p style={{ fontWeight: '600', fontSize: '0.95rem', marginBottom: '0.25rem' }}>
-                          {cta.title}
-                        </p>
-                        <p style={{ fontSize: '0.8rem', opacity: 0.9, margin: 0, lineHeight: 1.4 }}>
-                          {cta.body}
-                        </p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => { setCtaAction(cta.action); setShowContactModal(true) }}
-                      style={{
-                        background: 'var(--mr-bg-card)',
-                        color: 'var(--mr-primary)',
-                        padding: '0.625rem 1.25rem',
-                        borderRadius: '0.5rem',
-                        border: 'none',
-                        fontWeight: '600',
-                        fontSize: '0.85rem',
-                        cursor: 'pointer',
-                        boxShadow: 'var(--mr-shadow)',
-                        transition: 'all 0.2s',
-                        marginLeft: isMobile ? '0' : '3.5rem'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.transform = 'translateY(-1px)'
-                        e.currentTarget.style.boxShadow = 'var(--mr-shadow-lg)'
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.transform = 'translateY(0)'
-                        e.currentTarget.style.boxShadow = 'var(--mr-shadow)'
-                      }}
-                    >
-                      {cta.button}
-                    </button>
-                  </div>
-                )
-              })()}
-
               {/* Download Buttons */}
               <div style={{
                 display: 'flex',
@@ -1995,6 +1924,77 @@ function DashboardContent() {
                   </button>
                 )}
               </div>
+
+              {/* CTA — dynamic based on score (after downloads) */}
+              {(() => {
+                const cta = getCtaForScore(selectedAnalysis.score, lang)
+                const score = selectedAnalysis.score
+                const emoji = score >= 85 ? '🎧' : score >= 60 ? '🔧' : score >= 40 ? '🔍' : score >= 20 ? '🔍' : '💬'
+                return (
+                  <div style={{
+                    background: 'linear-gradient(to bottom right, #818cf8 0%, #6366f1 100%)',
+                    borderRadius: '1rem',
+                    padding: '1.25rem',
+                    marginTop: '1rem',
+                    color: 'white',
+                    boxShadow: '0 10px 25px rgba(99, 102, 241, 0.15)'
+                  }}>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: '0.75rem',
+                      marginBottom: '1rem'
+                    }}>
+                      <div style={{
+                        width: '2.75rem',
+                        height: '2.75rem',
+                        background: 'rgba(255,255,255,0.2)',
+                        borderRadius: '50%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0
+                      }}>
+                        <span style={{ fontSize: '1.375rem' }}>{emoji}</span>
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <p style={{ fontWeight: '600', fontSize: '0.95rem', marginBottom: '0.25rem' }}>
+                          {cta.title}
+                        </p>
+                        <p style={{ fontSize: '0.8rem', opacity: 0.9, margin: 0, lineHeight: 1.4 }}>
+                          {cta.body}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => { setCtaAction(cta.action); setShowContactModal(true) }}
+                      style={{
+                        background: 'var(--mr-bg-card)',
+                        color: 'var(--mr-primary)',
+                        padding: '0.625rem 1.25rem',
+                        borderRadius: '0.5rem',
+                        border: 'none',
+                        fontWeight: '600',
+                        fontSize: '0.85rem',
+                        cursor: 'pointer',
+                        boxShadow: 'var(--mr-shadow)',
+                        transition: 'all 0.2s',
+                        marginLeft: isMobile ? '0' : '3.5rem'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = 'translateY(-1px)'
+                        e.currentTarget.style.boxShadow = 'var(--mr-shadow-lg)'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = 'translateY(0)'
+                        e.currentTarget.style.boxShadow = 'var(--mr-shadow)'
+                      }}
+                    >
+                      {cta.button}
+                    </button>
+                  </div>
+                )
+              })()}
             </div>
           </div>
         </div>

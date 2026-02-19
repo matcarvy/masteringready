@@ -1199,77 +1199,6 @@ export default function HistoryPage() {
                 </div>
               )}
 
-              {/* CTA */}
-              {(() => {
-                const cta = getCtaForScore(selectedAnalysis.score, lang)
-                const score = selectedAnalysis.score
-                const emoji = score >= 85 ? '🎧' : score >= 60 ? '🔧' : score >= 40 ? '🔍' : score >= 20 ? '🔍' : '💬'
-                return (
-                  <div style={{
-                    background: 'linear-gradient(to bottom right, #818cf8 0%, #6366f1 100%)',
-                    borderRadius: '1rem',
-                    padding: '1.25rem',
-                    marginTop: '1.5rem',
-                    color: 'white',
-                    boxShadow: 'var(--mr-shadow-lg)'
-                  }}>
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'flex-start',
-                      gap: '0.75rem',
-                      marginBottom: '1rem'
-                    }}>
-                      <div style={{
-                        width: '2.75rem',
-                        height: '2.75rem',
-                        background: 'rgba(255,255,255,0.2)',
-                        borderRadius: '50%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        flexShrink: 0
-                      }}>
-                        <span style={{ fontSize: '1.375rem' }}>{emoji}</span>
-                      </div>
-                      <div style={{ flex: 1 }}>
-                        <p style={{ fontWeight: '600', fontSize: '0.95rem', marginBottom: '0.25rem' }}>
-                          {cta.title}
-                        </p>
-                        <p style={{ fontSize: '0.8rem', opacity: 0.9, margin: 0, lineHeight: 1.4 }}>
-                          {cta.body}
-                        </p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => { setCtaAction(cta.action); setShowContactModal(true) }}
-                      style={{
-                        background: 'var(--mr-bg-card)',
-                        color: 'var(--mr-primary)',
-                        padding: '0.625rem 1.25rem',
-                        borderRadius: '0.5rem',
-                        border: 'none',
-                        fontWeight: '600',
-                        fontSize: '0.85rem',
-                        cursor: 'pointer',
-                        boxShadow: 'var(--mr-shadow)',
-                        marginLeft: isMobile ? '0' : '3.5rem',
-                        transition: 'all 0.2s'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.transform = 'translateY(-1px)'
-                        e.currentTarget.style.boxShadow = 'var(--mr-shadow-lg)'
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.transform = 'translateY(0)'
-                        e.currentTarget.style.boxShadow = 'var(--mr-shadow)'
-                      }}
-                    >
-                      {cta.button}
-                    </button>
-                  </div>
-                )
-              })()}
-
               {/* Download */}
               <div style={{
                 display: 'flex',
@@ -1461,6 +1390,77 @@ export default function HistoryPage() {
                   </button>
                 )}
               </div>
+
+              {/* CTA — dynamic based on score (after downloads) */}
+              {(() => {
+                const cta = getCtaForScore(selectedAnalysis.score, lang)
+                const score = selectedAnalysis.score
+                const emoji = score >= 85 ? '🎧' : score >= 60 ? '🔧' : score >= 40 ? '🔍' : score >= 20 ? '🔍' : '💬'
+                return (
+                  <div style={{
+                    background: 'linear-gradient(to bottom right, #818cf8 0%, #6366f1 100%)',
+                    borderRadius: '1rem',
+                    padding: '1.25rem',
+                    marginTop: '1rem',
+                    color: 'white',
+                    boxShadow: 'var(--mr-shadow-lg)'
+                  }}>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: '0.75rem',
+                      marginBottom: '1rem'
+                    }}>
+                      <div style={{
+                        width: '2.75rem',
+                        height: '2.75rem',
+                        background: 'rgba(255,255,255,0.2)',
+                        borderRadius: '50%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0
+                      }}>
+                        <span style={{ fontSize: '1.375rem' }}>{emoji}</span>
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <p style={{ fontWeight: '600', fontSize: '0.95rem', marginBottom: '0.25rem' }}>
+                          {cta.title}
+                        </p>
+                        <p style={{ fontSize: '0.8rem', opacity: 0.9, margin: 0, lineHeight: 1.4 }}>
+                          {cta.body}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => { setCtaAction(cta.action); setShowContactModal(true) }}
+                      style={{
+                        background: 'var(--mr-bg-card)',
+                        color: 'var(--mr-primary)',
+                        padding: '0.625rem 1.25rem',
+                        borderRadius: '0.5rem',
+                        border: 'none',
+                        fontWeight: '600',
+                        fontSize: '0.85rem',
+                        cursor: 'pointer',
+                        boxShadow: 'var(--mr-shadow)',
+                        marginLeft: isMobile ? '0' : '3.5rem',
+                        transition: 'all 0.2s'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = 'translateY(-1px)'
+                        e.currentTarget.style.boxShadow = 'var(--mr-shadow-lg)'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = 'translateY(0)'
+                        e.currentTarget.style.boxShadow = 'var(--mr-shadow)'
+                      }}
+                    >
+                      {cta.button}
+                    </button>
+                  </div>
+                )
+              })()}
             </div>
           </div>
         </div>
