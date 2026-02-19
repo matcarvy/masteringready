@@ -3275,9 +3275,10 @@ by Matías Carvajal
                 <div style={{
                   background: 'linear-gradient(to bottom right, #7478d6 0%, #5a5ec8 100%)',
                   borderRadius: '1.5rem',
-                  padding: isMobile ? '1.5rem' : '2.5rem 2rem',
+                  padding: isMobile ? '1.5rem 1.25rem' : '2.5rem 2rem',
                   color: 'white',
-                  boxShadow: '0 20px 40px rgba(99, 102, 241, 0.15)'
+                  boxShadow: '0 20px 40px rgba(99, 102, 241, 0.15)',
+                  overflow: 'visible'
                 }}>
                   <div style={{
                     display: 'flex',
@@ -3288,8 +3289,8 @@ by Matías Carvajal
                   }}>
                     {/* Icon circle — dynamic based on score */}
                     <div style={{
-                      width: '4rem',
-                      height: '4rem',
+                      width: isMobile ? '3rem' : '4rem',
+                      height: isMobile ? '3rem' : '4rem',
                       background: 'rgba(255, 255, 255, 0.15)',
                       borderRadius: '50%',
                       display: 'flex',
@@ -3298,16 +3299,14 @@ by Matías Carvajal
                       backdropFilter: 'blur(10px)',
                       flexShrink: 0
                     }}>
-                      <span style={{ fontSize: '2rem' }}>
+                      <span style={{ fontSize: isMobile ? '1.5rem' : '2rem' }}>
                         {result.score >= 85 ? '🎧' :
-                         result.score >= 60 ? '🔧' :
-                         result.score >= 40 ? '🔍' :
-                         result.score >= 20 ? '🔍' : '💬'}
+                         result.score >= 40 ? '🔧' : '🔍'}
                       </span>
                     </div>
 
                     {/* Message */}
-                    <div style={{ flex: 1 }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
                       <h3 style={{
                         fontSize: isMobile ? '1.125rem' : '1.375rem',
                         lineHeight: '1.3',
@@ -3323,21 +3322,15 @@ by Matías Carvajal
                         })()}
                       </h3>
                       <p style={{
-                        fontSize: isMobile ? '0.9rem' : '1.0625rem',
+                        fontSize: isMobile ? '0.9375rem' : '1.0625rem',
                         lineHeight: '1.6',
                         color: 'rgba(255, 255, 255, 0.88)',
-                        margin: 0
+                        margin: 0,
+                        wordWrap: 'break-word',
+                        overflowWrap: 'break-word',
+                        hyphens: 'auto' as const
                       }}>
-                        {(() => {
-                          const fullText = result.cta_message.split('\n').slice(1).join(' ')
-                          if (isMobile) {
-                            const firstSentence = fullText.split('.')[0]
-                            return firstSentence.length > 80
-                              ? firstSentence.substring(0, 77) + '...'
-                              : firstSentence + '.'
-                          }
-                          return fullText
-                        })()}
+                        {result.cta_message.split('\n').slice(1).join(' ')}
                       </p>
                     </div>
                   </div>
@@ -3362,7 +3355,8 @@ by Matías Carvajal
                         fontSize: '1.125rem',
                         boxShadow: 'none',
                         transition: 'all 0.2s',
-                        width: isMobile ? '100%' : 'auto'
+                        width: isMobile ? '100%' : 'auto',
+                        minHeight: isMobile ? '48px' : 'auto'
                       }}
                       onMouseEnter={(e) => {
                         e.currentTarget.style.transform = 'translateY(-2px)'
@@ -3375,17 +3369,6 @@ by Matías Carvajal
                     >
                       {result.cta_button}
                     </button>
-                    {(result as any).cta_subline && (
-                      <p style={{
-                        fontSize: '0.8rem',
-                        color: 'rgba(255, 255, 255, 0.65)',
-                        marginTop: '0.75rem',
-                        textAlign: 'center',
-                        letterSpacing: '0.01em'
-                      }}>
-                        {(result as any).cta_subline}
-                      </p>
-                    )}
                   </div>
                 </div>
               )}
