@@ -1505,12 +1505,16 @@ by Matías Carvajal
       // Convert plain checkmarks and arrows to styled ones
       .replace(/^✓\s*/gm, '• ')
       .replace(/^→\s*/gm, '• ')
-      // Add recommendation emoji if missing
-      .replace(/(?<!💡\s)Recomendación:/g, '💡 Recomendación:')
-      .replace(/(?<!💡\s)Recommendation:/g, '💡 Recommendation:')
       // Remove duplicate emojis
       .replace(/✅\s*✅/g, '✅')
       .replace(/⚠️\s*⚠️/g, '⚠️')
+      // Remove recommendation lines (CTA card handles this)
+      .replace(/\n*💡\s*Recomendaci[óo]n:[^\n]*/g, '')
+      .replace(/\n*💡\s*Recommendation:[^\n]*/g, '')
+      .replace(/\n*Recomendaci[óo]n:[^\n]*/g, '')
+      .replace(/\n*Recommendation:[^\n]*/g, '')
+      // Remove inline CTA section (already shown as CTA card below)
+      .replace(/\n*[🎧🔧🔍💬]\s*(Tu mezcla|Your mix|Escr[íi]benos|Write us)[^\n]*(\n[^\n]*)?$/, '')
       // Remove excessive newlines (max 2 consecutive)
       .replace(/\n{3,}/g, '\n\n')
       // Remove lines that are just spaces
