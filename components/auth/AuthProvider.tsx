@@ -250,6 +250,40 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }
 
   useEffect(() => {
+    // Supabase storage key — derived from project URL
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+    let storageKey = 'sb-auth-token'
+    try { storageKey = `sb-${new URL(supabaseUrl).hostname.split('.')[0]}-auth-token` } catch {}
+
+    // Restore session from storage when GoTrueClient's internal state is cleared
+    // (happens when _recoverAndRefresh fails with AbortError on page reload)
+    const restoreFromStorage = async (): Promise<boolean> => {
+      try {
+        const raw = localStorage.getItem(storageKey) || sessionStorage.getItem(storageKey)
+        if (!raw) return false
+        const parsed = JSON.parse(raw)
+        if (!parsed?.access_token || !parsed?.refresh_token) return false
+        const { data, error } = await supabase.auth.setSession({
+          access_token: parsed.access_token,
+          refresh_token: parsed.refresh_token,
+        })
+        if (error || !data.session) return false
+        setSession(data.session)
+        if (data.session.user) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('is_admin')
+            .eq('id', data.session.user.id)
+            .single()
+          setIsAdmin(profile?.is_admin === true, profile !== null)
+        }
+        setUser(data.session.user ?? null)
+        return true
+      } catch {
+        return false
+      }
+    }
+
     // Get initial session / Obtener sesión inicial
     const getSession = async (attempt = 1) => {
       try {
@@ -257,7 +291,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
         if (error) {
           console.error('Error getting session:', error)
-        } else {
+        }
+
+        // GoTrueClient returned null but tokens may still be in storage
+        // (internal state cleared by failed _recoverAndRefresh, our removeItem guard kept tokens)
+        if (!session) {
+          const restored = await restoreFromStorage()
+          if (restored) return
+        }
+
+        if (!error) {
           setSession(session)
 
           // Load admin status BEFORE setting user and clearing loading
@@ -281,15 +324,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
           return getSession(attempt + 1)
         }
         console.error('Auth error:', err)
-        // Last resort: try reading session one more time after all retries exhausted
-        // The tokens are still in storage — GoTrueClient just keeps aborting its own requests
-        try {
-          const { data: { session: fallbackSession } } = await supabase.auth.getSession()
-          if (fallbackSession?.user) {
-            setSession(fallbackSession)
-            setUser(fallbackSession.user)
-          }
-        } catch {
+        // Last resort: restore from storage directly
+        const restored = await restoreFromStorage()
+        if (!restored) {
           // Truly failed — page renders as logged out, user can click Sign In
         }
       } finally {
