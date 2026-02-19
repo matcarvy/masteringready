@@ -45,10 +45,19 @@ function isEphemeral(): boolean {
   return localStorage.getItem(EPHEMERAL_FLAG) === 'true'
 }
 
+// Guard: only allow token removal during explicit signOut().
+// GoTrueClient's internal _recoverAndRefresh() calls removeItem() on AbortError,
+// which was deleting valid tokens on page reload (force or regular).
+let _signOutInProgress = false
+export function setSignOutInProgress(v: boolean) { _signOutInProgress = v }
+
 const authStorage = {
   getItem: (key: string): string | null => {
     if (typeof window === 'undefined') return null
-    return isEphemeral() ? sessionStorage.getItem(key) : localStorage.getItem(key)
+    const preferred = isEphemeral() ? sessionStorage.getItem(key) : localStorage.getItem(key)
+    if (preferred !== null) return preferred
+    // Fallback: check the other storage (handles ephemeral flag changes between sessions)
+    return isEphemeral() ? localStorage.getItem(key) : sessionStorage.getItem(key)
   },
   setItem: (key: string, value: string): void => {
     if (typeof window === 'undefined') return
@@ -60,6 +69,9 @@ const authStorage = {
   },
   removeItem: (key: string): void => {
     if (typeof window === 'undefined') return
+    // Only remove tokens during explicit signOut — block GoTrueClient's
+    // internal cleanup that fires on AbortError during page reload
+    if (!_signOutInProgress) return
     localStorage.removeItem(key)
     sessionStorage.removeItem(key)
   }

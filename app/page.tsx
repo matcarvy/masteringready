@@ -3275,9 +3275,11 @@ by Matías Carvajal
                 <div style={{
                   background: 'linear-gradient(to bottom right, #7478d6 0%, #5a5ec8 100%)',
                   borderRadius: '1.5rem',
-                  padding: isMobile ? '1.5rem 1.25rem' : '2.5rem 2rem',
+                  padding: isMobile ? '1.5rem 1.25rem' : '2rem 2.5rem',
                   color: 'white',
-                  boxShadow: '0 20px 40px rgba(99, 102, 241, 0.15)'
+                  boxShadow: '0 20px 40px rgba(99, 102, 241, 0.15)',
+                  maxWidth: '680px',
+                  margin: '0 auto'
                 }}>
                   {/* Icon + Title inline */}
                   <div style={{

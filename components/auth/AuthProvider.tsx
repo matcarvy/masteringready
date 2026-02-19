@@ -7,7 +7,7 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 import { User, Session } from '@supabase/supabase-js'
-import { supabase } from '@/lib/supabase'
+import { supabase, setSignOutInProgress } from '@/lib/supabase'
 
 // ============================================================================
 // TYPES / TIPOS
@@ -433,10 +433,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setUser(null)
     setSession(null)
     setIsAdmin(false)
+    setSignOutInProgress(true)
     try {
       await supabase.auth.signOut()
     } catch (err) {
       console.error('Sign out error:', err)
+    } finally {
+      setSignOutInProgress(false)
     }
   }
 
