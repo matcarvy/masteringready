@@ -385,6 +385,8 @@ const cleanReportText = (text: string): string => {
     .replace(/\n*[🎧🔧🔍💬]\s*(Tu mezcla|Your mix|Escr[íi]benos|Write us|No recomiendo|I don't recommend|Enviarlo|Sending it|Hay aspectos|There are|Hay decisiones|Hay problemas|No significa|Está técnicamente)[^\n]*/gu, '')
     // Remove any remaining lines starting with CTA emojis followed by text
     .replace(/\n*[🎧🔧🔍💬][^\n]*/gu, '')
+    // Remove CTA continuation lines (contain "escríbenos" or "write us")
+    .replace(/\n*[^\n]*(escr[íi]benos|write us)[^\n]*/gi, '')
     // Remove orphaned emoji lines (single emoji on its own line, broken rendering)
     .replace(/^\s*[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{FE00}-\u{FE0F}]\s*$/gmu, '')
     // Remove lone surrogates (broken rendering as small squares)
