@@ -206,7 +206,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
     return false
   })
-  const setIsAdmin = (val: boolean) => {
+  // Only persist to localStorage on definitive answers — not on query failures
+  const setIsAdmin = (val: boolean, definitive = true) => {
+    if (!definitive && !val) return // Don't clear cache on failed/aborted queries
     _setIsAdmin(val)
     if (typeof window !== 'undefined') {
       if (val) localStorage.setItem('mr_is_admin', 'true')
@@ -266,7 +268,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
               .select('is_admin')
               .eq('id', session.user.id)
               .single()
-            setIsAdmin(profile?.is_admin === true)
+            // Only update if query succeeded (profile !== null) — don't clear cache on abort
+            setIsAdmin(profile?.is_admin === true, profile !== null)
           }
 
           setUser(session?.user ?? null)
@@ -374,7 +377,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
           // Set admin status from profile, THEN set user — so page.tsx useEffects
           // see isAdmin=true on their first run (prevents purchase modal flash)
           const adminStatus = existingProfile?.is_admin === true
-          setIsAdmin(adminStatus)
+          setIsAdmin(adminStatus, existingProfile !== null)
           setUser(session?.user ?? null)
           setLoading(false)
 
