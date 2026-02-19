@@ -1015,7 +1015,7 @@ export default function HistoryPage() {
                 >
                   {tab === 'rapid' && <Zap size={16} />}
                   {tab === 'summary' && <FileText size={16} />}
-                  {tab === 'complete' && (!hasFullAccess ? <Crown size={16} style={{ color: '#d97706' }} /> : <TrendingUp size={16} />)}
+                  {tab === 'complete' && (!hasFullAccess ? <Crown size={16} style={{ color: 'var(--mr-amber)' }} /> : <TrendingUp size={16} />)}
                   {t.tabs[tab]}
                   {tab === 'complete' && !hasFullAccess && (
                     <span style={{
@@ -1059,11 +1059,11 @@ export default function HistoryPage() {
                   {/* Metrics Bars */}
                   {selectedAnalysis.metrics?.metrics_bars && Object.keys(selectedAnalysis.metrics.metrics_bars).length > 0 && (
                     <div style={{
-                      background: '#fef7f0',
+                      background: 'var(--mr-amber-bg)',
                       borderRadius: '0.75rem',
                       padding: '1.25rem',
                       marginBottom: '1.5rem',
-                      border: '1px solid #fed7aa'
+                      border: '1px solid var(--mr-amber)'
                     }}>
                       <h4 style={{
                         fontSize: '0.875rem',
@@ -1242,7 +1242,7 @@ export default function HistoryPage() {
                       onClick={() => { setCtaAction(cta.action); setShowContactModal(true) }}
                       style={{
                         background: 'var(--mr-bg-card)',
-                        color: '#6366f1',
+                        color: 'var(--mr-primary)',
                         padding: '0.625rem 1.25rem',
                         borderRadius: '0.5rem',
                         border: 'none',

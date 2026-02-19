@@ -411,6 +411,7 @@ function DashboardContent() {
   const [dashboardState, setDashboardState] = useState<DashboardState>('new_user')
   const [canBuyAddon, setCanBuyAddon] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
+  const [fileInfoExpanded, setFileInfoExpanded] = useState(false)
   const [showWelcomeBanner, setShowWelcomeBanner] = useState(false)
   const [welcomeBonus, setWelcomeBonus] = useState(0)
 
@@ -1376,7 +1377,7 @@ function DashboardContent() {
               </div>
             </div>
 
-            {/* File Info */}
+            {/* File Info — collapsible on mobile */}
             {(() => {
               const items: { label: string; value: string }[] = []
               if (selectedAnalysis.duration_seconds != null) items.push({ label: t.fileInfo.duration, value: formatDuration(selectedAnalysis.duration_seconds) })
@@ -1390,38 +1391,77 @@ function DashboardContent() {
               return (
                 <div style={{
                   margin: isMobile ? '0 1rem' : '0 1.5rem',
-                  padding: '0.75rem 1rem',
                   background: 'var(--mr-bg-base)',
                   borderRadius: '0.5rem',
-                  border: '1px solid var(--mr-bg-elevated)'
+                  border: '1px solid var(--mr-bg-elevated)',
+                  overflow: 'hidden'
                 }}>
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.375rem',
-                    marginBottom: '0.5rem',
-                    color: 'var(--mr-text-secondary)',
-                    fontSize: '0.75rem',
-                    fontWeight: '600',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.025em'
-                  }}>
-                    <Info size={12} />
-                    {t.fileInfo.title}
-                  </div>
-                  <div style={{
-                    display: 'flex',
-                    flexWrap: 'wrap',
-                    gap: '0.5rem 1.5rem',
-                    fontSize: '0.8125rem'
-                  }}>
-                    {items.map(item => (
-                      <div key={item.label} style={{ display: 'flex', gap: '0.375rem' }}>
-                        <span style={{ color: 'var(--mr-text-tertiary)' }}>{item.label}:</span>
-                        <span style={{ color: 'var(--mr-text-primary)', fontWeight: '500' }}>{item.value}</span>
+                  {/* Mobile toggle header */}
+                  {isMobile && (
+                    <button
+                      onClick={() => setFileInfoExpanded(!fileInfoExpanded)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        width: '100%',
+                        padding: '0.625rem 1rem',
+                        background: 'inherit',
+                        border: 'none',
+                        font: 'inherit',
+                        color: 'var(--mr-text-secondary)',
+                        cursor: 'pointer',
+                        fontSize: '0.75rem',
+                        fontWeight: '600',
+                        textTransform: 'uppercase' as const,
+                        letterSpacing: '0.025em'
+                      }}
+                    >
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+                        <Info size={12} />
+                        {t.fileInfo.title}
+                      </span>
+                      <span style={{
+                        transition: 'transform 0.2s',
+                        transform: fileInfoExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                        fontSize: '0.625rem'
+                      }}>▼</span>
+                    </button>
+                  )}
+                  {/* File info content — always visible on desktop, toggle on mobile */}
+                  {(!isMobile || fileInfoExpanded) && (
+                    <div style={{ padding: isMobile ? '0 1rem 0.75rem' : '0.75rem 1rem' }}>
+                      {!isMobile && (
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.375rem',
+                          marginBottom: '0.5rem',
+                          color: 'var(--mr-text-secondary)',
+                          fontSize: '0.75rem',
+                          fontWeight: '600',
+                          textTransform: 'uppercase' as const,
+                          letterSpacing: '0.025em'
+                        }}>
+                          <Info size={12} />
+                          {t.fileInfo.title}
+                        </div>
+                      )}
+                      <div style={{
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        gap: '0.5rem 1.5rem',
+                        fontSize: '0.8125rem'
+                      }}>
+                        {items.map(item => (
+                          <div key={item.label} style={{ display: 'flex', gap: '0.375rem' }}>
+                            <span style={{ color: 'var(--mr-text-tertiary)' }}>{item.label}:</span>
+                            <span style={{ color: 'var(--mr-text-primary)', fontWeight: '500' }}>{item.value}</span>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
+                    </div>
+                  )}
                 </div>
               )
             })()}
@@ -1503,11 +1543,11 @@ function DashboardContent() {
                   {/* Visual Metrics Bars */}
                   {selectedAnalysis.metrics?.metrics_bars && Object.keys(selectedAnalysis.metrics.metrics_bars).length > 0 && (
                     <div style={{
-                      background: '#fef7f0',
+                      background: 'var(--mr-amber-bg)',
                       borderRadius: '0.75rem',
                       padding: '1.25rem',
                       marginBottom: '1.5rem',
-                      border: '1px solid #fed7aa'
+                      border: '1px solid var(--mr-amber)'
                     }}>
                       <h4 style={{
                         fontSize: '0.875rem',
@@ -1727,7 +1767,7 @@ function DashboardContent() {
                       onClick={() => { setCtaAction(cta.action); setShowContactModal(true) }}
                       style={{
                         background: 'var(--mr-bg-card)',
-                        color: '#6366f1',
+                        color: 'var(--mr-primary)',
                         padding: '0.625rem 1.25rem',
                         borderRadius: '0.5rem',
                         border: 'none',
@@ -2062,13 +2102,13 @@ function DashboardContent() {
                     width: '20px',
                     height: '20px',
                     borderRadius: '50%',
-                    background: '#dcfce7',
+                    background: 'var(--mr-green-bg)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     flexShrink: 0
                   }}>
-                    <TrendingUp size={12} style={{ color: '#16a34a' }} />
+                    <TrendingUp size={12} style={{ color: 'var(--mr-green)' }} />
                   </div>
                   <span style={{ fontSize: '0.9rem', color: 'var(--mr-text-primary)' }}>
                     {benefit}
@@ -2218,14 +2258,14 @@ function DashboardContent() {
                 style={{
                   display: 'flex', alignItems: 'center', gap: '1rem',
                   padding: '1rem 1.5rem', background: 'var(--mr-green-bg)',
-                  border: '1px solid #86efac', borderRadius: '0.75rem',
-                  textDecoration: 'none', color: '#166534', cursor: 'pointer'
+                  border: '1px solid var(--mr-green)', borderRadius: '0.75rem',
+                  textDecoration: 'none', color: 'var(--mr-green-text)', cursor: 'pointer'
                 }}
               >
                 <div style={{ fontSize: '2rem' }}>📱</div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: '600', marginBottom: '0.25rem' }}>WhatsApp</div>
-                  <div style={{ fontSize: '0.875rem', color: '#15803d' }}>
+                  <div style={{ fontSize: '0.875rem', color: 'var(--mr-green-text)' }}>
                     {lang === 'es' ? 'Mensaje directo instantáneo' : 'Instant direct message'}
                   </div>
                 </div>
@@ -2245,14 +2285,14 @@ function DashboardContent() {
                 style={{
                   display: 'flex', alignItems: 'center', gap: '1rem',
                   padding: '1rem 1.5rem', background: 'var(--mr-blue-bg)',
-                  border: '1px solid #93c5fd', borderRadius: '0.75rem',
+                  border: '1px solid var(--mr-blue)', borderRadius: '0.75rem',
                   textDecoration: 'none', color: 'var(--mr-blue-text)', cursor: 'pointer'
                 }}
               >
                 <div style={{ fontSize: '2rem' }}>📧</div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: '600', marginBottom: '0.25rem' }}>Email</div>
-                  <div style={{ fontSize: '0.875rem', color: '#1e3a8a' }}>mat@matcarvy.com</div>
+                  <div style={{ fontSize: '0.875rem', color: 'var(--mr-blue-text)' }}>mat@matcarvy.com</div>
                 </div>
               </a>
 
@@ -2263,15 +2303,15 @@ function DashboardContent() {
                 rel="noopener noreferrer"
                 style={{
                   display: 'flex', alignItems: 'center', gap: '1rem',
-                  padding: '1rem 1.5rem', background: '#fdf2f8',
-                  border: '1px solid #f9a8d4', borderRadius: '0.75rem',
-                  textDecoration: 'none', color: '#9f1239', cursor: 'pointer'
+                  padding: '1rem 1.5rem', background: 'var(--mr-red-bg)',
+                  border: '1px solid var(--mr-red)', borderRadius: '0.75rem',
+                  textDecoration: 'none', color: 'var(--mr-red-text)', cursor: 'pointer'
                 }}
               >
                 <div style={{ fontSize: '2rem' }}>📷</div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: '600', marginBottom: '0.25rem' }}>Instagram</div>
-                  <div style={{ fontSize: '0.875rem', color: '#be123c' }}>@matcarvy</div>
+                  <div style={{ fontSize: '0.875rem', color: 'var(--mr-red-text)' }}>@matcarvy</div>
                 </div>
               </a>
             </div>
