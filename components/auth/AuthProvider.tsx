@@ -381,11 +381,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
     // Listen for auth changes / Escuchar cambios de auth
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        // INITIAL_SESSION with null session = GoTrueClient init failed (AbortError).
-        // Don't clear user state — let getSession()/restoreFromStorage() handle it.
-        // Only SIGNED_OUT should explicitly clear the user.
+        // INITIAL_SESSION with null session: could be (a) genuinely no session (first visit)
+        // or (b) GoTrueClient init failed but tokens still in storage.
+        // Only skip if tokens exist — let getSession()/restoreFromStorage() handle recovery.
+        // If no tokens, proceed normally (user is not logged in).
         if (event === 'INITIAL_SESSION' && !session) {
-          return
+          const hasStoredTokens = localStorage.getItem(storageKey) || sessionStorage.getItem(storageKey)
+          if (hasStoredTokens) return
         }
 
         setSession(session)
