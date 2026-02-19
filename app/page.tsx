@@ -3277,99 +3277,81 @@ by Matías Carvajal
                   borderRadius: '1.5rem',
                   padding: isMobile ? '1.5rem 1.25rem' : '2.5rem 2rem',
                   color: 'white',
-                  boxShadow: '0 20px 40px rgba(99, 102, 241, 0.15)',
-                  overflow: 'visible'
+                  boxShadow: '0 20px 40px rgba(99, 102, 241, 0.15)'
                 }}>
+                  {/* Icon + Title inline */}
                   <div style={{
                     display: 'flex',
-                    alignItems: 'flex-start',
-                    gap: '1rem',
-                    marginBottom: '1.75rem',
-                    maxWidth: '480px'
+                    alignItems: 'center',
+                    gap: '0.75rem',
+                    marginBottom: '0.75rem'
                   }}>
-                    {/* Icon circle — dynamic based on score */}
-                    <div style={{
-                      width: isMobile ? '3rem' : '4rem',
-                      height: isMobile ? '3rem' : '4rem',
-                      background: 'rgba(255, 255, 255, 0.15)',
-                      borderRadius: '50%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      backdropFilter: 'blur(10px)',
-                      flexShrink: 0
+                    <span style={{ fontSize: isMobile ? '1.5rem' : '1.75rem', flexShrink: 0 }}>
+                      {result.score >= 85 ? '🎧' :
+                       result.score >= 40 ? '🔧' : '🔍'}
+                    </span>
+                    <h3 style={{
+                      fontSize: isMobile ? '1.125rem' : '1.375rem',
+                      lineHeight: '1.3',
+                      fontWeight: '600',
+                      margin: 0,
+                      color: '#ffffff'
                     }}>
-                      <span style={{ fontSize: isMobile ? '1.5rem' : '2rem' }}>
-                        {result.score >= 85 ? '🎧' :
-                         result.score >= 40 ? '🔧' : '🔍'}
-                      </span>
-                    </div>
-
-                    {/* Message */}
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <h3 style={{
-                        fontSize: isMobile ? '1.125rem' : '1.375rem',
-                        lineHeight: '1.3',
-                        fontWeight: '600',
-                        marginBottom: '0.75rem',
-                        marginTop: '0.25rem',
-                        color: '#ffffff'
-                      }}>
-                        {(() => {
-                          let title = result.cta_message.split('\n')[0]
-                          title = title.replace(/^[\p{Emoji}\p{Symbol}\p{Punctuation}\s]+/gu, '')
-                          return title
-                        })()}
-                      </h3>
-                      <p style={{
-                        fontSize: isMobile ? '0.9375rem' : '1.0625rem',
-                        lineHeight: '1.6',
-                        color: 'rgba(255, 255, 255, 0.88)',
-                        margin: 0,
-                        wordWrap: 'break-word',
-                        overflowWrap: 'break-word',
-                        hyphens: 'auto' as const
-                      }}>
-                        {result.cta_message.split('\n').slice(1).join(' ')}
-                      </p>
-                    </div>
+                      {(() => {
+                        let title = result.cta_message.split('\n')[0]
+                        title = title.replace(/^[\p{Emoji}\p{Symbol}\p{Punctuation}\s]+/gu, '')
+                        return title
+                      })()}
+                    </h3>
                   </div>
+
+                  {/* Body text — full width */}
+                  <p style={{
+                    fontSize: isMobile ? '0.9375rem' : '1.0625rem',
+                    lineHeight: '1.6',
+                    color: 'rgba(255, 255, 255, 0.88)',
+                    margin: '0 0 1.5rem 0',
+                    maxWidth: '640px',
+                    wordWrap: 'break-word',
+                    overflowWrap: 'break-word',
+                    hyphens: isMobile ? 'auto' as const : 'none' as const
+                  }}>
+                    {result.cta_message.split('\n').slice(1).join(' ')}
+                  </p>
 
                   {/* CTA Button */}
-                  <div style={{ paddingLeft: isMobile ? '0' : '5rem', marginTop: '1.25rem' }}>
-                    <button
-                      onClick={() => {
-                        const action = (result as any).cta_action || 'mastering'
-                        trackCtaClick(action)
-                        setCtaSource(action)
-                        setShowContactModal(true)
-                      }}
-                      style={{
-                        background: '#ffffff',
-                        color: '#5a5ec8',
-                        padding: '1rem 2rem',
-                        borderRadius: '0.75rem',
-                        border: 'none',
-                        fontWeight: '600',
-                        cursor: 'pointer',
-                        fontSize: '1.125rem',
-                        boxShadow: 'none',
-                        transition: 'all 0.2s',
-                        width: isMobile ? '100%' : 'auto',
-                        minHeight: isMobile ? '48px' : 'auto'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.transform = 'translateY(-2px)'
-                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.1)'
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.transform = 'translateY(0)'
-                        e.currentTarget.style.boxShadow = 'none'
-                      }}
-                    >
-                      {result.cta_button}
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => {
+                      const action = (result as any).cta_action || 'mastering'
+                      trackCtaClick(action)
+                      setCtaSource(action)
+                      setShowContactModal(true)
+                    }}
+                    style={{
+                      background: '#ffffff',
+                      color: '#5a5ec8',
+                      padding: '1rem 2rem',
+                      borderRadius: '0.75rem',
+                      border: 'none',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      fontSize: '1.125rem',
+                      boxShadow: 'none',
+                      transition: 'all 0.2s',
+                      width: isMobile ? '100%' : 'auto',
+                      minHeight: isMobile ? '48px' : 'auto'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'translateY(-2px)'
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.1)'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'translateY(0)'
+                      e.currentTarget.style.boxShadow = 'none'
+                    }}
+                  >
+                    {result.cta_button}
+                  </button>
                 </div>
               )}
 
