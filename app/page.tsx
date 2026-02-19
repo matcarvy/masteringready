@@ -3315,8 +3315,7 @@ by Matías Carvajal
                     margin: '0 0 1.5rem 0',
                     maxWidth: '640px',
                     wordWrap: 'break-word',
-                    overflowWrap: 'break-word',
-                    hyphens: isMobile ? 'auto' as const : 'none' as const
+                    overflowWrap: 'break-word'
                   }}>
                     {result.cta_message.split('\n').slice(1).join(' ')}
                   </p>

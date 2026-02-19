@@ -263,22 +263,64 @@ export function AuthProvider({ children }: AuthProviderProps) {
         if (!raw) return false
         const parsed = JSON.parse(raw)
         if (!parsed?.access_token || !parsed?.refresh_token) return false
-        const { data, error } = await supabase.auth.setSession({
-          access_token: parsed.access_token,
-          refresh_token: parsed.refresh_token,
-        })
-        if (error || !data.session) return false
-        setSession(data.session)
-        if (data.session.user) {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('is_admin')
-            .eq('id', data.session.user.id)
-            .single()
-          setIsAdmin(profile?.is_admin === true, profile !== null)
+
+        // Try official setSession first (validates + refreshes if needed)
+        try {
+          const { data, error } = await supabase.auth.setSession({
+            access_token: parsed.access_token,
+            refresh_token: parsed.refresh_token,
+          })
+          if (!error && data.session) {
+            setSession(data.session)
+            if (data.session.user) {
+              const { data: profile } = await supabase
+                .from('profiles')
+                .select('is_admin')
+                .eq('id', data.session.user.id)
+                .single()
+              setIsAdmin(profile?.is_admin === true, profile !== null)
+            }
+            setUser(data.session.user ?? null)
+            return true
+          }
+        } catch {
+          // setSession failed (AbortError during refresh) — fall through to manual restore
         }
-        setUser(data.session.user ?? null)
-        return true
+
+        // Manual restore: decode JWT and set user state directly.
+        // The token may be expired but user will see logged-in state.
+        // First API call will trigger a proper refresh or re-login.
+        try {
+          const payload = JSON.parse(atob(parsed.access_token.split('.')[1]))
+          if (payload?.sub) {
+            const manualUser = {
+              id: payload.sub,
+              email: payload.email || '',
+              app_metadata: payload.app_metadata || {},
+              user_metadata: payload.user_metadata || {},
+              aud: payload.aud || 'authenticated',
+              created_at: '',
+            } as any
+            const manualSession = {
+              access_token: parsed.access_token,
+              refresh_token: parsed.refresh_token,
+              expires_at: parsed.expires_at || 0,
+              expires_in: 0,
+              token_type: 'bearer',
+              user: manualUser,
+            } as any
+            setSession(manualSession)
+            // Load admin from localStorage cache (profile query may also fail)
+            const cachedAdmin = localStorage.getItem('mr_is_admin') === 'true'
+            setIsAdmin(cachedAdmin, false)
+            setUser(manualUser)
+            return true
+          }
+        } catch {
+          // JWT decode failed
+        }
+
+        return false
       } catch {
         return false
       }
@@ -339,6 +381,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
     // Listen for auth changes / Escuchar cambios de auth
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        // INITIAL_SESSION with null session = GoTrueClient init failed (AbortError).
+        // Don't clear user state — let getSession()/restoreFromStorage() handle it.
+        // Only SIGNED_OUT should explicitly clear the user.
+        if (event === 'INITIAL_SESSION' && !session) {
+          return
+        }
+
         setSession(session)
 
         // For SIGNED_IN/USER_UPDATED, defer setUser until after admin status is loaded

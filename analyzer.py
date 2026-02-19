@@ -3908,7 +3908,7 @@ def generate_cta(score: int, strict: bool, lang: str, mode: str = "write") -> Di
             return {
                 "message": (
                     "🎧 Tu mezcla está lista.\n"
-                    "Está técnicamente preparada para el mastering. No se detectaron problemas técnicos que puedan comprometer el resultado. Si quieres, escríbenos y coordinamos el proceso."
+                    "Está técnicamente preparada para el mastering. Si quieres, escríbenos y coordinamos el proceso."
                 ),
                 "button": "Masterizar este track",
                 "action": "mastering"
@@ -3980,7 +3980,7 @@ def generate_cta(score: int, strict: bool, lang: str, mode: str = "write") -> Di
             return {
                 "message": (
                     "🎧 Your mix is ready.\n"
-                    "It's technically prepared for mastering. No technical issues were detected that would compromise the mastering result. If you'd like, write us and we'll coordinate the process."
+                    "It's technically prepared for mastering. If you'd like, write us and we'll coordinate the process."
                 ),
                 "button": "Master this track",
                 "action": "mastering"
