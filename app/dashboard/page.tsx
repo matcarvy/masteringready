@@ -376,6 +376,8 @@ const cleanReportText = (text: string): string => {
     // Remove duplicate emojis
     .replace(/✅\s*✅/g, '✅')
     .replace(/⚠️\s*⚠️/g, '⚠️')
+    // Remove inline CTA section (already shown as CTA card below)
+    .replace(/\n*[🎧🔧🔍]\s*(Tu mezcla|Your mix)[^\n]*\n[^\n]*$/, '')
     // Remove excessive newlines (max 2 consecutive)
     .replace(/\n{3,}/g, '\n\n')
     // Remove lines that are just spaces
@@ -1390,7 +1392,7 @@ function DashboardContent() {
               if (items.length === 0) return null
               return (
                 <div style={{
-                  margin: isMobile ? '0 1rem' : '0 1.5rem',
+                  margin: isMobile ? '0 1rem 0.75rem' : '0 1.5rem 0.75rem',
                   background: 'var(--mr-bg-base)',
                   borderRadius: '0.5rem',
                   border: '1px solid var(--mr-bg-elevated)',

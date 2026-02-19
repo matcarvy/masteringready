@@ -237,6 +237,8 @@ const cleanReportText = (text: string): string => {
     .replace(/(?<!💡\s)Recommendation:/g, '💡 Recommendation:')
     .replace(/✅\s*✅/g, '✅')
     .replace(/⚠️\s*⚠️/g, '⚠️')
+    // Remove inline CTA section (already shown as CTA card below)
+    .replace(/\n*[🎧🔧🔍]\s*(Tu mezcla|Your mix)[^\n]*\n[^\n]*$/, '')
     .replace(/\n{3,}/g, '\n\n')
     .split('\n')
     .map(line => line.trim())
