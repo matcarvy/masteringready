@@ -3265,23 +3265,24 @@ by Matías Carvajal
               {/* CTA for Mastering Service — dynamic from backend based on score */}
               {result.cta_message && result.cta_button && (
                 <div style={{
-                  background: 'linear-gradient(to bottom right, #818cf8 0%, #6366f1 100%)',
+                  background: 'linear-gradient(to bottom right, #7478d6 0%, #5a5ec8 100%)',
                   borderRadius: '1.5rem',
                   padding: isMobile ? '1.5rem' : '2.5rem 2rem',
                   color: 'white',
-                  boxShadow: '0 20px 40px rgba(99, 102, 241, 0.2)'
+                  boxShadow: '0 20px 40px rgba(99, 102, 241, 0.15)'
                 }}>
                   <div style={{
                     display: 'flex',
                     alignItems: 'flex-start',
                     gap: '1rem',
-                    marginBottom: '1.5rem'
+                    marginBottom: '1.75rem',
+                    maxWidth: '480px'
                   }}>
                     {/* Icon circle — dynamic based on score */}
                     <div style={{
                       width: '4rem',
                       height: '4rem',
-                      background: 'rgba(255, 255, 255, 0.2)',
+                      background: 'rgba(255, 255, 255, 0.15)',
                       borderRadius: '50%',
                       display: 'flex',
                       alignItems: 'center',
@@ -3303,8 +3304,9 @@ by Matías Carvajal
                         fontSize: isMobile ? '1.125rem' : '1.375rem',
                         lineHeight: '1.3',
                         fontWeight: '600',
-                        marginBottom: '1rem',
-                        marginTop: '0.25rem'
+                        marginBottom: '0.75rem',
+                        marginTop: '0.25rem',
+                        color: '#ffffff'
                       }}>
                         {(() => {
                           let title = result.cta_message.split('\n')[0]
@@ -3314,8 +3316,8 @@ by Matías Carvajal
                       </h3>
                       <p style={{
                         fontSize: isMobile ? '0.9rem' : '1.0625rem',
-                        lineHeight: '1.5',
-                        opacity: 0.95,
+                        lineHeight: '1.6',
+                        color: 'rgba(255, 255, 255, 0.88)',
                         margin: 0
                       }}>
                         {(() => {
@@ -3333,7 +3335,7 @@ by Matías Carvajal
                   </div>
 
                   {/* CTA Button */}
-                  <div style={{ paddingLeft: isMobile ? '0' : '5rem' }}>
+                  <div style={{ paddingLeft: isMobile ? '0' : '5rem', marginTop: '1.25rem' }}>
                     <button
                       onClick={() => {
                         const action = (result as any).cta_action || 'mastering'
@@ -3342,25 +3344,25 @@ by Matías Carvajal
                         setShowContactModal(true)
                       }}
                       style={{
-                        background: 'var(--mr-bg-card)',
-                        color: 'var(--mr-primary)',
+                        background: '#ffffff',
+                        color: '#5a5ec8',
                         padding: '1rem 2rem',
                         borderRadius: '0.75rem',
                         border: 'none',
                         fontWeight: '600',
                         cursor: 'pointer',
                         fontSize: '1.125rem',
-                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+                        boxShadow: 'none',
                         transition: 'all 0.2s',
                         width: isMobile ? '100%' : 'auto'
                       }}
                       onMouseEnter={(e) => {
                         e.currentTarget.style.transform = 'translateY(-2px)'
-                        e.currentTarget.style.boxShadow = '0 6px 16px rgba(0, 0, 0, 0.15)'
+                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.1)'
                       }}
                       onMouseLeave={(e) => {
                         e.currentTarget.style.transform = 'translateY(0)'
-                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.1)'
+                        e.currentTarget.style.boxShadow = 'none'
                       }}
                     >
                       {result.cta_button}
@@ -3368,7 +3370,7 @@ by Matías Carvajal
                     {(result as any).cta_subline && (
                       <p style={{
                         fontSize: '0.8rem',
-                        color: 'rgba(255, 255, 255, 0.7)',
+                        color: 'rgba(255, 255, 255, 0.65)',
                         marginTop: '0.75rem',
                         textAlign: 'center',
                         letterSpacing: '0.01em'
