@@ -1515,6 +1515,8 @@ by Matías Carvajal
       .replace(/\n*Recommendation:[^\n]*/g, '')
       // Remove inline CTA section (already shown as CTA card below)
       .replace(/\n*[🎧🔧🔍💬]\s*(Tu mezcla|Your mix|Escr[íi]benos|Write us)[^\n]*(\n[^\n]*)?$/, '')
+      // Remove orphaned emoji lines (single emoji on its own line, broken rendering)
+      .replace(/^\s*[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]\s*$/gmu, '')
       // Remove excessive newlines (max 2 consecutive)
       .replace(/\n{3,}/g, '\n\n')
       // Remove lines that are just spaces
