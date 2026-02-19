@@ -2923,3 +2923,46 @@ Pre-promotion audit before distributing the site. Meta Pixel and Google Search C
 **Commit**: `fix: notification bell stays dismissed after user clears it`
 
 **Git state**: main, pushed. Build clean.
+
+### Session 2026-02-19 — Force Reload Auth Fix (SOLVED) + CTA Voice Alignment
+
+#### 1. Force Reload Logout — FINALLY FIXED (`d25f81c`)
+- **Problem**: Force reload (Cmd+Shift+R) and regular reload logged user out on both desktop and mobile. 5 previous fix attempts failed.
+- **Root cause**: All previous fixes relied on ASYNC Supabase calls (`getSession()`, `setSession()`, `restoreFromStorage()`) which ALL abort during page reload (DOMException: The operation was aborted). Even retries abort. Even the manual JWT decode worked but got overwritten by `onAuthStateChange` firing `SIGNED_OUT` or profile queries aborting inside the callback.
+- **Fix — 3-phase auth initialization**:
+  1. **SYNC (instant, no network)**: On mount, immediately reads tokens from localStorage/sessionStorage, decodes JWT via `atob()`, sets user/session/admin state and `setLoading(false)`. Zero network calls. Cannot abort.
+  2. **ASYNC (background upgrade)**: `getSession()` runs after. If Supabase recovers normally, upgrades state with proper session. If it aborts (force reload), sync state is already set — no harm.
+  3. **EVENTS (guarded)**: `onAuthStateChange` callback wrapped in try/catch (prevents uncaught DOMException). `INITIAL_SESSION` + null → skipped if sync-restored or tokens exist. `SIGNED_OUT` → only clears state when `isSignOutInProgress()` is true (user clicked sign out button). GoTrueClient's internal confusion never clears user state.
+- **Key insight**: The only reliable approach is SYNCHRONOUS — decode the JWT immediately, no network. Let Supabase catch up later.
+- **Also added**: `isSignOutInProgress()` getter exported from `lib/supabase.ts` (was only a setter before)
+- **Confirmed working**: Desktop force reload, mobile force reload, fresh login (no stored tokens), sign out + sign in
+
+#### 2. Mobile Login Fix (`2fa8973`)
+- Previous commit's `INITIAL_SESSION` blocking was too aggressive — blocked fresh logins where no tokens exist in storage
+- Fix: only block when stored tokens are found (reload recovery case)
+
+#### 3. CTA Voice Alignment — NEXT SESSION (first task)
+- **Problem**: Dashboard CTAs have old first-person voice ("conmigo", "te ayudo") while analyzer CTA spec uses educational third-person voice ("Tu mezcla está lista", "Está técnicamente preparada...")
+- **Spec**: `~/Downloads/cta-card-final-spec.md` — 7 score ranges × 2 languages, title + body + button + subline
+- **Decision**: Dashboard CTAs should match analyzer spec copy exactly — same voice, same or shorter length for dashboard
+- **Scope**: Update dashboard CTA copy to match spec, remove old subline text, ensure consistent voice across analyzer + dashboard
+
+#### Commits to main (Session 2026-02-19)
+1. `2fa8973` - fix: mobile login — only block INITIAL_SESSION when stored tokens exist
+2. `d25f81c` - fix: force reload auth — sync JWT decode first, async Supabase second
+
+**Git state**: main on `d25f81c`, pushed. Build clean.
+
+---
+
+## NEXT STEPS (Priority Order)
+
+### IMMEDIATE (next session — Feb 19)
+1. **CTA voice alignment** — Update dashboard CTAs to match `~/Downloads/cta-card-final-spec.md` spec. Same 7 score ranges, same educational tone, same or shorter body text. Remove old first-person copy ("conmigo", "te ayudo"). Files: `app/dashboard/page.tsx` (dashboard modal CTA), possibly `app/history/page.tsx`.
+2. **Demo Pro user** — Create user with automatic Pro plan (30 analyses) for live demo. No admin access. SQL: create auth user + profile + subscription with Pro plan_id.
+
+### SHORT-TERM
+3. **Dark/Light mode Phase 5** — Admin secondary pages (privacy, terms, error pages)
+4. **eBook migration from Payhip** — Stripe product, protected download, `/ebook` page
+5. **Signed token system** — HMAC-signed tokens for bulletproof Render API protection
+6. **Email onboarding sequence** — Welcome, score explained, upgrade nudge, re-analysis

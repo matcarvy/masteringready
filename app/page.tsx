@@ -267,6 +267,7 @@ function Home() {
   // Mobile detection
   const [isMobile, setIsMobile] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [fileInfoExpanded, setFileInfoExpanded] = useState(false)
   const mobileMenuRef = useRef<HTMLDivElement>(null)
   const [loadingMsgIndex, setLoadingMsgIndex] = useState(0)
   const [glossaryOpen, setGlossaryOpen] = useState(false)
@@ -2639,36 +2640,72 @@ by Matías Carvajal
                   </p>
                 </div>
 
-                {/* File Technical Info Strip */}
+                {/* File Technical Info Strip — collapsible on mobile */}
                 {(result as any).file && (
                   <div style={{
-                    display: 'flex',
-                    flexWrap: 'wrap',
-                    gap: isMobile ? '0.375rem 0.75rem' : '1.25rem',
                     background: 'var(--mr-bg-base)',
                     borderRadius: '0.75rem',
-                    padding: isMobile ? '0.625rem 0.75rem' : '0.75rem 1rem',
                     marginBottom: '1.5rem',
                     border: '1px solid var(--mr-border)',
                     fontSize: 'clamp(0.6875rem, 1.8vw, 0.8rem)',
-                    color: 'var(--mr-text-secondary)'
+                    color: 'var(--mr-text-secondary)',
+                    overflow: 'hidden'
                   }}>
-                    {(result as any).file.duration != null && (
-                      <span>{lang === 'es' ? 'Duración' : 'Duration'}: <strong>{Math.floor((result as any).file.duration / 60)}:{String(Math.round((result as any).file.duration % 60)).padStart(2, '0')}</strong></span>
+                    {/* Mobile toggle header */}
+                    {isMobile && (
+                      <button
+                        onClick={() => setFileInfoExpanded(!fileInfoExpanded)}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          width: '100%',
+                          padding: '0.625rem 0.75rem',
+                          background: 'inherit',
+                          border: 'none',
+                          font: 'inherit',
+                          color: 'inherit',
+                          cursor: 'pointer',
+                          fontSize: 'clamp(0.6875rem, 1.8vw, 0.8rem)'
+                        }}
+                      >
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+                          <span style={{ fontSize: '0.75rem' }}>ℹ️</span>
+                          {lang === 'es' ? 'Info del archivo' : 'File info'}
+                        </span>
+                        <span style={{
+                          transition: 'transform 0.2s',
+                          transform: fileInfoExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                          fontSize: '0.625rem'
+                        }}>▼</span>
+                      </button>
                     )}
-                    {(result as any).file.sample_rate != null && (
-                      <span>Sample Rate: <strong>{((result as any).file.sample_rate / 1000).toFixed((result as any).file.sample_rate % 1000 === 0 ? 0 : 1)} kHz</strong></span>
+                    {/* File info content — always visible on desktop, toggle on mobile */}
+                    {(!isMobile || fileInfoExpanded) && (
+                      <div style={{
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        gap: isMobile ? '0.375rem 0.75rem' : '1.25rem',
+                        padding: isMobile ? '0.375rem 0.75rem 0.625rem' : '0.75rem 1rem'
+                      }}>
+                        {(result as any).file.duration != null && (
+                          <span>{lang === 'es' ? 'Duración' : 'Duration'}: <strong>{Math.floor((result as any).file.duration / 60)}:{String(Math.round((result as any).file.duration % 60)).padStart(2, '0')}</strong></span>
+                        )}
+                        {(result as any).file.sample_rate != null && (
+                          <span>Sample Rate: <strong>{((result as any).file.sample_rate / 1000).toFixed((result as any).file.sample_rate % 1000 === 0 ? 0 : 1)} kHz</strong></span>
+                        )}
+                        {(result as any).file.bit_depth != null && (
+                          <span>Bit Depth: <strong>{(result as any).file.bit_depth}-bit</strong></span>
+                        )}
+                        {(result as any).file.channels != null && (
+                          <span>{(result as any).file.channels === 2 ? (lang === 'es' ? 'Estéreo' : 'Stereo') : (result as any).file.channels === 1 ? 'Mono' : `${(result as any).file.channels}ch`}</span>
+                        )}
+                        {file && (
+                          <span>{lang === 'es' ? 'Tamaño' : 'Size'}: <strong>{file.size >= 1048576 ? `${(file.size / 1048576).toFixed(1)} MB` : `${(file.size / 1024).toFixed(0)} KB`}</strong></span>
+                        )}
+                        <span>{lang === 'es' ? 'Formato' : 'Format'}: <strong>{(result.filename || '').split('.').pop()?.toUpperCase() || 'N/A'}</strong></span>
+                      </div>
                     )}
-                    {(result as any).file.bit_depth != null && (
-                      <span>Bit Depth: <strong>{(result as any).file.bit_depth}-bit</strong></span>
-                    )}
-                    {(result as any).file.channels != null && (
-                      <span>{(result as any).file.channels === 2 ? (lang === 'es' ? 'Estéreo' : 'Stereo') : (result as any).file.channels === 1 ? 'Mono' : `${(result as any).file.channels}ch`}</span>
-                    )}
-                    {file && (
-                      <span>{lang === 'es' ? 'Tamaño' : 'Size'}: <strong>{file.size >= 1048576 ? `${(file.size / 1048576).toFixed(1)} MB` : `${(file.size / 1024).toFixed(0)} KB`}</strong></span>
-                    )}
-                    <span>{lang === 'es' ? 'Formato' : 'Format'}: <strong>{(result.filename || '').split('.').pop()?.toUpperCase() || 'N/A'}</strong></span>
                   </div>
                 )}
 

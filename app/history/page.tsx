@@ -112,20 +112,40 @@ const translations = {
 // CTA HELPER — replicates backend generate_cta() logic by score
 // ============================================================================
 
-function getCtaForScore(score: number, lang: 'es' | 'en'): { title: string; subtext: string; button: string } {
+function getCtaForScore(score: number, lang: 'es' | 'en'): { title: string; body: string; button: string; action: string } {
+  if (score >= 95) {
+    return lang === 'es'
+      ? { title: 'Tu mezcla está lista.', body: 'Está técnicamente preparada para el mastering. Si quieres, escríbenos y coordinamos.', button: 'Masterizar este track', action: 'mastering' }
+      : { title: 'Your mix is ready.', body: "It's technically prepared for mastering. If you'd like, write us and we'll coordinate.", button: 'Master this track', action: 'mastering' }
+  }
   if (score >= 85) {
     return lang === 'es'
-      ? { title: 'Masterizar este track conmigo', subtext: 'Trabajo el mastering respetando esta mezcla y corrigiendo estos puntos.', button: 'Masterizar mi canción' }
-      : { title: 'Master this track with me', subtext: "I'll master this respecting your mix and addressing these points.", button: 'Master my song' }
+      ? { title: 'Tu mezcla está en muy buen estado.', body: 'Hay detalles menores que no comprometen el resultado. Si quieres avanzar, escríbenos.', button: 'Masterizar este track', action: 'mastering' }
+      : { title: 'Your mix is in great shape.', body: "There are minor details that won't compromise the result. If you'd like to move forward, write us.", button: 'Master this track', action: 'mastering' }
+  }
+  if (score >= 75) {
+    return lang === 'es'
+      ? { title: 'Tu mezcla está cerca.', body: 'Hay aspectos técnicos que vale la pena revisar antes del mastering. Si necesitas orientación, escríbenos.', button: 'Preparar mi mezcla', action: 'preparation' }
+      : { title: 'Your mix is close.', body: 'There are technical aspects worth reviewing before mastering. If you need guidance, write us.', button: 'Prepare my mix', action: 'preparation' }
   }
   if (score >= 60) {
     return lang === 'es'
-      ? { title: 'Ayuda con la mezcla antes del mastering', subtext: 'Revisión técnica para corregir estos puntos antes del master final.', button: 'Preparar mi mezcla' }
-      : { title: 'Help with the mix before mastering', subtext: 'Technical review to address these points before the final master.', button: 'Prepare my mix' }
+      ? { title: 'Tu mezcla necesita ajustes antes del mastering.', body: 'Hay decisiones técnicas que pueden afectar el resultado. Si quieres que te ayudemos, escríbenos.', button: 'Revisar mi mezcla', action: 'preparation' }
+      : { title: 'Your mix needs adjustments before mastering.', body: "There are technical decisions that could affect the result. If you'd like help, write us.", button: 'Review my mix', action: 'preparation' }
+  }
+  if (score >= 40) {
+    return lang === 'es'
+      ? { title: 'Tu mezcla necesita trabajo en áreas clave.', body: 'Enviarlo en este estado limita el margen de maniobra del mastering. Si quieres, escríbenos.', button: 'Trabajar mi mezcla', action: 'review' }
+      : { title: 'Your mix needs work in key areas.', body: "In this state, mastering has limited room to work. If you'd like, write us.", button: 'Work on my mix', action: 'review' }
+  }
+  if (score >= 20) {
+    return lang === 'es'
+      ? { title: 'Tu mezcla tiene problemas técnicos importantes.', body: 'No recomiendo masterizar en este estado. Si quieres, escríbenos y trabajamos juntos.', button: 'Trabajar mi mezcla', action: 'review' }
+      : { title: 'Your mix has significant technical issues.', body: "I don't recommend mastering in this state. If you'd like, write us and we'll work through it together.", button: 'Work on my mix', action: 'review' }
   }
   return lang === 'es'
-    ? { title: '¿Revisamos tu mezcla juntos?', subtext: 'Te ayudo a identificar y resolver los puntos críticos de tu sesión.', button: 'Revisar mi mezcla' }
-    : { title: "Let's review your mix together", subtext: "I'll help you identify and resolve the critical points in your session.", button: 'Review my mix' }
+    ? { title: 'Tu mezcla necesita una revisión profunda.', body: 'Hay decisiones fundamentales que resolver antes del mastering. Si quieres, escríbenos.', button: 'Revisar mi proyecto', action: 'review' }
+    : { title: 'Your mix needs a deep review.', body: "There are fundamental decisions to resolve before mastering. If you'd like, write us.", button: 'Review my project', action: 'review' }
 }
 
 // ============================================================================
@@ -247,6 +267,8 @@ export default function HistoryPage() {
 
   // Check if Pro (for complete tab)
   const [isPro, setIsPro] = useState(false)
+  const [showContactModal, setShowContactModal] = useState(false)
+  const [ctaAction, setCtaAction] = useState('')
 
   // Free users get Completo + PDF for their first 2 analyses (by creation date). Pro/admin get all.
   const hasFullAccess = isPro || isAdmin || (() => {
@@ -1201,35 +1223,36 @@ export default function HistoryPage() {
                           {cta.title}
                         </p>
                         <p style={{ fontSize: '0.8rem', opacity: 0.9, margin: 0, lineHeight: 1.4 }}>
-                          {cta.subtext}
+                          {cta.body}
                         </p>
                       </div>
                     </div>
-                    <a
-                      href={`https://wa.me/573155576115?text=${encodeURIComponent(
-                        lang === 'es'
-                          ? `Hola! Acabo de analizar mi mezcla "${selectedAnalysis.filename}" en Mastering Ready. Puntuación: ${selectedAnalysis.score}/100`
-                          : `Hi! I just analyzed my mix "${selectedAnalysis.filename}" on Mastering Ready. Score: ${selectedAnalysis.score}/100`
-                      )}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                    <button
+                      onClick={() => { setCtaAction(cta.action); setShowContactModal(true) }}
                       style={{
-                        display: 'inline-block',
-                        background: 'white',
+                        background: 'var(--mr-bg-card)',
                         color: '#6366f1',
                         padding: '0.625rem 1.25rem',
                         borderRadius: '0.5rem',
+                        border: 'none',
                         fontWeight: '600',
                         fontSize: '0.85rem',
                         cursor: 'pointer',
                         boxShadow: 'var(--mr-shadow)',
-                        textDecoration: 'none',
-                        marginLeft: 'clamp(0rem, 5vw, 3.5rem)',
+                        marginLeft: isMobile ? '0' : '3.5rem',
                         transition: 'all 0.2s'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = 'translateY(-1px)'
+                        e.currentTarget.style.boxShadow = 'var(--mr-shadow-lg)'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = 'translateY(0)'
+                        e.currentTarget.style.boxShadow = 'var(--mr-shadow)'
                       }}
                     >
                       {cta.button}
-                    </a>
+                    </button>
                   </div>
                 )
               })()}
@@ -1425,6 +1448,132 @@ export default function HistoryPage() {
                   </button>
                 )}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Contact Modal */}
+      {showContactModal && (
+        <div
+          onClick={() => setShowContactModal(false)}
+          style={{
+            position: 'fixed',
+            top: 0, left: 0, right: 0, bottom: 0,
+            background: 'rgba(0,0,0,0.6)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 110,
+            padding: '1.5rem',
+            overscrollBehavior: 'contain'
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: 'var(--mr-bg-card)',
+              borderRadius: '1rem',
+              padding: '2rem',
+              maxWidth: '500px',
+              width: '100%',
+              boxShadow: 'var(--mr-shadow-lg)',
+              position: 'relative',
+              maxHeight: '90vh',
+              overflowY: 'auto'
+            }}
+          >
+            <button
+              onClick={() => setShowContactModal(false)}
+              style={{
+                position: 'absolute', top: '1rem', right: '1rem',
+                background: 'none', border: 'none', cursor: 'pointer',
+                color: 'var(--mr-text-secondary)', padding: '0.75rem'
+              }}
+              aria-label={lang === 'es' ? 'Cerrar' : 'Close'}
+            >
+              <X size={20} />
+            </button>
+
+            <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+              <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>🎧</div>
+              <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>
+                {lang === 'es' ? 'Hablemos de tu track' : 'Let\u2019s talk about your track'}
+              </h3>
+              <p style={{ color: 'var(--mr-text-secondary)' }}>
+                {lang === 'es' ? 'Elige cómo contactarme:' : 'Choose how to reach me:'}
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              {/* WhatsApp */}
+              <a
+                href={`https://wa.me/573155576115?text=${encodeURIComponent(
+                  lang === 'es'
+                    ? `Hola Matías, acabo de analizar "${selectedAnalysis?.filename || 'mi mezcla'}" en Mastering Ready (${selectedAnalysis?.score || 'N/A'}/100). ${ctaAction === 'mastering' ? 'Me interesa el mastering de este track.' : ctaAction === 'preparation' ? 'Me gustaría preparar mi mezcla antes del mastering.' : 'Me gustaría revisar mi mezcla con ayuda profesional.'}`
+                    : `Hi Matías, I just analyzed "${selectedAnalysis?.filename || 'my mix'}" on Mastering Ready (${selectedAnalysis?.score || 'N/A'}/100). ${ctaAction === 'mastering' ? 'I\'m interested in mastering this track.' : ctaAction === 'preparation' ? 'I\'d like to prepare my mix before mastering.' : 'I\'d like to review my mix with professional help.'}`
+                )}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '1rem',
+                  padding: '1rem 1.5rem', background: 'var(--mr-green-bg)',
+                  border: '1px solid var(--mr-green)', borderRadius: '0.75rem',
+                  textDecoration: 'none', color: 'var(--mr-green-text)', cursor: 'pointer'
+                }}
+              >
+                <div style={{ fontSize: '2rem' }}>📱</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: '600', marginBottom: '0.25rem' }}>WhatsApp</div>
+                  <div style={{ fontSize: '0.875rem', color: 'var(--mr-green-text)' }}>
+                    {lang === 'es' ? 'Mensaje directo instantáneo' : 'Instant direct message'}
+                  </div>
+                </div>
+              </a>
+
+              {/* Email */}
+              <a
+                href={`mailto:mat@matcarvy.com?subject=${encodeURIComponent(
+                  lang === 'es'
+                    ? `${ctaAction === 'mastering' ? 'Mastering' : ctaAction === 'preparation' ? 'Preparación de mezcla' : 'Revisión de mezcla'}: ${selectedAnalysis?.filename || 'Mi track'}`
+                    : `${ctaAction === 'mastering' ? 'Mastering' : ctaAction === 'preparation' ? 'Mix preparation' : 'Mix review'}: ${selectedAnalysis?.filename || 'My track'}`
+                )}&body=${encodeURIComponent(
+                  lang === 'es'
+                    ? `Hola Matías,\n\nAnalicé "${selectedAnalysis?.filename || 'mi mezcla'}" en Mastering Ready.\nPuntuación: ${selectedAnalysis?.score || 'N/A'}/100\n\n${ctaAction === 'mastering' ? 'Me interesa el mastering de este track.' : ctaAction === 'preparation' ? 'Me gustaría preparar mi mezcla antes del mastering.' : 'Me gustaría revisar mi mezcla con ayuda profesional.'}\n\nGracias.`
+                    : `Hi Matías,\n\nI analyzed "${selectedAnalysis?.filename || 'my mix'}" on Mastering Ready.\nScore: ${selectedAnalysis?.score || 'N/A'}/100\n\n${ctaAction === 'mastering' ? 'I\'m interested in mastering this track.' : ctaAction === 'preparation' ? 'I\'d like to prepare my mix before mastering.' : 'I\'d like to review my mix with professional help.'}\n\nThanks.`
+                )}`}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '1rem',
+                  padding: '1rem 1.5rem', background: 'var(--mr-blue-bg)',
+                  border: '1px solid var(--mr-blue)', borderRadius: '0.75rem',
+                  textDecoration: 'none', color: 'var(--mr-blue-text)', cursor: 'pointer'
+                }}
+              >
+                <div style={{ fontSize: '2rem' }}>📧</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: '600', marginBottom: '0.25rem' }}>Email</div>
+                  <div style={{ fontSize: '0.875rem', color: 'var(--mr-blue-text)' }}>mat@matcarvy.com</div>
+                </div>
+              </a>
+
+              {/* Instagram */}
+              <a
+                href="https://instagram.com/matcarvy"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '1rem',
+                  padding: '1rem 1.5rem', background: 'var(--mr-red-bg)',
+                  border: '1px solid var(--mr-red)', borderRadius: '0.75rem',
+                  textDecoration: 'none', color: 'var(--mr-red-text)', cursor: 'pointer'
+                }}
+              >
+                <div style={{ fontSize: '2rem' }}>📷</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: '600', marginBottom: '0.25rem' }}>Instagram</div>
+                  <div style={{ fontSize: '0.875rem', color: 'var(--mr-red-text)' }}>@matcarvy</div>
+                </div>
+              </a>
             </div>
           </div>
         </div>
