@@ -293,6 +293,17 @@ export default function HistoryPage() {
     return () => window.removeEventListener('resize', check)
   }, [])
 
+  // Modal scroll lock
+  useEffect(() => {
+    const anyModalOpen = !!selectedAnalysis || showContactModal
+    if (anyModalOpen) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => { document.body.style.overflow = '' }
+  }, [selectedAnalysis, showContactModal])
+
   // Redirect if not logged in (to home, not login — home has login options in header)
   useEffect(() => {
     if (!authLoading && !user) {
