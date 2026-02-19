@@ -199,7 +199,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
-  const [isAdmin, setIsAdmin] = useState(false)
+  const [isAdmin, _setIsAdmin] = useState(() => {
+    // Hydrate from localStorage — survives GoTrueClient abort errors
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('mr_is_admin') === 'true'
+    }
+    return false
+  })
+  const setIsAdmin = (val: boolean) => {
+    _setIsAdmin(val)
+    if (typeof window !== 'undefined') {
+      if (val) localStorage.setItem('mr_is_admin', 'true')
+      else localStorage.removeItem('mr_is_admin')
+    }
+  }
   const [pendingAnalysisQuotaExceeded, setPendingAnalysisQuotaExceeded] = useState(false)
   const [pendingAnalysisSaved, setPendingAnalysisSaved] = useState(false)
 
