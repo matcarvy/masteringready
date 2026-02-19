@@ -439,6 +439,8 @@ function DashboardContent() {
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768)
     check()
+    // Default: expanded on desktop, collapsed on mobile
+    setFileInfoExpanded(window.innerWidth >= 768)
     window.addEventListener('resize', check)
     return () => window.removeEventListener('resize', check)
   }, [])
@@ -1379,7 +1381,7 @@ function DashboardContent() {
               </div>
             </div>
 
-            {/* File Info — collapsible on mobile */}
+            {/* File Info — collapsible via max-height */}
             {(() => {
               const items: { label: string; value: string }[] = []
               if (selectedAnalysis.duration_seconds != null) items.push({ label: t.fileInfo.duration, value: formatDuration(selectedAnalysis.duration_seconds) })
@@ -1389,82 +1391,66 @@ function DashboardContent() {
               const format = selectedAnalysis.file_format || selectedAnalysis.filename?.split('.').pop() || null
               if (format != null) items.push({ label: t.fileInfo.format, value: format.toUpperCase() })
               if (selectedAnalysis.channels != null) items.push({ label: t.fileInfo.channels, value: selectedAnalysis.channels === 2 ? t.fileInfo.stereo : selectedAnalysis.channels === 1 ? t.fileInfo.mono : `${selectedAnalysis.channels}` })
-              // processing_time_seconds — admin-only metric, not shown to regular users
               if (items.length === 0) return null
               return (
                 <div style={{
-                  margin: isMobile ? '0 1rem 0.75rem' : '0 1.5rem 0.75rem',
+                  margin: isMobile ? '0 1rem 1rem' : '0 1.5rem 1rem',
                   background: 'var(--mr-bg-base)',
                   borderRadius: '0.5rem',
-                  border: '1px solid var(--mr-bg-elevated)',
-                  overflow: 'hidden'
+                  border: '1px solid var(--mr-bg-elevated)'
                 }}>
-                  {/* Mobile toggle header */}
-                  {isMobile && (
-                    <button
-                      onClick={() => setFileInfoExpanded(!fileInfoExpanded)}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        width: '100%',
-                        padding: '0.625rem 1rem',
-                        background: 'inherit',
-                        border: 'none',
-                        font: 'inherit',
-                        color: 'var(--mr-text-secondary)',
-                        cursor: 'pointer',
-                        fontSize: '0.75rem',
-                        fontWeight: '600',
-                        textTransform: 'uppercase' as const,
-                        letterSpacing: '0.025em'
-                      }}
-                    >
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-                        <Info size={12} />
-                        {t.fileInfo.title}
-                      </span>
-                      <span style={{
-                        transition: 'transform 0.2s',
-                        transform: fileInfoExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
-                        fontSize: '0.625rem'
-                      }}>▼</span>
-                    </button>
-                  )}
-                  {/* File info content — always visible on desktop, toggle on mobile */}
-                  {(!isMobile || fileInfoExpanded) && (
-                    <div style={{ padding: isMobile ? '0 1rem 0.75rem' : '0.75rem 1rem' }}>
-                      {!isMobile && (
-                        <div style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.375rem',
-                          marginBottom: '0.5rem',
-                          color: 'var(--mr-text-secondary)',
-                          fontSize: '0.75rem',
-                          fontWeight: '600',
-                          textTransform: 'uppercase' as const,
-                          letterSpacing: '0.025em'
-                        }}>
-                          <Info size={12} />
-                          {t.fileInfo.title}
+                  {/* Toggle header — always visible */}
+                  <button
+                    onClick={() => setFileInfoExpanded(!fileInfoExpanded)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      width: '100%',
+                      padding: '0.625rem 1rem',
+                      background: 'inherit',
+                      border: 'none',
+                      borderRadius: '0.5rem',
+                      font: 'inherit',
+                      color: 'var(--mr-text-secondary)',
+                      cursor: 'pointer',
+                      fontSize: '0.75rem',
+                      fontWeight: '600',
+                      textTransform: 'uppercase' as const,
+                      letterSpacing: '0.025em'
+                    }}
+                  >
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+                      <Info size={12} />
+                      {t.fileInfo.title}
+                    </span>
+                    <span style={{
+                      transition: 'transform 0.2s',
+                      transform: fileInfoExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                      fontSize: '0.625rem'
+                    }}>▼</span>
+                  </button>
+                  {/* File info content — CSS collapse via max-height */}
+                  <div style={{
+                    maxHeight: fileInfoExpanded ? '200px' : '0',
+                    overflow: 'hidden',
+                    padding: fileInfoExpanded ? '0 1rem 0.75rem' : '0 1rem 0',
+                    transition: 'max-height 0.25s ease, padding 0.25s ease'
+                  }}>
+                    <div style={{
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      gap: '0.5rem 1.5rem',
+                      fontSize: '0.8125rem'
+                    }}>
+                      {items.map(item => (
+                        <div key={item.label} style={{ display: 'flex', gap: '0.375rem' }}>
+                          <span style={{ color: 'var(--mr-text-tertiary)' }}>{item.label}:</span>
+                          <span style={{ color: 'var(--mr-text-primary)', fontWeight: '500' }}>{item.value}</span>
                         </div>
-                      )}
-                      <div style={{
-                        display: 'flex',
-                        flexWrap: 'wrap',
-                        gap: '0.5rem 1.5rem',
-                        fontSize: '0.8125rem'
-                      }}>
-                        {items.map(item => (
-                          <div key={item.label} style={{ display: 'flex', gap: '0.375rem' }}>
-                            <span style={{ color: 'var(--mr-text-tertiary)' }}>{item.label}:</span>
-                            <span style={{ color: 'var(--mr-text-primary)', fontWeight: '500' }}>{item.value}</span>
-                          </div>
-                        ))}
-                      </div>
+                      ))}
                     </div>
-                  )}
+                  </div>
                 </div>
               )
             })()}
