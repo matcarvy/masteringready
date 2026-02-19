@@ -7,7 +7,7 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 import { User, Session } from '@supabase/supabase-js'
-import { supabase, setSignOutInProgress } from '@/lib/supabase'
+import { supabase, setSignOutInProgress, isSignOutInProgress } from '@/lib/supabase'
 
 // ============================================================================
 // TYPES / TIPOS
@@ -255,42 +255,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
     let storageKey = 'sb-auth-token'
     try { storageKey = `sb-${new URL(supabaseUrl).hostname.split('.')[0]}-auth-token` } catch {}
 
-    // Restore session from storage when GoTrueClient's internal state is cleared
-    // (happens when _recoverAndRefresh fails with AbortError on page reload)
-    const restoreFromStorage = async (): Promise<boolean> => {
-      try {
-        const raw = localStorage.getItem(storageKey) || sessionStorage.getItem(storageKey)
-        if (!raw) return false
+    // ========================================================================
+    // PHASE 1: SYNCHRONOUS — decode stored JWT immediately (no network needed)
+    // This guarantees the user sees logged-in UI even if all Supabase async
+    // calls abort during force reload. No race conditions possible.
+    // ========================================================================
+    let syncRestored = false
+    try {
+      const raw = localStorage.getItem(storageKey) || sessionStorage.getItem(storageKey)
+      if (raw) {
         const parsed = JSON.parse(raw)
-        if (!parsed?.access_token || !parsed?.refresh_token) return false
-
-        // Try official setSession first (validates + refreshes if needed)
-        try {
-          const { data, error } = await supabase.auth.setSession({
-            access_token: parsed.access_token,
-            refresh_token: parsed.refresh_token,
-          })
-          if (!error && data.session) {
-            setSession(data.session)
-            if (data.session.user) {
-              const { data: profile } = await supabase
-                .from('profiles')
-                .select('is_admin')
-                .eq('id', data.session.user.id)
-                .single()
-              setIsAdmin(profile?.is_admin === true, profile !== null)
-            }
-            setUser(data.session.user ?? null)
-            return true
-          }
-        } catch {
-          // setSession failed (AbortError during refresh) — fall through to manual restore
-        }
-
-        // Manual restore: decode JWT and set user state directly.
-        // The token may be expired but user will see logged-in state.
-        // First API call will trigger a proper refresh or re-login.
-        try {
+        if (parsed?.access_token && parsed?.refresh_token) {
           const payload = JSON.parse(atob(parsed.access_token.split('.')[1]))
           if (payload?.sub) {
             const manualUser = {
@@ -310,66 +285,52 @@ export function AuthProvider({ children }: AuthProviderProps) {
               user: manualUser,
             } as any
             setSession(manualSession)
-            // Load admin from localStorage cache (profile query may also fail)
             const cachedAdmin = localStorage.getItem('mr_is_admin') === 'true'
             setIsAdmin(cachedAdmin, false)
             setUser(manualUser)
-            return true
+            setLoading(false)
+            syncRestored = true
           }
-        } catch {
-          // JWT decode failed
         }
-
-        return false
-      } catch {
-        return false
       }
+    } catch {
+      // JWT decode failed — fall through to async path
     }
 
-    // Get initial session / Obtener sesión inicial
-    const getSession = async (attempt = 1) => {
+    // ========================================================================
+    // PHASE 2: ASYNC — let Supabase properly recover (refresh token, etc.)
+    // If successful, upgrades the sync-restored state with a proper session.
+    // If it fails (AbortError on reload), sync state is already set — no harm.
+    // ========================================================================
+    const getSession = async () => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession()
-
         if (error) {
           console.error('Error getting session:', error)
         }
-
-        // GoTrueClient returned null but tokens may still be in storage
-        // (internal state cleared by failed _recoverAndRefresh, our removeItem guard kept tokens)
-        if (!session) {
-          const restored = await restoreFromStorage()
-          if (restored) return
-        }
-
-        if (!error) {
+        if (session) {
+          // Supabase recovered successfully — upgrade to proper session
           setSession(session)
-
-          // Load admin status BEFORE setting user and clearing loading
-          // — prevents race condition where page.tsx renders with user but isAdmin=false
-          if (session?.user) {
-            const { data: profile } = await supabase
-              .from('profiles')
-              .select('is_admin')
-              .eq('id', session.user.id)
-              .single()
-            // Only update if query succeeded (profile !== null) — don't clear cache on abort
-            setIsAdmin(profile?.is_admin === true, profile !== null)
+          if (session.user) {
+            try {
+              const { data: profile } = await supabase
+                .from('profiles')
+                .select('is_admin')
+                .eq('id', session.user.id)
+                .single()
+              setIsAdmin(profile?.is_admin === true, profile !== null)
+            } catch {
+              // Profile query failed (abort) — keep cached admin status
+            }
           }
-
-          setUser(session?.user ?? null)
+          setUser(session.user ?? null)
         }
+        // If session is null and syncRestored is true, do NOT clear state
+        // If session is null and syncRestored is false, user is genuinely not logged in
       } catch (err) {
-        // GoTrueClient abort — retry up to 3 times with increasing delay
-        if (attempt < 3 && err instanceof DOMException && err.name === 'AbortError') {
-          await new Promise(r => setTimeout(r, attempt * 500))
-          return getSession(attempt + 1)
-        }
-        console.error('Auth error:', err)
-        // Last resort: restore from storage directly
-        const restored = await restoreFromStorage()
-        if (!restored) {
-          // Truly failed — page renders as logged out, user can click Sign In
+        // AbortError on reload — if syncRestored, state is already set. If not, try storage.
+        if (!syncRestored) {
+          console.error('Auth error:', err)
         }
       } finally {
         setLoading(false)
@@ -378,132 +339,148 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     getSession()
 
-    // Listen for auth changes / Escuchar cambios de auth
+    // ========================================================================
+    // PHASE 3: EVENT LISTENER — handle auth state changes
+    // Key: NEVER let GoTrueClient's internal confusion clear a sync-restored
+    // session. Only explicit user actions (SIGNED_IN, SIGNED_OUT via button)
+    // should change state.
+    // ========================================================================
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        // INITIAL_SESSION with null session: could be (a) genuinely no session (first visit)
-        // or (b) GoTrueClient init failed but tokens still in storage.
-        // Only skip if tokens exist — let getSession()/restoreFromStorage() handle recovery.
-        // If no tokens, proceed normally (user is not logged in).
-        if (event === 'INITIAL_SESSION' && !session) {
-          const hasStoredTokens = localStorage.getItem(storageKey) || sessionStorage.getItem(storageKey)
-          if (hasStoredTokens) return
-        }
+        try {
+          // INITIAL_SESSION with null — GoTrueClient init failed or no session.
+          // If we sync-restored or have stored tokens, skip entirely.
+          if (event === 'INITIAL_SESSION' && !session) {
+            if (syncRestored) return
+            const hasStoredTokens = localStorage.getItem(storageKey) || sessionStorage.getItem(storageKey)
+            if (hasStoredTokens) return
+            // Genuinely no session — set loading false
+            setLoading(false)
+            return
+          }
 
-        setSession(session)
+          // SIGNED_OUT from GoTrueClient's internal confusion (not user-initiated)
+          // — don't clear state if user didn't click sign out
+          if (event === 'SIGNED_OUT' && !isSignOutInProgress()) {
+            return
+          }
 
-        // For SIGNED_IN/USER_UPDATED, defer setUser until after admin status is loaded
-        // — prevents race condition where page.tsx renders with user but isAdmin=false
-        if (!((event === 'SIGNED_IN' || event === 'USER_UPDATED') && session?.user)) {
-          setUser(session?.user ?? null)
-          setLoading(false)
-        }
+          setSession(session)
 
-        // Ensure profile + subscription exist on sign in (handles trigger bypass)
-        if ((event === 'SIGNED_IN' || event === 'USER_UPDATED') && session?.user) {
-          const u = session.user
-          // Check if profile exists
-          const { data: existingProfile } = await supabase
-            .from('profiles')
-            .select('id, is_admin')
-            .eq('id', u.id)
-            .single()
+          // For SIGNED_IN/USER_UPDATED, defer setUser until after admin status is loaded
+          if (!((event === 'SIGNED_IN' || event === 'USER_UPDATED') && session?.user)) {
+            setUser(session?.user ?? null)
+            setLoading(false)
+          }
 
-          if (!existingProfile) {
-            // Read UTM attribution from sessionStorage (captured on landing page)
-            let utmData: Record<string, string | null> = {}
-            try {
-              const utmRaw = sessionStorage.getItem('mr_utm')
-              if (utmRaw) {
-                utmData = JSON.parse(utmRaw)
-                sessionStorage.removeItem('mr_utm')
-              }
-            } catch { /* ignore */ }
-
-            // Create profile
-            await supabase.from('profiles').insert({
-              id: u.id,
-              email: u.email || '',
-              full_name: u.user_metadata?.full_name || u.user_metadata?.name || null,
-              avatar_url: u.user_metadata?.avatar_url || null,
-              terms_accepted_at: new Date().toISOString(),
-              terms_version: '1.0',
-              ...(utmData.utm_source ? {
-                utm_source: utmData.utm_source,
-                utm_medium: utmData.utm_medium,
-                utm_campaign: utmData.utm_campaign,
-                utm_content: utmData.utm_content,
-                utm_term: utmData.utm_term,
-              } : {})
-            })
-
-            // Anti-abuse: Check if this email was previously deleted
-            // Carry over lifetime usage so users can't delete/recreate for fresh free analyses
-            const { data: deletedRecord } = await supabase
-              .from('deleted_accounts')
-              .select('analyses_lifetime_used, total_analyses')
-              .eq('email', u.email || '')
-              .order('deleted_at', { ascending: false })
-              .limit(1)
+          // Ensure profile + subscription exist on sign in (handles trigger bypass)
+          if ((event === 'SIGNED_IN' || event === 'USER_UPDATED') && session?.user) {
+            const u = session.user
+            // Check if profile exists
+            const { data: existingProfile } = await supabase
+              .from('profiles')
+              .select('id, is_admin')
+              .eq('id', u.id)
               .single()
 
-            if (deletedRecord && deletedRecord.analyses_lifetime_used > 0) {
-              await supabase
-                .from('profiles')
-                .update({
-                  analyses_lifetime_used: deletedRecord.analyses_lifetime_used,
-                  total_analyses: deletedRecord.total_analyses || 0
-                })
-                .eq('id', u.id)
-            }
+            if (!existingProfile) {
+              // Read UTM attribution from sessionStorage (captured on landing page)
+              let utmData: Record<string, string | null> = {}
+              try {
+                const utmRaw = sessionStorage.getItem('mr_utm')
+                if (utmRaw) {
+                  utmData = JSON.parse(utmRaw)
+                  sessionStorage.removeItem('mr_utm')
+                }
+              } catch { /* ignore */ }
 
-            // Create free subscription
-            const { data: freePlan } = await supabase
-              .from('plans')
-              .select('id')
-              .eq('type', 'free')
-              .single()
-
-            if (freePlan) {
-              await supabase.from('subscriptions').insert({
-                user_id: u.id,
-                plan_id: freePlan.id,
-                current_period_end: new Date(Date.now() + 100 * 365.25 * 24 * 60 * 60 * 1000).toISOString()
+              // Create profile
+              await supabase.from('profiles').insert({
+                id: u.id,
+                email: u.email || '',
+                full_name: u.user_metadata?.full_name || u.user_metadata?.name || null,
+                avatar_url: u.user_metadata?.avatar_url || null,
+                terms_accepted_at: new Date().toISOString(),
+                terms_version: '1.0',
+                ...(utmData.utm_source ? {
+                  utm_source: utmData.utm_source,
+                  utm_medium: utmData.utm_medium,
+                  utm_campaign: utmData.utm_campaign,
+                  utm_content: utmData.utm_content,
+                  utm_term: utmData.utm_term,
+                } : {})
               })
-            }
-          }
 
-          // Set admin status from profile, THEN set user — so page.tsx useEffects
-          // see isAdmin=true on their first run (prevents purchase modal flash)
-          const adminStatus = existingProfile?.is_admin === true
-          setIsAdmin(adminStatus, existingProfile !== null)
-          setUser(session?.user ?? null)
-          setLoading(false)
+              // Anti-abuse: Check if this email was previously deleted
+              const { data: deletedRecord } = await supabase
+                .from('deleted_accounts')
+                .select('analyses_lifetime_used, total_analyses')
+                .eq('email', u.email || '')
+                .order('deleted_at', { ascending: false })
+                .limit(1)
+                .single()
 
-          // Check for pending analysis after login/signup
-          const saveResult = await savePendingAnalysisForUser(u.id, adminStatus)
-          if (saveResult === 'saved') {
-            setPendingAnalysisSaved(true)
-          } else if (saveResult === 'quota_exceeded' || saveResult === 'error') {
-            // Both quota exhausted and RPC errors must clear results
-            // — never show unpaid analysis results on failure
-            setPendingAnalysisQuotaExceeded(true)
-          }
+              if (deletedRecord && deletedRecord.analyses_lifetime_used > 0) {
+                await supabase
+                  .from('profiles')
+                  .update({
+                    analyses_lifetime_used: deletedRecord.analyses_lifetime_used,
+                    total_analyses: deletedRecord.total_analyses || 0
+                  })
+                  .eq('id', u.id)
+              }
 
-          // Link anonymous analyses to this user (fire-and-forget)
-          try {
-            const anonSessionId = typeof window !== 'undefined' ? sessionStorage.getItem('mr_anon_session') : null
-            if (anonSessionId) {
-              supabase.from('anonymous_analyses')
-                .update({ converted_to_user: true, user_id: u.id })
-                .eq('session_id', anonSessionId)
-                .eq('converted_to_user', false)
-                .then(() => {
-                  sessionStorage.removeItem('mr_anon_session')
+              // Create free subscription
+              const { data: freePlan } = await supabase
+                .from('plans')
+                .select('id')
+                .eq('type', 'free')
+                .single()
+
+              if (freePlan) {
+                await supabase.from('subscriptions').insert({
+                  user_id: u.id,
+                  plan_id: freePlan.id,
+                  current_period_end: new Date(Date.now() + 100 * 365.25 * 24 * 60 * 60 * 1000).toISOString()
                 })
+              }
             }
-          } catch {
-            // Non-blocking
+
+            // Set admin status from profile, THEN set user
+            const adminStatus = existingProfile?.is_admin === true
+            setIsAdmin(adminStatus, existingProfile !== null)
+            setUser(session?.user ?? null)
+            setLoading(false)
+
+            // Check for pending analysis after login/signup
+            const saveResult = await savePendingAnalysisForUser(u.id, adminStatus)
+            if (saveResult === 'saved') {
+              setPendingAnalysisSaved(true)
+            } else if (saveResult === 'quota_exceeded' || saveResult === 'error') {
+              setPendingAnalysisQuotaExceeded(true)
+            }
+
+            // Link anonymous analyses to this user (fire-and-forget)
+            try {
+              const anonSessionId = typeof window !== 'undefined' ? sessionStorage.getItem('mr_anon_session') : null
+              if (anonSessionId) {
+                supabase.from('anonymous_analyses')
+                  .update({ converted_to_user: true, user_id: u.id })
+                  .eq('session_id', anonSessionId)
+                  .eq('converted_to_user', false)
+                  .then(() => {
+                    sessionStorage.removeItem('mr_anon_session')
+                  })
+              }
+            } catch {
+              // Non-blocking
+            }
+          }
+        } catch (err) {
+          // Catch all errors inside onAuthStateChange to prevent uncaught promise rejections
+          // (profile queries can abort during reload — non-fatal if sync restore already set state)
+          if (!(err instanceof DOMException && err.name === 'AbortError')) {
+            console.error('Auth state change error:', err)
           }
         }
       }

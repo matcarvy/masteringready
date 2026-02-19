@@ -50,6 +50,7 @@ function isEphemeral(): boolean {
 // which was deleting valid tokens on page reload (force or regular).
 let _signOutInProgress = false
 export function setSignOutInProgress(v: boolean) { _signOutInProgress = v }
+export function isSignOutInProgress(): boolean { return _signOutInProgress }
 
 const authStorage = {
   getItem: (key: string): string | null => {
