@@ -19,6 +19,8 @@ import { NotificationBadge, setNotification, clearNotification } from '@/compone
 // (GoTrueClient conflicts cause auth state flicker → state loss)
 let _quotaCache: AnalysisStatus | null = null
 
+const ADMIN_STATUS: AnalysisStatus = { can_analyze: true, reason: 'ADMIN', analyses_used: 0, analyses_limit: -1, is_lifetime: false }
+
 // ============================================================================
 // Helper: Map score to database verdict enum (deterministic, mirrors backend score_report)
 // ============================================================================
@@ -559,19 +561,20 @@ function Home() {
         setResult(null)
         setIsUnlocking(false)
 
-        // Check quota directly — don't rely solely on AuthProvider signal
-        // (pendingAnalysis in localStorage may already be consumed)
-        checkCanAnalyze().then((status) => {
-          setUserAnalysisStatus(status); _quotaCache = status
-          if (!status.can_analyze) {
+        // Admin bypass — skip RPC entirely (avoids abort errors from auth flicker)
+        if (isAdmin) {
+          setUserAnalysisStatus(ADMIN_STATUS); _quotaCache = ADMIN_STATUS
+        } else {
+          // Check quota directly — don't rely solely on AuthProvider signal
+          checkCanAnalyze().then((status) => {
+            setUserAnalysisStatus(status); _quotaCache = status
+            if (!status.can_analyze) {
+              setShowFreeLimitModal(true)
+            }
+          }).catch(() => {
             setShowFreeLimitModal(true)
-          }
-          // If can_analyze is true, AuthProvider's pendingAnalysisSaved signal
-          // will handle the unlock animation + redirect to dashboard
-        }).catch(() => {
-          // On error, show FreeLimitModal as safety fallback
-          setShowFreeLimitModal(true)
-        })
+          })
+        }
       } else {
         // No pending analysis — check if user has existing analyses to nudge them
         // Show notification only if user has unseen analyses from this session
@@ -617,6 +620,11 @@ function Home() {
   // Modal is NOT shown here; it only appears when user clicks Analyze (conversion-friendly UX)
   useEffect(() => {
     if (authLoading || !isLoggedIn || result || loading) return
+    // Admin bypass — skip RPC entirely
+    if (isAdmin) {
+      setUserAnalysisStatus(ADMIN_STATUS); _quotaCache = ADMIN_STATUS
+      return
+    }
     checkCanAnalyze().then((status) => {
       // NO_PLAN means profile may not exist yet (new OAuth user) — retry after 2s
       if (status.reason === 'NO_PLAN') {
