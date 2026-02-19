@@ -275,12 +275,23 @@ export function AuthProvider({ children }: AuthProviderProps) {
           setUser(session?.user ?? null)
         }
       } catch (err) {
-        // GoTrueClient abort — retry once after short delay
-        if (attempt < 2 && err instanceof DOMException && err.name === 'AbortError') {
-          await new Promise(r => setTimeout(r, 500))
+        // GoTrueClient abort — retry up to 3 times with increasing delay
+        if (attempt < 3 && err instanceof DOMException && err.name === 'AbortError') {
+          await new Promise(r => setTimeout(r, attempt * 500))
           return getSession(attempt + 1)
         }
         console.error('Auth error:', err)
+        // Last resort: try reading session one more time after all retries exhausted
+        // The tokens are still in storage — GoTrueClient just keeps aborting its own requests
+        try {
+          const { data: { session: fallbackSession } } = await supabase.auth.getSession()
+          if (fallbackSession?.user) {
+            setSession(fallbackSession)
+            setUser(fallbackSession.user)
+          }
+        } catch {
+          // Truly failed — page renders as logged out, user can click Sign In
+        }
       } finally {
         setLoading(false)
       }
