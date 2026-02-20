@@ -13,7 +13,7 @@ export default function NotFound() {
       fontFamily: 'Inter, system-ui, sans-serif'
     }}>
       <div style={{
-        background: 'white',
+        background: 'var(--mr-bg-card)',
         borderRadius: '1.5rem',
         padding: 'clamp(1.5rem, 5vw, 2.5rem)',
         width: 'calc(100% - 1rem)',
@@ -37,27 +37,27 @@ export default function NotFound() {
         <h1 style={{
           fontSize: 'clamp(2rem, 8vw, 3rem)',
           fontWeight: 'bold',
-          color: '#111827',
+          color: 'var(--mr-text-primary)',
           marginBottom: '0.5rem'
         }}>
           404
         </h1>
         <p style={{
-          color: '#6b7280',
+          color: 'var(--mr-text-secondary)',
           fontSize: '1.1rem',
           marginBottom: '0.25rem'
         }}>
           Página no encontrada
         </p>
         <p style={{
-          color: '#9ca3af',
+          color: 'var(--mr-text-tertiary)',
           fontSize: '0.95rem',
           marginBottom: '0.5rem'
         }}>
           Page not found
         </p>
         <p style={{
-          color: '#9ca3af',
+          color: 'var(--mr-text-tertiary)',
           fontSize: '0.85rem',
           lineHeight: '1.5',
           marginBottom: '2rem'

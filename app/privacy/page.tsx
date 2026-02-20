@@ -290,13 +290,14 @@ export default function PrivacyPage() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
-      fontFamily: 'Inter, system-ui, sans-serif'
+      background: 'var(--mr-bg-base)',
+      fontFamily: 'Inter, system-ui, sans-serif',
+      color: 'var(--mr-text-primary)'
     }}>
       {/* Header */}
       <header style={{
-        background: 'white',
-        borderBottom: '1px solid #e5e7eb',
+        background: 'var(--mr-bg-card)',
+        borderBottom: '1px solid var(--mr-border)',
         padding: '1rem 1.5rem',
         position: 'sticky',
         top: 0,
@@ -315,7 +316,7 @@ export default function PrivacyPage() {
               display: 'flex',
               alignItems: 'center',
               gap: '0.5rem',
-              color: '#667eea',
+              color: 'var(--mr-primary)',
               textDecoration: 'none',
               fontSize: '0.875rem',
               fontWeight: '500'
@@ -332,14 +333,14 @@ export default function PrivacyPage() {
               setLanguageCookie(newLang)
             }}
             style={{
-              background: '#f3f4f6',
-              border: 'none',
+              background: 'var(--mr-bg-elevated)',
+              border: '1px solid var(--mr-border)',
               padding: '0.5rem 1rem',
               borderRadius: '0.5rem',
               cursor: 'pointer',
               fontSize: '0.875rem',
               fontWeight: '500',
-              color: '#374151'
+              color: 'var(--mr-text-primary)'
             }}
           >
             {lang === 'es' ? 'EN' : 'ES'}
@@ -373,13 +374,13 @@ export default function PrivacyPage() {
           <h1 style={{
             fontSize: isMobile ? '1.5rem' : '2rem',
             fontWeight: 'bold',
-            color: '#111827',
+            color: 'var(--mr-text-primary)',
             marginBottom: '0.5rem'
           }}>
             {t.title}
           </h1>
           <p style={{
-            color: '#6b7280',
+            color: 'var(--mr-text-secondary)',
             fontSize: '0.875rem'
           }}>
             {t.lastUpdated}: {lang === 'es' ? '28 de enero de 2026' : 'January 28, 2026'}
@@ -388,8 +389,8 @@ export default function PrivacyPage() {
 
         {/* Privacy First Badge */}
         <div style={{
-          background: 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)',
-          border: '1px solid #86efac',
+          background: 'var(--mr-green-bg)',
+          border: '1px solid var(--mr-green)',
           borderRadius: isMobile ? '0.75rem' : '1rem',
           padding: isMobile ? '1rem' : '1.5rem',
           marginBottom: isMobile ? '1.5rem' : '2rem',
@@ -398,14 +399,15 @@ export default function PrivacyPage() {
           <p style={{
             fontSize: '1.125rem',
             fontWeight: '600',
-            color: '#065f46',
+            color: 'var(--mr-green-text)',
             marginBottom: '0.5rem'
           }}>
             {lang === 'es' ? 'Privacidad Primero' : 'Privacy First'}
           </p>
           <p style={{
-            color: '#047857',
-            fontSize: '0.95rem'
+            color: 'var(--mr-green-text)',
+            fontSize: '0.95rem',
+            opacity: 0.85
           }}>
             {lang === 'es'
               ? 'Tus archivos de audio nunca se almacenan. Se procesan en memoria y se eliminan inmediatamente.'
@@ -415,10 +417,10 @@ export default function PrivacyPage() {
 
         {/* Sections */}
         <div style={{
-          background: 'white',
+          background: 'var(--mr-bg-card)',
           borderRadius: isMobile ? '0.75rem' : '1rem',
           padding: isMobile ? '1.25rem' : '2rem',
-          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+          boxShadow: 'var(--mr-shadow-lg)'
         }}>
           {Object.values(t.sections).map((section: any, index) => (
             <section
@@ -426,19 +428,19 @@ export default function PrivacyPage() {
               style={{
                 marginBottom: index < Object.values(t.sections).length - 1 ? '2rem' : 0,
                 paddingBottom: index < Object.values(t.sections).length - 1 ? '2rem' : 0,
-                borderBottom: index < Object.values(t.sections).length - 1 ? '1px solid #e5e7eb' : 'none'
+                borderBottom: index < Object.values(t.sections).length - 1 ? '1px solid var(--mr-border)' : 'none'
               }}
             >
               <h2 style={{
                 fontSize: '1.25rem',
                 fontWeight: '600',
-                color: '#111827',
+                color: 'var(--mr-text-primary)',
                 marginBottom: '1rem'
               }}>
                 {section.title}
               </h2>
               <div style={{
-                color: '#4b5563',
+                color: 'var(--mr-text-secondary)',
                 fontSize: '0.95rem',
                 lineHeight: '1.75',
                 whiteSpace: 'pre-line'
@@ -448,18 +450,18 @@ export default function PrivacyPage() {
                     <p>{lang === 'es' ? 'Si tienes preguntas sobre esta Política de Privacidad:' : 'If you have questions about this Privacy Policy:'}</p>
                     <p style={{ marginTop: '0.75rem' }}>
                       {'• Email: '}
-                      <a href="mailto:mat@matcarvy.com" style={{ color: '#667eea', textDecoration: 'underline' }}>mat@matcarvy.com</a>
+                      <a href="mailto:mat@matcarvy.com" style={{ color: 'var(--mr-primary)', textDecoration: 'underline' }}>mat@matcarvy.com</a>
                     </p>
                     <p>
                       {'• WhatsApp: '}
-                      <a href="https://wa.me/573155576115" target="_blank" rel="noopener noreferrer" style={{ color: '#667eea', textDecoration: 'underline' }}>+57 315 557 6115</a>
+                      <a href="https://wa.me/573155576115" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--mr-primary)', textDecoration: 'underline' }}>+57 315 557 6115</a>
                     </p>
                     <p style={{ marginTop: '1rem' }}>
                       {lang === 'es' ? 'Responsable del tratamiento de datos:' : 'Data controller:'}
                       <br />
                       {'Matías Carvajal'}
                       <br />
-                      <a href="mailto:mat@matcarvy.com" style={{ color: '#667eea', textDecoration: 'underline' }}>mat@matcarvy.com</a>
+                      <a href="mailto:mat@matcarvy.com" style={{ color: 'var(--mr-primary)', textDecoration: 'underline' }}>mat@matcarvy.com</a>
                     </p>
                   </>
                 ) : section.content}

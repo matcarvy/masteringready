@@ -19,7 +19,7 @@ export default function Error({
       fontFamily: 'Inter, system-ui, sans-serif'
     }}>
       <div style={{
-        background: 'white',
+        background: 'var(--mr-bg-card)',
         borderRadius: '1.5rem',
         padding: 'clamp(1.5rem, 5vw, 2.5rem)',
         width: 'calc(100% - 1rem)',
@@ -43,20 +43,20 @@ export default function Error({
         <h1 style={{
           fontSize: '1.75rem',
           fontWeight: 'bold',
-          color: '#111827',
+          color: 'var(--mr-text-primary)',
           marginBottom: '0.5rem'
         }}>
           Algo salió mal
         </h1>
         <p style={{
-          color: '#9ca3af',
+          color: 'var(--mr-text-tertiary)',
           fontSize: '0.95rem',
           marginBottom: '0.5rem'
         }}>
           Something went wrong
         </p>
         <p style={{
-          color: '#6b7280',
+          color: 'var(--mr-text-secondary)',
           fontSize: '0.95rem',
           lineHeight: '1.5',
           marginBottom: '2rem'
@@ -87,8 +87,8 @@ export default function Error({
             href="/"
             style={{
               padding: '0.875rem 1.5rem',
-              background: '#f3f4f6',
-              color: '#374151',
+              background: 'var(--mr-bg-elevated)',
+              color: 'var(--mr-text-primary)',
               borderRadius: '0.5rem',
               fontSize: '1rem',
               fontWeight: '600',
