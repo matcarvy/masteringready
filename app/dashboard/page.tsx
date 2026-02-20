@@ -1757,8 +1757,11 @@ function DashboardContent() {
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      gap: '0.5rem'
+                      gap: '0.5rem',
+                      transition: 'all 0.2s'
                     }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--mr-bg-elevated)'; e.currentTarget.style.transform = 'translateY(-1px)' }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--mr-bg-card)'; e.currentTarget.style.transform = 'translateY(0)' }}
                   >
                     <Download size={16} />
                     {lang === 'es' ? 'Descargar Rápido' : 'Download Quick'}
@@ -1791,8 +1794,11 @@ function DashboardContent() {
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      gap: '0.5rem'
+                      gap: '0.5rem',
+                      transition: 'all 0.2s'
                     }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--mr-bg-elevated)'; e.currentTarget.style.transform = 'translateY(-1px)' }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--mr-bg-card)'; e.currentTarget.style.transform = 'translateY(0)' }}
                   >
                     <Download size={16} />
                     {lang === 'es' ? 'Descargar Resumen' : 'Download Summary'}
@@ -1825,8 +1831,11 @@ function DashboardContent() {
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      gap: '0.5rem'
+                      gap: '0.5rem',
+                      transition: 'all 0.2s'
                     }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--mr-bg-elevated)'; e.currentTarget.style.transform = 'translateY(-1px)' }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--mr-bg-card)'; e.currentTarget.style.transform = 'translateY(0)' }}
                   >
                     <Download size={16} />
                     {lang === 'es' ? 'Descargar Completo' : 'Download Complete'}
@@ -1890,8 +1899,11 @@ function DashboardContent() {
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      gap: '0.5rem'
+                      gap: '0.5rem',
+                      transition: 'all 0.2s'
                     }}
+                    onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.4)'; e.currentTarget.style.transform = 'translateY(-1px)' }}
+                    onMouseLeave={(e) => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.transform = 'translateY(0)' }}
                   >
                     <Download size={16} />
                     {lang === 'es' ? 'Descargar PDF' : 'Download PDF'}
