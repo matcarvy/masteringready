@@ -211,7 +211,7 @@ function ResetPasswordContent() {
           <div style={{ textAlign: 'center' }}>
             <div style={{
               background: 'var(--mr-red-bg)',
-              border: '1px solid #fecaca',
+              border: '1px solid var(--mr-red)',
               color: 'var(--mr-red)',
               padding: '1rem',
               borderRadius: '0.75rem',
@@ -288,7 +288,7 @@ function ResetPasswordContent() {
             {error && (
               <div style={{
                 background: 'var(--mr-red-bg)',
-                border: '1px solid #fecaca',
+                border: '1px solid var(--mr-red)',
                 color: 'var(--mr-red)',
                 padding: '0.75rem 1rem',
                 borderRadius: '0.5rem',

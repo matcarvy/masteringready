@@ -858,7 +858,7 @@ export default function SettingsPage() {
                   marginBottom: '1rem',
                   fontSize: '0.875rem',
                   background: passwordMessage.type === 'success' ? 'var(--mr-green-bg)' : 'var(--mr-red-bg)',
-                  border: `1px solid ${passwordMessage.type === 'success' ? '#bbf7d0' : '#fecaca'}`,
+                  border: `1px solid ${passwordMessage.type === 'success' ? 'var(--mr-green)' : 'var(--mr-red)'}`,
                   color: passwordMessage.type === 'success' ? 'var(--mr-green-text)' : 'var(--mr-red)'
                 }}>
                   {passwordMessage.text}
@@ -1051,7 +1051,7 @@ export default function SettingsPage() {
               padding: '0.625rem 1.25rem',
               background: 'var(--mr-bg-card)',
               color: 'var(--mr-red)',
-              border: '1px solid #fecaca',
+              border: '1px solid var(--mr-red)',
               borderRadius: '0.5rem',
               fontSize: '0.875rem',
               fontWeight: '500',

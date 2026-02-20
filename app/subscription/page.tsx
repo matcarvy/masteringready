@@ -866,7 +866,7 @@ export default function SubscriptionPage() {
                     padding: '0.625rem 1.25rem',
                     background: 'var(--mr-bg-card)',
                     color: 'var(--mr-red)',
-                    border: '1px solid #fecaca',
+                    border: '1px solid var(--mr-red)',
                     borderRadius: '0.5rem',
                     fontSize: '0.875rem',
                     fontWeight: '500',
