@@ -1492,8 +1492,11 @@ function DashboardContent() {
                     justifyContent: 'center',
                     gap: isMobile ? '0.25rem' : '0.5rem',
                     fontSize: isMobile ? '0.75rem' : '0.875rem',
-                    position: 'relative'
+                    position: 'relative',
+                    transition: 'color 0.2s, background 0.2s'
                   }}
+                  onMouseEnter={(e) => { if (reportTab !== tab) { e.currentTarget.style.color = 'var(--mr-text-primary)'; e.currentTarget.style.background = 'var(--mr-bg-hover)' } }}
+                  onMouseLeave={(e) => { if (reportTab !== tab) { e.currentTarget.style.color = 'var(--mr-text-secondary)'; e.currentTarget.style.background = 'none' } }}
                 >
                   {tab === 'rapid' && <Zap size={16} />}
                   {tab === 'summary' && <FileText size={16} />}
@@ -1748,11 +1751,11 @@ function DashboardContent() {
                       flex: 1,
                       padding: '0.75rem',
                       background: 'var(--mr-bg-card)',
-                      border: '2px solid var(--mr-border)',
+                      border: '2px solid var(--mr-primary)',
                       borderRadius: '0.5rem',
                       fontSize: '0.875rem',
-                      fontWeight: '500',
-                      color: 'var(--mr-text-primary)',
+                      fontWeight: '600',
+                      color: 'var(--mr-primary)',
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
@@ -1785,11 +1788,11 @@ function DashboardContent() {
                       flex: 1,
                       padding: '0.75rem',
                       background: 'var(--mr-bg-card)',
-                      border: '2px solid var(--mr-border)',
+                      border: '2px solid var(--mr-primary)',
                       borderRadius: '0.5rem',
                       fontSize: '0.875rem',
-                      fontWeight: '500',
-                      color: 'var(--mr-text-primary)',
+                      fontWeight: '600',
+                      color: 'var(--mr-primary)',
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
@@ -1822,11 +1825,11 @@ function DashboardContent() {
                       flex: 1,
                       padding: '0.75rem',
                       background: 'var(--mr-bg-card)',
-                      border: '2px solid var(--mr-border)',
+                      border: '2px solid var(--mr-primary)',
                       borderRadius: '0.5rem',
                       fontSize: '0.875rem',
-                      fontWeight: '500',
-                      color: 'var(--mr-text-primary)',
+                      fontWeight: '600',
+                      color: 'var(--mr-primary)',
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
