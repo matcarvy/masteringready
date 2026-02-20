@@ -11,6 +11,7 @@ import Link from 'next/link'
 import { useAuth } from '@/components/auth/AuthProvider'
 import { supabase, createFreshQueryClient } from '@/lib/supabase'
 import { detectLanguage, setLanguageCookie } from '@/lib/language'
+import ThemeToggle from '@/components/ThemeToggle'
 import {
   Users, BarChart3, DollarSign, MessageSquare, Activity,
   Search, ChevronDown, ChevronUp, ArrowLeft, RefreshCw,
@@ -3607,8 +3608,8 @@ export default function AdminPage() {
           left: chartTooltip.x,
           top: chartTooltip.y,
           transform: 'translate(-50%, -100%)',
-          background: 'var(--mr-text-primary)',
-          color: 'white',
+          background: '#1a1a2e',
+          color: '#ffffff',
           padding: '6px 12px',
           borderRadius: '6px',
           fontSize: '0.8rem',
@@ -3616,7 +3617,7 @@ export default function AdminPage() {
           whiteSpace: 'nowrap',
           pointerEvents: 'none',
           zIndex: 9999,
-          boxShadow: 'var(--mr-shadow-lg)'
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.4)'
         }}>
           {chartTooltip.content}
         </div>
@@ -3698,6 +3699,7 @@ export default function AdminPage() {
             >
               {lang === 'es' ? 'EN' : 'ES'}
             </button>
+            <ThemeToggle lang={lang} />
             <button
               onClick={async () => {
                 try {
