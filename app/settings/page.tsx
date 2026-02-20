@@ -412,7 +412,7 @@ export default function SettingsPage() {
         gap: '1rem'
       }}>
         <span style={{ fontSize: '2rem' }}>🎧</span>
-        <div style={{ color: 'var(--mr-text-inverse)', fontSize: '1.25rem' }}>{t.loading}</div>
+        <div style={{ color: 'var(--mr-text-primary)', fontSize: '1.25rem' }}>{t.loading}</div>
       </div>
     )
   }

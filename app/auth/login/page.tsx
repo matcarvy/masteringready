@@ -474,7 +474,7 @@ export default function LoginPage() {
         alignItems: 'center',
         justifyContent: 'center'
       }}>
-        <div style={{ color: 'var(--mr-text-inverse)', fontSize: '1.25rem' }}>Cargando...</div>
+        <div style={{ color: 'var(--mr-text-primary)', fontSize: '1.25rem' }}>Cargando...</div>
       </div>
     }>
       <LoginContent />

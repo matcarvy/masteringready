@@ -470,7 +470,7 @@ export default function HistoryPage() {
         gap: '1rem'
       }}>
         <span style={{ fontSize: '2rem' }}>🎧</span>
-        <div style={{ color: 'var(--mr-text-inverse)', fontSize: '1.25rem' }}>{t.loading}</div>
+        <div style={{ color: 'var(--mr-text-primary)', fontSize: '1.25rem' }}>{t.loading}</div>
       </div>
     )
   }
@@ -575,7 +575,7 @@ export default function HistoryPage() {
                 alignItems: 'center',
                 gap: '0.5rem',
                 background: 'var(--mr-gradient)',
-                color: 'var(--mr-text-inverse)',
+                color: 'white',
                 padding: '0.5rem 1rem',
                 borderRadius: '9999px',
                 fontWeight: '600',
@@ -640,7 +640,7 @@ export default function HistoryPage() {
                 gap: '0.5rem',
                 padding: '0.75rem 1.5rem',
                 background: 'var(--mr-gradient)',
-                color: 'var(--mr-text-inverse)',
+                color: 'white',
                 textDecoration: 'none',
                 borderRadius: '0.5rem',
                 fontWeight: '600'
@@ -1337,7 +1337,7 @@ export default function HistoryPage() {
                       borderRadius: '0.5rem',
                       fontSize: '0.875rem',
                       fontWeight: '600',
-                      color: 'var(--mr-text-inverse)',
+                      color: 'white',
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
@@ -1400,7 +1400,7 @@ export default function HistoryPage() {
                       borderRadius: '0.5rem',
                       fontSize: '0.875rem',
                       fontWeight: '600',
-                      color: 'var(--mr-text-inverse)',
+                      color: 'white',
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
