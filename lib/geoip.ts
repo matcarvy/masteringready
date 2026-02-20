@@ -331,41 +331,41 @@ export const PRICING = {
 // ============================================================================
 // EXCHANGE RATES (Static - Updated Monthly)
 // ============================================================================
-// Last updated: February 10, 2026
+// Last updated: February 20, 2026
 // These are approximate rates for display purposes only
 // Actual charge is always in USD via Stripe
 
 export const EXCHANGE_RATES: Record<string, number> = {
   // North America
   'USD': 1,
-  'CAD': 1.436,
-  'MXN': 17.22,
+  'CAD': 1.369,
+  'MXN': 17.26,
 
   // Europe
-  'EUR': 0.841,
-  'GBP': 0.732,
+  'EUR': 0.850,
+  'GBP': 0.743,
 
   // South America
-  'COP': 3660,    // Colombian Peso
-  'BRL': 5.80,    // Brazilian Real
-  'ARS': 1074,    // Argentine Peso (volatile)
-  'CLP': 955,     // Chilean Peso
-  'PEN': 3.66,    // Peruvian Sol
-  'UYU': 43.34,   // Uruguayan Peso
-  'PYG': 7980,    // Paraguayan Guarani
-  'BOB': 6.92,    // Bolivian Boliviano
-  'VES': 78,      // Venezuelan Bolivar (volatile)
+  'COP': 3682,    // Colombian Peso
+  'BRL': 5.23,    // Brazilian Real
+  'ARS': 1452,    // Argentine Peso (volatile)
+  'CLP': 863,     // Chilean Peso
+  'PEN': 3.36,    // Peruvian Sol
+  'UYU': 38.91,   // Uruguayan Peso
+  'PYG': 6550,    // Paraguayan Guarani
+  'BOB': 6.95,    // Bolivian Boliviano
+  'VES': 402,     // Venezuelan Bolivar (volatile)
 
   // Central America
-  'GTQ': 7.67,    // Guatemalan Quetzal
-  'HNL': 25.47,   // Honduran Lempira
-  'NIO': 36.63,   // Nicaraguan Cordoba
-  'CRC': 505,     // Costa Rican Colon
+  'GTQ': 7.69,    // Guatemalan Quetzal
+  'HNL': 26.53,   // Honduran Lempira
+  'NIO': 36.91,   // Nicaraguan Cordoba
+  'CRC': 483,     // Costa Rican Colon
   'PAB': 1,       // Panamanian Balboa (pegged to USD)
-  'DOP': 62.66,   // Dominican Peso
+  'DOP': 61.77,   // Dominican Peso
 
   // Oceania
-  'AUD': 1.594,
+  'AUD': 1.418,
 }
 
 // Currency symbols for display

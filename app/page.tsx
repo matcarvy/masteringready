@@ -847,8 +847,8 @@ const handleAnalyze = async () => {
       setCompressionProgress(0)
 
       const compressionInterval = setInterval(() => {
-        setCompressionProgress(prev => Math.min(prev + 2, 92))
-      }, 200)
+        setCompressionProgress(prev => Math.min(prev + 5, 92))
+      }, 100)
 
       try {
         const { file: compressedFile, compressed, originalSize, newSize, originalMetadata: metadata } =
@@ -856,6 +856,9 @@ const handleAnalyze = async () => {
 
         clearInterval(compressionInterval)
         setCompressionProgress(100)
+
+        // Brief pause so user sees 100% before compression UI clears
+        await new Promise(resolve => setTimeout(resolve, 300))
 
         fileToAnalyze = compressedFile
         // Only use compression metadata if pre-compression header parse didn't capture it
