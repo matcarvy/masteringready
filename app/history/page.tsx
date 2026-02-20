@@ -1449,8 +1449,8 @@ export default function HistoryPage() {
                     <button
                       onClick={() => { setCtaAction(cta.action); setShowContactModal(true) }}
                       style={{
-                        background: 'var(--mr-bg-card)',
-                        color: 'var(--mr-primary)',
+                        background: '#ffffff',
+                        color: '#6366f1',
                         padding: '0.625rem 1.25rem',
                         borderRadius: '0.5rem',
                         border: 'none',
