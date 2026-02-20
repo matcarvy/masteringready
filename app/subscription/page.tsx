@@ -801,7 +801,7 @@ export default function SubscriptionPage() {
                 marginBottom: '0.75rem'
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-                  <AlertTriangle size={16} style={{ color: '#d97706' }} />
+                  <AlertTriangle size={16} style={{ color: 'var(--mr-amber)' }} />
                   <span style={{ fontWeight: '600', color: 'var(--mr-amber-text)', fontSize: '0.875rem' }}>
                     {t.cancellationScheduled}
                   </span>
@@ -927,7 +927,7 @@ export default function SubscriptionPage() {
                         gap: '0.25rem',
                         fontSize: '0.75rem',
                         fontWeight: '500',
-                        color: p.status === 'succeeded' ? '#059669' : p.status === 'failed' ? 'var(--mr-red)' : '#d97706',
+                        color: p.status === 'succeeded' ? 'var(--mr-green)' : p.status === 'failed' ? 'var(--mr-red)' : 'var(--mr-amber)',
                         background: p.status === 'succeeded' ? 'var(--mr-green-bg)' : p.status === 'failed' ? 'var(--mr-red-bg)' : 'var(--mr-amber-bg)',
                         padding: '0.125rem 0.5rem',
                         borderRadius: '9999px'
@@ -991,7 +991,7 @@ export default function SubscriptionPage() {
                             gap: '0.25rem',
                             fontSize: '0.75rem',
                             fontWeight: '500',
-                            color: p.status === 'succeeded' ? '#059669' : p.status === 'failed' ? 'var(--mr-red)' : '#d97706',
+                            color: p.status === 'succeeded' ? 'var(--mr-green)' : p.status === 'failed' ? 'var(--mr-red)' : 'var(--mr-amber)',
                             background: p.status === 'succeeded' ? 'var(--mr-green-bg)' : p.status === 'failed' ? 'var(--mr-red-bg)' : 'var(--mr-amber-bg)',
                             padding: '0.125rem 0.5rem',
                             borderRadius: '9999px'
@@ -1063,7 +1063,7 @@ export default function SubscriptionPage() {
                 justifyContent: 'center',
                 margin: '0 auto 1rem'
               }}>
-                <AlertTriangle size={28} style={{ color: '#d97706' }} />
+                <AlertTriangle size={28} style={{ color: 'var(--mr-amber)' }} />
               </div>
               <h3 style={{ fontSize: '1.25rem', fontWeight: '700', color: 'var(--mr-text-primary)', marginBottom: '0.5rem' }}>
                 {t.cancelTitle}

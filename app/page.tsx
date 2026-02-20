@@ -2310,6 +2310,8 @@ by Matías Carvajal
                             transition: 'all 0.2s',
                             fontSize: 'clamp(0.8125rem, 2vw, 0.875rem)'
                           }}
+                          onMouseEnter={(e) => { if (reportView !== m) { e.currentTarget.style.background = 'var(--mr-bg-hover)' } }}
+                          onMouseLeave={(e) => { if (reportView !== m) { e.currentTarget.style.background = 'var(--mr-bg-elevated)' } }}
                         >
                           {m === 'visual' ? (lang === 'es' ? '⚡ Rápido' : '⚡ Quick') :
                            m === 'short' ? (lang === 'es' ? '📝 Resumen' : '📝 Summary') :
@@ -2737,6 +2739,8 @@ by Matías Carvajal
                         boxShadow: reportView === view ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
                         position: 'relative'
                       }}
+                      onMouseEnter={(e) => { if (reportView !== view) { e.currentTarget.style.color = 'var(--mr-text-primary)'; e.currentTarget.style.background = 'var(--mr-bg-hover)' } }}
+                      onMouseLeave={(e) => { if (reportView !== view) { e.currentTarget.style.color = 'var(--mr-text-secondary)'; e.currentTarget.style.background = 'transparent' } }}
                     >
                       {/* Crown icon for non-logged users on Resumen, unpaid on Completo */}
                       {((view === 'short' && !isLoggedIn) || (view === 'write' && (!isLoggedIn || !effectiveHasPaidAccess))) && (
