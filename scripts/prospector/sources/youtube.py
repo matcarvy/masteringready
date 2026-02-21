@@ -33,7 +33,7 @@ def fetch_youtube_leads() -> list[dict]:
         return []
 
     leads = []
-    video_ids = set()
+    video_map: dict[str, str] = {}  # video_id -> video_title
 
     # Step 1: Search for relevant videos
     for query in config.YOUTUBE_SEARCHES:
@@ -42,13 +42,15 @@ def fetch_youtube_leads() -> list[dict]:
                 q=query,
                 part='snippet',
                 type='video',
-                order='date',
+                order='relevance',
                 maxResults=config.YOUTUBE_MAX_RESULTS_PER_QUERY,
-                publishedAfter=_days_ago_rfc3339(7),
+                publishedAfter=_days_ago_rfc3339(config.YOUTUBE_PUBLISHED_DAYS),
             ).execute()
 
             for item in search_response.get('items', []):
-                video_ids.add(item['id']['videoId'])
+                vid = item['id']['videoId']
+                title = item['snippet'].get('title', '')
+                video_map[vid] = title
 
             logger.info(f'YouTube search "{query}": {len(search_response.get("items", []))} videos')
 
@@ -56,10 +58,10 @@ def fetch_youtube_leads() -> list[dict]:
             logger.error(f'YouTube search error for "{query}": {e}')
             continue
 
-    logger.info(f'Total unique videos to scan: {len(video_ids)}')
+    logger.info(f'Total unique videos to scan: {len(video_map)}')
 
     # Step 2: Fetch comments from each video
-    for video_id in video_ids:
+    for video_id in video_map:
         try:
             comments_response = youtube.commentThreads().list(
                 videoId=video_id,
@@ -80,8 +82,7 @@ def fetch_youtube_leads() -> list[dict]:
                 if result is None:
                     continue
 
-                # Get video title for context
-                video_title = _get_video_title(item)
+                video_title = video_map.get(video_id, '')
 
                 lead = {
                     'source': 'youtube',
@@ -102,7 +103,7 @@ def fetch_youtube_leads() -> list[dict]:
             logger.error(f'Error fetching comments for video {video_id}: {e}')
             continue
 
-    logger.info(f'YouTube: found {len(leads)} leads from {len(video_ids)} videos')
+    logger.info(f'YouTube: found {len(leads)} leads from {len(video_map)} videos')
     return leads
 
 
@@ -111,11 +112,3 @@ def _days_ago_rfc3339(days: int) -> str:
     from datetime import timedelta, timezone
     dt = datetime.now(timezone.utc) - timedelta(days=days)
     return dt.strftime('%Y-%m-%dT%H:%M:%SZ')
-
-
-def _get_video_title(comment_item: dict) -> str | None:
-    """Extract video title from comment snippet if available."""
-    try:
-        return comment_item.get('snippet', {}).get('videoId', None)
-    except Exception:
-        return None

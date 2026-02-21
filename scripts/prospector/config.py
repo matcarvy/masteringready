@@ -165,7 +165,7 @@ NEGATIVE_KEYWORDS = [
 
 # Scoring thresholds
 MIN_RELEVANCE_SCORE = 0.3
-MIN_RELEVANCE_YOUTUBE = 0.4  # Higher threshold for noisier YouTube comments
+MIN_RELEVANCE_YOUTUBE = 0.3  # Same as Reddit — 0.4 was too strict
 
 # Scoring bonuses
 FOCUSED_SUBREDDIT_BONUS = 0.1
@@ -177,13 +177,17 @@ SECONDARY_KEYWORD_SCORE = 0.15
 # Reddit fetch limits
 REDDIT_NEW_LIMIT = 50  # Posts to fetch per subreddit per run
 
-# YouTube search queries
+# YouTube search queries (broader to capture more comments)
 YOUTUBE_SEARCHES = [
-    'mastering loudness levels tutorial 2026',
-    'LUFS mastering explained',
-    'how to master music for streaming',
-    'mix ready for mastering check',
-    'mastering too quiet fix',
+    'mastering loudness levels',
+    'LUFS explained mastering',
+    'how to master music',
+    'is my mix ready for mastering',
+    'mastering too quiet',
+    'how loud should my master be',
+    'mixing before mastering tips',
+    'mastering for beginners',
 ]
 YOUTUBE_MAX_RESULTS_PER_QUERY = 10
-YOUTUBE_MAX_COMMENTS_PER_VIDEO = 50
+YOUTUBE_MAX_COMMENTS_PER_VIDEO = 100
+YOUTUBE_PUBLISHED_DAYS = 30  # Search videos from last 30 days (was 7)
