@@ -38,6 +38,19 @@
 - No markdown in report text — frontend does not render markdown
 - No Apple login — only Google, Facebook, Email+Password
 
+## Color Palette (source: `app/globals.css`)
+- **Brand gradient**: `linear-gradient(135deg, #667eea → #764ba2)` — hero, CTA buttons
+- **Primary**: `#667eea` (links, active states, bridge text light) / `#8b9cf5` (bridge text dark)
+- **Footer gradient**: `#1e1b4b → #312e81` (deep indigo, always dark)
+- **CTA on gradient**: hardcoded `#ffffff` bg / `#6366f1` text (must pop in both themes)
+- **Semantic (both themes)**: green `#10b981`, red `#ef4444`, amber `#f59e0b`, blue `#3b82f6`, purple `#7c3aed`
+- **Score colors**: >= 85 green, 60-84 amber, < 60 red
+- **Light theme**: base `#f9fafb`, card `#ffffff`, text `#111827` / `#6b7280` / `#9ca3af`, border `#e5e7eb`
+- **Dark theme**: base `#0D0D14`, card `#161620`, elevated `#1E1E2A`, text `#f5f5f7` / `#a0a0b2` / `#6b6b7e`
+- **Design tokens**: `--mr-radius` 12px, `--mr-radius-sm` 8px, `--mr-radius-lg` 16px
+- **Platform brands preserved**: WhatsApp `#25d366`, Instagram `#e1306c`
+- All vars prefixed `--mr-`. Full system in `app/globals.css` (25 vars per theme).
+
 ---
 
 ## LAUNCH READINESS STATUS
@@ -226,7 +239,7 @@ Watch these metrics in admin dashboard before making changes:
 - **Baseline avg analysis time**: 45.2s (from admin stats)
 - **Optimizations shipped**: skip chunking for short compressed files (`ed316c8`), duration-based progress copy
 - **Render keep-alive cron**: LIVE — cron-job.org, `GET /health` every 10 min. Check logs after 24-48h.
-- **Supabase keep-alive cron**: LIVE — cron-job.org, `GET /api/health` daily at midnight.
+- **Supabase keep-alive cron**: LIVE — cron-job.org, `GET /api/health` daily at midnight. Fixed Feb 21: replaced RLS-blocked `profiles` table query with direct PostgREST REST ping (`034fe6c`).
 - **After 50-100 analyses**: Pull new avg analysis time from admin. Compare against 45.2s baseline to measure impact.
 - **Optimization #2** (chunk 30s→60s): Only pursue if #1+#3 gains are insufficient. Verification: ±2 point score tolerance, same verdict, same severity levels across 3-5 test files.
 
@@ -2941,11 +2954,7 @@ Pre-promotion audit before distributing the site. Meta Pixel and Google Search C
 - Previous commit's `INITIAL_SESSION` blocking was too aggressive — blocked fresh logins where no tokens exist in storage
 - Fix: only block when stored tokens are found (reload recovery case)
 
-#### 3. CTA Voice Alignment — NEXT SESSION (first task)
-- **Problem**: Dashboard CTAs have old first-person voice ("conmigo", "te ayudo") while analyzer CTA spec uses educational third-person voice ("Tu mezcla está lista", "Está técnicamente preparada...")
-- **Spec**: `~/Downloads/cta-card-final-spec.md` — 7 score ranges × 2 languages, title + body + button + subline
-- **Decision**: Dashboard CTAs should match analyzer spec copy exactly — same voice, same or shorter length for dashboard
-- **Scope**: Update dashboard CTA copy to match spec, remove old subline text, ensure consistent voice across analyzer + dashboard
+#### 3. CTA Voice Alignment — DONE (this session continued below)
 
 #### Commits to main (Session 2026-02-19)
 1. `2fa8973` - fix: mobile login — only block INITIAL_SESSION when stored tokens exist
@@ -2953,16 +2962,216 @@ Pre-promotion audit before distributing the site. Meta Pixel and Google Search C
 
 **Git state**: main on `d25f81c`, pushed. Build clean.
 
+### Session 2026-02-19 Part 2 — CTA Voice + Dark Mode Fixes + Collapsible File Info + Recommendation Strip
+
+#### 1. CTA Voice Alignment (commits `838db28`, `3730576` from previous session)
+- Updated `getCtaForScore()` to 7 score ranges with educational third-person voice
+- Contact modal added to history page (was direct WhatsApp link)
+- Dashboard contact messages now include filename/score/action context
+- Scroll lock added to history page modals
+
+#### 2. Collapsible File Info — Reverted on Main Analyzer, Added to Dashboard
+- **Main analyzer (`page.tsx`)**: Reverted to always-visible file info (no toggle). First analysis = full view, no need to collapse.
+- **Dashboard (`dashboard/page.tsx`)**: CSS-based collapsible via `max-height: 0` / `overflow: hidden` (not conditional rendering). Toggle header always visible on both mobile and desktop. Default: expanded on desktop (≥768px), collapsed on mobile. 1rem margin-bottom before tab bar.
+- **History**: No file info section (metadata only used for PDF generation, not displayed).
+
+#### 3. Dark Mode Fixes — Contact Modal + Metrics Bars
+- **Dashboard contact modal**: 6 hardcoded hex colors → CSS vars (WhatsApp green, Email blue, Instagram pink)
+- **Metrics bars** (dashboard + history): `#fef7f0`/`#fed7aa` → `var(--mr-amber-bg)`/`var(--mr-amber)`
+- **General audit**: CTA buttons `#6366f1` → `var(--mr-primary)`, Crown icons `#d97706` → `var(--mr-amber)`, green badges → `var(--mr-green-bg)`/`var(--mr-green)`
+
+#### 4. CTA Below Downloads — Both Pages
+- Dashboard + history: CTA card moved after download buttons
+- Flow: Analysis content → Download buttons → CTA card
+- "Value first, offer second" — user grabs PDF, then sees contact CTA
+
+#### 5. Format Fallback from Filename
+- Dashboard file info: `selectedAnalysis.file_format || selectedAnalysis.filename?.split('.').pop()` — works for old analyses with NULL `file_format` in DB
+- Channels: no fallback possible (requires audio data). New analyses save it; old ones show 5 of 6 fields.
+
+#### 6. Recommendation Text Stripped from Rendered Tabs
+- **Decision**: CTA card is the single source of truth for verdict + next step in UI. PDF stays self-contained with written recommendation.
+- `cleanReportText()` updated on all 3 pages (analyzer, dashboard, history):
+  - Strips `💡 Recomendación: ...` / `💡 Recommendation: ...` lines (with and without emoji)
+  - Strips inline CTA text (`🎧🔧🔍💬` + various openers)
+  - Removed the code that was *adding* `💡` emoji to recommendation text
+- Backend `analyzer.py` unchanged — PDF generation still includes recommendation
+- Analysis content now ends at last technical finding. CTA card handles everything after.
+
+#### 7. Duplicate CTA in Completo Tab — Fixed
+- Backend's `report_write` includes CTA message at the end via `generate_cta()`. `cleanReportText()` regex strips it so only the CTA card shows it.
+
+#### Commits to main (Session 2026-02-19 Part 2)
+1. `4ac2aa9` - fix: move collapsible file info to dashboard, dark mode color fixes
+2. `3730576` - fix: add scroll lock to history page modals
+3. `250c9d3` - fix: file info spacing, remove duplicate CTA from Completo tab
+4. `0c74b85` - fix: CTA below downloads on both pages, format fallback from filename
+5. `9b6c7c8` - fix: collapsible file info via CSS max-height, not conditional rendering
+6. `b6df30d` - fix: strip recommendation text from rendered tabs, keep only in PDF
+
+**Git state**: main on `b6df30d`, pushed. Build clean.
+
+**Key architectural decisions:**
+- **CSS collapse > conditional rendering**: `max-height: 0` / `overflow: hidden` keeps content in DOM, toggle only controls visibility. Smoother animation, no field loss.
+- **One CTA, one source of truth**: Frontend CTA card handles verdict + contact invitation. Backend recommendation only lives in PDF. `cleanReportText()` is the boundary.
+- **`[data-theme]` CSS vars for dark mode**: All new colors use `var(--mr-*)` tokens from `globals.css`. No hardcoded hex in inline styles for theme-sensitive elements.
+
+### Session 2026-02-19 Part 3 — Broken Emoji Fix + CTA Text Cleanup + Dark Mode Polish
+
+#### 1. Broken Emoji Character — ROOT CAUSE FOUND & FIXED (`3f2afe4`)
+- **Problem**: Small broken square character appeared at bottom of analysis text after stripping recommendation/CTA
+- **Root cause**: CTA stripping regex `[🎧🔧🔍💬]` was missing the `u` (Unicode) flag. Without it, JavaScript treats each emoji as two UTF-16 surrogate pairs. The character class matched individual surrogates instead of whole codepoints, leaving orphaned low surrogates that render as broken squares.
+- **Fix (all 3 pages — page.tsx, dashboard, history)**:
+  - Added `u` flag to all emoji-containing regexes
+  - Added mode note stripping (`📊 Análisis realizado con estándares...`)
+  - Added broad CTA line catch: any line starting with 🎧🔧🔍💬 gets stripped (`/\n*[🎧🔧🔍💬][^\n]*/gu`)
+  - Added lone surrogate cleanup (`/[\uD800-\uDFFF]/g`) as safety net
+  - Extended variation selector range (`\u{FE00}-\u{FE0F}`) in orphaned emoji regex
+
+#### 2. CTA Continuation Lines Leaking (`e2ebeb0`)
+- **Problem**: CTA messages are 2 lines — first line starts with emoji (stripped), but second line ("Está técnicamente preparada... escríbenos y coordinamos") survived because it has no emoji prefix
+- **Fix**: Added catch-all regex on all 3 pages: `/\n*[^\n]*(escr[íi]benos|write us)[^\n]*/gi` — strips any line containing "escríbenos" (ES) or "write us" (EN), which all CTA continuation lines share
+
+#### 3. CTA Button White on Purple Gradient (`09c7984`)
+- **Problem**: Dashboard + history CTA buttons used `var(--mr-bg-card)` bg — dark in dark mode, making text unreadable on the purple gradient card
+- **Fix**: Hardcoded `#ffffff` bg + `#6366f1` text — button always sits on purple gradient, needs to pop in both themes
+- Main analyzer page was already correct (hardcoded white/purple)
+
+#### 4. Admin ThemeToggle + Chart Tooltip Fix (`b437fdc`)
+- **ThemeToggle**: Admin page was missing dark/light mode toggle. Added `ThemeToggle` component between lang button and logout button in header.
+- **Chart tooltip invisible**: Background was `var(--mr-text-primary)` = light gray in dark mode, with white text = unreadable. Hardcoded `#1a1a2e` dark bg + `#ffffff` text — visible in both themes.
+
+#### Key pattern: Unicode `u` flag on emoji regexes
+- **ALWAYS use `u` flag** when emoji characters appear in regex character classes or ranges
+- Without `u`, JS regex operates on UTF-16 code units, not Unicode code points
+- Emoji are 2 code units (surrogate pair) — character class matches individual surrogates
+- This applies to both `[🎧🔧🔍💬]` literal classes AND `[\u{1F300}-\u{1F9FF}]` range classes
+
+#### Commits to main (Session 2026-02-19 Part 3)
+1. `3f2afe4` - fix: broken emoji — add u flag to CTA regex, strip mode note, clean lone surrogates
+2. `e2ebeb0` - fix: strip CTA continuation lines containing "escríbenos" / "write us"
+3. `09c7984` - fix: CTA button white bg on purple gradient — dashboard + history
+4. `b437fdc` - fix: add ThemeToggle to admin header + fix chart tooltip visibility
+
+**Git state**: main on `b437fdc`, pushed. Build clean.
+
+### Session 2026-02-19 Part 4 — Dark Mode Final Sweep + UI Polish
+
+#### 1. Download Button Hover Effects (`0aa48f6`)
+- Added hover effects to all 6 TXT + 2 PDF download buttons on dashboard + history
+- TXT: `var(--mr-bg-elevated)` + `translateY(-1px)`. PDF: enhanced boxShadow + `translateY(-1px)`.
+
+#### 2. Dark Mode: Privacy + Terms + Error Pages (`867dd2c`)
+- Migrated privacy + terms pages from ~15 hardcoded colors each → CSS vars
+- Error pages (not-found, error) migrated — global-error left as-is (own `<html>` tag, can't access CSS vars)
+
+#### 3. Dark Mode: `--mr-text-inverse` Fix (`e5852c3`)
+- ROOT CAUSE: `--mr-text-inverse` was `#0D0D14` in dark mode — caused dark/invisible text on all gradient buttons
+- Fixed to `#ffffff` in dark theme. Also changed 4 history page gradient buttons to hardcoded `'white'`.
+- Fixed 7 loading text cases across 7 files from `--mr-text-inverse` to `--mr-text-primary`.
+
+#### 4. TXT Download Buttons → Blue (`68ea444`)
+- All 6 TXT download buttons (3 dashboard, 3 history) changed from `var(--mr-text-primary)` to `var(--mr-primary)` (blue text + blue border), matching main analyzer page style.
+
+#### 5. Tab Hover Effects — All 3 Pages (`68ea444`, `73feb18`)
+- Dashboard + history: underline-style tabs get `var(--mr-bg-hover)` + `var(--mr-text-primary)` on hover (inactive only)
+- Main page: pre-analysis grid buttons + post-analysis report tabs get same hover treatment
+
+#### 6. Subscription Dark Mode Fix (`73feb18`)
+- Replaced 4 hardcoded hex colors: `#d97706` → `var(--mr-amber)`, `#059669` → `var(--mr-green)` in payment status badges + cancel alert icon
+
+#### 7. Full Dark Mode Audit — COMPLETE (`612bfea`)
+- **Auth pages (4 files)**: 5 `#fecaca` error borders → `var(--mr-red)`
+- **Subscription**: 1 `#fecaca` error border → `var(--mr-red)`
+- **Settings**: 2 hardcoded borders (`#fecaca`, `#bbf7d0`) → `var(--mr-red)`, `var(--mr-green)`
+- **Admin**: Verified clean — tooltip intentionally hardcoded dark, 57 data visualization colors correctly preserved
+- **Error pages**: not-found + error clean. global-error can't use CSS vars (own `<html>` tag) — accepted as technical debt.
+
+#### Dark Mode Status — COMPLETE
+All user-facing pages fully themed with CSS variables. Remaining hardcoded colors are:
+- Brand gradients (footer, hero CTA, modal icons) — intentional
+- Data visualization colors (admin charts, score conditionals) — intentional
+- White text on gradient/dark surfaces — intentional
+- `global-error.tsx` — can't use CSS vars (own `<html>`, extremely rare page)
+
+#### Commits to main (Session 2026-02-19 Part 4)
+1. `0aa48f6` - ux: add hover effects to download buttons on dashboard + history
+2. `867dd2c` - feat: dark mode for privacy, terms, 404, and error pages
+3. `e5852c3` - fix: dark mode text-inverse — always white on gradient/colored backgrounds
+4. `68ea444` - ux: blue TXT download buttons + tab hover effects on dashboard and history
+5. `73feb18` - ux: tab hover effects on main page + dark mode fixes on subscription
+6. `612bfea` - fix: dark mode — replace hardcoded #fecaca error borders with var(--mr-red) across 6 files
+
+**Git state**: main on `612bfea`, pushed. Build clean.
+
+---
+
+## Lead Prospector System (Built Feb 20, 2026)
+
+Automated lead discovery system that scans Reddit + YouTube for people expressing mastering pain points. Runs unattended on GitHub Actions, surfaces leads on a standalone admin page for manual outreach.
+
+### Architecture
+- **Python scraper** (`scripts/prospector/`) — GitHub Actions cron every 6h, scans 7 subreddits + YouTube comments
+- **Next.js API route** (`app/api/admin/prospecting/route.ts`) — GET (admin auth, filters+KPIs), POST (shared secret auth from scraper), PATCH (admin status updates)
+- **Standalone page** (`app/prospecting/page.tsx`) — NOT part of `/admin` dashboard. Filterable table, KPI cards, bilingual, dark/light mode
+
+### Key Files
+- `scripts/prospector/config.py` — keywords, subreddits, score thresholds, 6 pain point categories (EN+ES)
+- `scripts/prospector/scorer.py` — weighted keyword matching (primary +0.3, secondary +0.15, bonuses for focused subreddits/questions/recency)
+- `scripts/prospector/sources/reddit.py` — PRAW, 7 subreddits, `subreddit.new(limit=50)`
+- `scripts/prospector/sources/youtube.py` — YouTube Data API v3, 5 search queries, comment scanning
+- `scripts/prospector/poster.py` — POST to API with `X-Prospecting-Secret`, batch 50, 3 retries
+- `supabase/migrations/20260221000001_prospecting_leads.sql` — `prospecting_leads` table, UNIQUE on `(source, source_id)`
+- `.github/workflows/prospector.yml` — cron `0 */6 * * *`, sparse checkout, Python 3.11
+
+### Auth Pattern
+- **Scraper → API**: `X-Prospecting-Secret` header (shared secret, env var `PROSPECTING_SECRET` on Vercel)
+- **Admin → API**: Bearer token + `profiles.is_admin` check (same as other admin routes)
+
+### Scoring
+- 6 categories: loudness, lufs_targets, streaming_targets, mastering_quality, mix_readiness, general_mastering
+- Threshold: 0.3 (Reddit), 0.4 (YouTube — higher to filter comment noise)
+- Negative keywords filter self-promotion ("my service", "check out my", "I offer mastering")
+
+### Deployment Status: CODE COMPLETE, NOT DEPLOYED
+To deploy:
+1. Run SQL migration in Supabase Dashboard
+2. Set `PROSPECTING_SECRET` env var on Vercel
+3. Create Reddit app (reddit.com/prefs/apps, "script" type) → Client ID + Secret
+4. Get YouTube API key from Google Cloud Console
+5. Set 5 GitHub Secrets: `REDDIT_CLIENT_ID`, `REDDIT_CLIENT_SECRET`, `YOUTUBE_API_KEY`, `MR_PROSPECTING_API_URL` (`https://masteringready.com/api/admin/prospecting`), `MR_PROSPECTING_SECRET`
+6. Test via manual `workflow_dispatch` trigger
+
+### Cost: $0/month
+- GitHub Actions: ~12 min/day (well under 2,000 free min/month)
+- Reddit API: free "script" app, 60 req/min
+- YouTube API: ~2,200 units/day (well under 10K free quota)
+- Twitter/X: DEFERRED (free tier doesn't allow search, Basic is $100/mo)
+
+### Future (v2)
+- AI classification via Claude Haiku for nuanced pain point detection
+- Automated outreach draft generation
+- Discord server monitoring
+- Link prospecting leads to MR signups (conversion tracking)
+
+### Growth Context (ACQ Scaling Roadmap)
+MR is at Stage 1 (Monetize) → transitioning to Stage 2 (Advertise). The prospector automates lead discovery so outreach time goes to engagement, not searching. Strategy: find pain point → offer free analysis → convert to paid. Rule of 100: 100 min/day on marketing, prospector handles the "finding" part.
+
 ---
 
 ## NEXT STEPS (Priority Order)
 
-### IMMEDIATE (next session — Feb 19)
-1. **CTA voice alignment** — Update dashboard CTAs to match `~/Downloads/cta-card-final-spec.md` spec. Same 7 score ranges, same educational tone, same or shorter body text. Remove old first-person copy ("conmigo", "te ayudo"). Files: `app/dashboard/page.tsx` (dashboard modal CTA), possibly `app/history/page.tsx`.
-2. **Demo Pro user** — Create user with automatic Pro plan (30 analyses) for live demo. No admin access. SQL: create auth user + profile + subscription with Pro plan_id.
+### IMMEDIATE (next session)
+1. **Demo Pro user** — Create user with automatic Pro plan (30 analyses) for live demo. No admin access. SQL: create auth user + profile + subscription with Pro plan_id.
 
 ### SHORT-TERM
-3. **Dark/Light mode Phase 5** — Admin secondary pages (privacy, terms, error pages)
-4. **eBook migration from Payhip** — Stripe product, protected download, `/ebook` page
-5. **Signed token system** — HMAC-signed tokens for bulletproof Render API protection
-6. **Email onboarding sequence** — Welcome, score explained, upgrade nudge, re-analysis
+2. **eBook migration from Payhip** — Stripe product `ebook` at $15 USD flat. DB: `has_ebook BOOLEAN`. Checkout + webhook + protected PDF download API. `/ebook` page. Replace Payhip links.
+3. **Signed token system** — HMAC-signed short-lived tokens via `/api/analyze-token`. Render validates signature. Bulletproof API protection. ~30 min.
+4. **Email onboarding sequence** — 4 bilingual triggered emails (welcome, score explained, upgrade nudge, re-analysis). Highest-leverage conversion feature. Needs Resend or SendGrid (~$10-20/mo).
+
+### MEDIUM-TERM (data-driven)
+5. **DLocal integration** — OXXO (MX), Pix (BR), Mercado Pago (AR/CO). Trigger: high LATAM signups but low paid conversion.
+6. **Priority Queue System** — Spec at `docs/specs/priority-queue-system.xml`. Trigger: OOM errors, queue depth >5.
+7. **Stream Ready deploy** — Backend ready in `main.py` (`_sr_` prefix). Frontend at `~/streamready/`. Target: when MR has stable traffic.
+8. **Facebook OAuth** — Meta App Review + Business Verification → re-enable button.
+9. **SEO blog posts** — Zero-competition ES keywords: "cómo saber si mi mezcla está lista", "analizar mezcla antes de mastering".

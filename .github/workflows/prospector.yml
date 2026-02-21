@@ -1,0 +1,40 @@
+name: Lead Prospector
+
+on:
+  schedule:
+    # Every 6 hours: 00:00, 06:00, 12:00, 18:00 UTC
+    - cron: '0 */6 * * *'
+  workflow_dispatch: # Manual trigger from GitHub UI
+
+jobs:
+  prospect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: scripts/prospector
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: scripts/prospector/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r scripts/prospector/requirements.txt
+
+      - name: Run prospector
+        env:
+          REDDIT_CLIENT_ID: ${{ secrets.REDDIT_CLIENT_ID }}
+          REDDIT_CLIENT_SECRET: ${{ secrets.REDDIT_CLIENT_SECRET }}
+          REDDIT_USER_AGENT: 'MasteringReady Prospector v1.0'
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+          MR_PROSPECTING_API_URL: ${{ secrets.MR_PROSPECTING_API_URL }}
+          MR_PROSPECTING_SECRET: ${{ secrets.MR_PROSPECTING_SECRET }}
+        run: python -m scripts.prospector.main
+
+      - name: Summary
+        if: always()
+        run: echo "Prospector completed at $(date -u)"

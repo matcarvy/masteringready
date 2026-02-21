@@ -658,6 +658,72 @@ export interface Database {
           created_at?: string
         }
       }
+      // Prospecting Leads — automated lead discovery from Reddit, YouTube, etc.
+      prospecting_leads: {
+        Row: {
+          id: string
+          source: string
+          source_url: string
+          source_id: string
+          subreddit: string | null
+          author_username: string
+          title: string | null
+          content_snippet: string
+          pain_point_category: string
+          matched_keywords: string[] | null
+          relevance_score: number
+          status: string
+          admin_notes: string | null
+          contacted_at: string | null
+          contacted_via: string | null
+          original_created_at: string | null
+          discovered_at: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          source: string
+          source_url: string
+          source_id: string
+          subreddit?: string | null
+          author_username: string
+          title?: string | null
+          content_snippet: string
+          pain_point_category: string
+          matched_keywords?: string[] | null
+          relevance_score: number
+          status?: string
+          admin_notes?: string | null
+          contacted_at?: string | null
+          contacted_via?: string | null
+          original_created_at?: string | null
+          discovered_at?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          source?: string
+          source_url?: string
+          source_id?: string
+          subreddit?: string | null
+          author_username?: string
+          title?: string | null
+          content_snippet?: string
+          pain_point_category?: string
+          matched_keywords?: string[] | null
+          relevance_score?: number
+          status?: string
+          admin_notes?: string | null
+          contacted_at?: string | null
+          contacted_via?: string | null
+          original_created_at?: string | null
+          discovered_at?: string
+          created_at?: string
+          updated_at?: string
+        }
+      }
     }
     Views: {
       // Public feature requests with vote counts
@@ -768,6 +834,8 @@ export type PaymentInsert = Database['public']['Tables']['payments']['Insert']
 export type ApiKeyInsert = Database['public']['Tables']['api_keys']['Insert']
 export type PurchaseInsert = Database['public']['Tables']['purchases']['Insert']
 export type RegionalPricingInsert = Database['public']['Tables']['regional_pricing']['Insert']
+export type ProspectingLead = Database['public']['Tables']['prospecting_leads']['Row']
+export type ProspectingLeadInsert = Database['public']['Tables']['prospecting_leads']['Insert']
 
 // Update types
 export type PlanUpdate = Database['public']['Tables']['plans']['Update']
@@ -779,6 +847,7 @@ export type PaymentUpdate = Database['public']['Tables']['payments']['Update']
 export type ApiKeyUpdate = Database['public']['Tables']['api_keys']['Update']
 export type PurchaseUpdate = Database['public']['Tables']['purchases']['Update']
 export type RegionalPricingUpdate = Database['public']['Tables']['regional_pricing']['Update']
+export type ProspectingLeadUpdate = Database['public']['Tables']['prospecting_leads']['Update']
 
 // User analysis status (from get_user_analysis_status function)
 export type UserAnalysisStatus = {
