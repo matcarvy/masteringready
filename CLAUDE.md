@@ -5,7 +5,7 @@
 - **Description**: Professional audio analysis platform for musicians/producers to evaluate mixes before mastering. Privacy-first (no audio storage, only derived metrics).
 - **Stack**: Next.js, Supabase, Stripe (Tier 1 + ROW payments), DLocal (LATAM payments — Phase 2)
 - **Spec file (FINAL — source of truth)**: ~/Downloads/mastering-ready-launch-spec-FINAL.xml
-- **Phase**: Pre-Launch / MVP — **Code complete, configuration done, ready to merge**
+- **Phase**: **LAUNCHED** (Feb 11, 2026) — Live at masteringready.com. Monitoring user behavior.
 - **Codebase**: /Users/matcarvy/masteringready
 - **Deployed on**: Vercel (prod: masteringready.com, dev: masteringready-git-dev-*.vercel.app)
 - **Analyzer API (prod)**: https://masteringready.onrender.com
@@ -26,7 +26,7 @@
 - Pro plan copy: NEVER say "ilimitados/unlimited" — always "30 análisis al mes"
 
 ## Pricing Plans
-- **Free (Gratis)**: 2 lifetime analyses (Rápido + Resumen only, no PDF)
+- **Free (Gratis)**: 2 full analyses (Completo + PDF included). Anonymous gets 1 Rápido trial before signup prompt.
 - **Single (Análisis individual)**: $5.99 USD one-off, 1 analysis (includes Completo + PDF)
 - **Pro Monthly (MasteringReady Pro)**: $9.99/mo USD, 30/month (includes Completo + PDF + priority processing)
 - **Pro Add-on Pack (Pack adicional)**: $3.99 USD, 10 extra analyses (Pro only, max 2 packs/cycle)
@@ -38,14 +38,27 @@
 - No markdown in report text — frontend does not render markdown
 - No Apple login — only Google, Facebook, Email+Password
 
+## Color Palette (source: `app/globals.css`)
+- **Brand gradient**: `linear-gradient(135deg, #667eea → #764ba2)` — hero, CTA buttons
+- **Primary**: `#667eea` (links, active states, bridge text light) / `#8b9cf5` (bridge text dark)
+- **Footer gradient**: `#1e1b4b → #312e81` (deep indigo, always dark)
+- **CTA on gradient**: hardcoded `#ffffff` bg / `#6366f1` text (must pop in both themes)
+- **Semantic (both themes)**: green `#10b981`, red `#ef4444`, amber `#f59e0b`, blue `#3b82f6`, purple `#7c3aed`
+- **Score colors**: >= 85 green, 60-84 amber, < 60 red
+- **Light theme**: base `#f9fafb`, card `#ffffff`, text `#111827` / `#6b7280` / `#9ca3af`, border `#e5e7eb`
+- **Dark theme**: base `#0D0D14`, card `#161620`, elevated `#1E1E2A`, text `#f5f5f7` / `#a0a0b2` / `#6b6b7e`
+- **Design tokens**: `--mr-radius` 12px, `--mr-radius-sm` 8px, `--mr-radius-lg` 16px
+- **Platform brands preserved**: WhatsApp `#25d366`, Instagram `#e1306c`
+- All vars prefixed `--mr-`. Full system in `app/globals.css` (25 vars per theme).
+
 ---
 
 ## LAUNCH READINESS STATUS
 
-### CODE — COMPLETE
-All features implemented, TypeScript compiles clean, pushed to `dev`.
+### CODE — COMPLETE & LAUNCHED (Feb 11, 2026)
+All features implemented, TypeScript compiles clean, deployed to production on `main`.
 
-### CONFIGURATION — IN PROGRESS
+### CONFIGURATION — COMPLETE
 
 #### Step 1: Stripe Dashboard Setup — DONE (2026-02-09)
 1. **Create 3 Products + Prices** at dashboard.stripe.com:
@@ -205,21 +218,74 @@ Test in this order:
 
 ---
 
-## NOT IMPLEMENTED (Phase 2 / Post-Launch)
+## WHAT TO MONITOR (Post-Launch)
 
-- [ ] **eBook Migration** (Week 1-2 post-launch) — Move "Mastering Ready" eBook from Payhip ($15 USD) to this platform. Single ecosystem, cross-selling with analyses, better tracking, less fees. Scope: add `ebook` plan type, new case in checkout + webhook, protected PDF download endpoint (`/api/ebook/download` with signed URLs), `/ebook` page, cross-sell CTA (glossary link already exists → just change URL). Honor existing Payhip buyers manually or via coupon.
-- [ ] **DLocal** (LATAM local payment methods) — LATAM users can pay via Stripe for now
-- [ ] **Transactional emails** (welcome, receipt, renewal reminders) — Supabase handles auth emails
-- [ ] **Google Analytics** (`NEXT_PUBLIC_GA_MEASUREMENT_ID` — optional)
-- [ ] **Sentry error tracking** (`NEXT_PUBLIC_SENTRY_DSN` — optional)
-- [ ] **Stream Ready** (video creators platform — July 2026, separate product)
-- [ ] **Smart Leveler** (future feature using captured energy_curve + spectral_6band data)
-- [ ] **Priority Queue System** (when ~50-100 active users or OOM errors) — Serializes analysis processing (max 1 at a time), prioritizes paid users over free. Spec: `docs/specs/priority-queue-system.xml`. Triggers: sustained queue depth >5, Pro users waiting >30s, OOM errors in Render logs, or MRR >$500.
+Watch these metrics in admin dashboard before making changes:
+- **Anonymous funnel** (Overview tab) — conversion rate from analysis → signup. If low, revisit CTA/auth flow.
+- **Render logs** — OOM errors under real concurrent usage. Semaphore holds 1 at a time, but baseline is ~240MB.
+- **Feedback tab** — real user sentiment and pain points.
+- **Leads tab** — WhatsApp/Email CTA click-through and conversion.
+
+**Decision triggers:**
+| Signal | Action |
+|--------|--------|
+| Low anonymous → signup conversion | Tweak CTA, simplify auth, consider showing Rápido without signup |
+| OOM returns on Render | Implement priority queue (spec: `docs/specs/priority-queue-system.xml`) |
+| Users asking questions post-analysis | Add transactional emails (welcome, receipt) |
+| MRR > $500 or queue depth > 5 | Priority queue + consider Render upgrade |
+| First paying non-admin user | Verify webhook flow end-to-end, check payment history display |
+
+**Performance optimization tracking (Feb 12, 2026):**
+- **Baseline avg analysis time**: 45.2s (from admin stats)
+- **Optimizations shipped**: skip chunking for short compressed files (`ed316c8`), duration-based progress copy
+- **Render keep-alive cron**: LIVE — cron-job.org, `GET /health` every 10 min. Check logs after 24-48h.
+- **Supabase keep-alive cron**: LIVE — cron-job.org, `GET /api/health` daily at midnight. Fixed Feb 21: replaced RLS-blocked `profiles` table query with direct PostgREST REST ping (`034fe6c`).
+- **After 50-100 analyses**: Pull new avg analysis time from admin. Compare against 45.2s baseline to measure impact.
+- **Optimization #2** (chunk 30s→60s): Only pursue if #1+#3 gains are insufficient. Verification: ±2 point score tolerance, same verdict, same severity levels across 3-5 test files.
+
+---
+
+## NEXT STEPS (Priority Order)
+
+### Immediate (next session)
+- [ ] **Dark/Light mode toggle** — System-aware with manual override, similar to Mind2Magic CRM. Must preserve all text legibility across both themes.
+- [ ] **eBook Migration** — Move from Payhip ($15 USD) to MasteringReady platform. Scope: `ebook` plan type, checkout + webhook case, protected PDF download (`/api/ebook/download` with signed URLs), `/ebook` page, cross-sell CTA.
+
+### Short-term (Week 2-4 post-launch)
+- [ ] **Shared secret Vercel ↔ Render** (~15 min) — `X-API-Secret` header prevents direct Render API abuse. Requires coordinated env var deploy.
+- [ ] **Google Search Console** — Add verification ID in `app/layout.tsx` line ~117. Submit sitemap.
+- [ ] **Facebook OAuth** — Submit Meta App Review + Business Verification → re-enable button in `SocialLoginButtons.tsx`
+- [ ] **Transactional emails** — Welcome, receipt, renewal reminders. Currently Supabase handles only auth emails.
+- [ ] **Google Analytics** (`NEXT_PUBLIC_GA_MEASUREMENT_ID`)
+- [ ] **Stream Ready deploy** — Backend endpoints ready in `main.py` (`_sr_` prefix). Frontend at `~/streamready/`. Needs: GitHub repo, Vercel project (`stream.masteringready.com`), env vars, Supabase project (post-launch). See `~/streamready/CLAUDE.md`.
+
+### Medium-term (Month 2-3)
+- [ ] **Priority Queue System** — Serialize analyses, prioritize paid users. Spec ready: `docs/specs/priority-queue-system.xml`. Trigger: OOM errors, queue depth >5, ~50-100 active users.
+- [ ] **DLocal** (LATAM local payment methods) — LATAM users can pay via Stripe for now.
+- [ ] **Smart Leveler** — Future feature using captured `energy_curve` + `spectral_6band` data.
+- [ ] **Sentry error tracking** (`NEXT_PUBLIC_SENTRY_DSN`)
+
+---
+
+## STREAM READY (Upcoming Product)
+
+- **Concept**: Analysis platform for video creators (YouTubers, streamers, content creators)
+- **Target launch**: July 2026
+- **Relationship to Mastering Ready**: Separate product, shared brand family ("Ready" suite). Separate codebase and deployment.
+- **Stack**: TBD — likely same (Next.js + Supabase + Stripe) for consistency and shared learnings
+- **Key differences from Mastering Ready**:
+  - Video/audio analysis (not just audio mastering)
+  - Different target audience (content creators vs musicians/producers)
+  - Different metrics and scoring criteria
+  - Different pricing structure TBD
+- **Shared infrastructure**: Stripe account, Supabase org (separate project), Vercel team
+- **Development plan**: Separate codebase at `~/streamready/`, shared backend at `~/masteringready/main.py`
+- **Status**: Phase 1 MVP built (not deployed). Frontend + backend complete, `npx next build` clean. See `~/streamready/CLAUDE.md` for full details.
 
 ---
 
 ## Key Architecture Notes
-- Supabase tables: `profiles`, `analyses`, `subscriptions`, `payments`, `purchases`, `pricing_plans`, `regional_pricing`, `user_feedback`, `contact_requests`, `cta_clicks`, `deleted_accounts`, `aggregate_stats`
+- Supabase tables: `profiles`, `analyses`, `subscriptions`, `payments`, `purchases`, `pricing_plans`, `regional_pricing`, `user_feedback`, `contact_requests`, `cta_clicks`, `deleted_accounts`, `aggregate_stats`, `anonymous_analyses`
 - Stripe webhooks: checkout.session.completed, invoice.paid, invoice.payment_failed, customer.subscription.deleted, customer.subscription.updated
 - GeoIP → currently all routes to Stripe (DLocal Phase 2)
 - Analysis tracking: Free = lifetime counter (max 2), Pro = monthly (resets on billing cycle, max 30) + addon_analyses_remaining
@@ -1763,3 +1829,1349 @@ Comprehensive security penetration test covering 7 attack vectors with 6 paralle
 - Google OAuth published, Facebook hidden
 - Supabase URLs configured, data erased, admin password secured
 - Only remaining: `git merge dev` → main → Vercel auto-deploy → 10-step verification
+
+### Session 2026-02-10 (Part 9) — Merge to Main + Production Fixes + Final Audit
+
+**What was done:**
+
+#### 1. Merge dev → main + Deploy
+- Merged `dev` into `main`, pushed to GitHub
+- Vercel auto-deployed to `masteringready.com`
+- Build: Clean, 22 routes compiled, zero errors
+
+#### 2. Post-Deploy 10-Step Verification (5/10 completed)
+| # | Check | Status |
+|---|-------|--------|
+| 1 | Homepage loads | PASS |
+| 2 | Google OAuth login | PASS |
+| 3 | Upload + analyze (admin, >50MB WAV) | PASS |
+| 4 | Results: Rápido + Completo + PDF download | PASS |
+| 5 | Compression indicator shows for >50MB files | PASS |
+| 6 | Subscription page loads with pricing | PASS |
+| 7 | Subscribe with real card | **PENDING (launch day)** |
+| 8 | Customer Portal (manage subscription) | **PENDING (launch day)** |
+| 9 | Stripe checkout branding shows "Mastering Ready" | PASS |
+| 10 | Cancel subscription → downgrade to Free | **PENDING (launch day)** |
+
+#### 3. Checkout Auth Fix (`3849e92`)
+- **Problem**: "Error al iniciar el pago" when clicking subscribe
+- **Root cause**: API routes (`/api/checkout`, `/api/customer-portal`) used `createServerClient` from `@supabase/ssr` which reads auth from cookies, but the frontend Supabase client stores sessions in localStorage via `@supabase/supabase-js`. API routes couldn't see the user session → 401 → generic error.
+- **Fix**: Changed both API routes to accept `Authorization: Bearer <token>` header. Updated frontend (`subscription/page.tsx`, `dashboard/page.tsx`) to send `session.access_token` with checkout and portal requests.
+- **Files changed**: `app/api/checkout/route.ts`, `app/api/customer-portal/route.ts`, `app/subscription/page.tsx`, `app/dashboard/page.tsx`
+
+#### 4. Compression UI Threshold Sync (`71d85e9`)
+- **Problem**: Compression indicator in UI triggered at 100MB but actual compression threshold was 50MB
+- **Fix**: Changed `file.size > 100 * 1024 * 1024` to `file.size > 50 * 1024 * 1024` in `app/page.tsx`
+
+#### 5. Metadata ArrayBuffer Detachment Fix (`e9bbb1a`)
+- **Problem**: Compressed files showed 44.1 kHz / 16-bit instead of original 48 kHz / 24-bit
+- **Root cause 1**: In `lib/audio-compression.ts`, `decodeAudioData(arrayBuffer)` detaches the ArrayBuffer (transfers ownership), making it empty. `parseFileHeader()` was called AFTER decode → read empty buffer → fell back to 16-bit/null defaults.
+- **Root cause 2**: In `app/page.tsx`, pre-compression header parse (lines 727-748) correctly captured original metadata, but line 769 (`originalMetadata = metadata`) unconditionally overwrote it with wrong values from compression result.
+- **Fix 1**: Moved `parseFileHeader()` BEFORE `decodeAudioData()` in `audio-compression.ts`
+- **Fix 2**: Changed `page.tsx` to only use compression metadata as fallback: `if (!originalMetadata) { originalMetadata = metadata }`
+
+#### 6. Spanish Accent Fix (`95ee70a`)
+- Found by final audit: `'analisis'` → `'análisis'` in 2 download filename fallbacks in `app/page.tsx`
+
+#### 7. Stripe Branding Update
+- User updated Stripe Dashboard > Business details > Business name from "Matias Carvajal" to "Mastering Ready"
+- Checkout page immediately reflected correct branding
+
+#### 8. Final 4-Agent Pre-Launch Audit — ALL PASS
+- **Frontend UI/Brand**: 1 blocker found (accent) → fixed in commit `95ee70a`
+- **Security/Payments**: 0 issues. Auth token flow correct, ALLOWED_ORIGINS whitelist in place, no exposed secrets
+- **Analyzer Backend**: 0 issues. v7.4.2 algorithms intact, IP rate limiting active, all endpoints secured
+- **Build/Config/Deploy**: 0 issues. Build clean, env vars configured, Vercel deployment healthy
+
+#### Commits to main (Part 9)
+1. `3849e92` - fix: checkout auth — send access token via header instead of SSR cookies
+2. `71d85e9` - fix: sync compression UI indicator threshold to 50MB
+3. `e9bbb1a` - fix: correct metadata capture — parse WAV header before decodeAudioData
+4. `95ee70a` - fix: correct Spanish accent in analysis filename fallback
+
+**Git state**: main on `95ee70a`, pushed. Build clean. Vercel production deploy healthy.
+
+---
+
+## LAUNCH DAY STEPS (Feb 11, 2026)
+
+**3 remaining payment verification steps:**
+
+1. **Subscribe with admin account** — Go to `/subscription`, click Pro Monthly ($5.49 COP pricing). Use real card. After payment, verify:
+   - Stripe webhook fires → `subscriptions` table updated
+   - Dashboard shows Pro welcome banner
+   - Analysis quota reflects Pro limits
+
+2. **Test Customer Portal** — From `/subscription`, click "Gestionar suscripción". Verify Stripe Customer Portal opens. Check invoice visibility and payment method management.
+
+3. **Cancel subscription** — In Customer Portal, cancel. Verify:
+   - `subscriptions.status` changes to `canceled` or `active` with `cancel_at_period_end = true`
+   - After period end, user downgrades to Free tier
+   - Dashboard reflects free limits
+
+4. **Verify phone** in Stripe Dashboard (currently Mat's brother's phone).
+
+After these 3 steps → all 10 post-deploy checks complete → **Mastering Ready is officially live.**
+
+### Session 2026-02-11 — Launch Day Fixes
+
+**Context**: Launch day. Production is live at `masteringready.com`. Admin subscribed to Pro ($5.49 COP). Testing payment flow, dashboard, PDF download.
+
+#### Launch Day Verification Progress
+| # | Check | Status |
+|---|-------|--------|
+| 1-6 | Homepage, OAuth, analysis, results, compression, subscription page | PASS (Session Part 9) |
+| 7 | Subscribe with real card | PASS — $5.49 COP charged |
+| 8 | Customer Portal | PASS |
+| 9 | Stripe checkout branding | PASS |
+| 10 | Cancel subscription → downgrade | **IN PROGRESS** |
+
+#### 1. PDF Download from Dashboard — COMPLETE
+- `api_request_id` saved with analysis, stored in DB
+- Dashboard "Descargar PDF" button fetches from Render's in-memory job storage
+- Confirmed working in production
+
+#### 2. Payment History — Wired Up (`6d7c5ec`)
+- Subscription page: payment history section now fetches from `payments` table
+- Desktop: table layout (Date, Description, Amount, Status, Receipt link)
+- Mobile: card layout with same info stacked
+- Status badges: green/red/yellow pills with CheckCircle/XCircle icons
+- Empty state: "No hay pagos registrados aún" when no records
+- Fetched in parallel with existing queries (no extra latency)
+
+#### 3. Webhook Payment Dedup Fix (`81c95e0`)
+- **Problem**: 3 duplicate payment records for a single Pro subscription ($5.49 × 3)
+- **Root cause**: `insertPaymentIfNew()` only deduped on `stripe_payment_intent_id`, but subscription payments use invoices (payment_intent is null). Both `checkout.session.completed` and `invoice.paid` fire for the same payment. Redeployments triggered Stripe webhook replays.
+- **Fix**: Added `stripe_invoice_id` dedup check in addition to `stripe_payment_intent_id`
+- **Cleanup**: Deleted 2 duplicate payment rows from Supabase
+
+#### 4. Analysis Save Awaited (`6d7c5ec`)
+- **Problem**: Non-blocking `.then()` save could fail to complete before user navigated to dashboard → analysis missing from DB
+- **Fix**: Changed to `await saveAnalysisToDatabase(...)`. Results still show immediately via `setResult(data)` before the await, so UI isn't blocked.
+
+#### 5. Analysis Loading Spinner (`e6c5f32`)
+- Added purple spinning SVG circle next to rotating methodology messages during analysis
+- Matches compression spinner style (same `@keyframes spin` animation)
+
+#### 6. Fully Parallelized Dashboard/Subscription Fetches (`e6c5f32`)
+- `can_buy_addon` moved from sequential call (after Promise.all) into the Promise.all batch
+- Eliminates redundant `getCurrentUser()` auth round-trip
+- Applied to both dashboard and subscription pages
+
+#### 7. Stable useEffect Dependency (`b08646d`)
+- **Problem**: Dashboard 30s timeout on SPA navigation from analyzer
+- **Root cause**: `[user]` dependency — Supabase `user` object is a new reference on every auth state update, causing useEffect to cancel and restart fetches repeatedly
+- **Fix**: Changed to `[user?.id]` (stable string) across 4 pages: dashboard, subscription, history, settings
+
+#### 8. Auto-Reload on Stalled Fetch (`8cef28c`)
+- **Problem**: Even with user?.id fix, SPA navigation sometimes causes stale Supabase connections that hang indefinitely
+- **Previous behavior**: 30s timeout → shows empty dashboard with "Gratis" / 0 analyses (broken state)
+- **New behavior**: 8s timeout → `window.location.reload()` (full reload always succeeds)
+- Applied to dashboard and subscription pages
+- Users see loading spinner for max ~8s, then clean reload with correct data
+
+#### Admin Counter Issue — Confirmed Admin-Only
+- `analyses_used_this_cycle = 0` despite multiple analyses is caused by admin's manually-created subscription
+- `increment_analysis_count` JOINs `subscriptions.plan_id = plans.id` — admin's subscription may have incorrect plan_id
+- Regular users get subscriptions via Stripe webhook which correctly sets plan_id
+- UNIQUE constraint on `plans.type` prevents duplicate plan rows
+- **No impact on regular users**
+
+#### Commits to main (Session 2026-02-11)
+1. `6d7c5ec` - fix: wire up payment history, await analysis save, inline addon RPC
+2. `81c95e0` - fix: deduplicate payments on invoice_id for subscription webhook events
+3. `e6c5f32` - fix: add analysis spinner, fully parallelize dashboard/subscription fetches
+4. `b08646d` - fix: use stable user.id as useEffect dependency to prevent fetch cancellation
+5. `8cef28c` - fix: auto-reload on stalled fetch instead of showing empty state
+
+**Git state**: main on `d3e1f85`, dev on `8cef28c`, pushed. Build clean.
+
+**Remaining**: Cancel subscription test → verify downgrade → launch announcement.
+
+---
+
+### 2026-02-11 Part 2 — Launch Day Fixes (Session continued from context compaction)
+
+#### Context
+Continued from prior session that ran out of context. All work on `main` branch (launch day).
+
+#### 1. Admin Dashboard Hang Fix (`f367ee2`)
+- **Problem**: Admin page sometimes hung on load
+- **Root cause**: `getAuthHeaders()` called `supabase.auth.getSession()` on stale singleton; `[user, authLoading]` caused repeated useEffect restarts due to object reference changes
+- **Fix**:
+  - `getAuthHeaders()` changed from async (calling singleton) to sync (using `session?.access_token` from AuthProvider context)
+  - Dependency `[user, authLoading]` → `[user?.id, authLoading]` (stable primitive)
+  - `userSort` dependency: `[userSearch, userSort]` → `[userSearch, userSort.field, userSort.asc]` (stable primitives)
+  - All `await getAuthHeaders()` → `getAuthHeaders()` (now synchronous)
+
+#### 2. Mobile Modal Responsiveness (`f367ee2`)
+- 12 modals across 5 files fixed:
+  - `page.tsx`: ContactModal, IpLimitModal, FreeLimitModal, VpnModal, UpgradeModal → `maxHeight: '90vh', overflowY: 'auto'`
+  - `dashboard/page.tsx`: UpgradeModal, ContactModal → same
+  - `subscription/page.tsx`: CancelModal → same + `overscrollBehavior: 'contain'`
+  - `history/page.tsx`: Analysis detail modal → `overscrollBehavior: 'contain'`
+  - `AuthModal.tsx`: Backdrop → `overscrollBehavior: 'contain'`
+  - FeedbackModal close button: 32px → 44px (2.75rem), literal ✕ → Lucide `<X size={20} />`, added aria-label
+
+#### 3. `_compressed` Leak Fix (`f367ee2`)
+- `main.py` line 1055: Status endpoint strips `_compressed` from `job['filename']` during polling
+- Full audit: zero user-facing paths leak the suffix
+
+#### 4. Analysis Not Saving to DB — CRITICAL FIX (`f367ee2`)
+- **Problem**: `saveAnalysisToDatabase` hung silently — console showed `[SaveAnalysis] Saving for logged-in user` but NO success/error after `Promise.all`
+- **Root cause**: Used shared Supabase singleton which had stale internal state after analysis (multiple auth/quota checks corrupted singleton)
+- **Fix**: `saveAnalysisToDatabase` now accepts `sessionTokens` param, creates `createFreshQueryClient()` with tokens from AuthProvider context
+- Both INSERT and RPC use fresh client instead of singleton
+
+#### 5. "Procesamiento Prioritario" Removed (`31d8287`)
+- User decision: "es mejor no prometer algo que en este momento no se hace"
+- Removed from 3 files (page.tsx FreeLimitModal/UpgradeModal, dashboard UpgradeModal, subscription benefit4) in both ES/EN
+
+#### 6. History Page Hang Fix (`5949f9f`)
+- Same stale singleton issue — data fetch hung
+- Added `createFreshQueryClient` + session from context
+- Changed 10s safety timeout (setLoading(false) → empty page) to 8s auto-reload
+
+#### 7. Subscription Page Session Fix (`5949f9f`)
+- `handleCheckout` and `handleManageSubscription` changed from `supabase.auth.getSession()` to `session` from AuthProvider context
+
+#### 8. All Pages Audited — No Hangs
+- settings, dashboard, history, subscription: ALL use `createFreshQueryClient`
+- admin: All 4 data API calls use fresh client (inline login uses singleton — acceptable, one-time operation)
+- page.tsx: 3 fire-and-forget analytics inserts use singleton — non-blocking, non-critical
+
+#### 9. Direct Cancel Subscription API (`ffd7221`)
+- **Problem**: Cancel button redirected to Stripe Customer Portal where user had to navigate and cancel again — confusing, didn't complete
+- **Fix**: New `/api/cancel-subscription/route.ts` endpoint calls `stripe.subscriptions.update(subId, { cancel_at_period_end: true })` directly
+- Modal button calls API in one click — shows "Cancelando..." loading state and error feedback
+- On success, page reloads to reflect updated state
+
+#### 10. Cancellation UI Banner (`a933ab2`)
+- When `canceled_at` is set (subscription scheduled for cancellation):
+  - Yellow warning banner: "Cancelación programada — Tu suscripción se cancelará el [date]. Mantendrás acceso Pro hasta esa fecha."
+  - Cancel button hidden (already cancelled)
+  - "Administrar suscripción" button remains for payment method updates
+- When `canceled_at` is null: normal view with "Próximo cobro" and cancel button
+
+#### 11. Webhook Reactivation Fix (`e769143`)
+- **Problem**: Webhook handler set `canceled_at` when cancelling but never cleared it when subscription was reactivated
+- **Fix**: `canceled_at` now always writes — either the cancellation date or `null`
+
+#### 12. PDF Download in History Page (`78549b3`)
+- **Problem**: History modal only had txt downloads, no PDF (dashboard had it)
+- **Fix**: Added "Descargar PDF" button for Pro users — same on-demand generation from DB data via backend `/api/download/pdf`
+- Extended `Analysis` interface with all fields needed for PDF generation
+
+#### Key Architectural Decisions
+- **Fresh client pattern**: `createFreshQueryClient(sessionTokens)` is the standard for all authenticated data fetches. Shared singleton only for non-critical fire-and-forget operations.
+- **Session from context**: Always get auth tokens from `useAuth()` → `session`, never from `supabase.auth.getSession()` on the singleton.
+- **8s auto-reload**: Safety net for any remaining stale connections — `window.location.reload()` always succeeds.
+- **Direct cancel API > Portal redirect**: Better UX, one click, no external navigation.
+
+#### Commits to main (Session 2026-02-11 Part 2)
+1. `f367ee2` - fix: admin hang, mobile modals, _compressed leak, analysis save with fresh client
+2. `31d8287` - remove: "procesamiento prioritario" from all modals (Phase 2 feature)
+3. `5949f9f` - fix: history page hang + subscription page session handling
+4. `ffd7221` - feat: direct cancel-subscription API, no more portal redirect
+5. `a933ab2` - feat: cancellation notice banner on subscription page
+6. `e769143` - fix: clear canceled_at when subscription reactivated via webhook
+7. `78549b3` - feat: PDF download button in history page for Pro users
+8. `a545c2c` - fix: remove `|| supabase` fallback on settings, history, admin (wait for session)
+9. `46b876c` - ux: analysis modals close on backdrop click, destructive modals require explicit button
+
+#### Admin Notes
+- Admin user (`matcarvy@gmail.com`, id `7a9ced11-...`): `is_admin = true`, unlimited analyses, `is_test_analysis` exclusion — does NOT need Pro subscription
+- "Test Name" was stale `profiles.full_name` — fixed by clicking "Guardar cambios" in Settings (syncs auth metadata → profiles table)
+- Supabase project name on Google OAuth consent screen (`cetgbmrylzgaqnrlfamt.supabase.co`) — free tier limitation, needs Supabase Pro ($25/mo) for custom domain
+
+#### Modal Dismiss Behavior (UX best practice)
+- **Informational modals** (analysis detail, upgrade, contact): close on backdrop click
+- **Destructive modals** (cancel subscription, delete account): require explicit button — no backdrop dismiss
+
+**Git state**: main on `46b876c`, pushed. Build clean.
+
+**Status**: LAUNCHED — Feb 11, 2026. Announced live by user.
+
+### Session 2026-02-12 — Post-Launch Hardening + Anonymous Tracking
+
+#### Context
+First post-launch session. Production live at `masteringready.com` since Feb 11.
+
+#### 1. Render OOM Fix — Memory Optimizations (`52dee8f`)
+- **Problem**: Render Starter tier (512MB) exceeded memory limit under concurrent analysis requests
+- **Root cause**: ~240MB baseline from libraries (librosa, scipy, numpy), no concurrency control, no explicit memory cleanup
+- **3 fixes**:
+  - `asyncio.Semaphore(1)` in `main.py` — serializes analyses (max 1 at a time)
+  - `del y` + `gc.collect()` in `analyzer.py` — frees numpy arrays between chunks
+  - Periodic job cleanup every 5 minutes in `main.py` — removes expired jobs from memory
+- Pushed to main, deployed to Render
+
+#### 2. Admin Feedback Tab Fix (`327f14d`)
+- **Problem**: Retroalimentación tab stuck on "Cargando..." and constantly refreshing
+- **Root cause**: `fetchFeedback` used stale `supabase` singleton instead of `createFreshQueryClient`
+- **Fix**: Switched to fresh client pattern matching other admin fetches
+
+#### 3. Admin Logout Fix (`79ae89b`)
+- **Problem**: "Cerrar sesión" button on admin dashboard didn't work
+- **Root cause**: Used `supabase.auth.signOut()` on stale singleton instead of context `signOut()`
+- **Fix**: Import `signOut` from `useAuth()`, reset `isAdmin` and `adminChecked` states
+
+#### 4. CTA Buttons Updated to MR Voice (`79ae89b`)
+- Blur overlay: "Ver mi análisis" + "Gratis. Sin tarjeta de crédito."
+- Left button (non-logged-in): "Ver mi análisis" + subtext
+- Right button (non-logged-in): "Análisis detallado" + "Desde $5.99"
+- Logged-in users see original download text unchanged
+- Option B chosen after research discussion — calm, precise, no hype
+
+#### 5. Anonymous Analysis Tracking (`77cf817`)
+- **Purpose**: Capture funnel data for users who analyze but don't sign up
+- **New table**: `anonymous_analyses` (migration `20260212000001_anonymous_analyses.sql`, executed in Supabase)
+- **Frontend** (`page.tsx`): Tracks anonymous analyses via `sessionStorage` (`mr_anon_session`) + Supabase insert
+- **AuthProvider**: Links anonymous analyses to user on signup (fire-and-forget update)
+- **Admin stats API**: Returns `anonymousFunnel` metrics (total anonymous, converted, conversion rate)
+- **Admin Overview tab**: New funnel card with 3 metrics
+- **RLS**: Anonymous INSERT allowed, admin-only SELECT, authenticated UPDATE for conversion linking
+
+#### 5. CTA Visual Hierarchy (`b8a9637`)
+- Advisor feedback: free button should feel like natural path, not inferior option
+- Free button: gradient primary + Headphones icon, "Sin tarjeta" (shorter)
+- Paid button: outline secondary + Crown icon
+- Contextual: paid button becomes primary when user has paid access
+
+#### 6. Anonymous Records Table in Admin (`d9944c7`)
+- Individual anonymous analysis records visible in Overview tab below funnel card
+- Last 50 records: filename, score (color-coded), format, country, converted badge, date
+
+#### 7. Performance Optimizations (`ed316c8`)
+- **Optimization #3**: Compressed files (MP3/AAC/M4A/OGG) now probe duration via pydub before chunking decision. Files < 2 min use faster single-pass. Safety net: unknown/zero duration → chunked.
+- **Duration-based progress copy**: Uses actual decoded duration (≥ 3 min → "under 90 seconds", < 3 min → "under 30 seconds"). File-size fallback when header parsing fails.
+- **Optimization #1** (Render keep-alive): DONE — cron-job.org configured `GET https://masteringready.onrender.com/health` every 10 min. Failure notifications ON.
+- **Optimization #2** (chunk 30s→60s): Deferred. Only pursue if #1+#3 gains insufficient after 50-100 analyses. Verification protocol: ±2 point score tolerance, same verdict, same severity levels across 3-5 test files.
+
+#### 8. Cron Jobs Configured (cron-job.org)
+- **Render Keep-Alive**: `GET https://masteringready.onrender.com/health` every 10 min. Prevents Render free tier cold starts (30-60s penalty). Failure notification ON.
+- **Supabase Keep-Alive**: `GET https://masteringready.com/api/health` daily at midnight (America/Bogota). Prevents Supabase free tier pause (7-day inactivity threshold). Failure notification ON.
+
+#### Commits to main (Session 2026-02-12)
+1. `52dee8f` - fix: memory optimizations to prevent OOM on Render Starter (512MB)
+2. `327f14d` - fix: feedback tab using stale singleton — switch to fresh client
+3. `79ae89b` - fix: admin logout + CTA buttons to MR voice (Option B)
+4. `77cf817` - feat: anonymous analysis tracking — capture funnel data for non-registered users
+5. `b8a9637` - ux: visual hierarchy — free button primary, paid secondary, remove crown from free
+6. `d9944c7` - feat: anonymous analyses table in admin Overview — individual records below funnel card
+7. `ed316c8` - perf: skip chunking for short compressed files, duration-based progress copy
+
+**Git state**: main on `ed316c8`, pushed. Build clean. All 22 routes compiled.
+
+### Session 2026-02-12 Part 2 — OOM Elimination
+
+#### Context
+Two OOM crashes on Render Starter (512MB) after launch. Instance failed at 7:50 PM and 8:18 PM on Feb 12. Root cause: Python holding large objects in RAM that could be handled externally.
+
+#### 1. OOM Fix — Memory Architecture Overhaul (`4b2d0db`)
+- **Root cause analysis**: Three compounding memory issues:
+  1. `content` bytes (~66MB) held in closure for entire analysis duration after writing to temp file
+  2. pydub `AudioSegment.from_file()` decoded entire compressed file into Python RAM just to read duration
+  3. `gc.collect()` only every 3 chunks + glibc allocator hoarding freed pages (never returned to OS)
+- **Fix 1**: `convert_to_wav()` now uses `subprocess.run([ffmpeg, ...])` instead of pydub — zero Python memory for AAC/M4A conversion
+- **Fix 2**: Duration probe uses `ffmpeg -i` + regex parse of stderr `Duration: HH:MM:SS.ff` — zero Python memory
+- **Fix 3**: `del content` (sync) / `nonlocal content; content = None` (async) after writing to temp file — frees ~66MB immediately
+- **Fix 4**: `_free_memory()` helper = `gc.collect()` + `ctypes.CDLL("libc.so.6").malloc_trim(0)` — forces glibc to return freed pages to OS
+- **Fix 5**: `gc.collect()` after EVERY chunk instead of every 3 in analyzer.py
+- **Peak memory**: ~350-400MB → ~260-280MB for typical analysis
+- **pydub fully removed from imports** — still in requirements.txt (harmless, not imported)
+
+#### Key Architectural Decisions
+- **malloc_trim is essential**: Python's `gc.collect()` only handles reference cycles. glibc's malloc arena hoards freed pages. `malloc_trim(0)` is the only way to return them to the OS. Wrapped in try/except for macOS compatibility.
+- **ffmpeg subprocess > pydub**: pydub is a Python wrapper that decodes into Python bytes objects. For operations where you don't need the audio data in Python (conversion, duration), subprocess is always better.
+- **nonlocal for closure memory**: `content = None` inside `_run_analysis` requires `nonlocal content` to actually free the outer scope's bytes object.
+
+#### Commits to main (Session 2026-02-12 Part 2)
+1. `4b2d0db` - fix: eliminate OOM on Render 512MB — replace pydub with ffmpeg subprocess, free upload bytes early
+
+**Git state**: main on `4b2d0db`, pushed.
+
+**IP rate limiting confirmed working** — first real blocked user observed Feb 12.
+
+### Session 2026-02-12 Part 3 — Performance Optimization + Verdict Bug + Data Capture
+
+#### Context
+Continued from Part 2. OOM fixes deployed, testing performance and PDF correctness.
+
+#### 1. Verdict Bug Fix (`af65ade`)
+- **Problem**: Dashboard/history PDFs showed wrong verdict (e.g., "Necesita trabajo" for 99/100 score)
+- **Root cause**: `mapVerdictToEnum()` used keyword matching on verdict text — broken for most strings:
+  - English ≥95: "Optimal margin" → "optimal" not in keywords → fell to `needs_work`
+  - Spanish 85-94: "Lista para mastering" → "lista" ≠ "listo" → fell to `needs_work`
+  - Score 20-39: "Compromised margin" → no keywords matched → `needs_work` instead of `critical`
+- **Fix (3 files)**:
+  - `app/page.tsx` + `AuthProvider.tsx`: Replaced `mapVerdictToEnum(verdict)` with `scoreToVerdictEnum(score)` — deterministic, mirrors backend
+  - `main.py` PDF endpoint Mode 1: Reconstructs verdict enum from score (fixes existing DB records)
+- All 3 PDF paths verified correct: main page (EN), dashboard (EN), dashboard (ES)
+
+#### 2. Performance Optimizations (`af65ade`)
+- **gc.collect every 3 chunks** instead of every chunk — `del y` already frees numpy arrays deterministically, gc.collect only catches circular refs (numpy doesn't create them). Saves ~2-3s on 13-chunk analysis.
+- **Compression progress smoothed**: +2/200ms instead of +10/500ms, cap at 92%, 0.4s CSS transition. No more 50→100% jump.
+
+#### 3. Benchmark Result
+- Paraíso Fractal (6.5min WAV, 14 chunks): **70.1 seconds** after clean Render rebuild
+- Progression: 92.9s (baseline) → 84.2s (memory fixes) → 70.1s (gc optimization + clean rebuild)
+- Healthy range: 68-73s. If drifts past 80s → clean Render rebuild + investigate.
+- Clean rebuild only needed for analyzer/memory code changes, not frontend tweaks.
+
+#### 4. Chunk Size Decision
+- 30s chunks confirmed optimal for 512MB Render Starter
+- 45s tested: 2.4x slower per chunk (superlinear STFT scaling + cache locality)
+- 60s tested: OOM (STFT + TruePeak processing exceeded 512MB)
+- Upgrade to Standard ($25/mo, 2GB/1CPU) when revenue justifies it — would enable 60s chunks and ~halve analysis time
+
+#### 5. UTM Attribution Capture (`e8132cf`)
+- **Purpose**: Track marketing attribution for Instagram campaigns and Stream Ready insights
+- **Flow**: `?utm_source=instagram&utm_medium=story&utm_campaign=launch` → `sessionStorage('mr_utm')` → profile INSERT on signup
+- **`page.tsx`**: Captures 5 UTM params from URL on landing page load
+- **`AuthProvider.tsx`**: Reads from sessionStorage on profile creation, saves to `profiles` table
+- Survives OAuth redirect flow (sessionStorage persists within tab)
+
+#### 6. Device Type Tracking (`e8132cf`)
+- **Purpose**: Mobile vs desktop split for Stream Ready build priority decisions
+- **`page.tsx`**: Parses `navigator.userAgent` → `mobile/tablet/desktop`, stores with anonymous analysis
+- **Admin Overview**: Device breakdown pills (📱 mobile / 📋 tablet / 🖥️ desktop) + device column in records table
+- **Stats API**: `deviceBreakdown` array in `anonymousFunnel` response
+
+#### 7. SQL Migration Executed
+```sql
+-- profiles: UTM attribution
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS utm_source TEXT;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS utm_medium TEXT;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS utm_campaign TEXT;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS utm_content TEXT;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS utm_term TEXT;
+
+-- anonymous_analyses: device tracking
+ALTER TABLE anonymous_analyses ADD COLUMN IF NOT EXISTS user_agent TEXT;
+ALTER TABLE anonymous_analyses ADD COLUMN IF NOT EXISTS device_type TEXT;
+```
+
+#### Commits to main (Session 2026-02-12 Part 3)
+1. `af65ade` - fix: verdict bug — score-based enum mapping, smoother compression progress, gc.collect optimization
+2. `e8132cf` - feat: UTM attribution capture on signup + device type tracking for anonymous analyses
+
+**Git state**: main on `e8132cf`, pushed. Build clean.
+
+**What to do next (evidence-based):**
+1. **Shared secret Vercel ↔ Render** (~15 min) — `X-API-Secret` header. Prevents direct Render API abuse.
+2. **Google Search Console** — Add verification ID in `app/layout.tsx` line ~117. Submit sitemap.
+3. **Facebook OAuth** — Meta App Review + Business Verification → re-enable button.
+4. **Monitor**: anonymous funnel conversion (now with device breakdown), UTM attribution on new signups, Render analysis times (benchmark: 68-73s).
+5. **Stream Ready data audit**: Comprehensive audit completed — MasteringReady captures 33 tables of data. Key gaps identified: user journey events, post-analysis behavior, cohort analysis. UTM + device tracking now filling two critical gaps.
+
+**Next product**: Stream Ready (video creators platform) — separate codebase `~/streamready/`. See `~/streamready/CLAUDE.md`.
+
+---
+
+### Session 2026-02-12 Part 4 — Stream Ready Backend Integration
+
+#### Stream Ready Endpoints Added to `main.py`
+
+Added `/api/stream/analyze` and `/api/stream/health` endpoints to the shared Render backend. Stream Ready is a **completely separate product** for video/audiovisual content creators (YouTube, TikTok, Instagram, Facebook). It shares the analysis engine with MR but has its own frontend, brand, voice, and audience.
+
+**Changes to `main.py`:**
+
+1. **CORS Origins** (line ~245): Added `https://stream.masteringready.com` + `http://localhost:3001`
+2. **FFPROBE_EXE** (line ~68): Derived from existing `FFMPEG_EXE` path for video duration checks
+3. **Stream Ready section** (lines ~1417-1872): 2 endpoints + 8 helper functions, all `_sr_` prefixed
+
+**`POST /api/stream/analyze`**: Video upload → ffprobe duration check → ffmpeg audio extraction → shared `analysis_semaphore` → `analyze_file()` → platform compliance calculation → bilingual plain-language response (no technical jargon). Privacy-first: video deleted immediately after audio extraction, WAV deleted after analysis.
+
+**`GET /api/stream/health`**: Returns `{"status": "ok", "service": "streamready"}`
+
+**Key architectural decisions:**
+- Shares MR's `asyncio.Semaphore(1)` — SR and MR analyses are mutually exclusive on 512MB Render
+- Translation layer is server-side — frontend never sees LUFS/dBTP/PLR values
+- All SR functions `_sr_` prefixed to avoid collisions with MR code
+- `strict=False` always — content creators, not mastering engineers
+
+**Git state**: `main.py` modified locally, not committed yet (waiting for user to push).
+
+---
+
+### Session 2026-02-13 — Bug Fixes: PDF/Verdict Consistency, GoTrueClient, Console Cleanup
+
+#### 1. Verdict Text Consistency (PDF + Dashboard + History match Analyzer)
+
+**Problem**: PDF, dashboard, and history showed different verdict texts for the same score:
+- Fresh analysis: "⚠️ Margen suficiente (revisar sugerencias)" (full analyzer verdict)
+- PDF from DB: "Casi listo" / "Almost ready" (simplified 4-value enum label)
+- Dashboard/History: "Casi listo" (same simplified enum)
+
+**Root cause**: DB stores only 4 verdict enums (`ready`/`almost_ready`/`needs_work`/`critical`), but analyzer has 7 score tiers. The PDF and dashboard used enum→label mapping that lost granularity.
+
+**Fix**: All three locations now derive verdict from **score** (always stored in DB), matching the analyzer's `score_report()` exactly:
+
+| Score | ES | EN |
+|-------|----|----|
+| ≥95 | Margen óptimo para mastering | Optimal margin for mastering |
+| ≥85 | Lista para mastering | Ready for mastering |
+| ≥75 | Margen suficiente (revisar sugerencias) | Sufficient margin (review suggestions) |
+| ≥60 | Margen reducido - revisar antes de mastering | Reduced margin - review before mastering |
+| ≥40 | Margen limitado - ajustes recomendados | Limited margin - adjustments recommended |
+| ≥20 | Margen comprometido para mastering | Compromised margin for mastering |
+| ≥5 | Requiere revisión | Requires review |
+| <5 | Sin margen para procesamiento adicional | No margin for additional processing |
+
+**Files changed:**
+- `analyzer.py` (PDF generation): Replaced static `VERDICT_LABELS` dict with score-based mapping
+- `app/dashboard/page.tsx`: Added `scoreToVerdictLabel(score, lang)` function, replaced `t.verdicts[enum]` lookups
+- `app/history/page.tsx`: Same `scoreToVerdictLabel()` function added, same replacement
+- `app/page.tsx`: `cleanReportText()` aligned with dashboard/history version (added `Puntuación MR`, `ÁREAS A MEJORAR`, `✓→•`, `💡 Recomendación` patterns)
+
+#### 2. Multiple GoTrueClient Instances Fix
+
+**Problem**: Navigating between analyzer → dashboard → PDF download → back → analyze again caused GoTrueClient counter to increment (1, 2, 3, 4, 5...) because `createFreshQueryClient()` created a NEW Supabase client on every call.
+
+**Fix**: `lib/supabase.ts` — Added module-level cache (`_cachedFreshClient` + `_cachedAccessToken`). If the access token hasn't changed, the existing fresh client is reused instead of creating a new one.
+
+```typescript
+let _cachedFreshClient: any = null
+let _cachedAccessToken: string | null = null
+// In createFreshQueryClient: check if same token → reuse cached client
+```
+
+#### 3. Console Debug Logging Removed (Production Hardening)
+
+**Problem**: 165+ console.log/console.warn statements in frontend code with no NODE_ENV checks. Reveals:
+- `[Geo]` logs: pricing strategy and country detection
+- `[SaveAnalysis]` logs: auth/quota flow and DB insert pattern
+- CTA debug logs: conditional display logic
+- PDF download debug logs
+
+**Fix**: Removed all debug `console.log` statements. Kept `console.error` for production error tracking.
+
+**Files cleaned:**
+- `lib/geoip.ts` — Removed `[Geo]` debug logs
+- `app/page.tsx` — Removed `[SaveAnalysis]`, `[Analysis]`, QuotaGuard, PDF debug logs
+- `components/auth/AuthProvider.tsx` — Removed `[SaveAnalysis]` verbose traces
+- `components/Results.tsx` — Removed CTA debug logs
+- `app/dashboard/page.tsx` — Removed debug logs
+- `app/history/page.tsx` — Removed debug logs
+- `app/subscription/page.tsx` — Removed debug logs
+- `app/settings/page.tsx` — Removed debug logs
+
+#### 4. Supabase Health Endpoint Fix
+
+**Problem**: Supabase keep-alive cron job (cron-job.org) failing. The `/api/health` endpoint queried `profiles` table with `select('id').limit(1)` — likely blocked by RLS for anonymous requests.
+
+**Fix**: Changed to `select('count', { count: 'exact', head: true })` which returns count metadata without requiring row-level read access.
+
+**Git state**: Committed and pushed as part of `111f6ed` (Session 2026-02-13 Part 2 batch).
+
+---
+
+### Session 2026-02-13 Part 2 — Progress Bar Fix + Infinite Reload Fix
+
+#### Context
+Continued from Session 2026-02-13 (context compaction). Main task: fix progress bar stuck at 0%/1% during analysis. Secondary: fix dashboard infinite reload loop.
+
+#### 1. Progress Bar Bug — Root Cause Analysis
+
+**Original symptom**: Progress bar stays at 0% during entire analysis, then jumps to results.
+
+**Investigation progression (across Sessions 2026-02-13 and 2026-02-13 Part 2):**
+
+1. **`decodeAudioData()` hang** (FIXED `7daf256`): Browser WebAudio API hung permanently on 2nd analysis, blocking upload. Fixed by removing AudioContext for files <50MB, using WAV header math for duration.
+
+2. **`result` state hiding progress bar** (FIXED `be6e299`): Second analysis kept `result` from first analysis set. `{!result ? (upload area) : (results)}` hid progress bar. Added `setResult(null)` at start.
+
+3. **Progress bar inside disabled `<button>`** (FIXED `388c7e3`): Progress bar + spinner + compression UI were all rendered inside `<button disabled={loading}>`. Refactored: progress/compression display as standalone `<div>` elements, button only renders when idle.
+
+4. **Diagnostic logging** (`388c7e3`): Added `console.error('[Progress]')` at every `setProgress` call to trace execution.
+
+5. **Diagnostic results** (user tested): ALL setProgress calls execute correctly:
+   - `Set to 1, 3, 5, 7, 10` — all fire
+   - Poll responses: `progress: 10` (×19), then `27, 35, 52, 100`
+   - Functional updater: `10→10, 10→27, 27→35, 35→52, 52→100`
+   - **But UI stays at 1% throughout**
+
+6. **React 18 automatic batching** (ROOT CAUSE): React 18 batches ALL state updates in async event handlers (including `setProgress` calls from `handleAnalyze` and even from `setInterval` callbacks). The browser never gets a painting opportunity between batched updates. The `progress` state IS updated internally, but React never flushes a render that the browser can paint.
+
+7. **Ref + interval approach** (FAILED `e045529`): Used `progressRef` for instant writes + `setInterval(300ms)` calling `setProgress(progressRef.current)`. Still didn't paint — React's batching extends even to timer-based setState.
+
+8. **Direct DOM manipulation** (CURRENT FIX `7be3f46`): Bypass React entirely. `progressRef.current` written from async handler. `setInterval(300ms)` reads ref and writes directly to DOM via `document.getElementById`:
+   - `#mr-progress-fill` → `style.width = ${val}%`
+   - `#mr-progress-text` → `textContent = ${val}%`
+
+**Status**: Deployed, awaiting user verification.
+
+**Key architectural insight**: React 18's automatic batching is more aggressive than documented. Even `setInterval` callbacks that call `setState` don't guarantee browser paint between updates when the component is mid-async-operation. For real-time progress indicators, direct DOM manipulation is the reliable approach.
+
+#### 2. Infinite Reload Loop Fix (`fdb332b`)
+
+**Problem**: Dashboard (and 4 other pages) had an 8-second auto-reload safety timeout that caused infinite reload loops when fetches consistently failed (NetworkError, stale Supabase connections).
+
+**Root cause**: `useEffect` with `[loading]` dependency called `window.location.reload()` after 8s if `loading` was still true. After reload, `loading` starts true again, fetch fails again, 8s → reload → infinite loop.
+
+**Fix**: Added `sessionStorage` flag per page (e.g., `mr_dash_reload`) to limit auto-reload to **1 attempt max**. Flag cleared when loading succeeds.
+
+**Pages fixed**: dashboard, history, subscription, settings, admin (5 pages).
+
+#### 3. Backend Progress Gap (Known Behavior)
+
+**Observation**: Backend stays at `progress: 10` (format detected) for ~19 consecutive polls before chunk processing starts (27%). This is normal — Render cold starts, semaphore wait, and initial file reading cause delay between format detection and chunk processing.
+
+**Not a bug**: The progress values from the backend are correct (10→18→27→35→44→52→61→70→75→85→95→100). The gap just means the backend spends most time at the beginning (loading file) rather than during chunk processing.
+
+#### Commits to main (Session 2026-02-13 Part 2)
+1. `388c7e3` - fix: move progress bar out of disabled button + add diagnostic logging
+2. `fdb332b` - fix: prevent infinite reload loop on all pages (sessionStorage guard)
+3. `e045529` - fix: progress bar updates via ref + interval (React 18 batching bypass attempt)
+4. `7be3f46` - fix: bypass React rendering — update progress bar via direct DOM manipulation
+
+**Git state**: main on `7be3f46`, pushed. Build clean.
+
+**Progress bar fix status**: Direct DOM manipulation deployed (`7be3f46`). Awaiting user verification. If DOM approach doesn't work either, next step would be investigating whether the `useEffect([loading])` interval even fires (add console.error inside interval callback).
+
+---
+
+**MR next steps (priority order):**
+
+### PRIORITY 1: Free Tier Change — 2 Rápido → 1 Full (Completo + PDF)
+Change free tier from "2 lifetime Rápido-only" to "1 full analysis with Completo + PDF". Better conversion — full product experience, then upsell.
+
+**Current implementation:**
+- Supabase RPC `can_user_analyze`: checks `profiles.analyses_lifetime_used` against limit of 2
+- Backend already generates ALL 3 reports (Rápido/Resumen/Completo) for every analysis — gating is frontend-only
+- `hasPaidAccess` state controls Completo tab + PDF: true for admin/Pro/Single, always false for free users
+- Tab gating: `app/page.tsx` lines 2640-2656. PDF gating: lines 3160-3224.
+
+**Changes needed:**
+1. Supabase migration: limit 2 → 1
+2. `app/page.tsx`: Update `hasPaidAccess` to grant free users full access when viewing their analysis result (Option A: `result !== null` for free users → true)
+3. Timing: counter increments after analysis (background save), must not flicker tabs
+4. Copy: "2 análisis gratis" → "1 análisis completo gratis" across page.tsx, subscription, AuthModal
+
+**Open question:** Does "1 full" include PDF download? Likely yes for max conversion.
+
+### PRIORITY 2: Analysis Flow Audit — Clean & Fast
+Verify analysis flow is optimized before adding features. Previous session fixed: module-level quota cache, timeout wrappers, mutex leak, progress desync, non-blocking DB save. Audit for: remaining unnecessary awaits, redundant API calls, leftover debug code, parallelization opportunities.
+
+### PRIORITY 3: Dark/Light Mode Toggle
+CSS variables approach (`[data-theme="dark"]`/`[data-theme="light"]` in `app/globals.css`). Works with existing inline styles: `style={{ background: 'var(--mr-bg-card)' }}`. Blocking `<script>` in `<head>` prevents flash. `localStorage('mr-theme')` + `prefers-color-scheme` fallback. `ThemeToggle` component (sun/moon SVG) next to lang toggle. ~30 CSS variables, 700+ hardcoded hex values to migrate across 8+ files. Mind2Magic CRM reference: `data-theme` attribute, 5-layer bg system.
+
+### PRIORITY 4: eBook Migration from Payhip
+New Stripe product `ebook` at $15 USD flat. DB: `has_ebook BOOLEAN` on profiles. Checkout + webhook + protected PDF download API. New `/ebook` page. Replace 3 Payhip links (page.tsx lines 3753, 3946 + layout.tsx line 248).
+
+### Other
+5. **SEO audit + Google Search Console** — Submit sitemap, add verification ID.
+6. **Shared secret Vercel ↔ Render** — `X-API-Secret` header.
+7. **Facebook OAuth** — Meta App Review + Business Verification.
+8. **Monitor**: anonymous funnel, UTM attribution, Render analysis times, device breakdown.
+9. **Stream Ready deploy** — Backend ready in `main.py`. Frontend at `~/streamready/`.
+
+---
+
+### Session 2026-02-14 — Second Analysis Hang Fix + Progress Desync + Admin Tooltip
+
+#### 1. Second Analysis Hang (PRIMARY BUG — FIXED)
+
+**Symptom**: First analysis works, second one hangs — progress bar shows but no POST request reaches Render.
+
+**Root cause (confirmed via diagnostics)**:
+- GoTrueClient conflicts cause auth state flicker between analyses
+- `userAnalysisStatus` (React useState) resets to null
+- Second analysis falls through to `await checkCanAnalyze()` on stale Supabase singleton, which hangs indefinitely
+
+**Diagnostic evidence** (added in `070320e`):
+- First analysis: `{ cached: true, can: true, reason: "ADMIN" }`
+- Second analysis: `{ cached: false, can: undefined, reason: undefined }` → hung on checkCanAnalyze()
+
+**Fix — Module-level quota cache** (`e8ad4a5`):
+- `let _quotaCache: AnalysisStatus | null = null` outside the component (survives React state resets)
+- All 6 `setUserAnalysisStatus()` calls also write to `_quotaCache`
+- `handleAnalyze` checks `userAnalysisStatus || _quotaCache` before falling through to RPC
+- `handleReset` quota check uses same fallback
+
+**Supporting fix — Mutex leak** (`070320e`):
+- `isAnalyzingRef.current = true` at line 670 but early return at line 680 (before try/finally) didn't reset it
+- Added `isAnalyzingRef.current = false` before early return
+
+**Supporting fix — Timeout wrappers** (`070320e`):
+- `checkCanAnalyze()` wrapped in 8s `Promise.race` timeout
+- `checkIpLimit()` wrapped in 8s timeout
+- Prevents indefinite hang if stale singleton is reached
+
+#### 2. Progress Percentage Desync After Compression (FIXED)
+
+**Symptom**: Large files showed ~45% when analysis just started, because CSS animation began when Analyze was clicked (before 10-15s compression).
+
+**Fix** (`13e5dbd`): Reset `progressAnimDuration`, `progressKey`, and `progressStartRef` AFTER compression completes, not when button is clicked.
+
+#### 3. Admin Spectral Tooltip Delay (FIXED)
+
+**Symptom**: "Perfil espectral por rango de puntuación" bars took ~500ms to show percentage on hover vs instant for other bars.
+
+**Root cause**: Used native HTML `title` attribute (browser-imposed delay) instead of custom React tooltip.
+
+**Fix** (`13e5dbd`): Switched to `onMouseEnter`/`onMouseLeave` → `setChartTooltip()` pattern matching `renderBarChart`.
+
+#### 4. Diagnostic Log Cleanup (DONE)
+
+Removed all `[MR-Q]`, `[MR-1]`, `[MR-2]`, `[MR] Uploading` console.error logs added during debugging (`13e5dbd`).
+
+#### Commits to main (Session 2026-02-14 Part 1)
+1. `070320e` - fix: timeout on quota check + mutex leak fix + diagnostic logs
+2. `e8ad4a5` - fix: module-level quota cache (actual fix for second analysis hang)
+3. `13e5dbd` - fix: progress desync after compression + admin tooltip + diagnostic cleanup
+
+**Key architectural insight**: React state (`useState`) is unreliable when GoTrueClient conflicts cause auth state flicker → component re-renders → state loss. Module-level variables outside the component persist for the entire page lifecycle and serve as a reliable fallback.
+
+---
+
+### Session 2026-02-14 Part 2 — Free Tier Change: 2 Rápido → 1 Full (Completo + PDF)
+
+#### Problem
+Free tier gave 2 Rápido+Resumen-only analyses — undersells the product. Users never experience the full Completo report or PDF download before hitting the paywall.
+
+#### Solution
+Changed to 1 full analysis (Completo + PDF included) for better conversion. Anonymous users get 1 trial, then IP block funnels them to account creation.
+
+#### Changes
+
+**Supabase migration** (`20260214000001_free_tier_to_1_full.sql`):
+- `can_user_analyze`: free limit `>= 2` → `>= 1`, returns `analyses_limit: 1`. Admin bypass preserved.
+- `check_ip_limit`: IP limit `>= 2` → `>= 1`
+
+**Backend** (`ip_limiter.py`):
+- `MAX_FREE_ANALYSES_PER_IP`: 2 → 1
+
+**Main page** (`app/page.tsx`):
+- Added `effectiveHasPaidAccess` computed boolean: `hasPaidAccess || (isLoggedIn && result !== null && userAnalysisStatus?.analyses_used <= 1)`
+- Grants Completo tab + PDF download for free user viewing their 1st analysis result
+- Replaced `hasPaidAccess` with `effectiveHasPaidAccess` in 8 gating locations (tab click, crown icon, PDF button styling/click/label)
+- IpLimitModal copy: "1 análisis de prueba" + benefits "1 análisis completo gratis" + "Informe Completo + PDF"
+- FreeLimitModal copy: "Has usado tu análisis completo gratis"
+
+**Dashboard** (`app/dashboard/page.tsx`):
+- Added `hasFullAccess = isPro || (!isPro && userStatus?.analyses_used <= 1)`
+- Replaced `isPro` with `hasFullAccess` in 9 gating locations (Completo tab click, crown icon, content gate, text download, PDF download, upgrade prompt)
+- Counter display: `/ 2` → `/ 1`, `2 -` → `1 -`
+- Free limit threshold: `>= 2` → `>= 1`
+- Welcome bonus cap: `Math.min(..., 2)` → `Math.min(..., 1)`
+
+**Copy updates** (4 files):
+- `components/auth/AuthModal.tsx`: benefits → "1 análisis completo gratis", "Informe Completo + PDF", "Guardar en Mis Análisis"
+- `app/auth/signup/page.tsx`: subtitle + benefit → "1 análisis completo gratis" / "1 free full analysis"
+- `app/terms/page.tsx`: "1 análisis completo para empezar, incluye informe completo y PDF"
+- `app/layout.tsx`: SEO meta descriptions → "1 free full analysis"
+
+**Config cleanup** (`supabase/config.toml`):
+- Removed deprecated keys (`[project]`, `db.password`, `auth.enable_confirmations`, `realtime.poll_*`) for Supabase CLI v2 compatibility
+
+#### Auth redirect flow (verified safe)
+Anonymous → analyze → result + `localStorage('pendingAnalysis')` → signup (OAuth redirect) → `AuthProvider.savePendingAnalysisForUser()` → DB save → redirect to `/dashboard` → `hasFullAccess` checks `userStatus.analyses_used <= 2` from DB → Completo + PDF unlocked. No dependency on in-memory `result` state.
+
+#### Supabase CLI installed
+- `supabase` v2.75.0 via Homebrew. Not yet linked (needs access token for `supabase login`).
+- Migrations run manually via SQL Editor in Supabase Dashboard.
+
+#### Analysis Flow Audit — CLEAN (no issues)
+Full audit of `handleAnalyze`, `handleReset`, `saveAnalysisToDatabase`, `lib/api.ts`, `AuthProvider`, and backend `main.py`. 37 checks passing, 0 issues. All `console.error` (13) and `console.warn` (2) are intentional production error tracking. Zero `console.log`/`console.debug` remaining. Flow is optimized: cached quota, parallel DB ops, non-blocking saves, timeout wrappers, adaptive polling.
+
+#### Anonymous CTA Simplification
+Removed premature "$5.99 Detailed analysis" button from anonymous view. Anonymous users see single CTA: "View my analysis — Free. No credit card." → signup. The $5.99 upsell only appears for logged-in users who've exhausted free analyses.
+
+#### Free Tier Final Decision: 2 Full Analyses (not 1)
+Initial change was 1 full analysis. After research, determined the **aha moment** for audio analysis SaaS is the **improvement loop** (analyze → fix in DAW → re-analyze → see score improve), not the first score alone. 1 analysis = user sees problem but never experiences solution. 2 analyses = complete value loop, user is emotionally invested when paywall hits on 3rd.
+
+**Final flow:**
+- **Anonymous**: 1 Rápido analysis → IP blocks (`check_ip_limit >= 1`) → signup modal
+- **Registered free**: 2 full analyses (Completo + PDF) via `can_user_analyze >= 2` → paywall on 3rd
+- **Pro/Single/Admin**: unchanged
+
+**Key implementation details:**
+- `effectiveHasPaidAccess` (page.tsx): `hasPaidAccess || (isLoggedIn && result !== null && analyses_used <= 2)`
+- `hasFullAccess` (dashboard): `isPro || (!isPro && userStatus.analyses_used <= 2)`
+- IP limit: `MAX_FREE_ANALYSES_PER_IP = 1` (ip_limiter.py) + `check_ip_limit >= 1` (Supabase)
+- User limit: `can_user_analyze >= 2` (Supabase) — admin bypass preserved
+- Download Full Report button hidden for anonymous (single CTA funnel), visible for logged-in
+
+#### Commits to main (Session 2026-02-14 Part 2)
+1. `48273e8` - feat: free tier change — full access (Completo + PDF) instead of Rápido-only
+2. `8a54579` - fix: single CTA for anonymous users — remove premature $5.99 upsell
+3. `4e7532d` - fix: 2 free full analyses for registered users, IP limit stays at 1
+
+**Git state**: main on `4e7532d`, pushed. Build clean. All 3 Supabase migrations ran via SQL Editor.
+
+### Session 2026-02-14 Part 3 — Dark/Light Mode + Free Tier Dashboard Fix
+
+#### Dark/Light Mode — Phases 1-4 COMPLETE (`4d08cb9`)
+
+Full dark/light mode implementation across all user-facing pages. 5 parallel background agents migrated ~900+ hardcoded hex colors to CSS variables.
+
+**Foundation (Phase 1):**
+- `app/globals.css` (NEW): 25 CSS variables with `--mr-` prefix. 5-layer bg system (base, card, elevated, hover, input), 3-layer text hierarchy (primary, secondary, tertiary), status color pairs (green/red/amber/blue/purple with bg+text variants for both themes), semantic constants (green, red, amber, blue, purple), layout vars (radius, shadow).
+- `lib/theme.ts` (NEW): `useTheme()` hook → `{ theme, resolvedTheme, setTheme }`. `ThemePreference` = 'system' | 'light' | 'dark'. Persists to `localStorage('mr-theme')`. Listens to `prefers-color-scheme` media query. Sets `data-theme` on `<html>`.
+- `components/ThemeToggle.tsx` (NEW): Sun/Moon toggle button (Lucide icons), 36px circle, bilingual aria-labels.
+- `app/layout.tsx`: Blocking `<script>` in `<head>` reads localStorage before first paint → prevents flash. `import './globals.css'`. `suppressHydrationWarning` on `<html>`.
+
+**Pages migrated (Phases 2-4):**
+- `app/page.tsx` (~357 colors): All backgrounds, text, borders, shadows, gradients → CSS vars. ThemeToggle in header.
+- `app/dashboard/page.tsx` (~146 colors): Same migration + ThemeToggle. Score/status conditional colors preserved.
+- `app/history/page.tsx` (~96 colors): Same migration + ThemeToggle.
+- `app/subscription/page.tsx` (~89 colors): Same migration + ThemeToggle.
+- `app/settings/page.tsx` (~82 colors): Same migration + ThemeToggle + **3-way theme selector** (Sistema/Claro/Oscuro) in new "Apariencia"/"Appearance" section using Lucide Monitor/Sun/Moon icons.
+- `components/auth/AuthModal.tsx` (~36 colors): Modal bg, inputs, borders, error/success states.
+- `components/auth/UserMenu.tsx` (~15 colors): Dropdown bg, menu items, hover states.
+- All 4 auth pages (login, signup, forgot-password, reset-password): Card bg, inputs, gradients.
+
+**Intentionally preserved (not migrated):**
+- Score/status conditional colors (green/blue/amber/red by score range)
+- Brand/decorative gradients (footer dark indigo, CTA purple, modal amber circles)
+- Social platform brand colors (WhatsApp green, Instagram pink)
+- `rgba()` modal backdrops
+- White text on dark/gradient surfaces
+
+**Phase 5 (deferred — later session):**
+- `app/admin/page.tsx` (343 hex colors — admin-only)
+- `app/privacy/page.tsx`, `app/terms/page.tsx` (legal pages)
+- Error pages (`not-found`, `error`, `global-error`)
+- `components/PrivacyBadge.tsx`
+- Supabase migration: `ALTER TABLE profiles ADD COLUMN preferred_theme TEXT DEFAULT 'system'`
+
+#### Free Tier Dashboard Fix — Per-Analysis Full Access (`91ed104`)
+
+**Problem**: Free user's first 2 analyses lost Completo + PDF access on dashboard/history when `analyses_used > 2` (which shouldn't happen, but safety net matters).
+
+**Root cause**: `hasFullAccess` checked global `userStatus.analyses_used <= 2` — once any analysis pushed count past 2, ALL analyses lost full access.
+
+**Fix**: Per-analysis ordinal check on both dashboard and history pages:
+```typescript
+const hasFullAccess = isPro || isAdmin || (() => {
+  if (!selectedAnalysis || analyses.length === 0) return false
+  const sorted = [...analyses].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+  const idx = sorted.findIndex(a => a.id === selectedAnalysis.id)
+  return idx >= 0 && idx < 2
+})()
+```
+
+- Sorts analyses by creation date, grants full access to first 2 only
+- Pro and admin always get full access
+- `can_user_analyze` RPC already blocks the 3rd analysis from running — this is belt-and-suspenders
+- Added `isAdmin` to `useAuth()` destructuring in both pages
+- History page: replaced all `isPro` gating references with `hasFullAccess`
+
+#### Commits to main (Session 2026-02-14 Part 3)
+1. `4d08cb9` - feat: dark/light mode — CSS variable system + color migration across all user-facing pages
+2. `91ed104` - fix: first 2 analyses get Completo + PDF on dashboard/history, rest need Pro
+
+**Git state**: main on `91ed104`, pushed. Build clean. All 23 routes compiled.
+
+### Session 2026-02-15 — Dark Mode Refinement, Bridge Statement, CTA Sublines
+
+#### 1. Bridge Statement Added (`85eead3`)
+- Single-line positioning anchor between hero and "¿Por qué Mastering Ready?" section
+- ES: "Lo importante no es la métrica. Es saber qué hacer con ella."
+- EN: "The metric isn't what matters. Knowing what to do with it is."
+- Own `<div>` with `bridge-section` / `bridge-text` CSS classes
+- Desktop: 1.25rem, max-width 600px, `#667eea` indigo (light) / `rgba(255,255,255,0.6)` (dark)
+- Mobile: 1.065rem (17px), max-width 85vw
+
+#### 2. Bridge Spacing Fix (`86921c8`, `6896060`)
+- Initial 64px padding was asymmetric — features section padding-top added extra space below
+- Fix: bridge bottom padding compensates for features top padding
+- Desktop: 52px above = 24px bridge-bottom + 28px features-top = 52px below
+- Mobile: 40px above = 22px bridge-bottom + 18px features-top = 40px below
+
+#### 3. Dark Mode Refinement (`85eead3`)
+- **Problem**: Dark mode hero looked like "X-ray" / inverted colors. Status backgrounds too saturated, cards lacked depth separation.
+- **globals.css dark theme overhaul**:
+  - Status backgrounds desaturated: `#052e16` → `#121e18` (green), `#450a0a` → `#1e1315` (red), `#2e1065` → `#1a1528` (purple) — muted tints instead of deep saturated darks
+  - Status text softened: `#86efac` → `#6ee7a0` (green), less neon across all colors
+  - Shadows: added `0 0 0 1px rgba(255,255,255,0.04)` inset ring — gives all shadowed cards subtle edge definition on dark surfaces
+  - New `--mr-card-border`: `1px solid #282d3a` in dark, transparent in light
+- **page.tsx**: `border: var(--mr-card-border)` on hero demo card, feature cards, upload area card
+- **Hero CTA button**: Hardcoded `#ffffff` / `#667eea` instead of `var(--mr-bg-card)` / `var(--mr-primary)` — always pops on gradient in both themes
+
+#### 4. CTA Sublines per Score Range (`ba94313`)
+- **Problem**: User clicks CTA after analysis but unsure if it connects to a person or automated feature
+- **Solution**: Added `subline` field to `generate_cta()` in `analyzer.py` — small text under button setting expectation
+
+| Score | ES Button | ES Subline | EN Button | EN Subline |
+|-------|-----------|------------|-----------|------------|
+| 95-100 | Masterizar este track | Escríbenos y coordinamos | Master this track | Let's coordinate |
+| 85-94 | Masterizar este track | Escríbenos y coordinamos | Master this track | Let's coordinate |
+| 75-84 | Preparar mi mezcla | Te orientamos antes del mastering | Prepare my mix | We'll guide you before mastering |
+| 60-74 | Revisar mi mezcla | Te ayudamos a identificar los ajustes | Review my mix | We'll help identify the adjustments |
+| 40-59 | **Trabajar mi mezcla** (was Revisar) | Escríbenos y revisamos juntos | **Work on my mix** | Write us and we'll review together |
+| 20-39 | Trabajar mi mezcla | Escríbenos y revisamos juntos | Work on my mix | Write us and we'll review together |
+| 0-19 | Revisar mi proyecto | Escríbenos, te ayudamos a armar un plan | Review my project | Write us, we'll help you build a plan |
+
+- **Contact messages enriched**: WhatsApp/email now differentiate 3 actions (mastering/preparation/review) instead of 2
+- **Backend**: `cta_subline` field added to `main.py` async job result
+- **Frontend**: Subline displayed as small muted text under CTA button
+
+#### 5. Admin Privileges Restored
+- `is_admin` and `analyses_lifetime_used` reset via Supabase SQL Editor for admin user
+
+#### Commits to main (Session 2026-02-15)
+1. `85eead3` - ux: dark mode refinement + bridge statement
+2. `86921c8` - ux: bridge statement spacing per spec — desktop 64px, mobile 40px, indigo color
+3. `6896060` - fix: equalize bridge statement spacing — compensate for features section padding
+4. `ba94313` - ux: CTA sublines per score range + enriched contact messages
+
+**Git state**: main on `ba94313`, pushed. Build clean. Vercel + Render both deployed.
+
+#### 6. Remember Device Checkbox (`47f947b`)
+- **Purpose**: Toggle session persistence — localStorage (remember, default) vs sessionStorage (forget on browser close)
+- **Implementation**:
+  - `lib/supabase.ts`: Custom `authStorage` adapter delegates `getItem`/`setItem`/`removeItem` to localStorage or sessionStorage based on `mr_session_ephemeral` flag in localStorage
+  - `setRememberDevice(bool)` and `getRememberDevice()` exported helpers
+  - Supabase client singleton uses `storage: authStorage` — no client recreation needed, flag checked dynamically on each storage operation
+  - `AuthModal.tsx`: `rememberDevice` state initialized from stored preference on modal open, checkbox in login form between "Recordar este dispositivo" and "¿Olvidaste tu contraseña?"
+  - `setRememberDevice(rememberDevice)` called before `signInWithPassword()` so session tokens go to correct storage
+- **No Supabase changes needed** — entirely client-side
+- **Signup**: no checkbox (signup always remembers — user will see checkbox on subsequent logins)
+
+#### 7. Bridge Text Dark Mode Color (`47f947b`)
+- Changed `[data-theme="dark"] .bridge-text` from `rgba(255,255,255,0.6)` (muted white) to `#8b9cf5` (lighter indigo)
+- Maintains brand consistency with `#667eea` light mode color
+
+#### 8. Product Rundown for Marketing (`47f947b`)
+- `docs/MR-Product-Rundown.md` — comprehensive briefing document covering product, features, pricing, tech stack, funnel, CTAs, brand voice, upcoming features
+- For pasting into Claude Online for marketing planning
+
+#### Commits to main (Session 2026-02-15 continued)
+5. `47f947b` - feat: remember device checkbox + bridge dark mode color + product rundown
+
+### Session 2026-02-15 Part 2 — Admin Dark Mode + Bridge Spacing + Pricing Doc
+
+#### 1. Admin Dark Mode Migration (`e326516`)
+- Background agent migrated ~286 hardcoded hex colors in `app/admin/page.tsx` to CSS variables
+- All backgrounds, text, borders, shadows, gradients, inputs, shimmer, status badges themed
+- 57 colors intentionally preserved (chart/data visualization, status functions, score conditionals)
+- Login form, loading state, access denied screen all themed
+- Build clean, deployed
+
+#### 2. Bridge-to-Features Spacing (`0dc7231`, `f2d4a0c`, `4da3d8f`)
+- User feedback: too much space between bridge statement and "Why Mastering Ready?" section
+- Three incremental tightenings: ~40% reduction, then micro-tune (~20px more), then final 25% shave
+- Bridge now feels like hero closure, not isolated floating section
+- Desktop total gap: ~5rem → ~0.75rem. Mobile: ~3.6rem → ~0.44rem.
+
+#### 3. Pricing System Document (`docs/MR-Pricing-System.md`)
+- Comprehensive pricing briefing: all 4 plans, 6 tiers, local currency examples, technical flow, exchange rates, quota system, key files, important rules
+
+#### Commits to main (Session 2026-02-15 Part 2)
+1. `e326516` - feat: dark mode migration for admin dashboard — 286 hardcoded colors to CSS variables
+2. `0dc7231` - ux: tighten bridge-to-features spacing — reduce gap ~40%
+3. `f2d4a0c` - ux: micro-tighten bridge-to-features spacing — shave ~20px more
+4. `4da3d8f` - ux: reduce bridge-to-features gap by 25% — tighter transition
+
+**Git state**: main on `4da3d8f`, pushed. Build clean.
+
+**Phase shift**: Design polishing complete. Now entering **distribution + validation phase**. Only tweak based on real user behavior data, not taste/intuition/aesthetics.
+
+### Session 2026-02-15 Part 3 — Remember Device on Login Page + Docs
+
+#### 1. Remember Device Checkbox on `/auth/login` (`8d50580`)
+- **Problem**: Standalone login page (`/auth/login`) was missing the "Remember this device" checkbox that AuthModal already had
+- **Fix**: Added checkbox between password field and forgot password link, matching AuthModal pattern exactly
+- `setRememberDevice(rememberDevice)` called before `signInWithPassword()` so session tokens go to correct storage
+- Translations: "Recordar este dispositivo" (ES) / "Remember this device" (EN)
+- Verified working on both mobile and desktop
+- Text choice: "Recordar este dispositivo" over generic "Remember me" — more precise, on-brand (technical but clear, tells user exactly what it does)
+
+#### 2. Infrastructure Scaling Document Updated (`docs/MR-Infrastructure-Scaling.md`)
+- Restructured around **when each plan is needed** with clear triggers
+- Vercel updated to Pro at $5/mo (shared across 4 projects: MR, CRM, Stream Ready, Nakar)
+- Current total: $13/mo (was $8)
+- Phase timeline: $13 → $31 (Render Standard) → $56 (Supabase Pro) → $116 (Render Pro) → $157 (optional Sentry + email)
+
+#### 3. Pricing System Document (`docs/MR-Pricing-System.md`)
+- Created in Part 2, committed in this batch
+
+#### Commits to main (Session 2026-02-15 Part 3)
+1. `8d50580` - feat: remember device checkbox on standalone login page + docs
+
+**Git state**: main on `8d50580`, pushed. Build clean.
+
+#### 4. Growth Plan + Financial Model Added to Project (`52cb459`)
+- `docs/MR-Dual-Engine-Growth-Plan-v2.docx` — 90-day dual-engine strategy (LATAM 70% / US 30%)
+- `docs/MR-Execution-Calendar.docx` — Day-by-day 12-week execution calendar
+- `docs/MR-Financial-Model-v2.xlsx` — P&L base + optimista scenarios, 12-month projection
+
+**Financial model summary:**
+- Base: 77 active subs M12, $570 MRR, $1,427 net Y1. Cash-flow positive Month 4.
+- Optimista: 197 active subs M12, $1,454 MRR, $4,403 net Y1. Cash-flow positive Month 3.
+- Both: 6% monthly churn, $13/mo COGS, Stripe fees per-transaction.
+- Optimista would likely trigger Render Standard (~Month 8-9, 60-80 daily analyses).
+
+**Git state**: main on `52cb459`, pushed. Build clean.
+
+### Session 2026-02-17 — Pre-Promotion Audit + Security Hardening + Bilingual Fixes
+
+#### Context
+Pre-promotion audit before distributing the site. Meta Pixel and Google Search Console already installed in previous session.
+
+#### 1. Comprehensive Pre-Promotion Audit (7 areas)
+- **Build**: PASS — 23 routes, 0 errors
+- **Security/secrets**: PASS — found stale `console.log` in `lib/supabase.ts:518` leaking quota data
+- **Live headers**: PASS — CSP, HSTS, X-Frame-Options, nosniff all present
+- **SEO**: Found 3 critical issues (logo.png 404, root canonical bleeding, robots.txt missing Disallows)
+- **Public assets**: All exist except logo.png (referenced in Organization schema)
+- **Sitemap**: Had non-indexable pages (auth, subscription)
+
+#### 2. Audit Fixes Applied (`655cc64`)
+1. Removed root canonical from `layout.tsx` (was bleeding to all sub-pages, telling Google they're duplicates of homepage)
+2. Fixed Organization schema logo → existing `icon-512.png` (was referencing non-existent `logo.png`)
+3. Added `bookFormat: 'https://schema.org/EBook'` to Book schema
+4. Removed stale `console.log('Analysis count incremented:', incrementResult)` from `lib/supabase.ts`
+5. Added Disallow rules to `robots.txt`: `/dashboard`, `/history`, `/settings`, `/admin`, `/auth/callback`, `/api/`
+6. Cleaned `sitemap.xml` to 3 indexable pages only (`/`, `/privacy`, `/terms`), updated lastmod dates
+
+#### 3. Server-Side IP Rate Limit Enforcement (`6584f50`)
+- **Problem**: IP limit was frontend-only. Direct API calls to Render (`/api/analyze/start` or `/api/analyze/mix`) bypassed all limits entirely.
+- **Fix**: Added `ip_limiter.check_ip_limit()` check INSIDE both endpoints:
+  - `/api/analyze/start` (polling endpoint): checks before creating job, returns 429 if limit reached
+  - `/api/analyze/mix` (sync endpoint): same enforcement, added `request: Request` parameter
+  - Both are fail-closed: if IP check itself fails, analysis is denied
+- **Remaining gap**: `is_authenticated` form param is self-reported. Will be fixed by signed token system (next session, requires Vercel Pro).
+
+#### 4. Spanish Accent Fixes (~55 strings)
+- `settings/page.tsx`: 12 strings — contraseña (×7), configuración, electrónico, acción, eliminarán, análisis
+- `subscription/page.tsx`: 25+ strings — suscripción (×5), análisis (×9), más, información, facturación, próximo, método (×2), cancelación, descripción, máximo, mantendrás, aún
+
+#### 5. Forbidden Word Fix
+- `subscription/page.tsx`: "Fallido" → "No procesado" (ES) / "Failed" → "Not processed" (EN)
+
+#### 6. Auth Page Loading Text
+- 4 Suspense fallbacks changed: "Loading..." → "Cargando..." (login, signup, forgot-password, reset-password)
+
+#### 7. Accuracy Validation: MR vs iZotope RX 11
+- Tested same file: Billie Jean (Michael Jackson, 128kbit AAC from vinyl)
+- **LUFS**: RX -16.1 vs MR -16.20 (0.1 difference — within tolerance)
+- **True Peak**: RX +0.5 dBTP vs MR +0.28 dBTP (both detect clipping, ~0.22 dB difference likely from oversampling rate)
+- **Dynamic Range**: RX shows LRA 2.9 LU (section-to-section variation), MR shows PLR 16.47 (transient headroom). Different metrics, both valid.
+- **Conclusion**: Core measurements align with $399 industry tool. PLR is the right metric for mastering prep. LRA deferred to Phase 2 / Stream Ready.
+
+#### Commits to main (Session 2026-02-17)
+1. `655cc64` - fix: pre-promotion audit — SEO, security, and indexing cleanup
+2. `6584f50` - fix: server-side IP enforcement + Spanish accent fixes across site
+
+**Git state**: main on `6584f50`, pushed. Build clean.
+
+---
+
+## CURRENT PHASE: DISTRIBUTION + VALIDATION
+
+**Status**: Product complete and stable. Design polishing done. Now building what drives leads, users, and paying customers. All dev work serves the 90-day growth plan (Week 1 starts Feb 17, 2026).
+
+### Growth Plan Context (read `docs/MR-Dual-Engine-Growth-Plan-v2.docx` for full details)
+- **Engine A** (US/EU, 30%): Reddit Month 1 → Meta Ads + forums Month 2 → Product Hunt Weeks 6-7
+- **Engine B** (LATAM, 70%): FB groups + IG Reels + influencer outreach Month 1 → Meta Ads Month 2
+- **Month 1 goal**: 25-40 registered users, $0-70 budget, organic only until Week 4
+- **Month 3 goal**: 100+ users, 15-25 paid, $100-200 MRR
+- **Decision trigger**: Engine data at Month 1 end → shift budget 80/20 toward winner
+
+### DEV PRIORITIES — Aligned to Growth Calendar
+
+#### Week 1 (Feb 17-23) — Foundation
+- [x] **Meta Pixel installation** — DONE (Session 2026-02-17). Pixel ID `1634157831233542` in `layout.tsx`. CSP updated for Facebook domains.
+- [x] **Google Search Console** — DONE (Session 2026-02-17). Verification tag + file added. Sitemap submitted.
+- [ ] **Signed token system (bulletproof IP enforcement)** — HMAC-signed short-lived tokens via Vercel API route `/api/analyze-token`. Render validates signature. Secret never in browser. Requires Vercel Pro (user setting up billing). ~30 min implementation.
+
+#### Weeks 5-6 (Mar 17-30) — Conversion Layer
+- [ ] **Email onboarding sequence** — THE highest-leverage dev work. 4 bilingual triggered emails:
+  1. Welcome (on signup): "Here's how to get the most from your analysis"
+  2. Score explained (24h after first analysis): "Your mix scored [X] — here's what that means"
+  3. Upgrade nudge (after 2 free analyses): "Here's what Pro gives you" + local currency price
+  4. Re-analysis (14 days inactive): "Upload your latest version and see if your score improved"
+  - Needs: email service integration (Resend or SendGrid, ~$10-20/mo)
+  - This is what turns free signups into paying users. Without it the funnel leaks.
+
+#### When Engine B wins (Month 2-3 data)
+- [ ] **DLocal integration** — Unlocks OXXO (MX), Pix (BR), Mercado Pago (AR/CO). Critical for LATAM paid conversion. If LATAM signups are high but paid conversion <3%, that's the payment method signal — not a PMF failure.
+
+#### Ongoing (supports both engines)
+- [ ] **eBook migration from Payhip** — Stripe product `ebook` at $15 USD flat. Revenue diversification.
+- [ ] **Shared secret Vercel ↔ Render** — Superseded by signed token system (Week 1). HMAC approach is bulletproof vs static secret in JS bundle.
+- [ ] **SEO blog posts** — ES keywords have zero competition: "cómo saber si mi mezcla está lista," "analizar mezcla antes de mastering." EN keywords: "is my mix ready for mastering," "mix analysis tool."
+
+### Phase 2 (data-driven, trigger on evidence)
+- **LRA (Loudness Range) metric** — EBU R 128 LRA as informational metric in MR (no score impact). ~2-3h. PLR is the right metric for mastering prep; LRA is more relevant for Stream Ready (section-to-section loudness variation = what platforms normalize). Add to SR first, MR later if users ask.
+- **Dark Mode Phase 5** — Admin secondary pages (privacy, terms, error pages). Low priority.
+- **Facebook OAuth** — Meta App Review + Business Verification. Only if data shows demand.
+- **Persona Mode** (Músico/Productor/Ingeniero) — Only if funnel data shows users need guidance.
+- **Priority Queue System** — Only if OOM errors return or queue depth >5.
+- **Referral program** — "Give a friend 2 free analyses, get 2 yourself." Manual Month 3, automate after.
+- **Stream Ready deploy** — Backend ready in `main.py`. Target: when MR has stable traffic.
+- **Product Hunt** — Weeks 6-7. Bilingual + privacy-first angle. Prep: 2-min demo video, 10-20 supporters.
+
+### Infrastructure Upgrade Triggers (documented in `docs/MR-Infrastructure-Scaling.md`)
+- **Render Standard ($25)**: 20-30 daily analyses overlapping, or analysis times >80s, or OOM errors. Optimista model: ~Month 8-9.
+- **Supabase Pro ($25)**: DB approaching 400MB (~8K users), or want backups/no pause risk.
+- **Render Pro ($85)**: 100+ daily analyses, or Smart Leveler / Stream Ready video processing.
+- **Vercel**: Already on Pro ($5/mo shared), no upgrade needed.
+- **Stripe/Domain/Cron**: Never need tier upgrades.
+
+### Reference Documents
+- `docs/MR-Dual-Engine-Growth-Plan-v2.docx` — Full 90-day dual-engine growth strategy
+- `docs/MR-Execution-Calendar.docx` — Day-by-day 12-week execution calendar
+- `docs/MR-Financial-Model-v2.xlsx` — P&L base + optimista, 12-month projection
+- `docs/MR-Pricing-System.md` — All plans, tiers, local currency, technical flow, quota system
+- `docs/MR-Infrastructure-Scaling.md` — When each service needs upgrading, break-even tables
+- `docs/MR-Product-Rundown.md` — Full product briefing for marketing/external use
+
+### Session 2026-02-18 — Notification Reset Bug Fix
+
+#### 1. Notification Bell Not Resetting After Dismiss (`NotificationBadge.tsx`)
+- **Problem**: Bell notification kept reappearing after being dismissed (clicked or X'd)
+- **Root cause**: `page.tsx` line 577-587 queries analyses count on every page load / auth state change. If count > 0, calls `setNotification({ type: 'has_analyses' })` — overwrites the dismissed notification. No "already seen" tracking existed.
+- **Fix**: Added dismissed-type tracking in `sessionStorage` (`mr_notif_dismissed`):
+  - `has_analyses`: Shows once per session. Once dismissed, `wasDismissed()` returns true → `setNotification()` skips it
+  - `analysis_ready`: Always shows (new event). Clears its own dismissed state so it always breaks through
+  - `clearNotification()` now calls `markDismissed(type)` before removing notification — so the dismiss persists even when `setNotification` re-fires
+  - Dashboard/history/settings/subscription `clearNotification()` calls also mark as dismissed
+  - New browser session → `sessionStorage` fresh → clean slate
+
+**Commit**: `fix: notification bell stays dismissed after user clears it`
+
+**Git state**: main, pushed. Build clean.
+
+### Session 2026-02-19 — Force Reload Auth Fix (SOLVED) + CTA Voice Alignment
+
+#### 1. Force Reload Logout — FINALLY FIXED (`d25f81c`)
+- **Problem**: Force reload (Cmd+Shift+R) and regular reload logged user out on both desktop and mobile. 5 previous fix attempts failed.
+- **Root cause**: All previous fixes relied on ASYNC Supabase calls (`getSession()`, `setSession()`, `restoreFromStorage()`) which ALL abort during page reload (DOMException: The operation was aborted). Even retries abort. Even the manual JWT decode worked but got overwritten by `onAuthStateChange` firing `SIGNED_OUT` or profile queries aborting inside the callback.
+- **Fix — 3-phase auth initialization**:
+  1. **SYNC (instant, no network)**: On mount, immediately reads tokens from localStorage/sessionStorage, decodes JWT via `atob()`, sets user/session/admin state and `setLoading(false)`. Zero network calls. Cannot abort.
+  2. **ASYNC (background upgrade)**: `getSession()` runs after. If Supabase recovers normally, upgrades state with proper session. If it aborts (force reload), sync state is already set — no harm.
+  3. **EVENTS (guarded)**: `onAuthStateChange` callback wrapped in try/catch (prevents uncaught DOMException). `INITIAL_SESSION` + null → skipped if sync-restored or tokens exist. `SIGNED_OUT` → only clears state when `isSignOutInProgress()` is true (user clicked sign out button). GoTrueClient's internal confusion never clears user state.
+- **Key insight**: The only reliable approach is SYNCHRONOUS — decode the JWT immediately, no network. Let Supabase catch up later.
+- **Also added**: `isSignOutInProgress()` getter exported from `lib/supabase.ts` (was only a setter before)
+- **Confirmed working**: Desktop force reload, mobile force reload, fresh login (no stored tokens), sign out + sign in
+
+#### 2. Mobile Login Fix (`2fa8973`)
+- Previous commit's `INITIAL_SESSION` blocking was too aggressive — blocked fresh logins where no tokens exist in storage
+- Fix: only block when stored tokens are found (reload recovery case)
+
+#### 3. CTA Voice Alignment — DONE (this session continued below)
+
+#### Commits to main (Session 2026-02-19)
+1. `2fa8973` - fix: mobile login — only block INITIAL_SESSION when stored tokens exist
+2. `d25f81c` - fix: force reload auth — sync JWT decode first, async Supabase second
+
+**Git state**: main on `d25f81c`, pushed. Build clean.
+
+### Session 2026-02-19 Part 2 — CTA Voice + Dark Mode Fixes + Collapsible File Info + Recommendation Strip
+
+#### 1. CTA Voice Alignment (commits `838db28`, `3730576` from previous session)
+- Updated `getCtaForScore()` to 7 score ranges with educational third-person voice
+- Contact modal added to history page (was direct WhatsApp link)
+- Dashboard contact messages now include filename/score/action context
+- Scroll lock added to history page modals
+
+#### 2. Collapsible File Info — Reverted on Main Analyzer, Added to Dashboard
+- **Main analyzer (`page.tsx`)**: Reverted to always-visible file info (no toggle). First analysis = full view, no need to collapse.
+- **Dashboard (`dashboard/page.tsx`)**: CSS-based collapsible via `max-height: 0` / `overflow: hidden` (not conditional rendering). Toggle header always visible on both mobile and desktop. Default: expanded on desktop (≥768px), collapsed on mobile. 1rem margin-bottom before tab bar.
+- **History**: No file info section (metadata only used for PDF generation, not displayed).
+
+#### 3. Dark Mode Fixes — Contact Modal + Metrics Bars
+- **Dashboard contact modal**: 6 hardcoded hex colors → CSS vars (WhatsApp green, Email blue, Instagram pink)
+- **Metrics bars** (dashboard + history): `#fef7f0`/`#fed7aa` → `var(--mr-amber-bg)`/`var(--mr-amber)`
+- **General audit**: CTA buttons `#6366f1` → `var(--mr-primary)`, Crown icons `#d97706` → `var(--mr-amber)`, green badges → `var(--mr-green-bg)`/`var(--mr-green)`
+
+#### 4. CTA Below Downloads — Both Pages
+- Dashboard + history: CTA card moved after download buttons
+- Flow: Analysis content → Download buttons → CTA card
+- "Value first, offer second" — user grabs PDF, then sees contact CTA
+
+#### 5. Format Fallback from Filename
+- Dashboard file info: `selectedAnalysis.file_format || selectedAnalysis.filename?.split('.').pop()` — works for old analyses with NULL `file_format` in DB
+- Channels: no fallback possible (requires audio data). New analyses save it; old ones show 5 of 6 fields.
+
+#### 6. Recommendation Text Stripped from Rendered Tabs
+- **Decision**: CTA card is the single source of truth for verdict + next step in UI. PDF stays self-contained with written recommendation.
+- `cleanReportText()` updated on all 3 pages (analyzer, dashboard, history):
+  - Strips `💡 Recomendación: ...` / `💡 Recommendation: ...` lines (with and without emoji)
+  - Strips inline CTA text (`🎧🔧🔍💬` + various openers)
+  - Removed the code that was *adding* `💡` emoji to recommendation text
+- Backend `analyzer.py` unchanged — PDF generation still includes recommendation
+- Analysis content now ends at last technical finding. CTA card handles everything after.
+
+#### 7. Duplicate CTA in Completo Tab — Fixed
+- Backend's `report_write` includes CTA message at the end via `generate_cta()`. `cleanReportText()` regex strips it so only the CTA card shows it.
+
+#### Commits to main (Session 2026-02-19 Part 2)
+1. `4ac2aa9` - fix: move collapsible file info to dashboard, dark mode color fixes
+2. `3730576` - fix: add scroll lock to history page modals
+3. `250c9d3` - fix: file info spacing, remove duplicate CTA from Completo tab
+4. `0c74b85` - fix: CTA below downloads on both pages, format fallback from filename
+5. `9b6c7c8` - fix: collapsible file info via CSS max-height, not conditional rendering
+6. `b6df30d` - fix: strip recommendation text from rendered tabs, keep only in PDF
+
+**Git state**: main on `b6df30d`, pushed. Build clean.
+
+**Key architectural decisions:**
+- **CSS collapse > conditional rendering**: `max-height: 0` / `overflow: hidden` keeps content in DOM, toggle only controls visibility. Smoother animation, no field loss.
+- **One CTA, one source of truth**: Frontend CTA card handles verdict + contact invitation. Backend recommendation only lives in PDF. `cleanReportText()` is the boundary.
+- **`[data-theme]` CSS vars for dark mode**: All new colors use `var(--mr-*)` tokens from `globals.css`. No hardcoded hex in inline styles for theme-sensitive elements.
+
+### Session 2026-02-19 Part 3 — Broken Emoji Fix + CTA Text Cleanup + Dark Mode Polish
+
+#### 1. Broken Emoji Character — ROOT CAUSE FOUND & FIXED (`3f2afe4`)
+- **Problem**: Small broken square character appeared at bottom of analysis text after stripping recommendation/CTA
+- **Root cause**: CTA stripping regex `[🎧🔧🔍💬]` was missing the `u` (Unicode) flag. Without it, JavaScript treats each emoji as two UTF-16 surrogate pairs. The character class matched individual surrogates instead of whole codepoints, leaving orphaned low surrogates that render as broken squares.
+- **Fix (all 3 pages — page.tsx, dashboard, history)**:
+  - Added `u` flag to all emoji-containing regexes
+  - Added mode note stripping (`📊 Análisis realizado con estándares...`)
+  - Added broad CTA line catch: any line starting with 🎧🔧🔍💬 gets stripped (`/\n*[🎧🔧🔍💬][^\n]*/gu`)
+  - Added lone surrogate cleanup (`/[\uD800-\uDFFF]/g`) as safety net
+  - Extended variation selector range (`\u{FE00}-\u{FE0F}`) in orphaned emoji regex
+
+#### 2. CTA Continuation Lines Leaking (`e2ebeb0`)
+- **Problem**: CTA messages are 2 lines — first line starts with emoji (stripped), but second line ("Está técnicamente preparada... escríbenos y coordinamos") survived because it has no emoji prefix
+- **Fix**: Added catch-all regex on all 3 pages: `/\n*[^\n]*(escr[íi]benos|write us)[^\n]*/gi` — strips any line containing "escríbenos" (ES) or "write us" (EN), which all CTA continuation lines share
+
+#### 3. CTA Button White on Purple Gradient (`09c7984`)
+- **Problem**: Dashboard + history CTA buttons used `var(--mr-bg-card)` bg — dark in dark mode, making text unreadable on the purple gradient card
+- **Fix**: Hardcoded `#ffffff` bg + `#6366f1` text — button always sits on purple gradient, needs to pop in both themes
+- Main analyzer page was already correct (hardcoded white/purple)
+
+#### 4. Admin ThemeToggle + Chart Tooltip Fix (`b437fdc`)
+- **ThemeToggle**: Admin page was missing dark/light mode toggle. Added `ThemeToggle` component between lang button and logout button in header.
+- **Chart tooltip invisible**: Background was `var(--mr-text-primary)` = light gray in dark mode, with white text = unreadable. Hardcoded `#1a1a2e` dark bg + `#ffffff` text — visible in both themes.
+
+#### Key pattern: Unicode `u` flag on emoji regexes
+- **ALWAYS use `u` flag** when emoji characters appear in regex character classes or ranges
+- Without `u`, JS regex operates on UTF-16 code units, not Unicode code points
+- Emoji are 2 code units (surrogate pair) — character class matches individual surrogates
+- This applies to both `[🎧🔧🔍💬]` literal classes AND `[\u{1F300}-\u{1F9FF}]` range classes
+
+#### Commits to main (Session 2026-02-19 Part 3)
+1. `3f2afe4` - fix: broken emoji — add u flag to CTA regex, strip mode note, clean lone surrogates
+2. `e2ebeb0` - fix: strip CTA continuation lines containing "escríbenos" / "write us"
+3. `09c7984` - fix: CTA button white bg on purple gradient — dashboard + history
+4. `b437fdc` - fix: add ThemeToggle to admin header + fix chart tooltip visibility
+
+**Git state**: main on `b437fdc`, pushed. Build clean.
+
+### Session 2026-02-19 Part 4 — Dark Mode Final Sweep + UI Polish
+
+#### 1. Download Button Hover Effects (`0aa48f6`)
+- Added hover effects to all 6 TXT + 2 PDF download buttons on dashboard + history
+- TXT: `var(--mr-bg-elevated)` + `translateY(-1px)`. PDF: enhanced boxShadow + `translateY(-1px)`.
+
+#### 2. Dark Mode: Privacy + Terms + Error Pages (`867dd2c`)
+- Migrated privacy + terms pages from ~15 hardcoded colors each → CSS vars
+- Error pages (not-found, error) migrated — global-error left as-is (own `<html>` tag, can't access CSS vars)
+
+#### 3. Dark Mode: `--mr-text-inverse` Fix (`e5852c3`)
+- ROOT CAUSE: `--mr-text-inverse` was `#0D0D14` in dark mode — caused dark/invisible text on all gradient buttons
+- Fixed to `#ffffff` in dark theme. Also changed 4 history page gradient buttons to hardcoded `'white'`.
+- Fixed 7 loading text cases across 7 files from `--mr-text-inverse` to `--mr-text-primary`.
+
+#### 4. TXT Download Buttons → Blue (`68ea444`)
+- All 6 TXT download buttons (3 dashboard, 3 history) changed from `var(--mr-text-primary)` to `var(--mr-primary)` (blue text + blue border), matching main analyzer page style.
+
+#### 5. Tab Hover Effects — All 3 Pages (`68ea444`, `73feb18`)
+- Dashboard + history: underline-style tabs get `var(--mr-bg-hover)` + `var(--mr-text-primary)` on hover (inactive only)
+- Main page: pre-analysis grid buttons + post-analysis report tabs get same hover treatment
+
+#### 6. Subscription Dark Mode Fix (`73feb18`)
+- Replaced 4 hardcoded hex colors: `#d97706` → `var(--mr-amber)`, `#059669` → `var(--mr-green)` in payment status badges + cancel alert icon
+
+#### 7. Full Dark Mode Audit — COMPLETE (`612bfea`)
+- **Auth pages (4 files)**: 5 `#fecaca` error borders → `var(--mr-red)`
+- **Subscription**: 1 `#fecaca` error border → `var(--mr-red)`
+- **Settings**: 2 hardcoded borders (`#fecaca`, `#bbf7d0`) → `var(--mr-red)`, `var(--mr-green)`
+- **Admin**: Verified clean — tooltip intentionally hardcoded dark, 57 data visualization colors correctly preserved
+- **Error pages**: not-found + error clean. global-error can't use CSS vars (own `<html>` tag) — accepted as technical debt.
+
+#### Dark Mode Status — COMPLETE
+All user-facing pages fully themed with CSS variables. Remaining hardcoded colors are:
+- Brand gradients (footer, hero CTA, modal icons) — intentional
+- Data visualization colors (admin charts, score conditionals) — intentional
+- White text on gradient/dark surfaces — intentional
+- `global-error.tsx` — can't use CSS vars (own `<html>`, extremely rare page)
+
+#### Commits to main (Session 2026-02-19 Part 4)
+1. `0aa48f6` - ux: add hover effects to download buttons on dashboard + history
+2. `867dd2c` - feat: dark mode for privacy, terms, 404, and error pages
+3. `e5852c3` - fix: dark mode text-inverse — always white on gradient/colored backgrounds
+4. `68ea444` - ux: blue TXT download buttons + tab hover effects on dashboard and history
+5. `73feb18` - ux: tab hover effects on main page + dark mode fixes on subscription
+6. `612bfea` - fix: dark mode — replace hardcoded #fecaca error borders with var(--mr-red) across 6 files
+
+**Git state**: main on `612bfea`, pushed. Build clean.
+
+---
+
+## Lead Prospector System (Built Feb 20, 2026)
+
+Automated lead discovery system that scans Reddit + YouTube for people expressing mastering pain points. Runs unattended on GitHub Actions, surfaces leads on a standalone admin page for manual outreach.
+
+### Architecture
+- **Python scraper** (`scripts/prospector/`) — GitHub Actions cron every 6h, scans 7 subreddits + YouTube comments
+- **Next.js API route** (`app/api/admin/prospecting/route.ts`) — GET (admin auth, filters+KPIs), POST (shared secret auth from scraper), PATCH (admin status updates)
+- **Standalone page** (`app/prospecting/page.tsx`) — NOT part of `/admin` dashboard. Filterable table, KPI cards, bilingual, dark/light mode
+
+### Key Files
+- `scripts/prospector/config.py` — keywords, subreddits, score thresholds, 6 pain point categories (EN+ES)
+- `scripts/prospector/scorer.py` — weighted keyword matching (primary +0.3, secondary +0.15, bonuses for focused subreddits/questions/recency)
+- `scripts/prospector/sources/reddit.py` — PRAW, 7 subreddits, `subreddit.new(limit=50)`
+- `scripts/prospector/sources/youtube.py` — YouTube Data API v3, 5 search queries, comment scanning
+- `scripts/prospector/poster.py` — POST to API with `X-Prospecting-Secret`, batch 50, 3 retries
+- `supabase/migrations/20260221000001_prospecting_leads.sql` — `prospecting_leads` table, UNIQUE on `(source, source_id)`
+- `.github/workflows/prospector.yml` — cron `0 */6 * * *`, sparse checkout, Python 3.11
+
+### Auth Pattern
+- **Scraper → API**: `X-Prospecting-Secret` header (shared secret, env var `PROSPECTING_SECRET` on Vercel)
+- **Admin → API**: Bearer token + `profiles.is_admin` check (same as other admin routes)
+
+### Scoring
+- 6 categories: loudness, lufs_targets, streaming_targets, mastering_quality, mix_readiness, general_mastering
+- Threshold: 0.3 (Reddit), 0.4 (YouTube — higher to filter comment noise)
+- Negative keywords filter self-promotion ("my service", "check out my", "I offer mastering")
+
+### Deployment Status: CODE COMPLETE, NOT DEPLOYED
+To deploy:
+1. Run SQL migration in Supabase Dashboard
+2. Set `PROSPECTING_SECRET` env var on Vercel
+3. Create Reddit app (reddit.com/prefs/apps, "script" type) → Client ID + Secret
+4. Get YouTube API key from Google Cloud Console
+5. Set 5 GitHub Secrets: `REDDIT_CLIENT_ID`, `REDDIT_CLIENT_SECRET`, `YOUTUBE_API_KEY`, `MR_PROSPECTING_API_URL` (`https://masteringready.com/api/admin/prospecting`), `MR_PROSPECTING_SECRET`
+6. Test via manual `workflow_dispatch` trigger
+
+### Cost: $0/month
+- GitHub Actions: ~12 min/day (well under 2,000 free min/month)
+- Reddit API: free "script" app, 60 req/min
+- YouTube API: ~2,200 units/day (well under 10K free quota)
+- Twitter/X: DEFERRED (free tier doesn't allow search, Basic is $100/mo)
+
+### Future (v2)
+- AI classification via Claude Haiku for nuanced pain point detection
+- Automated outreach draft generation
+- Discord server monitoring
+- Link prospecting leads to MR signups (conversion tracking)
+
+### Growth Context (ACQ Scaling Roadmap)
+MR is at Stage 1 (Monetize) → transitioning to Stage 2 (Advertise). The prospector automates lead discovery so outreach time goes to engagement, not searching. Strategy: find pain point → offer free analysis → convert to paid. Rule of 100: 100 min/day on marketing, prospector handles the "finding" part.
+
+---
+
+## NEXT STEPS (Priority Order)
+
+### IMMEDIATE (next session)
+1. **Demo Pro user** — Create user with automatic Pro plan (30 analyses) for live demo. No admin access. SQL: create auth user + profile + subscription with Pro plan_id.
+
+### SHORT-TERM
+2. **eBook migration from Payhip** — Stripe product `ebook` at $15 USD flat. DB: `has_ebook BOOLEAN`. Checkout + webhook + protected PDF download API. `/ebook` page. Replace Payhip links.
+3. **Signed token system** — HMAC-signed short-lived tokens via `/api/analyze-token`. Render validates signature. Bulletproof API protection. ~30 min.
+4. **Email onboarding sequence** — 4 bilingual triggered emails (welcome, score explained, upgrade nudge, re-analysis). Highest-leverage conversion feature. Needs Resend or SendGrid (~$10-20/mo).
+
+### MEDIUM-TERM (data-driven)
+5. **DLocal integration** — OXXO (MX), Pix (BR), Mercado Pago (AR/CO). Trigger: high LATAM signups but low paid conversion.
+6. **Priority Queue System** — Spec at `docs/specs/priority-queue-system.xml`. Trigger: OOM errors, queue depth >5.
+7. **Stream Ready deploy** — Backend ready in `main.py` (`_sr_` prefix). Frontend at `~/streamready/`. Target: when MR has stable traffic.
+8. **Facebook OAuth** — Meta App Review + Business Verification → re-enable button.
+9. **SEO blog posts** — Zero-competition ES keywords: "cómo saber si mi mezcla está lista", "analizar mezcla antes de mastering".
