@@ -206,13 +206,15 @@ function formatDate(dateStr: string): string {
 // ============================================================================
 
 export default function ProspectingPage() {
-  const { user, session, isAdmin, loading: authLoading } = useAuth()
+  const { user, session, loading: authLoading } = useAuth()
 
   const [lang, setLang] = useState<'es' | 'en'>('es')
   const [leads, setLeads] = useState<ProspectingLead[]>([])
   const [kpi, setKpi] = useState<KpiData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [isAdmin, setIsAdmin] = useState(false)
+  const [adminChecked, setAdminChecked] = useState(false)
 
   // Filters
   const [statusFilter, setStatusFilter] = useState('all')
@@ -241,6 +243,32 @@ export default function ProspectingPage() {
     window.addEventListener('resize', checkMobile)
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
+
+  // Independent admin check (same pattern as /admin page)
+  useEffect(() => {
+    if (authLoading) return
+    if (!user) { setIsAdmin(false); setAdminChecked(true); return }
+    setAdminChecked(false)
+    const checkAdmin = async () => {
+      try {
+        const client = await createFreshQueryClient(
+          session ? { access_token: session.access_token, refresh_token: session.refresh_token } : undefined
+        )
+        if (!client) { setIsAdmin(false); setAdminChecked(true); return }
+        const { data: profile } = await client
+          .from('profiles')
+          .select('is_admin')
+          .eq('id', user.id)
+          .single()
+        setIsAdmin(profile?.is_admin === true)
+      } catch {
+        setIsAdmin(false)
+      } finally {
+        setAdminChecked(true)
+      }
+    }
+    checkAdmin()
+  }, [user?.id, authLoading])
 
   const fetchLeads = useCallback(async () => {
     if (!session?.access_token) return
@@ -314,7 +342,7 @@ export default function ProspectingPage() {
   const totalPages = Math.ceil(totalLeads / limit)
 
   // Auth guard
-  if (authLoading) {
+  if (authLoading || !adminChecked) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'var(--mr-bg-base)', color: 'var(--mr-text-primary)' }}>
         <p>{labels.loading}</p>
