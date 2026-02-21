@@ -2371,15 +2371,15 @@ by Matías Carvajal
                         paddingRight: '2rem',
                       }}
                     >
-                      <option value="">{lang === 'es' ? 'Universal (todos los géneros)' : 'Universal (all genres)'}</option>
-                      <option value="Pop/Balada">Pop / Balada</option>
+                      <option value="">{lang === 'es' ? 'Universal (todos los géneros)' : 'Universal (All Genres)'}</option>
+                      <option value="Pop/Balada">{lang === 'es' ? 'Pop / Balada' : 'Pop / Ballad'}</option>
                       <option value="Rock">Rock</option>
                       <option value="Hip-Hop/Trap">Hip-Hop / Trap</option>
                       <option value="EDM/Electrónica">EDM / {lang === 'es' ? 'Electrónica' : 'Electronic'}</option>
                       <option value="R&B/Soul">R&B / Soul</option>
-                      <option value="Latin/Reggaeton">Latin / Reggaeton</option>
+                      <option value="Latin/Reggaeton">{lang === 'es' ? 'Latino / Reggaeton' : 'Latin / Reggaeton'}</option>
                       <option value="Metal">Metal</option>
-                      <option value="Jazz/Acústico">Jazz / {lang === 'es' ? 'Acústico' : 'Acoustic'}</option>
+                      <option value="Jazz/Acústico">Jazz / {lang === 'es' ? 'Acústica' : 'Acoustic'}</option>
                       <option value="Clásica">{lang === 'es' ? 'Clásica' : 'Classical'}</option>
                       <option value="Country">Country</option>
                     </select>
@@ -3001,14 +3001,27 @@ by Matías Carvajal
 
                         {/* Genre badge — shows detected or user-selected genre */}
                         {(() => {
+                          const genreLabels: { [key: string]: { es: string; en: string } } = {
+                            'Pop/Balada': { es: 'Pop / Balada', en: 'Pop / Ballad' },
+                            'Rock': { es: 'Rock', en: 'Rock' },
+                            'Hip-Hop/Trap': { es: 'Hip-Hop / Trap', en: 'Hip-Hop / Trap' },
+                            'EDM/Electrónica': { es: 'EDM / Electrónica', en: 'EDM / Electronic' },
+                            'R&B/Soul': { es: 'R&B / Soul', en: 'R&B / Soul' },
+                            'Latin/Reggaeton': { es: 'Latino / Reggaeton', en: 'Latin / Reggaeton' },
+                            'Metal': { es: 'Metal', en: 'Metal' },
+                            'Jazz/Acústico': { es: 'Jazz / Acústica', en: 'Jazz / Acoustic' },
+                            'Clásica': { es: 'Clásica', en: 'Classical' },
+                            'Country': { es: 'Country', en: 'Country' },
+                          }
                           const metricsArr = (result as any).metrics || []
                           const freqMetric = Array.isArray(metricsArr) ? metricsArr.find((m: any) => m.internal_key === 'Frequency Balance') : null
                           const userGenre = (result as any).user_genre || null
                           const detectedGenre = freqMetric?.detected_genre
                           const genreConfidence = freqMetric?.genre_confidence
-                          const genreDescription = lang === 'es' ? freqMetric?.genre_description : freqMetric?.genre_description
-                          const displayGenre = userGenre || detectedGenre
-                          if (!displayGenre) return null
+                          const genreDescription = freqMetric?.genre_description
+                          const genreKey = userGenre || detectedGenre
+                          if (!genreKey) return null
+                          const displayGenre = genreLabels[genreKey] ? (lang === 'es' ? genreLabels[genreKey].es : genreLabels[genreKey].en) : genreKey
                           const isUserSelected = !!userGenre
                           const confidencePct = genreConfidence ? Math.round(genreConfidence * 100) : null
                           return (

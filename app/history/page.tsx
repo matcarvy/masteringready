@@ -1179,14 +1179,27 @@ export default function HistoryPage() {
 
                       {/* Genre badge — shows detected or user-selected genre */}
                       {(() => {
+                        const genreLabels: { [key: string]: { es: string; en: string } } = {
+                          'Pop/Balada': { es: 'Pop / Balada', en: 'Pop / Ballad' },
+                          'Rock': { es: 'Rock', en: 'Rock' },
+                          'Hip-Hop/Trap': { es: 'Hip-Hop / Trap', en: 'Hip-Hop / Trap' },
+                          'EDM/Electrónica': { es: 'EDM / Electrónica', en: 'EDM / Electronic' },
+                          'R&B/Soul': { es: 'R&B / Soul', en: 'R&B / Soul' },
+                          'Latin/Reggaeton': { es: 'Latino / Reggaeton', en: 'Latin / Reggaeton' },
+                          'Metal': { es: 'Metal', en: 'Metal' },
+                          'Jazz/Acústico': { es: 'Jazz / Acústica', en: 'Jazz / Acoustic' },
+                          'Clásica': { es: 'Clásica', en: 'Classical' },
+                          'Country': { es: 'Country', en: 'Country' },
+                        }
                         const metricsArr = selectedAnalysis.metrics?.metrics || []
                         const freqMetric = Array.isArray(metricsArr) ? metricsArr.find((m: any) => m.internal_key === 'Frequency Balance') : null
                         const userGenre = selectedAnalysis.metrics?.user_genre || null
                         const detectedGenre = freqMetric?.detected_genre
                         const genreConfidence = freqMetric?.genre_confidence
                         const genreDescription = freqMetric?.genre_description
-                        const displayGenre = userGenre || detectedGenre
-                        if (!displayGenre) return null
+                        const genreKey = userGenre || detectedGenre
+                        if (!genreKey) return null
+                        const displayGenre = genreLabels[genreKey] ? (lang === 'es' ? genreLabels[genreKey].es : genreLabels[genreKey].en) : genreKey
                         const isUserSelected = !!userGenre
                         const confidencePct = genreConfidence ? Math.round(genreConfidence * 100) : null
                         return (
