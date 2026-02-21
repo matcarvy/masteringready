@@ -6,10 +6,9 @@
  * Bilingual: ES LATAM Neutro + US English
  */
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { useAuth } from '@/components/auth/AuthProvider'
-import { createFreshQueryClient } from '@/lib/supabase'
 import { detectLanguage, setLanguageCookie } from '@/lib/language'
 import {
   ArrowLeft, RefreshCw, Search, Filter, ExternalLink,
@@ -233,6 +232,7 @@ export default function ProspectingPage() {
   const [noteText, setNoteText] = useState('')
 
   const [isMobile, setIsMobile] = useState(false)
+  const initialLoadDone = useRef(false)
 
   const labels = t[lang]
 
@@ -244,31 +244,37 @@ export default function ProspectingPage() {
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
 
-  // Independent admin check (same pattern as /admin page)
+  // Admin status derived from fetchLeads response (API route already verifies admin).
+  // No separate Supabase client needed — avoids GoTrueClient lock contention.
   useEffect(() => {
     if (authLoading) return
     if (!user) { setIsAdmin(false); setAdminChecked(true); return }
-    setAdminChecked(false)
-    const checkAdmin = async () => {
+    if (!session?.access_token) { setAdminChecked(true); return }
+    // Attempt fetch — 403 means not admin, success means admin
+    const checkViaFetch = async () => {
       try {
-        const client = await createFreshQueryClient(
-          session ? { access_token: session.access_token, refresh_token: session.refresh_token } : undefined
-        )
-        if (!client) { setIsAdmin(false); setAdminChecked(true); return }
-        const { data: profile } = await client
-          .from('profiles')
-          .select('is_admin')
-          .eq('id', user.id)
-          .single()
-        setIsAdmin(profile?.is_admin === true)
+        const res = await fetch(`/api/admin/prospecting?page=1&limit=50`, {
+          headers: { 'Authorization': `Bearer ${session.access_token}` },
+        })
+        if (res.ok) {
+          const data = await res.json()
+          setLeads(data.leads || [])
+          setTotalLeads(data.total || 0)
+          setKpi(data.kpi || null)
+          setIsAdmin(true)
+          setLoading(false)
+          initialLoadDone.current = true
+        } else {
+          setIsAdmin(false)
+        }
       } catch {
         setIsAdmin(false)
       } finally {
         setAdminChecked(true)
       }
     }
-    checkAdmin()
-  }, [user?.id, authLoading])
+    checkViaFetch()
+  }, [user?.id, authLoading, session?.access_token])
 
   const fetchLeads = useCallback(async () => {
     if (!session?.access_token) return
@@ -289,6 +295,7 @@ export default function ProspectingPage() {
         headers: { 'Authorization': `Bearer ${session.access_token}` },
       })
 
+      if (res.status === 403) { setIsAdmin(false); return }
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
 
       const data = await res.json()
@@ -304,9 +311,10 @@ export default function ProspectingPage() {
   }, [session?.access_token, page, statusFilter, sourceFilter, categoryFilter, searchQuery, lang])
 
   useEffect(() => {
-    if (isAdmin && session?.access_token) {
-      fetchLeads()
-    }
+    if (!isAdmin || !session?.access_token) return
+    // Skip the first trigger — initial load already handled by admin check
+    if (!initialLoadDone.current) return
+    fetchLeads()
   }, [isAdmin, fetchLeads])
 
   const updateLead = async (id: string, updates: Record<string, any>) => {

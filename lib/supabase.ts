@@ -142,7 +142,13 @@ export async function createFreshQueryClient(sessionTokens?: { access_token: str
   }
 
   const fresh = createClient(supabaseUrl, supabaseAnonKey, {
-    auth: { persistSession: false, autoRefreshToken: false }
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      storageKey: 'sb-fresh-query-token',
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      lock: (async <R>(_name: string, _acquireTimeout: number, fn: () => Promise<R>): Promise<R> => fn()) as any,
+    }
   })
   await fresh.auth.setSession(tokens)
   _cachedFreshClient = fresh
