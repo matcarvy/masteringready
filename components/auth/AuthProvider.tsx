@@ -113,7 +113,8 @@ async function savePendingAnalysisForUser(userId: string, userIsAdmin: boolean =
       report_mode: 'write',
       metrics: {
         metrics: analysis.metrics || [],
-        metrics_bars: analysis.metrics_bars || null
+        metrics_bars: analysis.metrics_bars || null,
+        user_genre: analysis.user_genre || null
       },
       interpretations: analysis.interpretations || null,
       report_short: reportShort,

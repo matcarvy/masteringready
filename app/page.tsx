@@ -51,7 +51,8 @@ async function saveAnalysisToDatabase(userId: string, analysis: any, fileObj?: F
   // Combine metrics and metrics_bars into one object for storage
   const metricsData = {
     metrics: analysis.metrics || [],
-    metrics_bars: analysis.metrics_bars || null
+    metrics_bars: analysis.metrics_bars || null,
+    user_genre: analysis.user_genre || null
   }
 
   // Extract file metadata from API response
@@ -250,6 +251,7 @@ function Home() {
   const [lang, setLang] = useState<'es' | 'en'>('es')
   const [mode, setMode] = useState<'short' | 'write'>('write')
   const [strict, setStrict] = useState(false)
+  const [genre, setGenre] = useState<string | null>(null)
   const [langDetected, setLangDetected] = useState(false)
 
   const [loading, setLoading] = useState(false)
@@ -893,6 +895,7 @@ const handleAnalyze = async () => {
       lang,
       mode,
       strict,
+      genre,
       originalMetadata,
       isAuthenticated: isLoggedIn
     })
@@ -2342,6 +2345,50 @@ by Matías Carvajal
                         : 'More demanding commercial standards'}
                     </p>
                   </div>
+
+                  <div>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', fontWeight: '500' }}>
+                      <Music size={16} style={{ color: 'var(--mr-primary)' }} />
+                      {lang === 'es' ? 'Género' : 'Genre'}
+                    </label>
+                    <select
+                      value={genre || ''}
+                      onChange={(e) => setGenre(e.target.value || null)}
+                      style={{
+                        marginTop: '0.375rem',
+                        width: '100%',
+                        padding: '0.5rem 0.75rem',
+                        borderRadius: '0.5rem',
+                        border: '1px solid var(--mr-border)',
+                        background: 'var(--mr-bg-input)',
+                        color: 'var(--mr-text-primary)',
+                        fontSize: '0.875rem',
+                        cursor: 'pointer',
+                        appearance: 'none',
+                        backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
+                        backgroundRepeat: 'no-repeat',
+                        backgroundPosition: 'right 0.75rem center',
+                        paddingRight: '2rem',
+                      }}
+                    >
+                      <option value="">{lang === 'es' ? 'Universal (todos los géneros)' : 'Universal (all genres)'}</option>
+                      <option value="Pop/Balada">Pop / Balada</option>
+                      <option value="Rock">Rock</option>
+                      <option value="Hip-Hop/Trap">Hip-Hop / Trap</option>
+                      <option value="EDM/Electrónica">EDM / {lang === 'es' ? 'Electrónica' : 'Electronic'}</option>
+                      <option value="R&B/Soul">R&B / Soul</option>
+                      <option value="Latin/Reggaeton">Latin / Reggaeton</option>
+                      <option value="Metal">Metal</option>
+                      <option value="Jazz/Acústico">Jazz / {lang === 'es' ? 'Acústico' : 'Acoustic'}</option>
+                      <option value="Clásica">{lang === 'es' ? 'Clásica' : 'Classical'}</option>
+                      <option value="Country">Country</option>
+                    </select>
+                    <p style={{ fontSize: '0.75rem', color: 'var(--mr-text-secondary)', marginTop: '0.25rem' }}>
+                      {lang === 'es'
+                        ? 'Ajusta los umbrales de balance tonal para tu género'
+                        : 'Adjusts tonal balance thresholds for your genre'}
+                    </p>
+                  </div>
                 </div>
               )}
 
@@ -2951,7 +2998,51 @@ by Matías Carvajal
                             });
                           })()}
                         </div>
-                        
+
+                        {/* Genre badge — shows detected or user-selected genre */}
+                        {(() => {
+                          const metricsArr = (result as any).metrics || []
+                          const freqMetric = Array.isArray(metricsArr) ? metricsArr.find((m: any) => m.internal_key === 'Frequency Balance') : null
+                          const userGenre = (result as any).user_genre || null
+                          const detectedGenre = freqMetric?.detected_genre
+                          const genreConfidence = freqMetric?.genre_confidence
+                          const genreDescription = lang === 'es' ? freqMetric?.genre_description : freqMetric?.genre_description
+                          const displayGenre = userGenre || detectedGenre
+                          if (!displayGenre) return null
+                          const isUserSelected = !!userGenre
+                          const confidencePct = genreConfidence ? Math.round(genreConfidence * 100) : null
+                          return (
+                            <div style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.5rem',
+                              marginTop: '0.75rem',
+                              padding: '0.5rem 0.75rem',
+                              background: 'var(--mr-bg-elevated)',
+                              borderRadius: 'var(--mr-radius-sm)',
+                              border: '1px solid var(--mr-border)',
+                              fontSize: '0.75rem',
+                              color: 'var(--mr-text-secondary)'
+                            }}>
+                              <Music size={14} style={{ color: 'var(--mr-primary)', flexShrink: 0 }} />
+                              <span style={{ fontWeight: 600, color: 'var(--mr-text-primary)' }}>{displayGenre}</span>
+                              <span style={{ color: 'var(--mr-text-tertiary)' }}>
+                                {isUserSelected
+                                  ? (lang === 'es' ? '(seleccionado)' : '(selected)')
+                                  : confidencePct
+                                    ? `(${confidencePct}% ${lang === 'es' ? 'coincidencia' : 'match'})`
+                                    : ''
+                                }
+                              </span>
+                              {genreDescription && (
+                                <span style={{ marginLeft: 'auto', fontStyle: 'italic', color: 'var(--mr-text-tertiary)', fontSize: '0.7rem' }}>
+                                  {genreDescription}
+                                </span>
+                              )}
+                            </div>
+                          )
+                        })()}
+
                         {/* Legend - MasteringReady philosophy: margin, not judgment */}
                         <div style={{ 
                           display: 'flex', 

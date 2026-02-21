@@ -3104,55 +3104,148 @@ All user-facing pages fully themed with CSS variables. Remaining hardcoded color
 
 **Git state**: main on `612bfea`, pushed. Build clean.
 
+### Session 2026-02-21 — Genre-Aware Frequency Balance
+
+#### Feature: Genre-Specific Frequency Balance Scoring
+
+**Problem**: Frequency balance scoring used universal thresholds regardless of genre. A hip-hop track with heavy sub-bass got the same "warning" as a jazz track — but the hip-hop balance is correct for its genre.
+
+**Solution**: Genre-specific spectral profiles and thresholds so verdicts say "healthy for Hip-Hop/Trap mastering" instead of generic "healthy for mastering."
+
+#### Backend Changes
+
+**1. Expanded `GENRE_FREQUENCY_PROFILES`** (`analyzer.py:1158`):
+- 5 → 10 genres: Pop/Balada, Rock, Hip-Hop/Trap, EDM/Electrónica, Jazz/Acústico + R&B/Soul, Latin/Reggaeton, Metal, Clásica, Country
+- Added `dB_deltas` (expected dB delta ranges for genre) and `spectral_6band` (6-band reference center values) to all genres
+- Existing 3-band percentage ranges preserved
+
+**2. Genre-specific thresholds** (`analyzer.py` `_status_freq_en` + `_status_freq_es`):
+- When `genre` param provided and found in profiles, uses genre's `dB_deltas` as `perfect` range
+- `pass` range = `±3dB` outside perfect
+- Verdict messages include genre name: "Balance tonal saludable para mastering de Hip-Hop/Trap"
+- Falls back to universal thresholds when no genre or genre not in profiles
+
+**3. API genre parameter** (`main.py`):
+- Both sync (`/api/analyze/mix`) and polling (`/api/analyze/start`) endpoints accept `genre: Optional[str] = Form(None)`
+- Passed to `analyze_file(genre=genre)` / `analyze_file_chunked(..., genre=genre)`
+- `user_genre` included in response dict
+
+#### Frontend Changes
+
+**4. Genre selector** (`app/page.tsx`):
+- Dropdown after strict mode checkbox, before Analyze button
+- 11 options: "Universal (todos los géneros)" default + 10 genres
+- Bilingual labels
+- `genre` state sent to `startAnalysisPolling()` via `lib/api.ts`
+- "Universal" = `genre=null` = current universal behavior (no breaking change)
+
+**5. Genre badge in results** (all 3 pages):
+- Below frequency balance bars in "Áreas de Atención Prioritaria" section
+- Shows detected genre with confidence % ("Pop/Balada (85% coincidencia)") or user-selected genre ("Hip-Hop/Trap (seleccionado)")
+- Genre description shown as italic subtitle
+- Uses CSS vars for dark/light mode compatibility
+- Old analyses (no genre data) render normally without badge
+
+**6. DB persistence** (`app/page.tsx` `saveAnalysisToDatabase`):
+- `user_genre` saved in `metricsData` wrapper alongside `metrics` and `metrics_bars`
+- Dashboard/history read from `selectedAnalysis.metrics.user_genre`
+- `detected_genre` already inside `metrics` array objects
+
+#### Files Changed
+| File | Changes |
+|------|---------|
+| `analyzer.py` | 10 genres (was 5), `dB_deltas` + `spectral_6band`, genre-specific thresholds in EN+ES |
+| `main.py` | `genre` form field on both endpoints, passed to analyzer, `user_genre` in response |
+| `lib/api.ts` | `genre` option in `startAnalysisPolling`, appended to FormData |
+| `app/page.tsx` | Genre state + dropdown UI + badge in results + `user_genre` in DB save |
+| `app/dashboard/page.tsx` | Genre badge below frequency balance bars |
+| `app/history/page.tsx` | Genre badge below frequency balance bars |
+
+#### Key Design Decisions
+- **"Universal" default = current behavior** — zero breaking change for existing users
+- `detected_genre` (auto) always computed regardless of user selection
+- All new strings bilingual (ES LATAM Neutro + US EN)
+- No new dependencies
+- Frequency Balance weight stays at 5% (informational)
+- DO NOT modify scoring algorithms — only thresholds change based on genre
+
+**Build**: Clean, all routes compiled. Not yet committed.
+
 ---
 
-## Lead Prospector System (Built Feb 20, 2026)
+## Lead Prospector System (Built Feb 21, 2026) — LIVE
 
-Automated lead discovery system that scans Reddit + YouTube for people expressing mastering pain points. Runs unattended on GitHub Actions, surfaces leads on a standalone admin page for manual outreach.
+Automated lead discovery system. YouTube scraper runs on GitHub Actions every 6h. Reddit deferred (API approval required since Nov 2025). Leads surfaced on standalone admin page at `/prospecting`.
 
 ### Architecture
-- **Python scraper** (`scripts/prospector/`) — GitHub Actions cron every 6h, scans 7 subreddits + YouTube comments
+- **Python scraper** (`scripts/prospector/`) — GitHub Actions cron every 6h
 - **Next.js API route** (`app/api/admin/prospecting/route.ts`) — GET (admin auth, filters+KPIs), POST (shared secret auth from scraper), PATCH (admin status updates)
-- **Standalone page** (`app/prospecting/page.tsx`) — NOT part of `/admin` dashboard. Filterable table, KPI cards, bilingual, dark/light mode
+- **Standalone page** (`app/prospecting/page.tsx`) — independent admin check via `createFreshQueryClient` (NOT `useAuth().isAdmin` — GoTrueClient lock timeouts break it)
 
 ### Key Files
-- `scripts/prospector/config.py` — keywords, subreddits, score thresholds, 6 pain point categories (EN+ES)
-- `scripts/prospector/scorer.py` — weighted keyword matching (primary +0.3, secondary +0.15, bonuses for focused subreddits/questions/recency)
-- `scripts/prospector/sources/reddit.py` — PRAW, 7 subreddits, `subreddit.new(limit=50)`
-- `scripts/prospector/sources/youtube.py` — YouTube Data API v3, 5 search queries, comment scanning
+- `scripts/prospector/config.py` — 8 YouTube search queries, 6 pain point categories (EN+ES), threshold 0.3
+- `scripts/prospector/scorer.py` — weighted keyword matching (primary +0.3, secondary +0.15, bonuses)
+- `scripts/prospector/sources/youtube.py` — YouTube Data API v3, 30-day window, relevance sort, 100 comments/video
+- `scripts/prospector/sources/reddit.py` — PRAW scaffolded, skipped (no credentials)
 - `scripts/prospector/poster.py` — POST to API with `X-Prospecting-Secret`, batch 50, 3 retries
-- `supabase/migrations/20260221000001_prospecting_leads.sql` — `prospecting_leads` table, UNIQUE on `(source, source_id)`
 - `.github/workflows/prospector.yml` — cron `0 */6 * * *`, sparse checkout, Python 3.11
 
-### Auth Pattern
-- **Scraper → API**: `X-Prospecting-Secret` header (shared secret, env var `PROSPECTING_SECRET` on Vercel)
-- **Admin → API**: Bearer token + `profiles.is_admin` check (same as other admin routes)
-
-### Scoring
-- 6 categories: loudness, lufs_targets, streaming_targets, mastering_quality, mix_readiness, general_mastering
-- Threshold: 0.3 (Reddit), 0.4 (YouTube — higher to filter comment noise)
-- Negative keywords filter self-promotion ("my service", "check out my", "I offer mastering")
-
-### Deployment Status: CODE COMPLETE, NOT DEPLOYED
-To deploy:
-1. Run SQL migration in Supabase Dashboard
-2. Set `PROSPECTING_SECRET` env var on Vercel
-3. Create Reddit app (reddit.com/prefs/apps, "script" type) → Client ID + Secret
-4. Get YouTube API key from Google Cloud Console
-5. Set 5 GitHub Secrets: `REDDIT_CLIENT_ID`, `REDDIT_CLIENT_SECRET`, `YOUTUBE_API_KEY`, `MR_PROSPECTING_API_URL` (`https://masteringready.com/api/admin/prospecting`), `MR_PROSPECTING_SECRET`
-6. Test via manual `workflow_dispatch` trigger
+### Deployment Status: LIVE (Feb 21, 2026)
+- Supabase migration ran, `prospecting_leads` table active
+- Vercel `PROSPECTING_SECRET` env var set
+- YouTube API key in GitHub Secrets (Google Cloud Console, MasteringReady project)
+- Reddit: DEFERRED — killed self-service API keys Nov 2025, requires developer approval
+- First run: 42 leads from YouTube comments
+- GitHub Actions: manual trigger + cron every 6h
 
 ### Cost: $0/month
 - GitHub Actions: ~12 min/day (well under 2,000 free min/month)
-- Reddit API: free "script" app, 60 req/min
 - YouTube API: ~2,200 units/day (well under 10K free quota)
-- Twitter/X: DEFERRED (free tier doesn't allow search, Basic is $100/mo)
+
+### Outreach Strategy
+- Reply in YouTube comments (public, not DMs) — help first, link second
+- EN template: answer their question briefly, then "masteringready.com gives you a free analysis with a 0-100 score and specific recommendations"
+- ES template: same approach in LATAM Neutro Spanish
+- Max 1-2 replies per video, skip mastering engineers/plugin makers
+- Mark as "Contacted" in `/prospecting` after replying
+
+### Multi-Channel Lead System (all $0)
+
+| Channel | Type | Est. Leads/Week | Status |
+|---------|------|-----------------|--------|
+| YouTube scraper | Automated (6h cron) | 40-80 | LIVE |
+| Google Alerts (6) | Automated emails | 5-10 | LIVE |
+| F5Bot | Automated (Reddit+HN) | 10-30 | TODO — f5bot.com |
+| ForumScout | Automated alerts | 5-15 | TODO — forumscout.app (free tier) |
+| Discord servers | Manual replies | 5-15 | TODO — join Birdzhouse 58K, r/MusicProduction 19K, We Suck At Producing |
+| Facebook Groups (LATAM) | Manual engagement | 2-5 | TODO — "Produccion Musical", "Mezcla y Mastering" groups |
+| Quora | Manual answers | 1-3 | TODO — follow Audio Mastering, Music Mixing topics |
+| Gearspace/KVR forums | Google Alerts `site:` | 2-5 | TODO — add `site:gearspace.com` alerts |
+
+**Total estimated: 70-160 leads/week at $0**
+
+### Google Alerts (LIVE — 6 alerts)
+1. `"is my mix ready for mastering"` (EN)
+2. `"LUFS mastering"` (EN)
+3. `"mix sounds quiet on Spotify"` (EN)
+4. `"how loud should my master be"` (EN)
+5. `"masterizar mezcla"` (ES)
+6. `"mezcla lista para mastering"` (ES)
+Settings: As-it-happens, All results, Automatic sources, delivered to matcarvy@gmail.com
+
+### Not Worth It Yet
+- **TikTok/Instagram**: No free API for monitoring. Better to create content (Reels showing MR) than scrape.
+- **Twitter/X**: $200/mo Basic API. ForumScout free tier covers it.
+- **Reddit API**: F5Bot covers Reddit for free. Revisit if Reddit re-opens self-service.
 
 ### Future (v2)
 - AI classification via Claude Haiku for nuanced pain point detection
+- Discord keyword monitoring bot (`discord.py`, ~2-3h to build)
 - Automated outreach draft generation
-- Discord server monitoring
 - Link prospecting leads to MR signups (conversion tracking)
+- Spanish YouTube queries in prospector config
+- Indie Hackers "Show IH" launch post
+- KVR Audio RSS feed monitoring with keyword filter
 
 ### Growth Context (ACQ Scaling Roadmap)
 MR is at Stage 1 (Monetize) → transitioning to Stage 2 (Advertise). The prospector automates lead discovery so outreach time goes to engagement, not searching. Strategy: find pain point → offer free analysis → convert to paid. Rule of 100: 100 min/day on marketing, prospector handles the "finding" part.
@@ -3162,16 +3255,26 @@ MR is at Stage 1 (Monetize) → transitioning to Stage 2 (Advertise). The prospe
 ## NEXT STEPS (Priority Order)
 
 ### IMMEDIATE (next session)
-1. **Demo Pro user** — Create user with automatic Pro plan (30 analyses) for live demo. No admin access. SQL: create auth user + profile + subscription with Pro plan_id.
+1. **Set up F5Bot** — f5bot.com, keywords: mastering, mix ready, LUFS, before mastering, mix check. Free Reddit+HN monitoring.
+2. **Set up ForumScout** — forumscout.app free tier, 3 keyword alerts across Reddit/Twitter/forums/blogs.
+3. **Add Spanish YouTube queries** to prospector config (`"como masterizar"`, `"LUFS explicado"`, `"mezcla antes de masterizar"`).
+4. **Add `site:gearspace.com` Google Alerts** — "ready for mastering", "LUFS".
+5. **Start YouTube comment outreach** — reply to top leads from `/prospecting` using templates.
 
-### SHORT-TERM
-2. **eBook migration from Payhip** — Stripe product `ebook` at $15 USD flat. DB: `has_ebook BOOLEAN`. Checkout + webhook + protected PDF download API. `/ebook` page. Replace Payhip links.
-3. **Signed token system** — HMAC-signed short-lived tokens via `/api/analyze-token`. Render validates signature. Bulletproof API protection. ~30 min.
-4. **Email onboarding sequence** — 4 bilingual triggered emails (welcome, score explained, upgrade nudge, re-analysis). Highest-leverage conversion feature. Needs Resend or SendGrid (~$10-20/mo).
+### SHORT-TERM (Week 2-4)
+6. **Join Discord servers** — Birdzhouse (58K), r/MusicProduction (19K), We Suck At Producing. Monitor #mixing-mastering channels.
+7. **Join Facebook Groups (LATAM)** — "Produccion Musical", "Mezcla y Mastering", "Ingenieria de Sonido Colombia". Post educational content.
+8. **Quora profile** — follow Audio Mastering, Music Mixing topics. Answer 2-3 questions/week.
+9. **Demo Pro user** — Create user with automatic Pro plan (30 analyses) for live demo. No admin access.
+10. **eBook migration from Payhip** — Stripe product `ebook` at $15 USD flat. DB: `has_ebook BOOLEAN`. Checkout + webhook + protected PDF download API. `/ebook` page.
+11. **Email onboarding sequence** — 4 bilingual triggered emails (welcome, score explained, upgrade nudge, re-analysis). Highest-leverage conversion feature. Needs Resend or SendGrid (~$10-20/mo).
 
 ### MEDIUM-TERM (data-driven)
-5. **DLocal integration** — OXXO (MX), Pix (BR), Mercado Pago (AR/CO). Trigger: high LATAM signups but low paid conversion.
-6. **Priority Queue System** — Spec at `docs/specs/priority-queue-system.xml`. Trigger: OOM errors, queue depth >5.
-7. **Stream Ready deploy** — Backend ready in `main.py` (`_sr_` prefix). Frontend at `~/streamready/`. Target: when MR has stable traffic.
-8. **Facebook OAuth** — Meta App Review + Business Verification → re-enable button.
-9. **SEO blog posts** — Zero-competition ES keywords: "cómo saber si mi mezcla está lista", "analizar mezcla antes de mastering".
+12. **Signed token system** — HMAC-signed short-lived tokens via `/api/analyze-token`. Render validates signature. ~30 min.
+13. **Discord keyword bot** — `discord.py` bot monitoring 3-5 servers for mastering keywords. ~2-3h to build.
+14. **Indie Hackers launch** — Show IH post with story + metrics. 23% conversion rate per engaged post.
+15. **SEO blog posts** — Zero-competition ES keywords: "cómo saber si mi mezcla está lista", "analizar mezcla antes de mastering". EN: "is my mix ready for mastering", "mix analysis tool".
+16. **TikTok/Instagram Reels** — Short videos showing MR analyzing a mix, score improving after fixes. Content creation, not monitoring.
+17. **DLocal integration** — OXXO (MX), Pix (BR), Mercado Pago (AR/CO). Trigger: high LATAM signups but low paid conversion.
+18. **Priority Queue System** — Spec at `docs/specs/priority-queue-system.xml`. Trigger: OOM errors, queue depth >5.
+19. **Stream Ready deploy** — Backend ready in `main.py` (`_sr_` prefix). Frontend at `~/streamready/`.

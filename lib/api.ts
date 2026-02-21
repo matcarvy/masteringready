@@ -90,6 +90,7 @@ export async function startAnalysisPolling(
     lang: 'es' | 'en'
     mode: 'short' | 'write'
     strict: boolean
+    genre?: string | null
     originalMetadata?: {
       sampleRate: number
       bitDepth: number
@@ -105,6 +106,9 @@ export async function startAnalysisPolling(
   formData.append('lang', options.lang)
   formData.append('mode', options.mode)
   formData.append('strict', String(options.strict))
+  if (options.genre) {
+    formData.append('genre', options.genre)
+  }
   formData.append('is_authenticated', String(options.isAuthenticated || false))
 
   // CRITICAL: Add original metadata if provided

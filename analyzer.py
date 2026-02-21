@@ -1154,43 +1154,161 @@ def calculate_lr_balance(y: np.ndarray) -> float:
 # GENRE DETECTION & TONAL BALANCE (v7.3.50)
 # ============================================
 
-# Provisional genre profiles (to be refined with real references)
+# Genre frequency profiles — 3-band % ranges + 6-band reference + dB delta thresholds
+# dB_deltas: expected (d_low_mid_db, d_high_mid_db) range for genre
+# spectral_6band: center values for sub/low/low_mid/mid/high_mid/high (sum=100)
+# To be refined with real reference track analysis
 GENRE_FREQUENCY_PROFILES = {
     "Pop/Balada": {
-        "bass": (28, 38),    # % range
+        "bass": (28, 38),
         "mids": (48, 58),
         "highs": (10, 20),
+        "dB_deltas": {
+            "d_low_mid": (-4.0, 3.0),
+            "d_high_mid": (-12.0, 6.0),
+        },
+        "spectral_6band": {
+            "sub": 3.5, "low": 18.0, "low_mid": 22.0,
+            "mid": 28.0, "high_mid": 18.5, "high": 10.0,
+        },
         "description_es": "Balance vocal-céntrico con claridad",
-        "description_en": "Vocal-centric balance with clarity"
+        "description_en": "Vocal-centric balance with clarity",
     },
     "Rock": {
         "bass": (35, 45),
         "mids": (42, 52),
         "highs": (8, 18),
+        "dB_deltas": {
+            "d_low_mid": (-3.0, 5.0),
+            "d_high_mid": (-14.0, 8.0),
+        },
+        "spectral_6band": {
+            "sub": 4.0, "low": 20.0, "low_mid": 20.0,
+            "mid": 26.0, "high_mid": 18.0, "high": 12.0,
+        },
         "description_es": "Énfasis en medios (guitarras/voces)",
-        "description_en": "Mid-range emphasis (guitars/vocals)"
+        "description_en": "Mid-range emphasis (guitars/vocals)",
     },
     "Hip-Hop/Trap": {
         "bass": (42, 55),
         "mids": (32, 45),
         "highs": (8, 18),
+        "dB_deltas": {
+            "d_low_mid": (0.0, 8.0),
+            "d_high_mid": (-16.0, 6.0),
+        },
+        "spectral_6band": {
+            "sub": 8.0, "low": 24.0, "low_mid": 16.0,
+            "mid": 22.0, "high_mid": 18.0, "high": 12.0,
+        },
         "description_es": "Sub-bass prominente con highs presentes",
-        "description_en": "Prominent sub-bass with present highs"
+        "description_en": "Prominent sub-bass with present highs",
     },
     "EDM/Electrónica": {
         "bass": (38, 50),
         "mids": (38, 48),
         "highs": (10, 20),
+        "dB_deltas": {
+            "d_low_mid": (-2.0, 6.0),
+            "d_high_mid": (-12.0, 8.0),
+        },
+        "spectral_6band": {
+            "sub": 6.0, "low": 22.0, "low_mid": 18.0,
+            "mid": 24.0, "high_mid": 18.0, "high": 12.0,
+        },
         "description_es": "Balance energético con extremos marcados",
-        "description_en": "Energetic balance with pronounced extremes"
+        "description_en": "Energetic balance with pronounced extremes",
     },
     "Jazz/Acústico": {
         "bass": (22, 35),
         "mids": (50, 62),
         "highs": (12, 22),
+        "dB_deltas": {
+            "d_low_mid": (-6.0, 2.0),
+            "d_high_mid": (-10.0, 4.0),
+        },
+        "spectral_6band": {
+            "sub": 2.5, "low": 15.0, "low_mid": 24.0,
+            "mid": 30.0, "high_mid": 18.0, "high": 10.5,
+        },
         "description_es": "Rango medio natural y rico",
-        "description_en": "Natural and rich midrange"
-    }
+        "description_en": "Natural and rich midrange",
+    },
+    "R&B/Soul": {
+        "bass": (35, 48),
+        "mids": (40, 52),
+        "highs": (8, 18),
+        "dB_deltas": {
+            "d_low_mid": (-2.0, 5.0),
+            "d_high_mid": (-14.0, 6.0),
+        },
+        "spectral_6band": {
+            "sub": 5.0, "low": 22.0, "low_mid": 20.0,
+            "mid": 25.0, "high_mid": 17.0, "high": 11.0,
+        },
+        "description_es": "Graves cálidos con voces prominentes",
+        "description_en": "Warm lows with prominent vocals",
+    },
+    "Latin/Reggaeton": {
+        "bass": (40, 52),
+        "mids": (35, 48),
+        "highs": (8, 18),
+        "dB_deltas": {
+            "d_low_mid": (0.0, 7.0),
+            "d_high_mid": (-14.0, 8.0),
+        },
+        "spectral_6band": {
+            "sub": 7.0, "low": 23.0, "low_mid": 17.0,
+            "mid": 23.0, "high_mid": 18.0, "high": 12.0,
+        },
+        "description_es": "Graves potentes con brillo rítmico",
+        "description_en": "Powerful lows with rhythmic brightness",
+    },
+    "Metal": {
+        "bass": (32, 44),
+        "mids": (40, 52),
+        "highs": (10, 22),
+        "dB_deltas": {
+            "d_low_mid": (-2.0, 5.0),
+            "d_high_mid": (-10.0, 10.0),
+        },
+        "spectral_6band": {
+            "sub": 4.0, "low": 18.0, "low_mid": 20.0,
+            "mid": 24.0, "high_mid": 20.0, "high": 14.0,
+        },
+        "description_es": "Medios agresivos con graves definidos y brillo",
+        "description_en": "Aggressive mids with defined lows and brightness",
+    },
+    "Clásica": {
+        "bass": (20, 32),
+        "mids": (48, 60),
+        "highs": (14, 26),
+        "dB_deltas": {
+            "d_low_mid": (-8.0, 1.0),
+            "d_high_mid": (-8.0, 2.0),
+        },
+        "spectral_6band": {
+            "sub": 2.0, "low": 14.0, "low_mid": 22.0,
+            "mid": 30.0, "high_mid": 20.0, "high": 12.0,
+        },
+        "description_es": "Rango dinámico amplio con medios detallados",
+        "description_en": "Wide dynamic range with detailed midrange",
+    },
+    "Country": {
+        "bass": (28, 40),
+        "mids": (46, 58),
+        "highs": (10, 20),
+        "dB_deltas": {
+            "d_low_mid": (-4.0, 3.0),
+            "d_high_mid": (-12.0, 6.0),
+        },
+        "spectral_6band": {
+            "sub": 3.0, "low": 18.0, "low_mid": 22.0,
+            "mid": 28.0, "high_mid": 18.0, "high": 11.0,
+        },
+        "description_es": "Balance natural con voces al frente",
+        "description_en": "Natural balance with upfront vocals",
+    },
 }
 
 
@@ -2851,32 +2969,50 @@ def _status_freq_en(fb: Dict[str, float], genre: Optional[str] = None, strict: b
     """
     Evaluate frequency balance relative to midrange using dB deltas.
     Percentages are informational only (arrangement-dependent).
-    
-    UNIFIED THRESHOLDS (language-neutral): Match ES for consistency.
+
+    When genre is provided, uses genre-specific dB delta thresholds.
+    Otherwise uses universal "mix-for-mastering" thresholds.
     """
     dL = fb["d_low_mid_db"]
     dH = fb["d_high_mid_db"]
 
-    # Normal, wide "mix-for-mastering" ranges (UNIFIED)
-    low_perfect = (-6.0, 6.0)
-    low_pass = (-9.0, 9.0)
-    high_perfect = (-15.0, 10.0)  # UNIFIED: was (-12.0, 6.0)
-    high_pass = (-18.0, 12.0)      # UNIFIED: was (-15.0, 9.0)
+    genre_label = None
 
-    # Strict mode: slightly narrower tolerance (commercial delivery)
-    if strict:
-        low_perfect = (-5.0, 5.0)
-        low_pass = (-8.0, 8.0)
-        high_perfect = (-12.0, 8.0)   # UNIFIED: was (-11.0, 5.0)
-        high_pass = (-15.0, 10.0)     # UNIFIED: was (-14.0, 8.0)
+    # Genre-specific thresholds (if genre provided and has dB_deltas)
+    if genre and genre in GENRE_FREQUENCY_PROFILES:
+        profile = GENRE_FREQUENCY_PROFILES[genre]
+        if "dB_deltas" in profile:
+            deltas = profile["dB_deltas"]
+            low_perfect = deltas["d_low_mid"]
+            high_perfect = deltas["d_high_mid"]
+            low_pass = (low_perfect[0] - 3.0, low_perfect[1] + 3.0)
+            high_pass = (high_perfect[0] - 3.0, high_perfect[1] + 3.0)
+            genre_label = genre
+        else:
+            genre_label = None
+
+    if not genre_label:
+        # Universal "mix-for-mastering" ranges
+        low_perfect = (-6.0, 6.0)
+        low_pass = (-9.0, 9.0)
+        high_perfect = (-15.0, 10.0)
+        high_pass = (-18.0, 12.0)
+
+        if strict:
+            low_perfect = (-5.0, 5.0)
+            low_pass = (-8.0, 8.0)
+            high_perfect = (-12.0, 8.0)
+            high_pass = (-15.0, 10.0)
 
     def in_range(x, r):
         return r[0] <= x <= r[1]
 
+    suffix = f" for {genre_label}" if genre_label else ""
+
     if in_range(dL, low_perfect) and in_range(dH, high_perfect):
-        return "perfect", "Tonal balance is healthy for mastering.", 1.0
+        return "perfect", f"Tonal balance is healthy{suffix} for mastering.", 1.0
     if in_range(dL, low_pass) and in_range(dH, high_pass):
-        return "pass", "Tonal balance is generally healthy for mastering.", 0.7
+        return "pass", f"Tonal balance is generally healthy{suffix} for mastering.", 0.7
 
     # Outside pass range: warn, but don't over-penalize (can be artistic)
     msg_parts = []
@@ -2889,7 +3025,11 @@ def _status_freq_en(fb: Dict[str, float], genre: Optional[str] = None, strict: b
     elif dH < high_pass[0]:
         msg_parts.append("High end is dark vs mids")
 
-    msg = "Tonal balance shows some character; check translation across systems. (" + ", ".join(msg_parts) + ")." if msg_parts else "Tonal balance shows some character; check translation across systems."
+    if genre_label:
+        base = f"Tonal balance is outside typical {genre_label} range"
+    else:
+        base = "Tonal balance shows some character; check translation across systems"
+    msg = base + ". (" + ", ".join(msg_parts) + ")." if msg_parts else base + "."
     return "warning", msg, 0.4
 
 def _status_crest_factor_en(crest: float) -> Tuple[str, str, float]:
@@ -3085,32 +3225,50 @@ def _status_freq_es(fb: Dict[str, float], genre: Optional[str] = None, strict: b
     """
     Evalúa balance de frecuencias relativo a los medios usando deltas dB.
     Porcentajes son informativos únicamente (dependen del arreglo).
-    
-    UMBRALES UNIFICADOS (language-neutral): Idénticos a EN para consistencia.
+
+    Cuando se provee género, usa umbrales específicos del género.
+    Si no, usa umbrales universales "mix-for-mastering".
     """
     dL = fb["d_low_mid_db"]
     dH = fb["d_high_mid_db"]
-    
-    # Rangos amplios "mix-for-mastering" (UNIFICADOS)
-    low_perfect = (-6.0, 6.0)
-    low_pass = (-9.0, 9.0)
-    high_perfect = (-15.0, 10.0)  # UNIFICADO: era muy permisivo
-    high_pass = (-18.0, 12.0)      # UNIFICADO: era muy permisivo
 
-    # Strict mode: tolerancia ligeramente más estrecha (entrega comercial)
-    if strict:
-        low_perfect = (-5.0, 5.0)
-        low_pass = (-8.0, 8.0)
-        high_perfect = (-12.0, 8.0)   # UNIFICADO
-        high_pass = (-15.0, 10.0)     # UNIFICADO
+    genre_label = None
+
+    # Umbrales específicos del género (si se provee y tiene dB_deltas)
+    if genre and genre in GENRE_FREQUENCY_PROFILES:
+        profile = GENRE_FREQUENCY_PROFILES[genre]
+        if "dB_deltas" in profile:
+            deltas = profile["dB_deltas"]
+            low_perfect = deltas["d_low_mid"]
+            high_perfect = deltas["d_high_mid"]
+            low_pass = (low_perfect[0] - 3.0, low_perfect[1] + 3.0)
+            high_pass = (high_perfect[0] - 3.0, high_perfect[1] + 3.0)
+            genre_label = genre
+        else:
+            genre_label = None
+
+    if not genre_label:
+        # Rangos universales "mix-for-mastering"
+        low_perfect = (-6.0, 6.0)
+        low_pass = (-9.0, 9.0)
+        high_perfect = (-15.0, 10.0)
+        high_pass = (-18.0, 12.0)
+
+        if strict:
+            low_perfect = (-5.0, 5.0)
+            low_pass = (-8.0, 8.0)
+            high_perfect = (-12.0, 8.0)
+            high_pass = (-15.0, 10.0)
 
     def in_range(x, r):
         return r[0] <= x <= r[1]
 
+    suffix = f" de {genre_label}" if genre_label else ""
+
     if in_range(dL, low_perfect) and in_range(dH, high_perfect):
-        return "perfect", "Balance tonal saludable para mastering.", 1.0
+        return "perfect", f"Balance tonal saludable para mastering{suffix}.", 1.0
     if in_range(dL, low_pass) and in_range(dH, high_pass):
-        return "pass", "Balance tonal generalmente saludable para mastering.", 0.7
+        return "pass", f"Balance tonal generalmente saludable para mastering{suffix}.", 0.7
 
     # Fuera de rango pass: advertir, pero no sobre-penalizar (puede ser artístico)
     msg_parts = []
@@ -3123,7 +3281,11 @@ def _status_freq_es(fb: Dict[str, float], genre: Optional[str] = None, strict: b
     elif dH < high_pass[0]:
         msg_parts.append("Agudos oscuros vs medios")
 
-    msg = "Balance tonal con carácter; verifica traducción en múltiples sistemas. (" + ", ".join(msg_parts) + ")." if msg_parts else "Balance tonal con carácter; verifica traducción en múltiples sistemas."
+    if genre_label:
+        base = f"Balance tonal fuera del rango típico de {genre_label}"
+    else:
+        base = "Balance tonal con carácter; verifica traducción en múltiples sistemas"
+    msg = base + ". (" + ", ".join(msg_parts) + ")." if msg_parts else base + "."
     return "warning", msg, 0.4
 
 def _status_crest_factor_es(crest: float) -> Tuple[str, str, float]:

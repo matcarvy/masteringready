@@ -1655,6 +1655,50 @@ function DashboardContent() {
                         })()}
                       </div>
 
+                      {/* Genre badge — shows detected or user-selected genre */}
+                      {(() => {
+                        const metricsArr = selectedAnalysis.metrics?.metrics || []
+                        const freqMetric = Array.isArray(metricsArr) ? metricsArr.find((m: any) => m.internal_key === 'Frequency Balance') : null
+                        const userGenre = selectedAnalysis.metrics?.user_genre || null
+                        const detectedGenre = freqMetric?.detected_genre
+                        const genreConfidence = freqMetric?.genre_confidence
+                        const genreDescription = freqMetric?.genre_description
+                        const displayGenre = userGenre || detectedGenre
+                        if (!displayGenre) return null
+                        const isUserSelected = !!userGenre
+                        const confidencePct = genreConfidence ? Math.round(genreConfidence * 100) : null
+                        return (
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            marginTop: '0.75rem',
+                            padding: '0.5rem 0.75rem',
+                            background: 'var(--mr-bg-elevated)',
+                            borderRadius: 'var(--mr-radius-sm)',
+                            border: '1px solid var(--mr-border)',
+                            fontSize: '0.75rem',
+                            color: 'var(--mr-text-secondary)'
+                          }}>
+                            <Music size={14} style={{ color: 'var(--mr-primary)', flexShrink: 0 }} />
+                            <span style={{ fontWeight: 600, color: 'var(--mr-text-primary)' }}>{displayGenre}</span>
+                            <span style={{ color: 'var(--mr-text-tertiary)' }}>
+                              {isUserSelected
+                                ? (lang === 'es' ? '(seleccionado)' : '(selected)')
+                                : confidencePct
+                                  ? `(${confidencePct}% ${lang === 'es' ? 'coincidencia' : 'match'})`
+                                  : ''
+                              }
+                            </span>
+                            {genreDescription && (
+                              <span style={{ marginLeft: 'auto', fontStyle: 'italic', color: 'var(--mr-text-tertiary)', fontSize: '0.7rem' }}>
+                                {genreDescription}
+                              </span>
+                            )}
+                          </div>
+                        )
+                      })()}
+
                       {/* Legend */}
                       <div style={{
                         display: 'flex',

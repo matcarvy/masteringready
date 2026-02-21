@@ -459,30 +459,32 @@ async def analyze_mix_endpoint(
     lang: str = Form("es"),
     mode: str = Form("write"),
     strict: bool = Form(False),
+    genre: Optional[str] = Form(None),
     original_metadata_json: Optional[str] = Form(None)  # Original file metadata from frontend
 ):
     """
     Analyze audio mix for mastering readiness.
-    
+
     Privacy guarantee:
     - File analyzed in-memory only
     - Auto-deleted immediately after analysis
     - NO permanent storage without explicit user consent
-    
+
     Parameters:
     - file: Audio file (.wav, .mp3, .aiff)
     - lang: Language (es/en)
     - mode: Output mode (short/write)
     - strict: Use strict commercial standards (true/false)
+    - genre: (Optional) Genre for frequency balance thresholds (e.g., "Pop/Balada", "Hip-Hop/Trap")
     - original_metadata_json: (Optional) JSON string with original file metadata
         Example: {"sampleRate": 48000, "bitDepth": 24, "duration": 391.2, "numberOfChannels": 2}
-    
+
     Returns:
     - JSON with score, verdict, report, and metrics
     """
-    
+
     # Log request
-    logger.info(f"📥 Analysis request: {file.filename}, lang={lang}, mode={mode}, strict={strict}")
+    logger.info(f"📥 Analysis request: {file.filename}, lang={lang}, mode={mode}, strict={strict}, genre={genre}")
     
     # Parse original metadata if provided
     original_metadata_from_frontend = None
@@ -585,6 +587,7 @@ async def analyze_mix_endpoint(
             result = analyze_file(
                 Path(analysis_path),
                 lang=lang,
+                genre=genre,
                 strict=strict,
                 original_metadata=original_metadata_from_frontend
             )
@@ -626,6 +629,7 @@ async def analyze_mix_endpoint(
                 "spectral_6band": result.get("spectral_6band", {}),
                 "energy_analysis": result.get("energy_analysis", {}),
                 "categorical_flags": result.get("categorical_flags", {}),
+                "user_genre": genre,
                 "privacy_note": "🔒 Audio analizado en memoria y eliminado inmediatamente.",
                 "methodology": "Basado en la metodología 'Mastering Ready' de Matías Carvajal"
             }
@@ -662,6 +666,7 @@ async def start_analysis(
     lang: str = Form("es"),
     mode: str = Form("write"),
     strict: bool = Form(False),
+    genre: Optional[str] = Form(None),
     original_metadata_json: Optional[str] = Form(None),  # Original file metadata from frontend
     is_authenticated: bool = Form(False)  # Whether user is logged in
 ):
@@ -674,6 +679,7 @@ async def start_analysis(
     Parameters:
     - file: Audio file
     - lang: Language (es/en)
+    - genre: (Optional) Genre for frequency balance thresholds
     - mode: Output mode (write/short)
     - strict: Strict mode (true/false)
     - original_metadata_json: (Optional) JSON with original file metadata
@@ -947,6 +953,7 @@ async def start_analysis(
                         analyze_file_chunked,
                         Path(analysis_path),
                         lang=lang,
+                        genre=genre,
                         strict=strict,
                         chunk_duration=30.0,  # 30s optimal for 512MB Render (larger chunks are superlinearly slower)
                         progress_callback=update_progress,  # ← Pass callback
@@ -954,11 +961,12 @@ async def start_analysis(
                     )
                 else:
                     logger.info(f"📊 [{job_id}] Using NORMAL analysis (estimated {estimated_duration_min:.1f} min, {file_size_mb:.1f} MB)")
-                    
+
                     analyze_func = functools.partial(
                         analyze_file,
                         Path(analysis_path),
                         lang=lang,
+                        genre=genre,
                         strict=strict,
                         original_metadata=original_metadata  # ← Pass original metadata
                     )
@@ -1076,6 +1084,7 @@ async def start_analysis(
                         "spectral_6band": result.get("spectral_6band", {}),
                         "energy_analysis": result.get("energy_analysis", {}),
                         "categorical_flags": result.get("categorical_flags", {}),
+                        "user_genre": genre,
                         "privacy_note": "🔒 Audio analizado en memoria y eliminado inmediatamente.",
                         "methodology": "Basado en la metodología 'Mastering Ready' de Matías Carvajal"
                     }
