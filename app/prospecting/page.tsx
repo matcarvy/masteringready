@@ -11,7 +11,6 @@ import Link from 'next/link'
 import { useAuth } from '@/components/auth/AuthProvider'
 import { createFreshQueryClient } from '@/lib/supabase'
 import { detectLanguage, setLanguageCookie } from '@/lib/language'
-import ThemeToggle from '@/components/ThemeToggle'
 import {
   ArrowLeft, RefreshCw, Search, Filter, ExternalLink,
   MessageCircle, XCircle, CheckCircle, Eye, ChevronDown,
@@ -355,7 +354,6 @@ export default function ProspectingPage() {
           <button onClick={toggleLang} style={{ padding: '0.375rem 0.75rem', background: 'var(--mr-bg-elevated)', border: '1px solid var(--mr-bg-hover)', borderRadius: '6px', color: 'var(--mr-text-primary)', cursor: 'pointer', fontSize: '0.8125rem' }}>
             {lang === 'es' ? 'EN' : 'ES'}
           </button>
-          <ThemeToggle />
         </div>
       </header>
 
