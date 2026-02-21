@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
 
 // Force dynamic — never evaluate at build time
 export const dynamic = 'force-dynamic'
@@ -31,18 +30,20 @@ export async function GET() {
   }
 
   try {
-    const supabase = createClient(url, key)
+    // Direct REST ping to PostgREST — no table query, no RLS, no Supabase client
+    // Just proves the database is alive and accepting connections
+    const res = await fetch(`${url}/rest/v1/`, {
+      headers: {
+        apikey: key,
+        Authorization: `Bearer ${key}`
+      }
+    })
 
-    // Simple query to keep Supabase active (no RLS dependency)
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('count', { count: 'exact', head: true })
-
-    if (error) {
+    if (!res.ok) {
       return NextResponse.json({
         status: 'error',
         service: 'supabase',
-        error: error.message,
+        error: `PostgREST responded ${res.status}`,
         timestamp: new Date().toISOString()
       }, { status: 503 })
     }
