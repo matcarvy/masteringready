@@ -52,8 +52,13 @@ def score_text(text: str, source: str = 'reddit', subreddit: str | None = None) 
     # Cap at 1.0
     best_score = min(1.0, best_score)
 
-    # Apply threshold
-    threshold = config.MIN_RELEVANCE_SCORE if source == 'reddit' else config.MIN_RELEVANCE_YOUTUBE
+    # Apply threshold (HN is noisier — require higher relevance)
+    if source == 'reddit':
+        threshold = config.MIN_RELEVANCE_SCORE
+    elif source == 'hackernews':
+        threshold = 0.4
+    else:
+        threshold = config.MIN_RELEVANCE_YOUTUBE
     if best_score < threshold:
         return None
 

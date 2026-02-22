@@ -4,6 +4,7 @@ Uses the free Algolia HN Search API (no key required).
 Searches recent comments and stories for mastering-related pain points.
 """
 
+import re
 import logging
 from datetime import datetime, timedelta, timezone
 import requests
@@ -16,20 +17,44 @@ logger = logging.getLogger(__name__)
 # Algolia HN Search API (free, no auth)
 HN_SEARCH_URL = 'https://hn.algolia.com/api/v1/search_by_date'
 
-# Queries tailored to HN audience (more technical)
+# Queries tailored to HN audience — must be specific to music/audio
 HN_QUERIES = [
     'LUFS mastering',
-    'loudness normalization',
-    'audio mastering',
-    'mastering music',
-    'streaming loudness',
-    'mix mastering',
-    'audio loudness levels',
+    'audio mastering loudness',
+    'mastering music loudness',
+    'music streaming normalization LUFS',
+    'mix mastering audio',
+    'true peak loudness music',
 ]
+
+# Audio/music context words — at least one must appear in the text
+# to filter out generic "volume" / "loudness" matches from non-music content
+AUDIO_CONTEXT_WORDS = {
+    # English
+    'music', 'audio', 'master', 'mastering', 'mastered',
+    'mix', 'mixing', 'song', 'track', 'album', 'beat',
+    'daw', 'plugin', 'vst', 'eq', 'compressor', 'limiter',
+    'lufs', 'dbtp', 'true peak', 'waveform', 'stereo', 'mono',
+    'spotify', 'apple music', 'soundcloud', 'bandcamp', 'distrokid',
+    'ableton', 'logic pro', 'fl studio', 'pro tools', 'reaper',
+    'ozone', 'fabfilter', 'izotope', 'waves',
+    'vocalist', 'producer', 'engineer', 'studio',
+    # Spanish
+    'música', 'mezcla', 'masterización', 'canción', 'pista',
+    'producción musical', 'productor', 'ingeniero de sonido',
+}
 
 # How far back to search (days)
 HN_LOOKBACK_DAYS = 7
 HN_HITS_PER_QUERY = 50
+
+_HTML_TAG_RE = re.compile(r'<[^>]+>')
+
+
+def _has_audio_context(text: str) -> bool:
+    """Check if text contains at least one audio/music context word."""
+    text_lower = text.lower()
+    return any(word in text_lower for word in AUDIO_CONTEXT_WORDS)
 
 
 def fetch_hackernews_leads() -> list[dict]:
@@ -76,10 +101,13 @@ def fetch_hackernews_leads() -> list[dict]:
                         source_url = f'https://news.ycombinator.com/item?id={object_id}'
 
                     # Strip HTML tags (HN returns HTML in comments)
-                    import re
-                    text = re.sub(r'<[^>]+>', ' ', text)
+                    text = _HTML_TAG_RE.sub(' ', text)
 
                     if len(text.strip()) < 20:
+                        continue
+
+                    # Must have audio/music context to avoid false positives
+                    if not _has_audio_context(text):
                         continue
 
                     author = hit.get('author', 'unknown')
