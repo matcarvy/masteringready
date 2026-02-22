@@ -179,6 +179,7 @@ REDDIT_NEW_LIMIT = 50  # Posts to fetch per subreddit per run
 
 # YouTube search queries (broader to capture more comments)
 YOUTUBE_SEARCHES = [
+    # English
     'mastering loudness levels',
     'LUFS explained mastering',
     'how to master music',
@@ -187,6 +188,13 @@ YOUTUBE_SEARCHES = [
     'how loud should my master be',
     'mixing before mastering tips',
     'mastering for beginners',
+    # Spanish (LATAM reach)
+    'como masterizar musica',
+    'LUFS explicado mastering',
+    'mezcla lista para masterizar',
+    'masterizar para Spotify',
+    'volumen mastering muy bajo',
+    'tutorial mastering principiantes',
 ]
 YOUTUBE_MAX_RESULTS_PER_QUERY = 10
 YOUTUBE_MAX_COMMENTS_PER_VIDEO = 100

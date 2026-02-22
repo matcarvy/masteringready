@@ -172,6 +172,8 @@ const SOURCE_COLORS: Record<string, { bg: string; text: string }> = {
   reddit: { bg: 'var(--mr-amber-bg)', text: '#FF4500' },
   youtube: { bg: 'var(--mr-red-bg)', text: 'var(--mr-red)' },
   twitter: { bg: 'var(--mr-blue-bg)', text: 'var(--mr-blue)' },
+  hackernews: { bg: 'var(--mr-amber-bg)', text: '#FF6600' },
+  stackexchange: { bg: 'var(--mr-blue-bg)', text: '#0077CC' },
 }
 
 const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
@@ -436,6 +438,8 @@ export default function ProspectingPage() {
             <option value="all">{labels.allSources}</option>
             <option value="reddit">Reddit</option>
             <option value="youtube">YouTube</option>
+            <option value="hackernews">Hacker News</option>
+            <option value="stackexchange">Stack Exchange</option>
           </select>
 
           <select value={categoryFilter} onChange={e => { setCategoryFilter(e.target.value); setPage(1) }}

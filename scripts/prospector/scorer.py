@@ -53,7 +53,7 @@ def score_text(text: str, source: str = 'reddit', subreddit: str | None = None) 
     best_score = min(1.0, best_score)
 
     # Apply threshold
-    threshold = config.MIN_RELEVANCE_YOUTUBE if source == 'youtube' else config.MIN_RELEVANCE_SCORE
+    threshold = config.MIN_RELEVANCE_SCORE if source == 'reddit' else config.MIN_RELEVANCE_YOUTUBE
     if best_score < threshold:
         return None
 
