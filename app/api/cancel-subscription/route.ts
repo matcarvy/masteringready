@@ -72,9 +72,9 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Cancel subscription error:', error)
+    console.error('Cancel subscription error:', error instanceof Error ? error.message : (error as any)?.message || 'Unknown error')
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Cancellation failed' },
+      { error: 'Cancellation failed' },
       { status: 500 }
     )
   }

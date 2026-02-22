@@ -8,6 +8,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { createHmac, timingSafeEqual } from 'crypto'
 import { createAdminSupabaseClient } from '@/lib/supabase'
 
 export const dynamic = 'force-dynamic'
@@ -125,22 +126,66 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Prospecting GET error:', error)
+    console.error('Prospecting GET error:', error instanceof Error ? error.message : (error as any)?.message || 'Unknown error')
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    // Auth via shared secret (scraper has no user session)
-    const secret = request.headers.get('X-Prospecting-Secret')
-    const expectedSecret = process.env.PROSPECTING_SECRET
+    // Auth: HMAC signature (preferred) or legacy shared secret (backward compat)
+    const signature = request.headers.get('X-Prospecting-Signature')
+    const timestamp = request.headers.get('X-Prospecting-Timestamp')
+    const legacySecret = request.headers.get('X-Prospecting-Secret')
+    const secret = process.env.PROSPECTING_SECRET
 
-    if (!expectedSecret || secret !== expectedSecret) {
+    if (!secret) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const body = await request.json()
+    const rawBody = await request.text()
+    let authenticated = false
+
+    if (signature && timestamp) {
+      // HMAC path: verify signature + replay window
+      const requestAge = Math.abs(Date.now() - parseInt(timestamp, 10))
+      if (isNaN(requestAge) || requestAge > 5 * 60 * 1000) {
+        return NextResponse.json({ error: 'Request expired' }, { status: 401 })
+      }
+
+      // HMAC-SHA256: sign(timestamp + "." + body)
+      const expectedSig = createHmac('sha256', secret)
+        .update(`${timestamp}.${rawBody}`)
+        .digest('hex')
+
+      // Constant-time comparison to prevent timing attacks
+      try {
+        const sigBuffer = Buffer.from(signature, 'hex')
+        const expectedBuffer = Buffer.from(expectedSig, 'hex')
+        if (sigBuffer.length === expectedBuffer.length && timingSafeEqual(sigBuffer, expectedBuffer)) {
+          authenticated = true
+        }
+      } catch {
+        // Invalid hex — fall through to reject
+      }
+    } else if (legacySecret) {
+      // Legacy path: plain secret comparison (TODO: remove after scraper fully migrated)
+      try {
+        const a = Buffer.from(legacySecret)
+        const b = Buffer.from(secret)
+        if (a.length === b.length && timingSafeEqual(a, b)) {
+          authenticated = true
+        }
+      } catch {
+        // Fall through to reject
+      }
+    }
+
+    if (!authenticated) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const body = JSON.parse(rawBody)
     const { leads } = body
 
     if (!Array.isArray(leads) || leads.length === 0) {
@@ -159,7 +204,7 @@ export async function POST(request: NextRequest) {
       .select('id')
 
     if (error) {
-      console.error('Prospecting POST upsert error:', error)
+      console.error('Prospecting POST upsert error:', error instanceof Error ? error.message : (error as any)?.message || 'Unknown error')
       return NextResponse.json({ error: 'Failed to insert leads' }, { status: 500 })
     }
 
@@ -169,7 +214,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ inserted, skipped, total: leads.length })
 
   } catch (error) {
-    console.error('Prospecting POST error:', error)
+    console.error('Prospecting POST error:', error instanceof Error ? error.message : (error as any)?.message || 'Unknown error')
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
@@ -201,14 +246,14 @@ export async function PATCH(request: NextRequest) {
       .eq('id', id)
 
     if (error) {
-      console.error('Prospecting PATCH error:', error)
+      console.error('Prospecting PATCH error:', error instanceof Error ? error.message : (error as any)?.message || 'Unknown error')
       return NextResponse.json({ error: 'Failed to update lead' }, { status: 500 })
     }
 
     return NextResponse.json({ updated: true })
 
   } catch (error) {
-    console.error('Prospecting PATCH error:', error)
+    console.error('Prospecting PATCH error:', error instanceof Error ? error.message : (error as any)?.message || 'Unknown error')
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

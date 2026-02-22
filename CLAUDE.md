@@ -3183,10 +3183,12 @@ All user-facing pages fully themed with CSS variables. Remaining hardcoded color
 - Extra `user_genre` key in API response → harmless for old frontends
 
 #### Reference Track Calibration (pending)
-- `docs/genre-reference-tracks.md`: ~98 commercially mastered tracks across 10 genres (spanning 60s-2020s)
-- Workflow: analyze each with genre selected → SQL query extracts raw metrics from Supabase → calculate mean ± std dev → update `GENRE_FREQUENCY_PROFILES`
+- `docs/genre-reference-tracks.md`: ~102 commercially mastered tracks across 10 genres (spanning 60s-2020s)
+- Workflow: analyze each as admin with genre selected → SQL query extracts raw metrics from Supabase → calculate mean ± std dev → update `GENRE_FREQUENCY_PROFILES`
 - Current profiles use educated estimates; reference track data will refine them
 - SQL query included in the doc for extracting frequency balance data grouped by `user_genre`
+- **Volume doesn't matter**: Frequency balance is 100% relative — `band_balance_db()` normalizes energy per band to sum to 100%, dB deltas are differences between bands. A -6 LUFS master and -14 LUFS master produce identical frequency balance data.
+- **SQL requirements**: `is_test_analysis = true` (admin analyses) AND `user_genre IS NOT NULL` (genre selected from dropdown). Filename is just a label for identification.
 
 #### Commits to main (Session 2026-02-21)
 1. `027b880` - feat: genre-aware frequency balance — selector, thresholds, badges
@@ -3316,10 +3318,36 @@ MR is at Stage 1 (Monetize) → transitioning to Stage 2 (Advertise). The prospe
 
 ---
 
+### Session 2026-02-21 Part 3 — Reference Track List Expansion + Calibration Q&A
+
+#### Rock Reference Tracks Expanded
+Added 4 tracks to Rock section in `docs/genre-reference-tracks.md` (items 11-14):
+| # | Artist | Track | Year | Notes |
+|---|--------|-------|------|-------|
+| 11 | Rush | Tom Sawyer | 1981 | Prog-rock, tight production |
+| 12 | The Who | Who Are You | 1978 | Classic rock, powerful dynamics |
+| 13 | Sting | Hounds of Winter | 1996 | Mature rock/pop, refined production |
+| 14 | Fleetwood Mac | Everywhere | 1987 | Pop-rock, pristine mix |
+
+Rock now has 14 reference tracks (most of any genre). Total: ~102 tracks across 10 genres.
+
+#### Volume/Loudness Clarification
+Confirmed by reading `band_balance_db()` source (`analyzer.py:2569`): frequency balance is 100% relative. Percentages = `energy_per_band / total_energy * 100` (normalized to sum to 100%). dB deltas = differences between bands. Volume/loudness of masters does NOT affect frequency balance readings — safe to use any quality master for calibration.
+
+#### SQL Workflow Clarified
+- SQL filters on `is_test_analysis = true` (admin analyses only) AND `user_genre IS NOT NULL` (genre selected from dropdown)
+- Must be logged in as admin + select correct genre before analyzing each track
+- Filename is just a label for human identification, not parsed by SQL
+- Can be done in batches across sessions — SQL grabs all qualifying analyses
+
+**Files changed**: `docs/genre-reference-tracks.md` (4 tracks added to Rock, total updated)
+
+---
+
 ## NEXT STEPS (Priority Order)
 
 ### IMMEDIATE (next session)
-1. **Genre profile calibration** — Analyze ~98 reference tracks (see `docs/genre-reference-tracks.md`). Select genre from dropdown, analyze, then run SQL query to extract frequency data. Calculate mean ± std dev per genre → update `GENRE_FREQUENCY_PROFILES` in `analyzer.py`. Can be done in batches.
+1. **Genre profile calibration** — Analyze ~102 reference tracks (see `docs/genre-reference-tracks.md`). Log in as admin, select genre from dropdown, analyze. Run SQL query after all done. Paste results to Claude → calculate mean ± std dev per genre → update `GENRE_FREQUENCY_PROFILES` in `analyzer.py`. Can be done in batches.
 2. **Lead prospector outreach** — Reply to top YouTube leads from `/prospecting` using templates. Start with highest-score leads.
 3. **Set up F5Bot** — f5bot.com, keywords: mastering, mix ready, LUFS, before mastering, mix check. Free Reddit+HN monitoring.
 4. **Set up ForumScout** — forumscout.app free tier, 3 keyword alerts across Reddit/Twitter/forums/blogs.

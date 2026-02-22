@@ -36,6 +36,10 @@
 | 8 | Arctic Monkeys | Do I Wanna Know? | 2013 | Modern rock |
 | 9 | Royal Blood | Figure It Out | 2014 | Contemporary rock |
 | 10 | Greta Van Fleet | Highway Tune | 2017 | Modern classic-rock revival |
+| 11 | Rush | Tom Sawyer | 1981 | Prog-rock, tight production |
+| 12 | The Who | Who Are You | 1978 | Classic rock, powerful dynamics |
+| 13 | Sting | Hounds of Winter | 1996 | Mature rock/pop, refined production |
+| 14 | Fleetwood Mac | Everywhere | 1987 | Pop-rock, pristine mix |
 
 ### 3. Hip-Hop/Trap
 | # | Artist | Track | Year | Notes |
@@ -149,7 +153,7 @@
 
 ---
 
-## Total: ~98 tracks across 10 genres
+## Total: ~102 tracks across 10 genres
 
 ## Time Estimate
 - ~90 seconds per analysis on Render Starter

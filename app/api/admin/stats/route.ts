@@ -553,9 +553,9 @@ export async function GET(request: NextRequest) {
       }
     })
   } catch (error) {
-    console.error('Admin stats error:', error)
+    console.error('Admin stats error:', error instanceof Error ? error.message : (error as any)?.message || 'Unknown error')
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Internal server error' },
+      { error: 'Internal server error' },
       { status: 500 }
     )
   }

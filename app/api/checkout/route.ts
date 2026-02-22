@@ -30,6 +30,24 @@ const PRODUCT_NAMES = {
   addon: 'Pro Add-on Pack'
 } as const
 
+// ISO 3166-1 alpha-2 country codes (complete list)
+const VALID_COUNTRY_CODES = new Set([
+  'AD','AE','AF','AG','AI','AL','AM','AO','AQ','AR','AS','AT','AU','AW','AX','AZ',
+  'BA','BB','BD','BE','BF','BG','BH','BI','BJ','BL','BM','BN','BO','BQ','BR','BS','BT','BV','BW','BY','BZ',
+  'CA','CC','CD','CF','CG','CH','CI','CK','CL','CM','CN','CO','CR','CU','CV','CW','CX','CY','CZ',
+  'DE','DJ','DK','DM','DO','DZ','EC','EE','EG','EH','ER','ES','ET',
+  'FI','FJ','FK','FM','FO','FR','GA','GB','GD','GE','GF','GG','GH','GI','GL','GM','GN','GP','GQ','GR','GS','GT','GU','GW','GY',
+  'HK','HM','HN','HR','HT','HU','ID','IE','IL','IM','IN','IO','IQ','IR','IS','IT',
+  'JE','JM','JO','JP','KE','KG','KH','KI','KM','KN','KP','KR','KW','KY','KZ',
+  'LA','LB','LC','LI','LK','LR','LS','LT','LU','LV','LY',
+  'MA','MC','MD','ME','MF','MG','MH','MK','ML','MM','MN','MO','MP','MQ','MR','MS','MT','MU','MV','MW','MX','MY','MZ',
+  'NA','NC','NE','NF','NG','NI','NL','NO','NP','NR','NU','NZ',
+  'OM','PA','PE','PF','PG','PH','PK','PL','PM','PN','PR','PS','PT','PW','PY','QA',
+  'RE','RO','RS','RU','RW','SA','SB','SC','SD','SE','SG','SH','SI','SJ','SK','SL','SM','SN','SO','SR','SS','ST','SV','SX','SY','SZ',
+  'TC','TD','TF','TG','TH','TJ','TK','TL','TM','TN','TO','TR','TT','TV','TW','TZ',
+  'UA','UG','UM','US','UY','UZ','VA','VC','VE','VG','VI','VN','VU','WF','WS','YE','YT','ZA','ZM','ZW',
+])
+
 export async function POST(request: NextRequest) {
   try {
     // Parse request body
@@ -38,7 +56,8 @@ export async function POST(request: NextRequest) {
 
     // Verify country code server-side to prevent pricing manipulation
     const serverCountry = request.headers.get('x-vercel-ip-country') || clientCountryCode
-    const countryCode = serverCountry || 'US'
+    const rawCountry = (serverCountry || 'US').toUpperCase()
+    const countryCode = VALID_COUNTRY_CODES.has(rawCountry) ? rawCountry : 'US'
 
     if (!productType || !['pro_monthly', 'single', 'addon'].includes(productType)) {
       return NextResponse.json(
@@ -203,9 +222,9 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Checkout error:', error)
+    console.error('Checkout error:', error instanceof Error ? error.message : (error as any)?.message || 'Unknown error')
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Checkout failed' },
+      { error: 'Checkout failed' },
       { status: 500 }
     )
   }

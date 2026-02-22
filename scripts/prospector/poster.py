@@ -5,6 +5,9 @@ Handles batching, retry, and error reporting.
 
 import os
 import time
+import json
+import hmac
+import hashlib
 import requests
 
 
@@ -47,15 +50,27 @@ def post_leads(leads: list[dict]) -> dict:
     }
 
 
+def _sign_payload(payload_str: str) -> tuple[str, str]:
+    """Create HMAC-SHA256 signature for a payload string. Returns (signature, timestamp)."""
+    timestamp = str(int(time.time() * 1000))
+    message = f'{timestamp}.{payload_str}'
+    signature = hmac.new(API_SECRET.encode(), message.encode(), hashlib.sha256).hexdigest()
+    return signature, timestamp
+
+
 def _post_batch(batch: list[dict]) -> dict:
     """POST a single batch with retry."""
+    body = json.dumps({'leads': batch})
+    signature, timestamp = _sign_payload(body)
+
     for attempt in range(MAX_RETRIES):
         try:
             response = requests.post(
                 API_URL,
-                json={'leads': batch},
+                data=body,
                 headers={
-                    'X-Prospecting-Secret': API_SECRET,
+                    'X-Prospecting-Signature': signature,
+                    'X-Prospecting-Timestamp': timestamp,
                     'Content-Type': 'application/json',
                 },
                 timeout=30,

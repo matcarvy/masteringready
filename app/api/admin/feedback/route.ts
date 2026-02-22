@@ -106,9 +106,9 @@ export async function PATCH(request: NextRequest) {
 
     return NextResponse.json({ success: true, feedback: data })
   } catch (error) {
-    console.error('Admin feedback error:', error)
+    console.error('Admin feedback error:', error instanceof Error ? error.message : (error as any)?.message || 'Unknown error')
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Internal server error' },
+      { error: 'Internal server error' },
       { status: 500 }
     )
   }

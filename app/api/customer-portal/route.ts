@@ -83,9 +83,9 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Customer portal error:', error)
+    console.error('Customer portal error:', error instanceof Error ? error.message : (error as any)?.message || 'Unknown error')
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Portal creation failed' },
+      { error: 'Portal creation failed' },
       { status: 500 }
     )
   }

@@ -134,7 +134,7 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Admin leads API error:', error)
+    console.error('Admin leads API error:', error instanceof Error ? error.message : (error as any)?.message || 'Unknown error')
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
