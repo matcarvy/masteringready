@@ -3169,7 +3169,30 @@ All user-facing pages fully themed with CSS variables. Remaining hardcoded color
 - Frequency Balance weight stays at 5% (informational)
 - DO NOT modify scoring algorithms — only thresholds change based on genre
 
-**Build**: Clean, all routes compiled. Not yet committed.
+#### Label Refinements (`a6f1a7f`)
+- EN: "Pop / Ballad" (was "Pop / Balada"), "Universal (All Genres)" capitalized
+- ES: "Latino / Reggaeton" (was "Latin / Reggaeton"), "Jazz / Acústica" (was "Jazz / Acústico")
+- `genreLabels` bilingual map on all 3 pages decouples display labels from internal profile keys
+- Internal keys in `analyzer.py` unchanged (backward compatible)
+- `AuthProvider.tsx`: Added `user_genre` to `savePendingAnalysisForUser` metrics wrapper (pending-analysis-on-login path)
+
+#### Backward Compatibility — Verified
+- Full audit: 12/12 checks PASS, zero issues
+- `genre=null` (default) → universal thresholds, identical to pre-genre behavior
+- Old analyses without `user_genre` → badge returns null, no rendering
+- Extra `user_genre` key in API response → harmless for old frontends
+
+#### Reference Track Calibration (pending)
+- `docs/genre-reference-tracks.md`: ~98 commercially mastered tracks across 10 genres (spanning 60s-2020s)
+- Workflow: analyze each with genre selected → SQL query extracts raw metrics from Supabase → calculate mean ± std dev → update `GENRE_FREQUENCY_PROFILES`
+- Current profiles use educated estimates; reference track data will refine them
+- SQL query included in the doc for extracting frequency balance data grouped by `user_genre`
+
+#### Commits to main (Session 2026-02-21)
+1. `027b880` - feat: genre-aware frequency balance — selector, thresholds, badges
+2. `a6f1a7f` - fix: genre label refinements — bilingual display labels on dropdown + badges
+
+**Git state**: main on `a6f1a7f`, pushed. Build clean.
 
 ---
 
@@ -3250,31 +3273,73 @@ Settings: As-it-happens, All results, Automatic sources, delivered to matcarvy@g
 ### Growth Context (ACQ Scaling Roadmap)
 MR is at Stage 1 (Monetize) → transitioning to Stage 2 (Advertise). The prospector automates lead discovery so outreach time goes to engagement, not searching. Strategy: find pain point → offer free analysis → convert to paid. Rule of 100: 100 min/day on marketing, prospector handles the "finding" part.
 
+### Session 2026-02-21 Part 2 — GoTrueClient Fix + Prospector Expansion
+
+#### Bug Fix: GoTrueClient Lock Contention → 403 on Prospecting Page
+
+**Problem**: Opening `/prospecting` triggered "Multiple GoTrueClient instances" warning → Navigator Lock timeout (10s) → session broken → HTTP 403 on API call.
+
+**Root cause**: `createFreshQueryClient()` created a second GoTrueClient sharing the same storage key (`sb-cetgbmrylzgaqnrlfamt-auth-token`) and Navigator Lock as the singleton. When the singleton held the lock during auth recovery, `setSession()` on the fresh client timed out.
+
+**Fix** (2 files):
+- **`lib/supabase.ts`**: Fresh client now uses `storageKey: 'sb-fresh-query-token'` + no-op `lock` function → separate namespace, no lock contention. Applies globally to ALL pages using `createFreshQueryClient`.
+- **`app/prospecting/page.tsx`**: Removed redundant `createFreshQueryClient` admin check. Admin status now derived from API fetch response (403 = not admin, 200 = admin). One less GoTrueClient created.
+
+#### Feature: Hacker News + Stack Exchange Sources + Spanish YouTube Queries
+
+**New prospector sources** (both free, no API keys):
+1. **Hacker News** (`scripts/prospector/sources/hackernews.py`): Algolia HN Search API. Searches comments + stories, 7-day lookback, 50 hits/query. Audio context gate requires at least one of ~40 music/audio words to prevent false positives. Threshold 0.4 (vs 0.3 for YouTube).
+2. **Stack Exchange** (`scripts/prospector/sources/stackexchange.py`): SE API v2.3. Searches Music, Sound Design, Video Production sites. 30-day lookback, 50 results/query. No key needed (300 req/day free).
+3. **Spanish YouTube queries** (6 added to `config.py`): "como masterizar musica", "LUFS explicado mastering", "mezcla lista para masterizar", "masterizar para Spotify", "volumen mastering muy bajo", "tutorial mastering principiantes".
+
+**HN false positive prevention** (3 layers):
+- Search queries tightened — all include "music"/"audio"/"mastering"
+- `AUDIO_CONTEXT_WORDS` gate (~40 words: DAW names, music terms, platform names, Spanish equivalents)
+- Higher scorer threshold: 0.4 for HN (vs 0.3 for YouTube/SE)
+
+**UI updates** (`app/prospecting/page.tsx`):
+- Source filter dropdown: added Hacker News + Stack Exchange options
+- Source badge colors: HN orange (#FF6600), SE blue (#0077CC)
+
+**Files changed**:
+| File | Changes |
+|------|---------|
+| `lib/supabase.ts` | Fresh client: separate `storageKey` + no-op `lock` |
+| `app/prospecting/page.tsx` | Removed `createFreshQueryClient` import, admin check via API fetch, new source filters/colors |
+| `scripts/prospector/sources/hackernews.py` | NEW — Algolia HN API source with audio context gate |
+| `scripts/prospector/sources/stackexchange.py` | NEW — SE API source (music/sound/video sites) |
+| `scripts/prospector/config.py` | 6 Spanish YouTube queries added |
+| `scripts/prospector/main.py` | Wired HN + SE sources |
+| `scripts/prospector/scorer.py` | HN threshold 0.4, cleaner threshold logic |
+
+**Results**: First run pulled ~90+ leads (45 existing YouTube + new HN/YouTube ES). Two HN false positives identified (card game, screen recorder) — fixed with audio context gate in follow-up commit.
+
 ---
 
 ## NEXT STEPS (Priority Order)
 
 ### IMMEDIATE (next session)
-1. **Set up F5Bot** — f5bot.com, keywords: mastering, mix ready, LUFS, before mastering, mix check. Free Reddit+HN monitoring.
-2. **Set up ForumScout** — forumscout.app free tier, 3 keyword alerts across Reddit/Twitter/forums/blogs.
-3. **Add Spanish YouTube queries** to prospector config (`"como masterizar"`, `"LUFS explicado"`, `"mezcla antes de masterizar"`).
-4. **Add `site:gearspace.com` Google Alerts** — "ready for mastering", "LUFS".
-5. **Start YouTube comment outreach** — reply to top leads from `/prospecting` using templates.
+1. **Genre profile calibration** — Analyze ~98 reference tracks (see `docs/genre-reference-tracks.md`). Select genre from dropdown, analyze, then run SQL query to extract frequency data. Calculate mean ± std dev per genre → update `GENRE_FREQUENCY_PROFILES` in `analyzer.py`. Can be done in batches.
+2. **Lead prospector outreach** — Reply to top YouTube leads from `/prospecting` using templates. Start with highest-score leads.
+3. **Set up F5Bot** — f5bot.com, keywords: mastering, mix ready, LUFS, before mastering, mix check. Free Reddit+HN monitoring.
+4. **Set up ForumScout** — forumscout.app free tier, 3 keyword alerts across Reddit/Twitter/forums/blogs.
+5. ~~**Add Spanish YouTube queries**~~ — DONE (Feb 21). 6 ES queries added.
+6. **Review HN lead quality** — After next cron run, verify the audio context gate is filtering out false positives. Adjust `AUDIO_CONTEXT_WORDS` if needed.
+7. **Delete existing HN false positives** — The "Inscryption" and "CursorLens" leads are still in the DB. Dismiss or delete them from `/prospecting`.
 
 ### SHORT-TERM (Week 2-4)
 6. **Join Discord servers** — Birdzhouse (58K), r/MusicProduction (19K), We Suck At Producing. Monitor #mixing-mastering channels.
 7. **Join Facebook Groups (LATAM)** — "Produccion Musical", "Mezcla y Mastering", "Ingenieria de Sonido Colombia". Post educational content.
-8. **Quora profile** — follow Audio Mastering, Music Mixing topics. Answer 2-3 questions/week.
-9. **Demo Pro user** — Create user with automatic Pro plan (30 analyses) for live demo. No admin access.
-10. **eBook migration from Payhip** — Stripe product `ebook` at $15 USD flat. DB: `has_ebook BOOLEAN`. Checkout + webhook + protected PDF download API. `/ebook` page.
-11. **Email onboarding sequence** — 4 bilingual triggered emails (welcome, score explained, upgrade nudge, re-analysis). Highest-leverage conversion feature. Needs Resend or SendGrid (~$10-20/mo).
+8. **Demo Pro user** — Create user with automatic Pro plan (30 analyses) for live demo. No admin access.
+9. **eBook migration from Payhip** — Stripe product `ebook` at $15 USD flat. DB: `has_ebook BOOLEAN`. Checkout + webhook + protected PDF download API. `/ebook` page.
+10. **Email onboarding sequence** — 4 bilingual triggered emails (welcome, score explained, upgrade nudge, re-analysis). Highest-leverage conversion feature. Needs Resend or SendGrid (~$10-20/mo).
 
 ### MEDIUM-TERM (data-driven)
-12. **Signed token system** — HMAC-signed short-lived tokens via `/api/analyze-token`. Render validates signature. ~30 min.
-13. **Discord keyword bot** — `discord.py` bot monitoring 3-5 servers for mastering keywords. ~2-3h to build.
-14. **Indie Hackers launch** — Show IH post with story + metrics. 23% conversion rate per engaged post.
-15. **SEO blog posts** — Zero-competition ES keywords: "cómo saber si mi mezcla está lista", "analizar mezcla antes de mastering". EN: "is my mix ready for mastering", "mix analysis tool".
-16. **TikTok/Instagram Reels** — Short videos showing MR analyzing a mix, score improving after fixes. Content creation, not monitoring.
-17. **DLocal integration** — OXXO (MX), Pix (BR), Mercado Pago (AR/CO). Trigger: high LATAM signups but low paid conversion.
-18. **Priority Queue System** — Spec at `docs/specs/priority-queue-system.xml`. Trigger: OOM errors, queue depth >5.
-19. **Stream Ready deploy** — Backend ready in `main.py` (`_sr_` prefix). Frontend at `~/streamready/`.
+11. **Signed token system** — HMAC-signed short-lived tokens via `/api/analyze-token`. Render validates signature. ~30 min.
+12. **Discord keyword bot** — `discord.py` bot monitoring 3-5 servers for mastering keywords. ~2-3h to build.
+13. **Indie Hackers launch** — Show IH post with story + metrics. 23% conversion rate per engaged post.
+14. **SEO blog posts** — Zero-competition ES keywords: "cómo saber si mi mezcla está lista", "analizar mezcla antes de mastering". EN: "is my mix ready for mastering", "mix analysis tool".
+15. **TikTok/Instagram Reels** — Short videos showing MR analyzing a mix, score improving after fixes. Content creation, not monitoring.
+16. **DLocal integration** — OXXO (MX), Pix (BR), Mercado Pago (AR/CO). Trigger: high LATAM signups but low paid conversion.
+17. **Priority Queue System** — Spec at `docs/specs/priority-queue-system.xml`. Trigger: OOM errors, queue depth >5.
+18. **Stream Ready deploy** — Backend ready in `main.py` (`_sr_` prefix). Frontend at `~/streamready/`.
