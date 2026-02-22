@@ -2045,6 +2045,11 @@ by Matías Carvajal
                     ? 'Sube tu archivo y obtén un reporte profesional en 60 segundos'
                     : 'Upload your file and get a professional report in 60 seconds'}
                 </p>
+                <p style={{ fontSize: '0.9rem', color: 'var(--mr-text-tertiary)', marginTop: '0.5rem' }}>
+                  {lang === 'es'
+                    ? 'Crea tu cuenta gratis. 2 análisis completos con informe detallado y PDF.'
+                    : 'Create your free account. 2 full analyses with detailed report and PDF.'}
+                </p>
               </div>
 
               {/* Privacy Badge */}
