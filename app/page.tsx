@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { Download, Check, Upload, Zap, Shield, TrendingUp, Play, Music, Crown, X, AlertTriangle, Globe, Headphones, Menu } from 'lucide-react'
+import { Download, Check, Upload, Zap, Shield, TrendingUp, Play, Music, Crown, X, AlertTriangle, Globe, Headphones, Menu, GraduationCap, Stethoscope, Wrench } from 'lucide-react'
 import { UserMenu, useAuth, AuthModal } from '@/components/auth'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { analyzeFile, checkIpLimit, IpCheckResult } from '@/lib/api'
@@ -29,6 +29,37 @@ function scoreToVerdictEnum(score: number): 'ready' | 'almost_ready' | 'needs_wo
   if (score >= 60) return 'almost_ready'
   if (score >= 40) return 'needs_work'
   return 'critical'
+}
+
+// ============================================================================
+// Services + Workshop External URLs (update when dates/links change)
+// All URLs start empty — buttons open ContactModal when empty.
+// Fill URLs as Sara creates external pages (Carrd, Stripe links).
+// ============================================================================
+const SERVICES_CONFIG = {
+  mixReviewMaster: {
+    standardPrice: '$349',
+    launchPrice: '$249',
+    url: '', // Stripe checkout or Carrd — empty = ContactModal
+  },
+  fullMixMaster: {
+    standardPrice: '$997',
+    launchPrice: '$697',
+    url: '',
+  },
+  workshop: {
+    url: '',   // External Carrd — empty hides banner
+    date: '',  // e.g., 'Marzo 15' — empty hides banner
+    price: '$97',
+  },
+  audit: {
+    url: '',
+    price: '$97',
+  },
+  intensive: {
+    url: '',
+    price: '$399',
+  },
 }
 
 // ============================================================================
@@ -287,6 +318,7 @@ function Home() {
   const [hasPaidAccess, setHasPaidAccess] = useState(false)
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false)
+  const [workshopBannerDismissed, setWorkshopBannerDismissed] = useState(true) // default true to prevent flash
   const [feedback, setFeedback] = useState({ rating: 0, liked: '', change: '', add: '' })
   // Feedback widget + CTA tracking state
   const [savedAnalysisId, setSavedAnalysisId] = useState<string | null>(null)
@@ -308,6 +340,14 @@ function Home() {
     return () => { document.body.style.overflow = '' }
   }, [showContactModal, showFeedbackModal, showAuthModal, showIpLimitModal,
       showFreeLimitModal, showVpnModal, showUpgradeModal])
+
+  // Workshop banner visibility (only when config has URL + date)
+  useEffect(() => {
+    if (SERVICES_CONFIG.workshop.url && SERVICES_CONFIG.workshop.date) {
+      const dismissed = sessionStorage.getItem('mr_workshop_banner_dismissed')
+      if (!dismissed) setWorkshopBannerDismissed(false)
+    }
+  }, [])
 
   // Geo detection for regional pricing
   const { geo } = useGeo()
@@ -1762,6 +1802,54 @@ by Matías Carvajal
         </div>
       </nav>
 
+      {/* Workshop Announcement Banner — only visible when config has URL + date */}
+      {!workshopBannerDismissed && SERVICES_CONFIG.workshop.url && SERVICES_CONFIG.workshop.date && (
+        <div style={{
+          background: 'var(--mr-gradient)',
+          color: 'white',
+          padding: '0.75rem 1.5rem',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexWrap: 'wrap',
+          gap: '0.75rem',
+          position: 'relative',
+          fontSize: '0.9375rem'
+        }}>
+          <span style={{ textAlign: 'center' }}>
+            {lang === 'es'
+              ? `Workshop en vivo: ${SERVICES_CONFIG.workshop.date}. ${SERVICES_CONFIG.workshop.price}.`
+              : `Live workshop: ${SERVICES_CONFIG.workshop.date}. ${SERVICES_CONFIG.workshop.price}.`}
+          </span>
+          <a
+            href={SERVICES_CONFIG.workshop.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: 'white', fontWeight: '600', textDecoration: 'underline' }}
+          >
+            {lang === 'es' ? 'Reservar cupo' : 'Reserve your spot'}
+          </a>
+          <button
+            onClick={() => {
+              setWorkshopBannerDismissed(true)
+              sessionStorage.setItem('mr_workshop_banner_dismissed', 'true')
+            }}
+            style={{
+              position: 'absolute',
+              right: '0.75rem',
+              background: 'none',
+              border: 'none',
+              color: 'rgba(255,255,255,0.8)',
+              cursor: 'pointer',
+              padding: '0.5rem'
+            }}
+            aria-label={lang === 'es' ? 'Cerrar anuncio' : 'Close announcement'}
+          >
+            <X size={18} />
+          </button>
+        </div>
+      )}
+
       {/* Hero Section */}
       <section className="hero-section" style={{
         paddingBottom: '4rem',
@@ -2273,6 +2361,194 @@ by Matías Carvajal
                 {isLoggedIn
                   ? (lang === 'es' ? 'Comprar análisis' : 'Buy analysis')
                   : (lang === 'es' ? 'Crear cuenta gratis' : 'Create free account')}
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Services Section — Mix Review + Master / Full Mix + Master */}
+      <section id="services" className="services-section" style={{ background: 'var(--mr-bg-base)' }}>
+        <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+            <h2 style={{ fontSize: 'clamp(1.5rem, 4vw, 2rem)', fontWeight: '800', color: 'var(--mr-text-primary)', marginBottom: '0.5rem' }}>
+              {lang === 'es' ? 'Servicios profesionales' : 'Professional services'}
+            </h2>
+            <p style={{ color: 'var(--mr-text-secondary)', fontSize: '1rem', maxWidth: '600px', margin: '0 auto' }}>
+              {lang === 'es'
+                ? '300+ masters, crédito Latin Grammy. Mezcla y mastering con criterio.'
+                : '300+ masters, Latin Grammy credit. Mixing and mastering with judgment.'}
+            </p>
+          </div>
+
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)',
+            gap: '1.5rem'
+          }}>
+            {/* Card 1: Mix Review + Master */}
+            <div style={{
+              background: 'var(--mr-bg-card)',
+              border: 'var(--mr-card-border)',
+              borderRadius: '1rem',
+              padding: '2rem',
+              boxShadow: 'var(--mr-shadow)',
+              transition: 'transform 0.2s, box-shadow 0.2s'
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = 'var(--mr-shadow-lg)' }}
+            onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'var(--mr-shadow)' }}
+            >
+              <div style={{ marginBottom: '1rem' }}>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: '700', color: 'var(--mr-text-primary)', marginBottom: '0.25rem' }}>
+                  Mix Review + Master
+                </h3>
+                <p style={{ fontSize: '0.875rem', color: 'var(--mr-text-tertiary)' }}>
+                  {lang === 'es' ? 'Revisamos tu mezcla, te damos feedback y masterizamos cuando esté lista.' : 'We review your mix, give you feedback, and master it when it\'s ready.'}
+                </p>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                <span style={{ fontSize: '2rem', fontWeight: '800', color: 'var(--mr-text-primary)' }}>
+                  {SERVICES_CONFIG.mixReviewMaster.launchPrice}
+                </span>
+                <span style={{ fontSize: '1rem', color: 'var(--mr-text-tertiary)', textDecoration: 'line-through' }}>
+                  {SERVICES_CONFIG.mixReviewMaster.standardPrice}
+                </span>
+              </div>
+              <span style={{
+                display: 'inline-block',
+                background: 'var(--mr-green-bg)',
+                color: 'var(--mr-green-text)',
+                fontSize: '0.75rem',
+                fontWeight: '600',
+                padding: '0.25rem 0.75rem',
+                borderRadius: '1rem',
+                marginBottom: '1.25rem'
+              }}>
+                {lang === 'es' ? 'Precio de lanzamiento' : 'Launch price'}
+              </span>
+              <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 1.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                {[
+                  lang === 'es' ? 'Feedback detallado de tu mezcla' : 'Detailed mix feedback',
+                  lang === 'es' ? '1 ronda de revisión incluida' : '1 revision round included',
+                  lang === 'es' ? 'Master profesional' : 'Professional master',
+                  lang === 'es' ? '5-7 días hábiles' : '5-7 business days'
+                ].map((item, i) => (
+                  <li key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', color: 'var(--mr-text-secondary)' }}>
+                    <Check size={16} style={{ color: 'var(--mr-green)', flexShrink: 0 }} />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+              <button
+                onClick={() => {
+                  if (SERVICES_CONFIG.mixReviewMaster.url) {
+                    window.open(SERVICES_CONFIG.mixReviewMaster.url, '_blank')
+                  } else {
+                    setCtaSource('service_mix_review')
+                    setShowContactModal(true)
+                  }
+                }}
+                style={{
+                  display: 'block',
+                  width: '100%',
+                  padding: '0.75rem',
+                  background: 'transparent',
+                  color: 'var(--mr-primary)',
+                  textAlign: 'center',
+                  borderRadius: '0.5rem',
+                  fontWeight: '600',
+                  fontSize: '0.9375rem',
+                  border: '2px solid var(--mr-primary)',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--mr-primary)'; e.currentTarget.style.color = '#ffffff' }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--mr-primary)' }}
+              >
+                {lang === 'es' ? 'Solicitar servicio' : 'Request service'}
+              </button>
+            </div>
+
+            {/* Card 2: Full Mix + Master */}
+            <div style={{
+              background: 'var(--mr-bg-card)',
+              border: 'var(--mr-card-border)',
+              borderRadius: '1rem',
+              padding: '2rem',
+              boxShadow: 'var(--mr-shadow)',
+              transition: 'transform 0.2s, box-shadow 0.2s'
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = 'var(--mr-shadow-lg)' }}
+            onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'var(--mr-shadow)' }}
+            >
+              <div style={{ marginBottom: '1rem' }}>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: '700', color: 'var(--mr-text-primary)', marginBottom: '0.25rem' }}>
+                  Full Mix + Master
+                </h3>
+                <p style={{ fontSize: '0.875rem', color: 'var(--mr-text-tertiary)' }}>
+                  {lang === 'es' ? 'Mezclamos y masterizamos tu proyecto completo.' : 'We mix and master your full project.'}
+                </p>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                <span style={{ fontSize: '2rem', fontWeight: '800', color: 'var(--mr-text-primary)' }}>
+                  {SERVICES_CONFIG.fullMixMaster.launchPrice}
+                </span>
+                <span style={{ fontSize: '1rem', color: 'var(--mr-text-tertiary)', textDecoration: 'line-through' }}>
+                  {SERVICES_CONFIG.fullMixMaster.standardPrice}
+                </span>
+              </div>
+              <span style={{
+                display: 'inline-block',
+                background: 'var(--mr-green-bg)',
+                color: 'var(--mr-green-text)',
+                fontSize: '0.75rem',
+                fontWeight: '600',
+                padding: '0.25rem 0.75rem',
+                borderRadius: '1rem',
+                marginBottom: '1.25rem'
+              }}>
+                {lang === 'es' ? 'Precio de lanzamiento' : 'Launch price'}
+              </span>
+              <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 1.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                {[
+                  lang === 'es' ? 'Mezcla completa profesional' : 'Full professional mix',
+                  lang === 'es' ? '2 rondas de revisión incluidas' : '2 revision rounds included',
+                  lang === 'es' ? 'Master profesional' : 'Professional master',
+                  lang === 'es' ? '7-14 días hábiles' : '7-14 business days'
+                ].map((item, i) => (
+                  <li key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', color: 'var(--mr-text-secondary)' }}>
+                    <Check size={16} style={{ color: 'var(--mr-green)', flexShrink: 0 }} />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+              <button
+                onClick={() => {
+                  if (SERVICES_CONFIG.fullMixMaster.url) {
+                    window.open(SERVICES_CONFIG.fullMixMaster.url, '_blank')
+                  } else {
+                    setCtaSource('service_full_mix')
+                    setShowContactModal(true)
+                  }
+                }}
+                style={{
+                  display: 'block',
+                  width: '100%',
+                  padding: '0.75rem',
+                  background: 'transparent',
+                  color: 'var(--mr-primary)',
+                  textAlign: 'center',
+                  borderRadius: '0.5rem',
+                  fontWeight: '600',
+                  fontSize: '0.9375rem',
+                  border: '2px solid var(--mr-primary)',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--mr-primary)'; e.currentTarget.style.color = '#ffffff' }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--mr-primary)' }}
+              >
+                {lang === 'es' ? 'Solicitar servicio' : 'Request service'}
               </button>
             </div>
           </div>
@@ -3738,6 +4014,243 @@ by Matías Carvajal
                   >
                     {result.cta_button}
                   </button>
+                </div>
+              )}
+
+              {/* Three-Path CTA — visible for all users after analysis */}
+              {result && (
+                <div style={{
+                  maxWidth: '780px',
+                  margin: '0 auto 1.5rem auto',
+                  textAlign: 'center'
+                }}>
+                  <h3 style={{
+                    fontSize: isMobile ? '1.125rem' : '1.25rem',
+                    fontWeight: '600',
+                    color: 'var(--mr-text-primary)',
+                    marginBottom: '1rem'
+                  }}>
+                    {lang === 'es' ? '¿Qué quieres hacer ahora?' : 'What do you want to do next?'}
+                  </h3>
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
+                    gap: '1rem'
+                  }}>
+                    {/* Card 1: Learn to fix it */}
+                    <div
+                      style={{
+                        background: 'var(--mr-bg-card)',
+                        border: 'var(--mr-card-border)',
+                        borderRadius: '1rem',
+                        padding: '1.5rem',
+                        boxShadow: 'var(--mr-shadow)',
+                        cursor: 'pointer',
+                        transition: 'transform 0.2s, box-shadow 0.2s',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: '0.75rem'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = 'translateY(-3px)'
+                        e.currentTarget.style.boxShadow = 'var(--mr-shadow-lg)'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = 'translateY(0)'
+                        e.currentTarget.style.boxShadow = 'var(--mr-shadow)'
+                      }}
+                      onClick={() => {
+                        if (SERVICES_CONFIG.workshop.url) {
+                          window.open(SERVICES_CONFIG.workshop.url, '_blank')
+                        } else {
+                          setCtaSource('three_path_learn')
+                          setShowContactModal(true)
+                        }
+                      }}
+                    >
+                      <div style={{
+                        width: '40px',
+                        height: '40px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}>
+                        <GraduationCap size={40} style={{ color: 'var(--mr-primary)' }} />
+                      </div>
+                      <h4 style={{
+                        fontSize: '1rem',
+                        fontWeight: '600',
+                        color: 'var(--mr-text-primary)',
+                        margin: 0
+                      }}>
+                        {lang === 'es' ? 'Aprende a corregirlo' : 'Learn to fix it yourself'}
+                      </h4>
+                      <p style={{
+                        fontSize: '0.8125rem',
+                        color: 'var(--mr-text-secondary)',
+                        margin: 0,
+                        lineHeight: '1.5'
+                      }}>
+                        {lang === 'es'
+                          ? 'Workshop + sesiones intensivas de mezcla y mastering'
+                          : 'Workshop + intensive mixing and mastering sessions'}
+                      </p>
+                      <span style={{
+                        fontSize: '0.8125rem',
+                        fontWeight: '600',
+                        color: 'var(--mr-primary)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.25rem'
+                      }}>
+                        {lang === 'es' ? 'Ver opciones' : 'See options'} →
+                      </span>
+                    </div>
+
+                    {/* Card 2: Get told what to fix */}
+                    <div
+                      style={{
+                        background: 'var(--mr-bg-card)',
+                        border: 'var(--mr-card-border)',
+                        borderRadius: '1rem',
+                        padding: '1.5rem',
+                        boxShadow: 'var(--mr-shadow)',
+                        cursor: 'pointer',
+                        transition: 'transform 0.2s, box-shadow 0.2s',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: '0.75rem'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = 'translateY(-3px)'
+                        e.currentTarget.style.boxShadow = 'var(--mr-shadow-lg)'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = 'translateY(0)'
+                        e.currentTarget.style.boxShadow = 'var(--mr-shadow)'
+                      }}
+                      onClick={() => {
+                        if (SERVICES_CONFIG.audit.url) {
+                          window.open(SERVICES_CONFIG.audit.url, '_blank')
+                        } else {
+                          setCtaSource('three_path_audit')
+                          setShowContactModal(true)
+                        }
+                      }}
+                    >
+                      <div style={{
+                        width: '40px',
+                        height: '40px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}>
+                        <Stethoscope size={40} style={{ color: 'var(--mr-amber)' }} />
+                      </div>
+                      <h4 style={{
+                        fontSize: '1rem',
+                        fontWeight: '600',
+                        color: 'var(--mr-text-primary)',
+                        margin: 0
+                      }}>
+                        {lang === 'es' ? 'Que te digan qué corregir' : 'Get told what to fix'}
+                      </h4>
+                      <p style={{
+                        fontSize: '0.8125rem',
+                        color: 'var(--mr-text-secondary)',
+                        margin: 0,
+                        lineHeight: '1.5'
+                      }}>
+                        {lang === 'es'
+                          ? `Auditoría profesional, ${SERVICES_CONFIG.audit.price}`
+                          : `Professional audit, ${SERVICES_CONFIG.audit.price}`}
+                      </p>
+                      <span style={{
+                        fontSize: '0.8125rem',
+                        fontWeight: '600',
+                        color: 'var(--mr-primary)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.25rem'
+                      }}>
+                        {lang === 'es' ? 'Solicitar auditoría' : 'Request audit'} →
+                      </span>
+                    </div>
+
+                    {/* Card 3: Get it fixed for you */}
+                    <div
+                      style={{
+                        background: 'var(--mr-bg-card)',
+                        border: 'var(--mr-card-border)',
+                        borderRadius: '1rem',
+                        padding: '1.5rem',
+                        boxShadow: 'var(--mr-shadow)',
+                        cursor: 'pointer',
+                        transition: 'transform 0.2s, box-shadow 0.2s',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: '0.75rem'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = 'translateY(-3px)'
+                        e.currentTarget.style.boxShadow = 'var(--mr-shadow-lg)'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = 'translateY(0)'
+                        e.currentTarget.style.boxShadow = 'var(--mr-shadow)'
+                      }}
+                      onClick={() => {
+                        const servicesEl = document.getElementById('services')
+                        if (servicesEl) {
+                          servicesEl.scrollIntoView({ behavior: 'smooth' })
+                        } else {
+                          setCtaSource('three_path_service')
+                          setShowContactModal(true)
+                        }
+                      }}
+                    >
+                      <div style={{
+                        width: '40px',
+                        height: '40px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}>
+                        <Wrench size={40} style={{ color: 'var(--mr-green)' }} />
+                      </div>
+                      <h4 style={{
+                        fontSize: '1rem',
+                        fontWeight: '600',
+                        color: 'var(--mr-text-primary)',
+                        margin: 0
+                      }}>
+                        {lang === 'es' ? 'Que lo corrijan por ti' : 'Get it fixed for you'}
+                      </h4>
+                      <p style={{
+                        fontSize: '0.8125rem',
+                        color: 'var(--mr-text-secondary)',
+                        margin: 0,
+                        lineHeight: '1.5'
+                      }}>
+                        {lang === 'es'
+                          ? 'Mix Review + Master profesional'
+                          : 'Mix Review + Professional Master'}
+                      </p>
+                      <span style={{
+                        fontSize: '0.8125rem',
+                        fontWeight: '600',
+                        color: 'var(--mr-primary)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.25rem'
+                      }}>
+                        {lang === 'es' ? 'Ver servicios' : 'See services'} →
+                      </span>
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -5741,6 +6254,11 @@ by Matías Carvajal
           padding: 2.5rem 1.5rem 3.5rem 1.5rem;
         }
 
+        /* Services Section */
+        .services-section {
+          padding: 2.5rem 1.5rem 3.5rem 1.5rem;
+        }
+
         /* Analyzer Section */
         .analyzer-section {
           padding: 1.25rem 1.5rem;
@@ -5848,6 +6366,11 @@ by Matías Carvajal
 
           /* Pricing Section */
           .pricing-section {
+            padding: 2rem 1.25rem 2.5rem 1.25rem;
+          }
+
+          /* Services Section */
+          .services-section {
             padding: 2rem 1.25rem 2.5rem 1.25rem;
           }
 
