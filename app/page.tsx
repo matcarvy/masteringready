@@ -38,29 +38,61 @@ function scoreToVerdictEnum(score: number): 'ready' | 'almost_ready' | 'needs_wo
 // ============================================================================
 const SERVICES_CONFIG = {
   mixReviewMaster: {
-    standardPrice: '$349',
-    launchPrice: '$249',
+    standardPrice: 349,
+    launchPrice: 249,
     url: '', // Stripe checkout or Carrd — empty = ContactModal
   },
   fullMixMaster: {
-    standardPrice: '$997',
-    launchPrice: '$697',
+    standardPrice: 997,
+    launchPrice: 697,
     url: '',
+  },
+  mastering: {
+    price: 80,
+    url: '', // Contextual CTA for high-scoring mixes — empty = ContactModal
   },
   workshop: {
     url: '',   // External Carrd — empty hides banner
     date: '',  // e.g., 'Marzo 15' — empty hides banner
-    price: '$97',
+    price: 97,
   },
   audit: {
     url: '',
-    price: '$97',
+    price: 97,
   },
   intensive: {
     url: '',
-    price: '$399',
+    price: 399,
   },
 }
+
+// Format price as "$X USD" with smaller USD suffix (JSX helper)
+const PriceUSD = ({ amount, size = '2rem' }: { amount: number; size?: string }) => (
+  <span style={{ fontSize: size, fontWeight: '800', color: 'var(--mr-text-primary)' }}>
+    ${amount} <span style={{ fontSize: '0.65em', fontWeight: '600', color: 'var(--mr-text-secondary)' }}>USD</span>
+  </span>
+)
+
+// ============================================================================
+// Testimonials — fill when reviews come in. Empty array = section hidden.
+// Categories: accuracy ("spot on"), outcome ("fixed X, master improved"), confidence ("finally understood")
+// ============================================================================
+const TESTIMONIALS: {
+  name: string
+  role?: string
+  role_es?: string
+  quote_es: string
+  quote_en: string
+}[] = [
+  // Example (uncomment and replace with real reviews):
+  // {
+  //   name: 'Carlos M.',
+  //   role: 'Producer',
+  //   role_es: 'Productor',
+  //   quote_es: 'El análisis me mostró que mi low end estaba saturado. Corregí el sub y el master mejoró notablemente.',
+  //   quote_en: 'The analysis showed me my low end was overloaded. I fixed the sub and the master improved noticeably.',
+  // },
+]
 
 // ============================================================================
 // Helper: Save analysis directly to database for logged-in users
@@ -1818,8 +1850,8 @@ by Matías Carvajal
         }}>
           <span style={{ textAlign: 'center' }}>
             {lang === 'es'
-              ? `Workshop en vivo: ${SERVICES_CONFIG.workshop.date}. ${SERVICES_CONFIG.workshop.price}.`
-              : `Live workshop: ${SERVICES_CONFIG.workshop.date}. ${SERVICES_CONFIG.workshop.price}.`}
+              ? `Workshop en vivo: ${SERVICES_CONFIG.workshop.date}. $${SERVICES_CONFIG.workshop.price} USD.`
+              : `Live workshop: ${SERVICES_CONFIG.workshop.date}. $${SERVICES_CONFIG.workshop.price} USD.`}
           </span>
           <a
             href={SERVICES_CONFIG.workshop.url}
@@ -2128,6 +2160,93 @@ by Matías Carvajal
         </div>
       </section>
 
+      {/* Testimonials Section — fill TESTIMONIALS array above when reviews come in */}
+      {TESTIMONIALS.length > 0 && (
+        <section style={{
+          background: 'var(--mr-bg-base)',
+          borderTop: '1px solid var(--mr-border)',
+          padding: isMobile ? '2rem 1.25rem' : '2.5rem 1.5rem 3rem'
+        }}>
+          <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+            <h2 style={{
+              fontSize: isMobile ? '1.5rem' : '2rem',
+              fontWeight: 'bold',
+              textAlign: 'center',
+              marginBottom: '0.5rem',
+              color: 'var(--mr-text-primary)'
+            }}>
+              {lang === 'es'
+                ? 'Lo que dicen productores que lo probaron'
+                : 'What producers say after trying it'}
+            </h2>
+            <p style={{
+              textAlign: 'center',
+              color: 'var(--mr-text-tertiary)',
+              fontSize: '0.9375rem',
+              marginBottom: '2rem'
+            }}>
+              {lang === 'es'
+                ? 'Resultados reales, sin filtro.'
+                : 'Real results, unfiltered.'}
+            </p>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: isMobile ? '1fr' : TESTIMONIALS.length <= 2 ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)',
+              gap: '1.25rem'
+            }}>
+              {TESTIMONIALS.map((t, i) => (
+                <div key={i} style={{
+                  background: 'var(--mr-bg-card)',
+                  border: 'var(--mr-card-border)',
+                  borderRadius: '1rem',
+                  padding: '1.5rem',
+                  boxShadow: 'var(--mr-shadow)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.75rem'
+                }}>
+                  <p style={{
+                    fontSize: '0.9375rem',
+                    lineHeight: '1.6',
+                    color: 'var(--mr-text-primary)',
+                    margin: 0,
+                    fontStyle: 'italic'
+                  }}>
+                    &ldquo;{lang === 'es' ? t.quote_es : t.quote_en}&rdquo;
+                  </p>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    marginTop: 'auto'
+                  }}>
+                    <div>
+                      <p style={{
+                        fontSize: '0.8125rem',
+                        fontWeight: '600',
+                        color: 'var(--mr-text-primary)',
+                        margin: 0
+                      }}>
+                        {t.name}
+                      </p>
+                      {t.role && (
+                        <p style={{
+                          fontSize: '0.75rem',
+                          color: 'var(--mr-text-tertiary)',
+                          margin: 0
+                        }}>
+                          {lang === 'es' ? t.role_es || t.role : t.role}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* Pricing Section */}
       <section id="pricing" className="pricing-section" style={{
         background: 'var(--mr-bg-base)',
@@ -2407,11 +2526,9 @@ by Matías Carvajal
                 </p>
               </div>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', marginBottom: '0.75rem' }}>
-                <span style={{ fontSize: '2rem', fontWeight: '800', color: 'var(--mr-text-primary)' }}>
-                  {SERVICES_CONFIG.mixReviewMaster.launchPrice}
-                </span>
+                <PriceUSD amount={SERVICES_CONFIG.mixReviewMaster.launchPrice} />
                 <span style={{ fontSize: '1rem', color: 'var(--mr-text-tertiary)', textDecoration: 'line-through' }}>
-                  {SERVICES_CONFIG.mixReviewMaster.standardPrice}
+                  ${SERVICES_CONFIG.mixReviewMaster.standardPrice} USD
                 </span>
               </div>
               <span style={{
@@ -2490,11 +2607,9 @@ by Matías Carvajal
                 </p>
               </div>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', marginBottom: '0.75rem' }}>
-                <span style={{ fontSize: '2rem', fontWeight: '800', color: 'var(--mr-text-primary)' }}>
-                  {SERVICES_CONFIG.fullMixMaster.launchPrice}
-                </span>
+                <PriceUSD amount={SERVICES_CONFIG.fullMixMaster.launchPrice} />
                 <span style={{ fontSize: '1rem', color: 'var(--mr-text-tertiary)', textDecoration: 'line-through' }}>
-                  {SERVICES_CONFIG.fullMixMaster.standardPrice}
+                  ${SERVICES_CONFIG.fullMixMaster.standardPrice} USD
                 </span>
               </div>
               <span style={{
@@ -4017,6 +4132,119 @@ by Matías Carvajal
                 </div>
               )}
 
+              {/* Inline testimonials — validates the analysis, nudges toward next step */}
+              {result && TESTIMONIALS.length > 0 && (
+                <div style={{
+                  maxWidth: '680px',
+                  margin: '0 auto 1.5rem auto'
+                }}>
+                  <div style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.75rem'
+                  }}>
+                    {TESTIMONIALS.slice(0, 2).map((t, i) => (
+                      <div key={i} style={{
+                        background: 'var(--mr-bg-card)',
+                        border: 'var(--mr-card-border)',
+                        borderRadius: '0.75rem',
+                        padding: '1rem 1.25rem',
+                        boxShadow: 'var(--mr-shadow)',
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        gap: '0.75rem'
+                      }}>
+                        <span style={{ fontSize: '1.25rem', flexShrink: 0, lineHeight: 1, marginTop: '0.125rem' }}>&ldquo;</span>
+                        <div>
+                          <p style={{
+                            fontSize: '0.875rem',
+                            lineHeight: '1.5',
+                            color: 'var(--mr-text-primary)',
+                            margin: '0 0 0.375rem 0',
+                            fontStyle: 'italic'
+                          }}>
+                            {lang === 'es' ? t.quote_es : t.quote_en}
+                          </p>
+                          <p style={{
+                            fontSize: '0.75rem',
+                            color: 'var(--mr-text-tertiary)',
+                            margin: 0
+                          }}>
+                            {t.name}{t.role ? ` · ${lang === 'es' ? (t.role_es || t.role) : t.role}` : ''}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Contextual $80 Mastering — only for high-scoring mixes (≥85) */}
+              {result && result.score >= 85 && (
+                <div style={{
+                  maxWidth: '680px',
+                  margin: '0 auto 1.5rem auto',
+                  background: 'var(--mr-bg-card)',
+                  border: 'var(--mr-card-border)',
+                  borderRadius: '1rem',
+                  padding: isMobile ? '1.25rem' : '1.5rem 2rem',
+                  boxShadow: 'var(--mr-shadow)',
+                  display: 'flex',
+                  flexDirection: isMobile ? 'column' : 'row',
+                  alignItems: 'center',
+                  gap: '1rem'
+                }}>
+                  <div style={{ flex: 1, textAlign: isMobile ? 'center' : 'left' }}>
+                    <p style={{
+                      fontSize: '1rem',
+                      fontWeight: '600',
+                      color: 'var(--mr-text-primary)',
+                      margin: '0 0 0.25rem 0'
+                    }}>
+                      {lang === 'es'
+                        ? '¿Tu mezcla ya está lista? Puedo masterizarla.'
+                        : 'Is your mix ready? I can master it.'}
+                    </p>
+                    <p style={{
+                      fontSize: '0.8125rem',
+                      color: 'var(--mr-text-secondary)',
+                      margin: 0
+                    }}>
+                      {lang === 'es'
+                        ? 'Mastering profesional para mezclas aprobadas por Mastering Ready.'
+                        : 'Professional mastering for mixes approved by Mastering Ready.'}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      if (SERVICES_CONFIG.mastering.url) {
+                        window.open(SERVICES_CONFIG.mastering.url, '_blank')
+                      } else {
+                        setCtaSource('contextual_mastering')
+                        setShowContactModal(true)
+                      }
+                    }}
+                    style={{
+                      background: 'var(--mr-gradient)',
+                      color: '#ffffff',
+                      padding: '0.75rem 1.5rem',
+                      borderRadius: '0.5rem',
+                      border: 'none',
+                      fontWeight: '600',
+                      fontSize: '0.9375rem',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      whiteSpace: 'nowrap',
+                      flexShrink: 0
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(99, 102, 241, 0.3)' }}
+                    onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none' }}
+                  >
+                    ${SERVICES_CONFIG.mastering.price} <span style={{ fontSize: '0.75em' }}>USD</span> →
+                  </button>
+                </div>
+              )}
+
               {/* Three-Path CTA — visible for all users after analysis */}
               {result && (
                 <div style={{
@@ -4164,8 +4392,8 @@ by Matías Carvajal
                         lineHeight: '1.5'
                       }}>
                         {lang === 'es'
-                          ? `Auditoría profesional, ${SERVICES_CONFIG.audit.price}`
-                          : `Professional audit, ${SERVICES_CONFIG.audit.price}`}
+                          ? `Auditoría profesional, $${SERVICES_CONFIG.audit.price} USD`
+                          : `Professional audit, $${SERVICES_CONFIG.audit.price} USD`}
                       </p>
                       <span style={{
                         fontSize: '0.8125rem',
