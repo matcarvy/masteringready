@@ -2040,6 +2040,238 @@ by Matías Carvajal
         </div>
       </section>
 
+      {/* Pricing Section */}
+      <section id="pricing" className="pricing-section" style={{
+        background: 'var(--mr-bg-base)',
+        borderTop: '1px solid var(--mr-border)'
+      }}>
+        <div style={{ maxWidth: '1080px', margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
+            <h2 style={{ fontSize: '2.25rem', fontWeight: 'bold', marginBottom: '0.75rem', color: 'var(--mr-text-primary)' }}>
+              {lang === 'es' ? 'Elige tu plan' : 'Choose your plan'}
+            </h2>
+            <p style={{ fontSize: '1.125rem', color: 'var(--mr-text-secondary)' }}>
+              {lang === 'es'
+                ? 'Empieza gratis. Escala cuando lo necesites.'
+                : 'Start free. Scale when you need to.'}
+            </p>
+          </div>
+
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
+            gap: '1.5rem',
+            alignItems: 'start'
+          }}>
+            {/* Free Plan */}
+            <div style={{
+              background: 'var(--mr-bg-card)',
+              border: 'var(--mr-card-border)',
+              borderRadius: '1rem',
+              padding: '2rem',
+              boxShadow: 'var(--mr-shadow)',
+              order: isMobile ? 1 : 0
+            }}>
+              <div style={{ marginBottom: '1.5rem' }}>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: '700', color: 'var(--mr-text-primary)', marginBottom: '0.25rem' }}>
+                  {lang === 'es' ? 'Gratis' : 'Free'}
+                </h3>
+                <p style={{ fontSize: '0.875rem', color: 'var(--mr-text-tertiary)' }}>
+                  {lang === 'es' ? 'Para probar tu mezcla' : 'To test your mix'}
+                </p>
+              </div>
+              <div style={{ fontSize: '2rem', fontWeight: '800', color: 'var(--mr-text-primary)', marginBottom: '1.5rem' }}>
+                $0
+              </div>
+              <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {[
+                  lang === 'es' ? '2 análisis completos' : '2 full analyses',
+                  lang === 'es' ? 'Informe profesional en PDF' : 'Professional PDF report',
+                  lang === 'es' ? 'Historial de análisis' : 'Analysis history'
+                ].map((item, i) => (
+                  <li key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9375rem', color: 'var(--mr-text-secondary)' }}>
+                    <Check size={16} style={{ color: 'var(--mr-green)', flexShrink: 0 }} />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+              <button
+                onClick={scrollToAnalyzer}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  background: 'transparent',
+                  color: 'var(--mr-primary)',
+                  border: '2px solid var(--mr-primary)',
+                  borderRadius: '0.5rem',
+                  fontWeight: '600',
+                  fontSize: '0.9375rem',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'var(--mr-primary)'
+                  e.currentTarget.style.color = '#ffffff'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent'
+                  e.currentTarget.style.color = 'var(--mr-primary)'
+                }}
+              >
+                {lang === 'es' ? 'Crear cuenta gratis' : 'Create free account'}
+              </button>
+            </div>
+
+            {/* Pro Plan - Highlighted */}
+            <div style={{
+              background: 'var(--mr-bg-card)',
+              border: '2px solid var(--mr-primary)',
+              borderRadius: '1rem',
+              padding: '2rem',
+              boxShadow: '0 8px 30px rgba(102, 126, 234, 0.15)',
+              position: 'relative',
+              transform: isMobile ? 'none' : 'translateY(-8px)',
+              order: isMobile ? 0 : 1
+            }}>
+              {/* Popular badge */}
+              <div style={{
+                position: 'absolute',
+                top: '-12px',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                background: 'var(--mr-gradient)',
+                color: 'white',
+                padding: '0.25rem 1rem',
+                borderRadius: '9999px',
+                fontSize: '0.75rem',
+                fontWeight: '600',
+                whiteSpace: 'nowrap'
+              }}>
+                {lang === 'es' ? 'Más popular' : 'Most popular'}
+              </div>
+              <div style={{ marginBottom: '1.5rem' }}>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: '700', color: 'var(--mr-text-primary)', marginBottom: '0.25rem' }}>
+                  Pro
+                </h3>
+                <p style={{ fontSize: '0.875rem', color: 'var(--mr-text-tertiary)' }}>
+                  {lang === 'es' ? 'Para producir con confianza' : 'To produce with confidence'}
+                </p>
+              </div>
+              <div style={{ marginBottom: '1.5rem' }}>
+                <span style={{ fontSize: '2rem', fontWeight: '800', color: 'var(--mr-text-primary)' }}>
+                  {prices.pro_monthly}
+                </span>
+                <span style={{ fontSize: '0.9375rem', color: 'var(--mr-text-tertiary)', marginLeft: '0.25rem' }}>
+                  /{lang === 'es' ? 'mes' : 'mo'}
+                </span>
+              </div>
+              <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {[
+                  lang === 'es' ? '30 análisis al mes' : '30 analyses per month',
+                  lang === 'es' ? 'Informe profesional en PDF' : 'Professional PDF report',
+                  lang === 'es' ? 'Historial completo' : 'Full history',
+                  lang === 'es' ? 'Selector de género' : 'Genre selector'
+                ].map((item, i) => (
+                  <li key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9375rem', color: 'var(--mr-text-secondary)' }}>
+                    <Check size={16} style={{ color: 'var(--mr-green)', flexShrink: 0 }} />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+              <a
+                href={`/subscription?lang=${lang}`}
+                style={{
+                  display: 'block',
+                  width: '100%',
+                  padding: '0.75rem',
+                  background: 'var(--mr-gradient)',
+                  color: 'white',
+                  textAlign: 'center',
+                  textDecoration: 'none',
+                  borderRadius: '0.5rem',
+                  fontWeight: '600',
+                  fontSize: '0.9375rem',
+                  boxSizing: 'border-box',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-2px)'
+                  e.currentTarget.style.boxShadow = '0 4px 15px rgba(102, 126, 234, 0.35)'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)'
+                  e.currentTarget.style.boxShadow = 'none'
+                }}
+              >
+                {lang === 'es' ? 'Suscribirme' : 'Subscribe'}
+              </a>
+            </div>
+
+            {/* Individual Plan */}
+            <div style={{
+              background: 'var(--mr-bg-card)',
+              border: 'var(--mr-card-border)',
+              borderRadius: '1rem',
+              padding: '2rem',
+              boxShadow: 'var(--mr-shadow)',
+              order: 2
+            }}>
+              <div style={{ marginBottom: '1.5rem' }}>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: '700', color: 'var(--mr-text-primary)', marginBottom: '0.25rem' }}>
+                  {lang === 'es' ? 'Individual' : 'Single'}
+                </h3>
+                <p style={{ fontSize: '0.875rem', color: 'var(--mr-text-tertiary)' }}>
+                  {lang === 'es' ? 'Para una canción específica' : 'For a specific song'}
+                </p>
+              </div>
+              <div style={{ fontSize: '2rem', fontWeight: '800', color: 'var(--mr-text-primary)', marginBottom: '1.5rem' }}>
+                {prices.single}
+              </div>
+              <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {[
+                  lang === 'es' ? '1 análisis completo' : '1 full analysis',
+                  lang === 'es' ? 'Informe profesional en PDF' : 'Professional PDF report',
+                  lang === 'es' ? 'Sin suscripción' : 'No subscription'
+                ].map((item, i) => (
+                  <li key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9375rem', color: 'var(--mr-text-secondary)' }}>
+                    <Check size={16} style={{ color: 'var(--mr-green)', flexShrink: 0 }} />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+              <a
+                href={`/subscription?lang=${lang}`}
+                style={{
+                  display: 'block',
+                  width: '100%',
+                  padding: '0.75rem',
+                  background: 'transparent',
+                  color: 'var(--mr-primary)',
+                  textAlign: 'center',
+                  textDecoration: 'none',
+                  borderRadius: '0.5rem',
+                  fontWeight: '600',
+                  fontSize: '0.9375rem',
+                  border: '2px solid var(--mr-primary)',
+                  boxSizing: 'border-box',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'var(--mr-primary)'
+                  e.currentTarget.style.color = '#ffffff'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent'
+                  e.currentTarget.style.color = 'var(--mr-primary)'
+                }}
+              >
+                {lang === 'es' ? 'Comprar análisis' : 'Buy analysis'}
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Analyzer Section - Same as before but with inline styles */}
       <section id="analyze" className="analyzer-section" style={{
         background: 'var(--mr-bg-card)'
@@ -2058,8 +2290,8 @@ by Matías Carvajal
                 </p>
                 <p style={{ fontSize: '0.9rem', color: 'var(--mr-text-tertiary)', marginTop: '0.5rem' }}>
                   {lang === 'es'
-                    ? 'Crea tu cuenta gratis. 2 análisis completos con informe detallado y PDF.'
-                    : 'Create your free account. 2 full analyses with detailed report and PDF.'}
+                    ? 'Crea tu cuenta gratis y recibe 2 análisis completos con informe profesional en PDF.'
+                    : 'Create your free account and get 2 full analyses with a professional PDF report.'}
                 </p>
               </div>
 
