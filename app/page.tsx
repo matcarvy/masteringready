@@ -2096,7 +2096,7 @@ by Matías Carvajal
                 ))}
               </ul>
               <button
-                onClick={scrollToAnalyzer}
+                onClick={() => isLoggedIn ? scrollToAnalyzer() : setShowAuthModal(true)}
                 style={{
                   width: '100%',
                   padding: '0.75rem',
@@ -2118,7 +2118,9 @@ by Matías Carvajal
                   e.currentTarget.style.color = 'var(--mr-primary)'
                 }}
               >
-                {lang === 'es' ? 'Crear cuenta gratis' : 'Create free account'}
+                {isLoggedIn
+                  ? (lang === 'es' ? 'Analizar ahora' : 'Analyze now')
+                  : (lang === 'es' ? 'Crear cuenta gratis' : 'Create free account')}
               </button>
             </div>
 
@@ -2178,8 +2180,8 @@ by Matías Carvajal
                   </li>
                 ))}
               </ul>
-              <a
-                href={`/subscription?lang=${lang}`}
+              <button
+                onClick={() => isLoggedIn ? (window.location.href = `/subscription?lang=${lang}`) : setShowAuthModal(true)}
                 style={{
                   display: 'block',
                   width: '100%',
@@ -2187,12 +2189,13 @@ by Matías Carvajal
                   background: 'var(--mr-gradient)',
                   color: 'white',
                   textAlign: 'center',
-                  textDecoration: 'none',
                   borderRadius: '0.5rem',
                   fontWeight: '600',
                   fontSize: '0.9375rem',
                   boxSizing: 'border-box',
-                  transition: 'all 0.2s'
+                  transition: 'all 0.2s',
+                  border: 'none',
+                  cursor: 'pointer'
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.transform = 'translateY(-2px)'
@@ -2203,8 +2206,10 @@ by Matías Carvajal
                   e.currentTarget.style.boxShadow = 'none'
                 }}
               >
-                {lang === 'es' ? 'Suscribirme' : 'Subscribe'}
-              </a>
+                {isLoggedIn
+                  ? (lang === 'es' ? 'Suscribirme' : 'Subscribe')
+                  : (lang === 'es' ? 'Crear cuenta gratis' : 'Create free account')}
+              </button>
             </div>
 
             {/* Individual Plan */}
@@ -2239,8 +2244,8 @@ by Matías Carvajal
                   </li>
                 ))}
               </ul>
-              <a
-                href={`/subscription?lang=${lang}`}
+              <button
+                onClick={() => isLoggedIn ? (window.location.href = `/subscription?lang=${lang}`) : setShowAuthModal(true)}
                 style={{
                   display: 'block',
                   width: '100%',
@@ -2248,13 +2253,13 @@ by Matías Carvajal
                   background: 'transparent',
                   color: 'var(--mr-primary)',
                   textAlign: 'center',
-                  textDecoration: 'none',
                   borderRadius: '0.5rem',
                   fontWeight: '600',
                   fontSize: '0.9375rem',
                   border: '2px solid var(--mr-primary)',
                   boxSizing: 'border-box',
-                  transition: 'all 0.2s'
+                  transition: 'all 0.2s',
+                  cursor: 'pointer'
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.background = 'var(--mr-primary)'
@@ -2265,8 +2270,10 @@ by Matías Carvajal
                   e.currentTarget.style.color = 'var(--mr-primary)'
                 }}
               >
-                {lang === 'es' ? 'Comprar análisis' : 'Buy analysis'}
-              </a>
+                {isLoggedIn
+                  ? (lang === 'es' ? 'Comprar análisis' : 'Buy analysis')
+                  : (lang === 'es' ? 'Crear cuenta gratis' : 'Create free account')}
+              </button>
             </div>
           </div>
         </div>
