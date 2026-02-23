@@ -2070,7 +2070,7 @@ by Matías Carvajal
               borderRadius: '1rem',
               padding: '2rem',
               boxShadow: 'var(--mr-shadow)',
-              order: isMobile ? 1 : 0
+              order: 0
             }}>
               <div style={{ marginBottom: '1.5rem' }}>
                 <h3 style={{ fontSize: '1.25rem', fontWeight: '700', color: 'var(--mr-text-primary)', marginBottom: '0.25rem' }}>
@@ -2131,7 +2131,7 @@ by Matías Carvajal
               boxShadow: '0 8px 30px rgba(102, 126, 234, 0.15)',
               position: 'relative',
               transform: isMobile ? 'none' : 'translateY(-8px)',
-              order: isMobile ? 0 : 1
+              order: 1
             }}>
               {/* Popular badge */}
               <div style={{
@@ -5709,7 +5709,7 @@ by Matías Carvajal
 
         /* Bridge Statement — tighter spacing, feels like hero closure */
         .bridge-section {
-          padding: 1.25rem 1.5rem 0.125rem 1.5rem;
+          padding: 1.25rem 1.5rem 0rem 1.5rem;
         }
         .bridge-text {
           font-size: 1.25rem;
@@ -5722,18 +5722,23 @@ by Matías Carvajal
 
         /* Features Section */
         .features-section {
-          padding: 0.625rem 1.5rem;
+          padding: 0.25rem 1.5rem;
         }
 
         .features-title-container {
           margin-bottom: 2.5rem;
         }
 
+        /* Pricing Section */
+        .pricing-section {
+          padding: 2.5rem 1.5rem 3.5rem 1.5rem;
+        }
+
         /* Analyzer Section */
         .analyzer-section {
           padding: 1.25rem 1.5rem;
         }
-        
+
         .analyzer-title-container {
           margin-bottom: 2.5rem;
         }
@@ -5818,7 +5823,7 @@ by Matías Carvajal
           
           /* Bridge Statement — tighter spacing, feels like hero closure */
           .bridge-section {
-            padding: 0.875rem 1.5rem 0.0625rem 1.5rem;
+            padding: 0.875rem 1.5rem 0rem 1.5rem;
           }
           .bridge-text {
             font-size: 1.065rem;
@@ -5827,13 +5832,18 @@ by Matías Carvajal
 
           /* Features Section */
           .features-section {
-            padding: 0.375rem 1.5rem 2rem 1.5rem;
+            padding: 0.125rem 1.5rem 1.5rem 1.5rem;
           }
 
           .features-title-container {
             margin-bottom: 1.5rem;
           }
-          
+
+          /* Pricing Section */
+          .pricing-section {
+            padding: 2rem 1.25rem 2.5rem 1.25rem;
+          }
+
           /* Analyzer Section */
           .analyzer-section {
             padding: 1.125rem 1.5rem;
