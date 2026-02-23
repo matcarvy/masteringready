@@ -3344,30 +3344,86 @@ Confirmed by reading `band_balance_db()` source (`analyzer.py:2569`): frequency 
 
 ---
 
+### Session 2026-02-21 Part 4 — Marketing Strategy Session + Growth Plan Review
+
+#### Marketing Strategy Analysis (Hormozi Framework + Research)
+- Full review of existing 90-day Dual-Engine Growth Plan against Hormozi's $100M Leads framework and current indie SaaS best practices
+- Research covered: Rule of 100, indie SaaS $0-$1K MRR paths, music production SaaS marketing (LANDR/DistroKid/Splice), email onboarding conversion, community-led growth, live stream lead gen, LATAM SaaS growth
+
+#### Key Strategic Decisions
+- **Hero copy: don't change yet.** No baseline conversion data (launched 10 days ago). Wait for 50+ anonymous analyses, then evaluate. Tuesday live stream is the first real traffic event.
+- **Hormozi Rule of 100 adjusted**: 20-30 quality personalized outreach/day (not 100 copy-paste). Solo founder running 3 businesses, quality > volume.
+- **Email sequence moved to Week 1** (was Weeks 5-6 in growth plan). Even manual Gmail emails before Resend integration.
+- **Founding member offer**: $4.99/month locked in (50% off) for first 10 users. Stripe coupon, DM to warm leads from IG.
+- **Product Hunt delayed to Month 3-4** (was Weeks 6-7). Need testimonials and onboarding flow first.
+- **LATAM payments (PSE/Nequi) stays Month 2**. Tuesday live stream confirms demand signal.
+- **Behavioral email triggers (score-based)**: Draft logic now, build at 30+ registered users.
+- **Monthly live master reviews**: Tuesday should be first of recurring series, not one-off.
+
+#### Copy Rules Added
+- **No em dashes** in user-facing copy. Feels AI-generated. Use periods or commas instead.
+- **"de por vida" / "lifetime"** remains forbidden. Use "fijo" or "para siempre" for founding member pricing.
+
+#### Email Sequence Drafted (4 emails, bilingual, ready for Gmail or Resend)
+1. **Welcome** (immediate on signup): Account active, 2 free analyses, upload tip, signed by Sara
+2. **Score Explained** (24h after first analysis): Generic version for Gmail (no score number), dynamic version for Resend later. Conditional copy by score range (>=85 green, 60-84 yellow, <60 red). Encourages second analysis.
+3. **Upgrade Nudge** (after 2 free analyses used): Pro at regional price, what's included (30 analyses/month, PDF, history), option to stay on free Quick mode
+4. **Re-engagement** (14 days inactive): Short, no pressure, "better to fix now than pay twice"
+
+#### Founding Member DM Template (corrected)
+- ES: "Hey [nombre], vi que probaste Mastering Ready. Estoy buscando 10 founding members. Acceso Pro completo a $4.99/mes fijo (el precio normal será $9.99). Incluye 30 análisis al mes, reportes completos en PDF y todo lo que venga después. ¿Te interesa?"
+- EN: "Hey [name], I saw you tried Mastering Ready. I'm looking for 10 founding members. Full Pro access at $4.99/mo locked in (regular price will be $9.99). Includes 30 analyses per month, full PDF reports, and everything that comes next. Interested?"
+- Stripe coupon: 50% off recurring, limit 10 redemptions
+
+#### Founding Member Pricing by Country (50% off regional)
+- US: $4.99/mo, Colombia/Peru/Ecuador: $2.75/mo, Mexico: $3.50/mo, Argentina: $2.00/mo
+- Stripe percentage coupon applies to whatever price the checkout creates
+
+#### Code Change
+- Added "Crea tu cuenta gratis. 2 análisis completos con informe detallado y PDF." below upload section title (`page.tsx`). Small muted text, value anchor before signup prompt.
+
+#### Commits to main (Session 2026-02-21 Part 4)
+1. `f7b407e` - ux: add '2 free analyses' value anchor below upload section title
+
+**Git state**: main on `f7b407e`, pushed. Build clean.
+
+---
+
 ## NEXT STEPS (Priority Order)
 
-### IMMEDIATE (next session)
-1. **Genre profile calibration** — Analyze ~102 reference tracks (see `docs/genre-reference-tracks.md`). Log in as admin, select genre from dropdown, analyze. Run SQL query after all done. Paste results to Claude → calculate mean ± std dev per genre → update `GENRE_FREQUENCY_PROFILES` in `analyzer.py`. Can be done in batches.
-2. **Lead prospector outreach** — Reply to top YouTube leads from `/prospecting` using templates. Start with highest-score leads.
-3. **Set up F5Bot** — f5bot.com, keywords: mastering, mix ready, LUFS, before mastering, mix check. Free Reddit+HN monitoring.
-4. **Set up ForumScout** — forumscout.app free tier, 3 keyword alerts across Reddit/Twitter/forums/blogs.
-5. ~~**Add Spanish YouTube queries**~~ — DONE (Feb 21). 6 ES queries added.
-6. **Review HN lead quality** — After next cron run, verify the audio context gate is filtering out false positives. Adjust `AUDIO_CONTEXT_WORDS` if needed.
-7. **Delete existing HN false positives** — The "Inscryption" and "CursorLens" leads are still in the DB. Dismiss or delete them from `/prospecting`.
+### BEFORE TUESDAY LIVE STREAM (Feb 25)
+1. **Stripe coupon** — Create 50% off recurring coupon in Stripe Dashboard, limit 10 redemptions. Name: `FOUNDING10`.
+2. **DM 5-10 founding members** — Use corrected template above. People who engaged with Stories or tried MR.
+3. **Email 1 (Welcome) ready** — Have it ready to send manually from Gmail to anyone who signs up after Tuesday's live stream.
+4. **Live stream prep** — Structure, talking points, CTA during stream (masteringready.com link visible).
 
-### SHORT-TERM (Week 2-4)
-6. **Join Discord servers** — Birdzhouse (58K), r/MusicProduction (19K), We Suck At Producing. Monitor #mixing-mastering channels.
-7. **Join Facebook Groups (LATAM)** — "Produccion Musical", "Mezcla y Mastering", "Ingenieria de Sonido Colombia". Post educational content.
-8. **Demo Pro user** — Create user with automatic Pro plan (30 analyses) for live demo. No admin access.
-9. **eBook migration from Payhip** — Stripe product `ebook` at $15 USD flat. DB: `has_ebook BOOLEAN`. Checkout + webhook + protected PDF download API. `/ebook` page.
-10. **Email onboarding sequence** — 4 bilingual triggered emails (welcome, score explained, upgrade nudge, re-analysis). Highest-leverage conversion feature. Needs Resend or SendGrid (~$10-20/mo).
+### IMMEDIATE (next session after live stream)
+5. **Review live stream data** — Check admin dashboard: anonymous analyses, signups, countries, devices. This is your first real conversion data.
+6. **Send Email 1 manually** — Gmail to every new signup from the live stream.
+7. **Lead prospector outreach** — Reply to top YouTube/HN leads from `/prospecting`. 20-30/day quality replies.
+8. **Delete HN false positives** — "Inscryption" and "CursorLens" leads still in DB.
+9. **Review HN lead quality** — Verify audio context gate is filtering correctly after next cron run.
 
-### MEDIUM-TERM (data-driven)
-11. **Signed token system** — HMAC-signed short-lived tokens via `/api/analyze-token`. Render validates signature. ~30 min.
-12. **Discord keyword bot** — `discord.py` bot monitoring 3-5 servers for mastering keywords. ~2-3h to build.
-13. **Indie Hackers launch** — Show IH post with story + metrics. 23% conversion rate per engaged post.
-14. **SEO blog posts** — Zero-competition ES keywords: "cómo saber si mi mezcla está lista", "analizar mezcla antes de mastering". EN: "is my mix ready for mastering", "mix analysis tool".
-15. **TikTok/Instagram Reels** — Short videos showing MR analyzing a mix, score improving after fixes. Content creation, not monitoring.
-16. **DLocal integration** — OXXO (MX), Pix (BR), Mercado Pago (AR/CO). Trigger: high LATAM signups but low paid conversion.
-17. **Priority Queue System** — Spec at `docs/specs/priority-queue-system.xml`. Trigger: OOM errors, queue depth >5.
-18. **Stream Ready deploy** — Backend ready in `main.py` (`_sr_` prefix). Frontend at `~/streamready/`.
+### SHORT-TERM (Weeks 2-4, post live stream data)
+10. **Email service integration (Resend)** — $0 for first 3,000 emails/month. Automate the 4-email sequence with behavioral triggers.
+11. **Genre profile calibration** — Analyze ~102 reference tracks. Can be done in batches across sessions.
+12. **Referral program (manual)** — "Refer a friend, both get 2 extra analyses." Even manual tracking via email.
+13. **Set up F5Bot** — f5bot.com, free Reddit+HN keyword monitoring.
+14. **Set up ForumScout** — forumscout.app free tier, 3 keyword alerts.
+15. **Join Discord servers** — Birdzhouse (58K), r/MusicProduction (19K), We Suck At Producing.
+16. **Join Facebook Groups (LATAM)** — "Produccion Musical", "Mezcla y Mastering", "Ingenieria de Sonido Colombia".
+17. **Outreach templates** — 15 bilingual templates for YouTube comments, Reddit replies, FB group answers, IG DMs, WhatsApp.
+
+### MONTH 2 (data-driven, triggered by live stream + outreach results)
+18. **LATAM payments (PSE/Nequi)** — Trigger: Colombian signups hitting paywall without international credit card. Research EBANX vs Rebill vs dLocal.
+19. **Monthly live master review #2** — Recurring series, gate replay behind email signup.
+20. **eBook migration from Payhip** — Stripe product `ebook` at $15 USD flat.
+21. **SEO blog posts** — Zero-competition ES keywords first.
+22. **Indie Hackers launch** — After testimonials and data from Month 1.
+
+### MONTH 3+ (scale what works)
+23. **Product Hunt** — After testimonials, polished onboarding, proven conversion flow.
+24. **Signed token system** — HMAC-signed tokens, ~30 min.
+25. **DLocal integration** — If LATAM signups high but paid conversion <3%.
+26. **Priority Queue System** — Trigger: OOM errors, queue depth >5.
+27. **Stream Ready deploy** — Backend ready. Frontend at `~/streamready/`.

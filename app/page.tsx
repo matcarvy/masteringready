@@ -569,7 +569,8 @@ function Home() {
           setUserAnalysisStatus(ADMIN_STATUS); _quotaCache = ADMIN_STATUS
         } else {
           // Check quota directly — don't rely solely on AuthProvider signal
-          checkCanAnalyze().then((status) => {
+          const qTokens = session ? { access_token: session.access_token, refresh_token: session.refresh_token } : undefined
+          checkCanAnalyze(1, qTokens).then((status) => {
             setUserAnalysisStatus(status); _quotaCache = status
             if (!status.can_analyze) {
               setShowFreeLimitModal(true)
@@ -628,11 +629,12 @@ function Home() {
       setUserAnalysisStatus(ADMIN_STATUS); _quotaCache = ADMIN_STATUS
       return
     }
-    checkCanAnalyze().then((status) => {
+    const preTokens = session ? { access_token: session.access_token, refresh_token: session.refresh_token } : undefined
+    checkCanAnalyze(1, preTokens).then((status) => {
       // NO_PLAN means profile may not exist yet (new OAuth user) — retry after 2s
       if (status.reason === 'NO_PLAN') {
         setTimeout(() => {
-          checkCanAnalyze().then((retryStatus) => {
+          checkCanAnalyze(1, preTokens).then((retryStatus) => {
             setUserAnalysisStatus(retryStatus); _quotaCache = retryStatus
           }).catch(() => {})
         }, 2000)
@@ -773,8 +775,9 @@ const handleAnalyze = async () => {
         if (effectiveQuotaStatus?.can_analyze && effectiveQuotaStatus.reason !== 'ANONYMOUS') {
           analysisStatus = effectiveQuotaStatus
         } else {
+          const tokens = session ? { access_token: session.access_token, refresh_token: session.refresh_token } : undefined
           analysisStatus = await Promise.race([
-            checkCanAnalyze(),
+            checkCanAnalyze(1, tokens),
             new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Quota check timeout')), 8000))
           ])
         }
@@ -797,8 +800,15 @@ const handleAnalyze = async () => {
         }
       } catch {
         setLoading(false)
-        // RPC failed — show upgrade modal as safe fallback (user likely hit limit)
-        setShowFreeLimitModal(true)
+        if (isAdmin) {
+          // Admin should never see payment modal — show retryable error instead
+          setError(lang === 'es'
+            ? 'No se pudo verificar tu sesión. Recarga la página e intenta de nuevo.'
+            : 'Could not verify your session. Please reload the page and try again.')
+        } else {
+          // RPC failed — show upgrade modal as safe fallback (user likely hit limit)
+          setShowFreeLimitModal(true)
+        }
         return
       }
     }
@@ -966,7 +976,8 @@ const handleAnalyze = async () => {
         // Only re-check if user logged in DURING analysis (wasLoggedInAtStart=false).
         if (!wasLoggedInAtStart) {
           try {
-            const quotaCheck = await checkCanAnalyze()
+            const postTokens = session ? { access_token: session.access_token, refresh_token: session.refresh_token } : undefined
+            const quotaCheck = await checkCanAnalyze(1, postTokens)
             if (!quotaCheck.can_analyze || quotaCheck.reason === 'ANONYMOUS') {
               setUserAnalysisStatus(quotaCheck); _quotaCache = quotaCheck
               setShowFreeLimitModal(true)

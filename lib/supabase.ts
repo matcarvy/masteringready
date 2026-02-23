@@ -297,11 +297,15 @@ export interface AnalysisStatus {
  * Returns detailed status including reason and limits
  * Verificar si el usuario puede realizar análisis (dentro de límites)
  */
-export async function checkCanAnalyze(attempt = 1): Promise<AnalysisStatus> {
+export async function checkCanAnalyze(attempt = 1, sessionTokens?: { access_token: string; refresh_token: string }): Promise<AnalysisStatus> {
   try {
-    const user = await getCurrentUser()
+    // Use fresh client when session tokens provided (avoids GoTrueClient lock contention on singleton)
+    const client = sessionTokens ? await createFreshQueryClient(sessionTokens) : null
+    const effectiveClient = client || supabase
 
-    if (!user) {
+    const { data: { user }, error: userError } = await effectiveClient.auth.getUser()
+
+    if (userError || !user) {
       // Anonymous users can analyze (tracked differently via IP)
       return {
         can_analyze: true,
@@ -312,7 +316,7 @@ export async function checkCanAnalyze(attempt = 1): Promise<AnalysisStatus> {
       }
     }
 
-    const { data, error } = await supabase.rpc('can_user_analyze', {
+    const { data, error } = await effectiveClient.rpc('can_user_analyze', {
       p_user_id: user.id
     })
 
