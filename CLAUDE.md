@@ -3389,41 +3389,131 @@ Confirmed by reading `band_balance_db()` source (`analyzer.py:2569`): frequency 
 
 ---
 
+### Session 2026-02-23 — 60-Day Monetization Dev Work (Days 2, 6, 8)
+
+#### Context
+Implementing dev work from 60-Day Monetization Plan (`/Users/matcarvy/Downloads/MasteringReady_60Day_Plan_v2.docx`). Shifts MR from pure SaaS ($9.99/mo) to 7-tier offer ladder where Matias' mastering expertise (300+ masters, Latin Grammy credit) is layered on top of the diagnostic tool.
+
+#### Plan (approved in previous session)
+Detailed plan at `/Users/matcarvy/.claude/plans/peppy-bubbling-whisper.md`. Three code changes, all in `app/page.tsx`, no new files/dependencies/backend changes.
+
+#### Changes Implemented
+
+**1. SERVICES_CONFIG constants + Lucide imports**
+- `SERVICES_CONFIG` object with 5 service configs: `mixReviewMaster`, `fullMixMaster`, `workshop`, `audit`, `intensive`
+- All URLs start empty — buttons default to ContactModal until Sara creates external pages (Carrd, Stripe links)
+- Prices: Mix Review+Master $249 launch/$349 standard, Full Mix+Master $697/$997, Workshop $97, Audit $97, Intensive $399
+- Added `GraduationCap`, `Stethoscope`, `Wrench` to Lucide imports
+
+**2. Workshop banner (Day 8)**
+- `workshopBannerDismissed` state (default `true` to prevent flash)
+- `useEffect` on mount checks `sessionStorage('mr_workshop_banner_dismissed')` + config
+- Full-width gradient banner between `</nav>` and hero section
+- Only renders when `SERVICES_CONFIG.workshop.url` AND `SERVICES_CONFIG.workshop.date` are both non-empty
+- **Hidden by default** — nothing visible until Sara fills in workshop URL + date
+- Dismiss persists for browser session via `sessionStorage`
+
+**3. Services section (Day 2)**
+- `id="services"` for scroll targeting from three-path CTA
+- Inserted between pricing section end and analyzer section
+- Two cards side by side (desktop) / stacked (mobile):
+  - Mix Review + Master: $349 strikethrough → $249 launch price, green badge, 4 bullet points
+  - Full Mix + Master: $997 strikethrough → $697 launch price, green badge, 4 bullet points
+- Outline CTA buttons open ContactModal when URLs empty
+- Hover: `translateY(-3px)` + enhanced shadow
+- `.services-section` CSS class for desktop + mobile responsive padding
+- Matias' expertise credentials in subtitle (300+ masters, Latin Grammy credit)
+
+**4. Three-path CTA after analysis (Day 6)**
+- 3 cards visible to ALL users after completing analysis (not gated by score/login/plan)
+- Inserted between existing CTA card and rating widget
+- Desktop: 3-column grid. Mobile: stacked.
+- Card 1 (Learn, GraduationCap, purple): Workshop URL or ContactModal (`ctaSource: 'three_path_learn'`)
+- Card 2 (Audit, Stethoscope, amber): Audit URL or ContactModal (`ctaSource: 'three_path_audit'`)
+- Card 3 (Service, Wrench, green): Scrolls to `#services` section, falls back to ContactModal (`ctaSource: 'three_path_service'`)
+- All cards use CSS vars for dark/light mode, hover effects with translateY + shadow-lg
+
+#### Key Design Decisions
+- **Empty URL = ContactModal**: All URLs start empty. When Sara creates external pages, just fill in the URL string — no code change needed.
+- **No new files**: Everything in `app/page.tsx` (constants, state, JSX, CSS)
+- **No backend changes**: ContactModal already writes to `contact_requests` table. New `ctaSource` values flow through existing system.
+- **Complements existing CTA**: Three-path section doesn't replace the score-based CTA card — it adds path options below it.
+- **Matias, not Sara**: 300+ masters and Latin Grammy credit belong to Matias (Sara's husband). Services section credits him.
+
+#### Pricing Format Decision — "$249 USD" with smaller suffix
+- Advisor analysis: `$249` feels retail/transactional, `249 USD` feels cleaner but slower to parse. Best: `$249 USD` — instant recognition + international clarity.
+- Created `PriceUSD` component: renders amount with `USD` at ~65% font size, secondary color. Reusable across site.
+- `SERVICES_CONFIG` prices changed from strings (`'$349'`) to numbers (`349`) for flexibility.
+
+#### Contextual $80 Mastering CTA — Score-Triggered, Not Public Tier
+- **Strategic decision**: $80 mastering is NOT listed in services section (would anchor value downward, put MR in Fiverr comparison arena).
+- Only appears when `score >= 85` (mix genuinely ready for mastering). Feels earned, not promotional.
+- "Mastering profesional para mezclas aprobadas por Mastering Ready" — the tool qualifies the mix, so $80 isn't cheap, it's efficient.
+- `SERVICES_CONFIG.mastering` with empty URL → ContactModal. Fill URL later for direct checkout.
+- `ctaSource: 'contextual_mastering'` for tracking.
+
+#### Testimonials — Dual Placement Architecture
+- **Between features and pricing**: Trust bridge for first-time visitors scrolling the page. Converts browsers into "let me try the free analysis" users.
+- **After analysis results (inline, max 2 compact quotes)**: High-friction moment — user just saw their score, deciding whether to trust the data. Validates the analysis, nudges toward three-path CTA.
+- Same `TESTIMONIALS` config array powers both. Empty = both hidden. Fill once → both go live.
+- Structure: `{ name, role, role_es, quote_es, quote_en }`. Categories to target: accuracy ("spot on"), outcome ("fixed X, master improved"), confidence ("finally understood").
+- Full section: 3-col grid (desktop), stacked (mobile). Inline: vertical stack, quotation mark accent, compact cards.
+
+#### No Stripe Products Needed Yet
+- All service buttons currently open ContactModal (URLs empty). No checkout flow involved.
+- Stripe products only needed when replacing ContactModal with direct checkout.
+- ContactModal is actually better for services ($249-$697) — want a conversation first. Direct checkout later for $80 mastering (mix already validated by MR).
+
+#### Commits to main (Session 2026-02-23)
+1. `1e20daf` - feat: 60-day monetization dev work — services section, three-path CTA, workshop banner
+2. `5098f77` - ux: $X USD pricing format, contextual $80 mastering CTA, dual testimonial placements
+
+**Git state**: main on `5098f77`, pushed. Build clean. All 23 routes compiled.
+
+---
+
 ## NEXT STEPS (Priority Order)
 
+### THIS WEEK (before Feb 25 live stream)
+1. **Collect 3-5 testimonials** — Ask users who tried MR for specific feedback. Target 3 categories: accuracy validation, outcome improvement, confidence shift. Get permission to feature. Populate `TESTIMONIALS` array in `app/page.tsx` → both placements go live instantly.
+2. **Stripe coupon `FOUNDING10`** — 50% off recurring, 10 redemptions, founding member DMs.
+3. **DM 5-10 founding members** — Use corrected template from Session 2026-02-21 Part 4.
+4. **Email 1 (Welcome) ready** — Have it ready to send manually from Gmail.
+5. **Live stream prep** — Structure, talking points, CTA during stream.
+
+### 60-DAY MONETIZATION — Remaining Config (No Code Changes)
+6. **Fill SERVICES_CONFIG URLs** — As Sara/Matias create Carrd pages or Stripe links, update URL strings in `app/page.tsx`. Zero code logic changes needed.
+7. **Workshop banner activation** — Set `SERVICES_CONFIG.workshop.url` and `SERVICES_CONFIG.workshop.date` when workshop is scheduled. Banner appears automatically.
+8. **eBook bundle (Day 1)** — Manual v1 via Payhip. Later: Stripe product migration.
+
 ### BEFORE TUESDAY LIVE STREAM (Feb 25)
-1. **Stripe coupon** — Create 50% off recurring coupon in Stripe Dashboard, limit 10 redemptions. Name: `FOUNDING10`.
-2. **DM 5-10 founding members** — Use corrected template above. People who engaged with Stories or tried MR.
-3. **Email 1 (Welcome) ready** — Have it ready to send manually from Gmail to anyone who signs up after Tuesday's live stream.
-4. **Live stream prep** — Structure, talking points, CTA during stream (masteringready.com link visible).
+4. **Stripe coupon** — Create 50% off recurring coupon in Stripe Dashboard, limit 10 redemptions. Name: `FOUNDING10`.
+5. **DM 5-10 founding members** — Use corrected template from Session 2026-02-21 Part 4.
+6. **Email 1 (Welcome) ready** — Have it ready to send manually from Gmail.
+7. **Live stream prep** — Structure, talking points, CTA during stream.
 
 ### IMMEDIATE (next session after live stream)
-5. **Review live stream data** — Check admin dashboard: anonymous analyses, signups, countries, devices. This is your first real conversion data.
-6. **Send Email 1 manually** — Gmail to every new signup from the live stream.
-7. **Lead prospector outreach** — Reply to top YouTube/HN leads from `/prospecting`. 20-30/day quality replies.
-8. **Delete HN false positives** — "Inscryption" and "CursorLens" leads still in DB.
-9. **Review HN lead quality** — Verify audio context gate is filtering correctly after next cron run.
+8. **Review live stream data** — Admin dashboard: anonymous analyses, signups, countries, devices.
+9. **Send Email 1 manually** — Gmail to every new signup.
+10. **Lead prospector outreach** — Reply to top YouTube/HN leads from `/prospecting`. 20-30/day.
+11. **Delete HN false positives** — "Inscryption" and "CursorLens" leads still in DB.
 
-### SHORT-TERM (Weeks 2-4, post live stream data)
-10. **Email service integration (Resend)** — $0 for first 3,000 emails/month. Automate the 4-email sequence with behavioral triggers.
-11. **Genre profile calibration** — Analyze ~102 reference tracks. Can be done in batches across sessions.
-12. **Referral program (manual)** — "Refer a friend, both get 2 extra analyses." Even manual tracking via email.
-13. **Set up F5Bot** — f5bot.com, free Reddit+HN keyword monitoring.
-14. **Set up ForumScout** — forumscout.app free tier, 3 keyword alerts.
-15. **Join Discord servers** — Birdzhouse (58K), r/MusicProduction (19K), We Suck At Producing.
-16. **Join Facebook Groups (LATAM)** — "Produccion Musical", "Mezcla y Mastering", "Ingenieria de Sonido Colombia".
-17. **Outreach templates** — 15 bilingual templates for YouTube comments, Reddit replies, FB group answers, IG DMs, WhatsApp.
+### SHORT-TERM (Weeks 2-4)
+12. **Email service integration (Resend)** — $0 for first 3,000 emails/month. Automate 4-email sequence.
+13. **Genre profile calibration** — Analyze ~102 reference tracks. Batched across sessions.
+14. **Referral program (manual)** — "Refer a friend, both get 2 extra analyses."
+15. **Community channels** — F5Bot, ForumScout, Discord servers, Facebook Groups (LATAM).
+16. **Outreach templates** — 15 bilingual templates for all channels.
 
-### MONTH 2 (data-driven, triggered by live stream + outreach results)
-18. **LATAM payments (PSE/Nequi)** — Trigger: Colombian signups hitting paywall without international credit card. Research EBANX vs Rebill vs dLocal.
-19. **Monthly live master review #2** — Recurring series, gate replay behind email signup.
-20. **eBook migration from Payhip** — Stripe product `ebook` at $15 USD flat.
-21. **SEO blog posts** — Zero-competition ES keywords first.
-22. **Indie Hackers launch** — After testimonials and data from Month 1.
+### MONTH 2 (data-driven)
+17. **LATAM payments (PSE/Nequi)** — Trigger: Colombian signups hitting paywall without intl card.
+18. **Monthly live master review #2** — Recurring series, gate replay behind email signup.
+19. **eBook migration from Payhip** — Stripe product `ebook` at $15 USD.
+20. **SEO blog posts** — Zero-competition ES keywords first.
 
 ### MONTH 3+ (scale what works)
-23. **Product Hunt** — After testimonials, polished onboarding, proven conversion flow.
-24. **Signed token system** — HMAC-signed tokens, ~30 min.
-25. **DLocal integration** — If LATAM signups high but paid conversion <3%.
-26. **Priority Queue System** — Trigger: OOM errors, queue depth >5.
-27. **Stream Ready deploy** — Backend ready. Frontend at `~/streamready/`.
+21. **Product Hunt** — After testimonials, polished onboarding, proven conversion flow.
+22. **Signed token system** — HMAC-signed tokens, ~30 min.
+23. **DLocal integration** — If LATAM signups high but paid conversion <3%.
+24. **Priority Queue System** — Trigger: OOM errors, queue depth >5.
+25. **Stream Ready deploy** — Backend ready. Frontend at `~/streamready/`.

@@ -1461,47 +1461,57 @@ ${new Date().toLocaleDateString()}
     }
     
     try {
-      // Try PDF first if endpoint is available
-      if (requestIdRef.current) {
+      // Generate PDF on-demand from analysis data (same pattern as dashboard/history).
+      // Does NOT depend on Render's in-memory job storage — survives deploys + 10-min expiry.
+      try {
+        const formData = new FormData()
+        formData.append('lang', lang)
+        formData.append('analysis_data', JSON.stringify({
+          score: result.score,
+          verdict: result.verdict,
+          filename: result.filename || file?.name || 'Unknown',
+          created_at: result.created_at || new Date().toISOString(),
+          duration_seconds: result.file?.duration || null,
+          sample_rate: result.file?.sample_rate || null,
+          bit_depth: result.file?.bit_depth || null,
+          metrics: result.metrics || [],
+          interpretations: result.interpretations || null,
+          strict_mode: result.strict || strict || false,
+          report_visual: result.report_visual || null,
+          report_short: result.report_short || result.report || null,
+          report_write: result.report_write || result.report || null,
+        }))
 
-        try {
-          const formData = new FormData()
-          formData.append('request_id', requestIdRef.current)
-          formData.append('lang', lang)
+        const envUrl = process.env.NEXT_PUBLIC_API_URL
+        const backendUrl = (envUrl && !envUrl.includes('your-backend'))
+          ? envUrl
+          : 'https://masteringready.onrender.com'
+        const pdfUrl = `${backendUrl}/api/download/pdf`
 
-          // Use full backend URL — guard against placeholder values
-          const envUrl = process.env.NEXT_PUBLIC_API_URL
-          const backendUrl = (envUrl && !envUrl.includes('your-backend'))
-            ? envUrl
-            : 'https://masteringready.onrender.com'
-          const pdfUrl = `${backendUrl}/api/download/pdf`
+        const response = await fetch(pdfUrl, {
+          method: 'POST',
+          body: formData
+        })
 
-          const response = await fetch(pdfUrl, {
-            method: 'POST',
-            body: formData
-          })
+        if (response.ok) {
+          const blob = await response.blob()
+          const url = URL.createObjectURL(blob)
+          const a = document.createElement('a')
+          a.href = url
+          const filename = result.filename?.replace(/\.(wav|mp3|flac|aac|m4a|ogg|aiff|aif)$/i, '') || 'análisis'
+          a.download = `masteringready-${lang === 'es' ? 'detallado' : 'detailed'}-${filename}.pdf`
+          document.body.appendChild(a)
+          a.click()
+          document.body.removeChild(a)
+          URL.revokeObjectURL(url)
 
-          if (response.ok) {
-            // PDF download successful
-            const blob = await response.blob()
-            const url = URL.createObjectURL(blob)
-            const a = document.createElement('a')
-            a.href = url
-            const filename = result.filename?.replace(/\.(wav|mp3|flac)$/i, '') || 'análisis'
-            a.download = `masteringready-${lang === 'es' ? 'detallado' : 'detailed'}-${filename}.pdf`
-            document.body.appendChild(a)
-            a.click()
-            document.body.removeChild(a)
-            URL.revokeObjectURL(url)
-
-            return
-          } else {
-            const errorText = await response.text()
-            console.error('[PDF Download] Error response:', response.status, errorText)
-          }
-        } catch (pdfError) {
-          console.error('[PDF Download] Exception:', pdfError)
+          return
+        } else {
+          const errorText = await response.text()
+          console.error('[PDF Download] Error response:', response.status, errorText)
         }
+      } catch (pdfError) {
+        console.error('[PDF Download] Exception:', pdfError)
       }
       
       // Fallback to TXT download
