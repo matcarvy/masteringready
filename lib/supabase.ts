@@ -112,7 +112,9 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true,
-    storage: authStorage
+    storage: authStorage,
+    // @ts-expect-error – prevent Navigator Lock from blocking all session access during long operations (compression, analysis)
+    lock: async (_name: string, _acquireTimeout: number, fn: () => Promise<unknown>) => await fn(),
   }
 })
 

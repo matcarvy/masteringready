@@ -301,6 +301,23 @@ Watch these metrics in admin dashboard before making changes:
 
 ## Session History
 
+### Session 2026-02-26 — Spacing Polish + Combined Mastering CTA
+
+#### 1. Bridge-to-Features spacing fix (`d2aa3e1`)
+- Reduced gap between tagline ("Lo importante no es la métrica...") and "¿Por qué Mastering Ready?" section
+- Added `marginTop: '0.25rem'` to features h2, overriding browser default ~1.87rem margin
+- CSS-only change, single line in `app/page.tsx`
+
+#### 2. Combined mastering CTA for scores ≥85 (`b6e80bd`)
+- **Removed**: Separate `$80 USD →` horizontal bar (contextual mastering CTA)
+- **Replaced**: Backend-driven purple card now renders a combined card for ≥85 with price shown upfront:
+  - ES: "Tu mezcla está lista." / "Está técnicamente preparada para mastering. Puedo masterizarla por $80 USD."
+  - EN: "Your mix is ready." / "It's technically ready for mastering. I can master it for $80 USD."
+  - Button: "Masterizar este track →" / "Master this track →"
+  - Same purple gradient style, same ContactModal/URL logic, tracks as `contextual_mastering`
+- **Kept unchanged**: Scores <85 still use backend-driven CTA card (`generate_cta()` in analyzer.py)
+- **Rationale**: Two redundant elements saying the same thing → one with price transparency at peak intent moment. Dashboard card (separate file) stays without price as softer reminder.
+
 ### 2026-01-27 (Session 2)
 - Resumed from previous session context
 - Ran SQL sync fix for analyses_lifetime_used — confirmed working
@@ -3517,3 +3534,64 @@ Detailed plan at `/Users/matcarvy/.claude/plans/peppy-bubbling-whisper.md`. Thre
 23. **DLocal integration** — If LATAM signups high but paid conversion <3%.
 24. **Priority Queue System** — Trigger: OOM errors, queue depth >5.
 25. **Stream Ready deploy** — Backend ready. Frontend at `~/streamready/`.
+
+---
+
+### Session 2026-02-26 — PDF Download Fix (analysis_data mode)
+
+#### Bug Report
+User reported: PDF "detallado" download failed on main analyzer page with 404, but worked fine from dashboard. Console errors:
+1. `Navigator LockManager lock "lock:sb-cetgbmrylzgaqnrlfamt-auth-token" timed out waiting 10000ms`
+2. `[PDF Download] Error response: 404 {"detail":"El análisis está tardando más de lo esperado..."}`
+
+#### Root Cause
+Main analyzer page used `request_id` mode for PDF download — sends only the job ID to Render, which looks it up in an **in-memory `jobs` dictionary**. That dictionary has a **10-minute cleanup cycle** and gets **wiped on every Render deploy**. Once the job expires or Render restarts, the backend returns 404.
+
+Dashboard and history pages used `analysis_data` mode — sends the full analysis data inline from Supabase. This always works regardless of Render's memory state.
+
+The Navigator Lock timeout was a secondary issue (Supabase GoTrueClient contention) — not the direct cause of the 404, but degrades other Supabase operations.
+
+#### Fix (`83c1874`)
+- Changed main page PDF download from `request_id` to `analysis_data` mode, matching dashboard/history pattern
+- Sends full analysis data inline: score, verdict, filename, file metadata, metrics, interpretations, strict_mode, all 3 report texts
+- No dependency on Render's ephemeral in-memory storage — survives deploys + expiry
+- Also expanded filename extension strip regex to cover all supported formats (`.aac`, `.m4a`, `.ogg`, `.aiff`, `.aif` — was only `.wav`, `.mp3`, `.flac`)
+
+#### PDF Download Modes Summary (all 3 pages now consistent)
+| Page | Mode | Data Source | Reliable? |
+|------|------|-------------|-----------|
+| Main analyzer (`page.tsx`) | `analysis_data` ✅ | In-memory `result` state | YES |
+| Dashboard (`dashboard/page.tsx`) | `analysis_data` | Supabase DB | YES |
+| History (`history/page.tsx`) | `analysis_data` | Supabase DB | YES |
+
+**Git state**: main on `83c1874`, pushed. Build clean.
+
+### Session 2026-02-26 Part 2 — Navigator Lock Fix (Singleton Client)
+
+#### Bug Report
+Compression taking very long, Navigator Lock timeout errors during analysis:
+- `Uncaught (in promise) Error: Acquiring an exclusive Navigator LockManager lock "lock:sb-cetgbmrylzgaqnrlfamt-auth-token" timed out waiting 10000ms`
+- React hydration error #418
+
+#### Root Cause
+The Supabase **singleton client** in `lib/supabase.ts` was missing the no-op `lock` function. `createFreshQueryClient` already had it (added in Session 2026-02-21 Part 2), but the main singleton used the default Navigator Lock. During compression (10-15s on main thread), any Supabase operation (session check, analytics insert) tried to acquire the same lock → 10s timeout → everything stalled.
+
+#### Fix
+Added no-op `lock` function to singleton client (`lib/supabase.ts:115`):
+```typescript
+auth: {
+  // ...existing options...
+  // @ts-expect-error – prevent Navigator Lock from blocking all session access
+  lock: async (_name, _acquireTimeout, fn) => await fn(),
+}
+```
+
+Now both Supabase clients (singleton + fresh query) bypass Navigator Lock. This is the same pattern used in the SIG project (`~/sig/`).
+
+#### Navigator Lock Fix Summary (all clients now fixed)
+| Client | File | Lock Fix |
+|--------|------|----------|
+| Singleton (`supabase`) | `lib/supabase.ts:110` | ✅ no-op lock (this session) |
+| Fresh query (`createFreshQueryClient`) | `lib/supabase.ts:~150` | ✅ no-op lock + separate storageKey (Session 2026-02-21 Part 2) |
+
+**Git state**: main, not yet committed.
