@@ -92,18 +92,25 @@ const TESTIMONIALS: {
     quote_en: 'I uploaded a mix that was a bit loud and it scored 74. I brought it down and it scored 94. It kept what I didn\'t touch, which was the EQ. Impressive, really pro work.',
   },
   {
-    name: 'J. A.',
-    role: 'Music Producer',
-    role_es: 'Productor musical',
+    name: 'Jhonny Chaux',
+    role: 'Session Musician',
+    role_es: 'Músico de sesión',
     quote_es: 'Genial esa herramienta, para uno poder tener un criterio técnico. La voy a recomendar a unos amigos.',
     quote_en: 'Great tool, it gives you real technical criteria for your mix. I\'m going to recommend it to some friends.',
   },
   {
-    name: 'J. P. C.',
-    role: 'Music Production Student',
-    role_es: 'Estudiante de producción musical',
+    name: 'Juan Pablo Conde Aya',
+    role: 'Musician',
+    role_es: 'Músico',
     quote_es: 'Puse un audio de una de las canciones de mi proyecto de grado. Una que le faltaban varias cosas y me dejó muchas cosas detalladas. Muy chévere que sea tan rápido y que tenga tanto detalle.',
     quote_en: 'I uploaded a track from my thesis project. It was missing a few things and the tool gave me really detailed feedback. Love how fast it is and how much detail it gives you.',
+  },
+  {
+    name: 'Pedro Rovetto',
+    role: 'Producer, Mix Engineer & Musician',
+    role_es: 'Productor, Ingeniero de Mezcla y Músico',
+    quote_es: 'Subí un mix que estoy por cerrar, súper rápido y efectiva la info. Me ayudó para revisar algo del stereo bus, porque estaban altos mis true peaks.',
+    quote_en: 'I uploaded a mix I was about to finalize, super fast and the info was spot on. It helped me catch something on the stereo bus, because my true peaks were too high.',
   },
 ]
 
