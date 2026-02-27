@@ -3648,7 +3648,7 @@ def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, s
         "internal_key": "LUFS (Integrated)",  # For WEIGHTS lookup
         "value": f"{lufs:.1f} {lufs_label}" if lufs is not None else "N/A",
         "status": st_l,
-        "message": f"{msg_l} (method: {lufs_method})",
+        "message": msg_l,
         "method": lufs_method,
         "reliable": lufs_reliable
     })
@@ -5574,7 +5574,7 @@ def analyze_file_chunked(
         "internal_key": "LUFS (Integrated)",
         "value": f"{weighted_lufs:.1f} LUFS",
         "status": st_l,
-        "message": f"{msg_l} (method: chunked)",
+        "message": msg_l,
         "method": "chunked",
         "reliable": lufs_reliable
     })
