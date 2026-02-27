@@ -4056,8 +4056,8 @@ by Matías Carvajal
                 </div>
               </div>
 
-              {/* CTA for Mastering Service — dynamic from backend based on score */}
-              {result.cta_message && result.cta_button && (
+              {/* CTA for Mastering Service — combined card for ≥85, backend-driven for lower scores */}
+              {result.score >= 85 ? (
                 <div style={{
                   background: 'linear-gradient(to bottom right, #7478d6 0%, #5a5ec8 100%)',
                   borderRadius: '1.5rem',
@@ -4067,7 +4067,84 @@ by Matías Carvajal
                   maxWidth: '680px',
                   margin: '0 auto'
                 }}>
-                  {/* Icon + Title inline */}
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.75rem',
+                    marginBottom: '0.75rem'
+                  }}>
+                    <span style={{ fontSize: isMobile ? '1.5rem' : '1.75rem', flexShrink: 0 }}>🎧</span>
+                    <h3 style={{
+                      fontSize: isMobile ? '1.125rem' : '1.375rem',
+                      lineHeight: '1.3',
+                      fontWeight: '600',
+                      margin: 0,
+                      color: '#ffffff'
+                    }}>
+                      {lang === 'es' ? 'Tu mezcla está lista.' : 'Your mix is ready.'}
+                    </h3>
+                  </div>
+
+                  <p style={{
+                    fontSize: isMobile ? '0.9375rem' : '1.0625rem',
+                    lineHeight: '1.6',
+                    color: 'rgba(255, 255, 255, 0.88)',
+                    margin: '0 0 1.5rem 0',
+                    maxWidth: '640px',
+                    wordWrap: 'break-word',
+                    overflowWrap: 'break-word'
+                  }}>
+                    {lang === 'es'
+                      ? `Está técnicamente preparada para mastering. Puedo masterizarla por $${SERVICES_CONFIG.mastering.price} USD.`
+                      : `It\u2019s technically ready for mastering. I can master it for $${SERVICES_CONFIG.mastering.price} USD.`}
+                  </p>
+
+                  <button
+                    onClick={() => {
+                      trackCtaClick('mastering')
+                      if (SERVICES_CONFIG.mastering.url) {
+                        window.open(SERVICES_CONFIG.mastering.url, '_blank')
+                      } else {
+                        setCtaSource('contextual_mastering')
+                        setShowContactModal(true)
+                      }
+                    }}
+                    style={{
+                      background: '#ffffff',
+                      color: '#5a5ec8',
+                      padding: '1rem 2rem',
+                      borderRadius: '0.75rem',
+                      border: 'none',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      fontSize: '1.125rem',
+                      boxShadow: 'none',
+                      transition: 'all 0.2s',
+                      width: isMobile ? '100%' : 'auto',
+                      minHeight: isMobile ? '48px' : 'auto'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'translateY(-2px)'
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.1)'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'translateY(0)'
+                      e.currentTarget.style.boxShadow = 'none'
+                    }}
+                  >
+                    {lang === 'es' ? 'Masterizar este track' : 'Master this track'} →
+                  </button>
+                </div>
+              ) : result.cta_message && result.cta_button ? (
+                <div style={{
+                  background: 'linear-gradient(to bottom right, #7478d6 0%, #5a5ec8 100%)',
+                  borderRadius: '1.5rem',
+                  padding: isMobile ? '1.5rem 1.25rem' : '2rem 2.5rem',
+                  color: 'white',
+                  boxShadow: '0 20px 40px rgba(99, 102, 241, 0.15)',
+                  maxWidth: '680px',
+                  margin: '0 auto'
+                }}>
                   <div style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -4075,8 +4152,7 @@ by Matías Carvajal
                     marginBottom: '0.75rem'
                   }}>
                     <span style={{ fontSize: isMobile ? '1.5rem' : '1.75rem', flexShrink: 0 }}>
-                      {result.score >= 85 ? '🎧' :
-                       result.score >= 40 ? '🔧' : '🔍'}
+                      {result.score >= 40 ? '🔧' : '🔍'}
                     </span>
                     <h3 style={{
                       fontSize: isMobile ? '1.125rem' : '1.375rem',
@@ -4093,7 +4169,6 @@ by Matías Carvajal
                     </h3>
                   </div>
 
-                  {/* Body text — full width */}
                   <p style={{
                     fontSize: isMobile ? '0.9375rem' : '1.0625rem',
                     lineHeight: '1.6',
@@ -4106,7 +4181,6 @@ by Matías Carvajal
                     {result.cta_message.split('\n').slice(1).join(' ')}
                   </p>
 
-                  {/* CTA Button */}
                   <button
                     onClick={() => {
                       const action = (result as any).cta_action || 'mastering'
@@ -4140,7 +4214,7 @@ by Matías Carvajal
                     {result.cta_button}
                   </button>
                 </div>
-              )}
+              ) : null}
 
               {/* Inline testimonials — validates the analysis, nudges toward next step */}
               {result && TESTIMONIALS.length > 0 && (
@@ -4186,72 +4260,6 @@ by Matías Carvajal
                       </div>
                     ))}
                   </div>
-                </div>
-              )}
-
-              {/* Contextual $80 Mastering — only for high-scoring mixes (≥85) */}
-              {result && result.score >= 85 && (
-                <div style={{
-                  maxWidth: '680px',
-                  margin: '0 auto 1.5rem auto',
-                  background: 'var(--mr-bg-card)',
-                  border: 'var(--mr-card-border)',
-                  borderRadius: '1rem',
-                  padding: isMobile ? '1.25rem' : '1.5rem 2rem',
-                  boxShadow: 'var(--mr-shadow)',
-                  display: 'flex',
-                  flexDirection: isMobile ? 'column' : 'row',
-                  alignItems: 'center',
-                  gap: '1rem'
-                }}>
-                  <div style={{ flex: 1, textAlign: isMobile ? 'center' : 'left' }}>
-                    <p style={{
-                      fontSize: '1rem',
-                      fontWeight: '600',
-                      color: 'var(--mr-text-primary)',
-                      margin: '0 0 0.25rem 0'
-                    }}>
-                      {lang === 'es'
-                        ? '¿Tu mezcla ya está lista? Puedo masterizarla.'
-                        : 'Is your mix ready? I can master it.'}
-                    </p>
-                    <p style={{
-                      fontSize: '0.8125rem',
-                      color: 'var(--mr-text-secondary)',
-                      margin: 0
-                    }}>
-                      {lang === 'es'
-                        ? 'Mastering profesional para mezclas aprobadas por Mastering Ready.'
-                        : 'Professional mastering for mixes approved by Mastering Ready.'}
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => {
-                      if (SERVICES_CONFIG.mastering.url) {
-                        window.open(SERVICES_CONFIG.mastering.url, '_blank')
-                      } else {
-                        setCtaSource('contextual_mastering')
-                        setShowContactModal(true)
-                      }
-                    }}
-                    style={{
-                      background: 'var(--mr-gradient)',
-                      color: '#ffffff',
-                      padding: '0.75rem 1.5rem',
-                      borderRadius: '0.5rem',
-                      border: 'none',
-                      fontWeight: '600',
-                      fontSize: '0.9375rem',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s',
-                      whiteSpace: 'nowrap',
-                      flexShrink: 0
-                    }}
-                    onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(99, 102, 241, 0.3)' }}
-                    onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none' }}
-                  >
-                    ${SERVICES_CONFIG.mastering.price} <span style={{ fontSize: '0.75em' }}>USD</span> →
-                  </button>
                 </div>
               )}
 
