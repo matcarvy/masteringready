@@ -2104,7 +2104,7 @@ by Matías Carvajal
           <div className="features-title-container" style={{
             textAlign: 'center'
           }}>
-            <h2 style={{ fontSize: '2.25rem', fontWeight: 'bold', marginBottom: '1rem' }}>
+            <h2 style={{ fontSize: '2.25rem', fontWeight: 'bold', marginTop: '0.25rem', marginBottom: '1rem' }}>
               {lang === 'es' ? '¿Por qué Mastering Ready?' : 'Why Mastering Ready?'}
             </h2>
             <p style={{ fontSize: '1.25rem', color: 'var(--mr-text-secondary)' }}>
