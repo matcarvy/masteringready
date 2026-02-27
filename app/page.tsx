@@ -84,14 +84,27 @@ const TESTIMONIALS: {
   quote_es: string
   quote_en: string
 }[] = [
-  // Example (uncomment and replace with real reviews):
-  // {
-  //   name: 'Carlos M.',
-  //   role: 'Producer',
-  //   role_es: 'Productor',
-  //   quote_es: 'El análisis me mostró que mi low end estaba saturado. Corregí el sub y el master mejoró notablemente.',
-  //   quote_en: 'The analysis showed me my low end was overloaded. I fixed the sub and the master improved noticeably.',
-  // },
+  {
+    name: 'Giovanni Caldas',
+    role: 'Musician, Producer & Mix Engineer',
+    role_es: 'Músico, Productor e Ingeniero de Mezcla',
+    quote_es: 'Primero subí uno que estaba un poco alto el volumen y me dijo 74. Le bajé y me dijo 94. Mantuvo lo que no toqué, que fue la EQ. Está impresionante, qué trabajo tan pro.',
+    quote_en: 'I uploaded a mix that was a bit loud and it scored 74. I brought it down and it scored 94. It kept what I didn\'t touch, which was the EQ. Impressive, really pro work.',
+  },
+  {
+    name: 'J. A.',
+    role: 'Music Producer',
+    role_es: 'Productor musical',
+    quote_es: 'Genial esa herramienta, para uno poder tener un criterio técnico. La voy a recomendar a unos amigos.',
+    quote_en: 'Great tool, it gives you real technical criteria for your mix. I\'m going to recommend it to some friends.',
+  },
+  {
+    name: 'J. P. C.',
+    role: 'Music Production Student',
+    role_es: 'Estudiante de producción musical',
+    quote_es: 'Puse un audio de una de las canciones de mi proyecto de grado. Una que le faltaban varias cosas y me dejó muchas cosas detalladas. Muy chévere que sea tan rápido y que tenga tanto detalle.',
+    quote_en: 'I uploaded a track from my thesis project. It was missing a few things and the tool gave me really detailed feedback. Love how fast it is and how much detail it gives you.',
+  },
 ]
 
 // ============================================================================
