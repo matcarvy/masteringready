@@ -2239,7 +2239,7 @@ by Matías Carvajal
                     marginBottom: '0.25rem'
                   }}>&ldquo;</span>
                   <p style={{
-                    fontSize: '0.9375rem',
+                    fontSize: '1.0625rem',
                     lineHeight: '1.6',
                     color: 'var(--mr-text-primary)',
                     margin: 0,
