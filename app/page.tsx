@@ -3163,11 +3163,12 @@ by Matías Carvajal
                             let estSec: number
                             if (fileDuration !== null && fileDuration > 120) {
                               const chunks = Math.ceil(fileDuration / 60)
-                              estSec = Math.round((chunks * 8 + 10) / 10) * 10
+                              estSec = Math.round((chunks * 8 + 30) / 10) * 10
                             } else if (fileDuration !== null) {
-                              estSec = 25
+                              estSec = 30
                             } else {
-                              estSec = file && file.size > 50 * 1024 * 1024 ? 90 : 30
+                              const sizeMB = file ? file.size / 1024 / 1024 : 0
+                              estSec = Math.max(30, Math.min(120, Math.round(sizeMB * 0.9)))
                             }
                             return lang === 'es'
                               ? `· Estimado: ~${estSec} segundos`
