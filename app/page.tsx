@@ -2183,12 +2183,13 @@ by Matías Carvajal
         </div>
       </section>
 
-      {/* Testimonials Section — fill TESTIMONIALS array above when reviews come in */}
+      {/* Testimonials Section */}
       {TESTIMONIALS.length > 0 && (
         <section style={{
-          background: 'var(--mr-bg-base)',
+          background: 'var(--mr-bg-elevated)',
           borderTop: '1px solid var(--mr-border)',
-          padding: isMobile ? '2rem 1.25rem' : '2.5rem 1.5rem 3rem'
+          borderBottom: '1px solid var(--mr-border)',
+          padding: isMobile ? '2.5rem 1.25rem' : '3rem 1.5rem 3.5rem'
         }}>
           <div style={{ maxWidth: '900px', margin: '0 auto' }}>
             <h2 style={{
@@ -2199,8 +2200,8 @@ by Matías Carvajal
               color: 'var(--mr-text-primary)'
             }}>
               {lang === 'es'
-                ? 'Lo que dicen productores que lo probaron'
-                : 'What producers say after trying it'}
+                ? 'Lo que dicen quienes lo probaron'
+                : 'What people say after trying it'}
             </h2>
             <p style={{
               textAlign: 'center',
@@ -2220,33 +2221,45 @@ by Matías Carvajal
               {TESTIMONIALS.map((t, i) => (
                 <div key={i} style={{
                   background: 'var(--mr-bg-card)',
-                  border: 'var(--mr-card-border)',
-                  borderRadius: '1rem',
+                  borderLeft: '3px solid var(--mr-primary)',
+                  borderRadius: '0.75rem',
                   padding: '1.5rem',
                   boxShadow: 'var(--mr-shadow)',
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: '0.75rem'
+                  gap: '0'
                 }}>
+                  <span style={{
+                    fontSize: '3rem',
+                    lineHeight: 1,
+                    color: 'var(--mr-primary)',
+                    opacity: 0.25,
+                    fontFamily: 'Georgia, serif',
+                    userSelect: 'none',
+                    marginBottom: '0.25rem'
+                  }}>&ldquo;</span>
                   <p style={{
                     fontSize: '0.9375rem',
                     lineHeight: '1.6',
                     color: 'var(--mr-text-primary)',
                     margin: 0,
-                    fontStyle: 'italic'
+                    fontStyle: 'italic',
+                    flex: 1
                   }}>
-                    &ldquo;{lang === 'es' ? t.quote_es : t.quote_en}&rdquo;
+                    {lang === 'es' ? t.quote_es : t.quote_en}
                   </p>
                   <div style={{
+                    borderTop: '1px solid var(--mr-border)',
+                    marginTop: '1rem',
+                    paddingTop: '0.75rem',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '0.5rem',
-                    marginTop: 'auto'
+                    gap: '0.5rem'
                   }}>
                     <div>
                       <p style={{
                         fontSize: '0.8125rem',
-                        fontWeight: '600',
+                        fontWeight: '700',
                         color: 'var(--mr-text-primary)',
                         margin: 0
                       }}>
@@ -2254,7 +2267,7 @@ by Matías Carvajal
                       </p>
                       {t.role && (
                         <p style={{
-                          fontSize: '0.75rem',
+                          fontSize: '0.6875rem',
                           color: 'var(--mr-text-tertiary)',
                           margin: 0
                         }}>
