@@ -2223,7 +2223,7 @@ by Matías Carvajal
                   background: 'var(--mr-bg-card)',
                   borderLeft: '3px solid var(--mr-primary)',
                   borderRadius: '0.75rem',
-                  padding: '1.5rem',
+                  padding: '1rem 1.5rem 1.5rem',
                   boxShadow: 'var(--mr-shadow)',
                   display: 'flex',
                   flexDirection: 'column',
@@ -2236,7 +2236,7 @@ by Matías Carvajal
                     opacity: 0.25,
                     fontFamily: 'Georgia, serif',
                     userSelect: 'none',
-                    marginBottom: '0.25rem'
+                    marginBottom: '-0.25rem'
                   }}>&ldquo;</span>
                   <p style={{
                     fontSize: '1.0625rem',
