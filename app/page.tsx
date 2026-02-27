@@ -99,13 +99,6 @@ const TESTIMONIALS: {
     quote_en: 'Great tool, it gives you real technical criteria for your mix. I\'m going to recommend it to some friends.',
   },
   {
-    name: 'Juan Pablo Conde Aya',
-    role: 'Musician',
-    role_es: 'Músico',
-    quote_es: 'Puse un audio de una de las canciones de mi proyecto de grado. Una que le faltaban varias cosas y me dejó muchas cosas detalladas. Muy chévere que sea tan rápido y que tenga tanto detalle.',
-    quote_en: 'I uploaded a track from my thesis project. It was missing a few things and the tool gave me really detailed feedback. Love how fast it is and how much detail it gives you.',
-  },
-  {
     name: 'Pedro Rovetto',
     role: 'Producer, Mix Engineer & Musician',
     role_es: 'Productor, Ingeniero de Mezcla y Músico',
