@@ -3594,4 +3594,110 @@ Now both Supabase clients (singleton + fresh query) bypass Navigator Lock. This 
 | Singleton (`supabase`) | `lib/supabase.ts:110` | ✅ no-op lock (this session) |
 | Fresh query (`createFreshQueryClient`) | `lib/supabase.ts:~150` | ✅ no-op lock + separate storageKey (Session 2026-02-21 Part 2) |
 
-**Git state**: main, not yet committed.
+**Git state**: main on `4c045cc`, pushed. Build clean.
+
+### Session 2026-02-26 Part 3 — Stereo Correlation Audit (No Code Changes)
+
+#### Context
+User compared an external mixing guide's interpretation of 0.37 correlation ("very good, safe, professional") against MR's evaluation. Audited all 3 systems (scoring, bars, interpretive text) for consistency and strict mode correctness.
+
+#### MR Stereo Correlation Thresholds (analyzer.py:531-548)
+
+**Normal Mode:**
+| Correlation | Status | Score Delta | Bar % | Bar Color |
+|-------------|--------|-------------|-------|-----------|
+| ≥ 0.70 | perfect | +1.0 | 100% | green |
+| 0.50–0.70 | pass | +0.7 | 85% | blue |
+| 0.30–0.50 | warning | 0.0 | 65% | yellow |
+| 0.10–0.30 | poor | -0.3 | 50% | yellow |
+| 0.00–0.10 | critical | -1.0 | 40% | red |
+| < 0.00 | catastrophic | -2.0 | 30% | red |
+
+**Strict Mode** (each boundary +0.05 higher):
+| Correlation | Status | Score Delta |
+|-------------|--------|-------------|
+| ≥ 0.75 | perfect | +1.0 |
+| 0.55–0.75 | pass | +0.7 |
+| 0.35–0.55 | warning | 0.0 |
+| 0.15–0.35 | poor | -0.3 |
+| 0.00–0.15 | critical | -1.0 |
+| < 0.00 | catastrophic | -2.0 |
+
+Bar percentages are **mode-independent** (always same visual regardless of strict/normal).
+
+#### External Guide vs MR — Key Differences
+- **External** (mixing perspective): 0.37 = "very good, safe, professional." Range 0.3–0.7 = normal.
+- **MR** (mastering prep perspective): 0.37 = warning (65% yellow, score delta 0.0). Flags it for the user to verify mono behavior — appropriate because mastering adds more processing that could push correlation lower.
+- **Both technically correct** for their respective contexts. MR's warning is informational (zero score penalty), not a failure.
+
+#### Strict Mode Verification — CORRECT, No Fix Needed
+Initial concern: strict mode might be less strict than normal at 0.37. After code audit:
+- 0.37 in **normal**: 0.30 ≤ 0.37 < 0.50 → `warning` (0.0)
+- 0.37 in **strict**: 0.35 ≤ 0.37 < 0.55 → `warning` (0.0)
+- Same result. The +0.05 shift on every boundary means strict is **always at least as strict** as normal across all correlation values. No inversion possible.
+
+#### Live Stream Talking Points (for explaining MR's correlation evaluation)
+- MR evaluates from a **mastering readiness** perspective, not a mixing perspective
+- 0.37 is a soft flag (yellow, zero penalty) — "check your mono behavior before sending to mastering"
+- Mastering adds processing (limiting, EQ, stereo enhancement) that can push correlation lower
+- Below 0 is the real danger zone (phase inversion, -2.0 penalty)
+- MR's strict mode shifts all thresholds +0.05 — always stricter, never more lenient
+
+### Session 2026-02-26 Part 4 — LUFS Metadata Leak Fix (`03e6290`)
+
+#### Bug
+LUFS metric `message` field included internal debug text `(method: chunked)` or `(method: pyloudnorm)` that leaked into user-facing Resumen/Completo reports and PDFs.
+
+#### Fix (2 lines in `analyzer.py`)
+- **Line 3651** (normal mode): `f"{msg_l} (method: {lufs_method})"` → `msg_l`
+- **Line 5577** (chunked mode): `f"{msg_l} (method: chunked)"` → `msg_l`
+
+The `"method"` metadata field (next line in both cases) is preserved for internal tracking — only the user-facing `message` string was cleaned.
+
+#### Audit: All Other Metric Messages Clean
+Agent audited all 35+ `"message":` fields across both `analyze_file()` and `analyze_file_chunked()`. Only the 2 LUFS messages had leaks. Headroom, True Peak, DC Offset, PLR, Crest Factor, Stereo, Frequency Balance — all clean.
+
+**Git state**: main on `03e6290`, pushed.
+
+### Session 2026-02-27 — Analysis Time Estimate Fix (`1410bf3`)
+
+#### Problem
+Time estimate shown during analysis was inaccurate. A 2:57 WAV file (65.2MB, 32-bit, 48kHz) estimated ~30 seconds but took 61.8 seconds.
+
+#### Root Cause
+Old chunked formula `chunks × 8 + 10` didn't account for Render overhead (cold start, file upload, format detection, semaphore wait) which adds ~20-30s. Short file estimate was 25s (too optimistic).
+
+#### Fix (`app/page.tsx`)
+- **Chunked**: `chunks × 8 + 30` (was `+ 10`), rounded to nearest 10
+- **Short files** (≤2 min, known duration): 30s (was 25s)
+- **Size-only fallback** (no duration): `fileSize_MB × 0.9`, floor 30s, cap 120s (was binary 30/90 at 50MB threshold)
+
+#### Verification — 2:57 file
+- Old: `ceil(177/60) = 3 × 8 + 10 = 34` → rounds to **30s** (real: 61.8s — 50% under)
+- New: `3 × 8 + 30 = 54` → rounds to **60s** (real: 61.8s — accurate)
+
+#### Design principle
+Better to estimate slightly over than under. Users prefer finishing early over waiting past the estimate.
+
+**Git state**: main on `1410bf3`, pushed. Build clean.
+
+### Session 2026-02-27 Part 2 — Testimonials Live + Restyle
+
+#### Testimonials Added (`1291b12`)
+3 real testimonials populated in `TESTIMONIALS` config array (`app/page.tsx`):
+1. **Giovanni Caldas** — Músico, Productor e Ingeniero de Mezcla (accuracy: uploaded loud mix → 74, fixed → 94)
+2. **J. A.** — Productor musical (confidence: "gives you real technical criteria")
+3. **J. P. C.** — Estudiante de producción musical (detail: "love how fast it is and how much detail")
+
+Both placements now live: full section between features and pricing, inline compact quotes after analysis results. Names pending full permission (tomorrow).
+
+#### Testimonials Restyled to MR Design Language (`3d82fb3`, `73aeaa9`)
+- **Section title**: "Lo que dicen quienes lo probaron" / "What people say after trying it"
+- **Section background**: `var(--mr-bg-elevated)` with top + bottom borders
+- **Cards**: 3px purple left border (mirrors report recommendation callouts), `0.75rem` border-radius
+- **Decorative quote mark**: 3rem Georgia serif at 25% opacity purple
+- **Name/role block**: separated by `var(--mr-border)` divider, name at `700` weight, role at `0.6875rem`
+- **Quote font**: bumped from `0.9375rem` (15px) → `1.0625rem` (17px) for more prominence
+- All colors use CSS vars — works in both light and dark mode
+
+**Git state**: main on `73aeaa9`, pushed. Build clean.
