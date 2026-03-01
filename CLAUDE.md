@@ -3489,51 +3489,44 @@ Detailed plan at `/Users/matcarvy/.claude/plans/peppy-bubbling-whisper.md`. Thre
 
 ---
 
-## NEXT STEPS (Priority Order)
+## NEXT STEPS (Priority Order) — GETTING CLIENTS
 
-### THIS WEEK (before Feb 25 live stream)
-1. **Collect 3-5 testimonials** — Ask users who tried MR for specific feedback. Target 3 categories: accuracy validation, outcome improvement, confidence shift. Get permission to feature. Populate `TESTIMONIALS` array in `app/page.tsx` → both placements go live instantly.
-2. **Stripe coupon `FOUNDING10`** — 50% off recurring, 10 redemptions, founding member DMs.
-3. **DM 5-10 founding members** — Use corrected template from Session 2026-02-21 Part 4.
-4. **Email 1 (Welcome) ready** — Have it ready to send manually from Gmail.
-5. **Live stream prep** — Structure, talking points, CTA during stream.
+### NOW (this week, Feb 28+)
+1. **Founding member DMs** — DM warm leads from IG/WhatsApp with founding offer ($4.99/mo locked, 50% off). Stripe coupon `FOUNDING10` (10 redemptions). Template in Session 2026-02-21 Part 4.
+2. **Lead prospector outreach** — Reply to top YouTube/HN leads from `/prospecting`. 20-30 quality replies/day. Help first, link second.
+3. **Testimonials: get to 6** — Juan Pablo Conde Aya ready for slot 4. Need 2 more for clean 2-row grid. Ask every user who analyzes.
+4. **Welcome email (manual)** — Gmail to every new signup. Template in Session 2026-02-21 Part 4.
+5. **Community engagement** — FB groups (Producción Musical, Mezcla y Mastering LATAM), Discord (Birdzhouse 58K, We Suck At Producing). Answer questions, drop link when relevant.
 
-### 60-DAY MONETIZATION — Remaining Config (No Code Changes)
-6. **Fill SERVICES_CONFIG URLs** — As Sara/Matias create Carrd pages or Stripe links, update URL strings in `app/page.tsx`. Zero code logic changes needed.
-7. **Workshop banner activation** — Set `SERVICES_CONFIG.workshop.url` and `SERVICES_CONFIG.workshop.date` when workshop is scheduled. Banner appears automatically.
-8. **eBook bundle (Day 1)** — Manual v1 via Payhip. Later: Stripe product migration.
+### WEEK 2-3 (Mar 7-21)
+6. **Email service (Resend)** — $0 for 3K emails/mo. Automate 4-email sequence (welcome, score explained, upgrade nudge, re-engagement).
+7. **Monthly live master review #2** — Recurring series. Gate replay behind email signup.
+8. **Outreach templates** — 15 bilingual templates for all channels (YouTube, HN, Discord, FB, forums).
+9. **F5Bot + ForumScout** — Free automated alerts for Reddit + forums. Zero effort after setup.
+10. **Fill SERVICES_CONFIG URLs** — As Matias creates service pages (Carrd/Stripe links), update URL strings → buttons go live. Zero code changes.
 
-### BEFORE TUESDAY LIVE STREAM (Feb 25)
-4. **Stripe coupon** — Create 50% off recurring coupon in Stripe Dashboard, limit 10 redemptions. Name: `FOUNDING10`.
-5. **DM 5-10 founding members** — Use corrected template from Session 2026-02-21 Part 4.
-6. **Email 1 (Welcome) ready** — Have it ready to send manually from Gmail.
-7. **Live stream prep** — Structure, talking points, CTA during stream.
-
-### IMMEDIATE (next session after live stream)
-8. **Review live stream data** — Admin dashboard: anonymous analyses, signups, countries, devices.
-9. **Send Email 1 manually** — Gmail to every new signup.
-10. **Lead prospector outreach** — Reply to top YouTube/HN leads from `/prospecting`. 20-30/day.
-11. **Delete HN false positives** — "Inscryption" and "CursorLens" leads still in DB.
-
-### SHORT-TERM (Weeks 2-4)
-12. **Email service integration (Resend)** — $0 for first 3,000 emails/month. Automate 4-email sequence.
-13. **Genre profile calibration** — Analyze ~102 reference tracks. Batched across sessions.
+### MONTH 2 (data-driven, based on admin dashboard metrics)
+11. **LATAM payments (PSE/Nequi)** — Trigger: Colombian signups hitting paywall without intl card.
+12. **SEO blog posts** — Zero-competition ES keywords first ("cómo saber si mi mezcla está lista").
+13. **eBook migration from Payhip** — Stripe product `ebook` at $15 USD.
 14. **Referral program (manual)** — "Refer a friend, both get 2 extra analyses."
-15. **Community channels** — F5Bot, ForumScout, Discord servers, Facebook Groups (LATAM).
-16. **Outreach templates** — 15 bilingual templates for all channels.
-
-### MONTH 2 (data-driven)
-17. **LATAM payments (PSE/Nequi)** — Trigger: Colombian signups hitting paywall without intl card.
-18. **Monthly live master review #2** — Recurring series, gate replay behind email signup.
-19. **eBook migration from Payhip** — Stripe product `ebook` at $15 USD.
-20. **SEO blog posts** — Zero-competition ES keywords first.
+15. **Genre profile calibration** — Analyze ~102 reference tracks. Batched across sessions.
 
 ### MONTH 3+ (scale what works)
-21. **Product Hunt** — After testimonials, polished onboarding, proven conversion flow.
-22. **Signed token system** — HMAC-signed tokens, ~30 min.
-23. **DLocal integration** — If LATAM signups high but paid conversion <3%.
-24. **Priority Queue System** — Trigger: OOM errors, queue depth >5.
-25. **Stream Ready deploy** — Backend ready. Frontend at `~/streamready/`.
+16. **Product Hunt** — After 6+ testimonials, proven conversion flow, polished onboarding.
+17. **DLocal integration** — If LATAM signups high but paid conversion <3%.
+18. **Workshop banner activation** — Set `SERVICES_CONFIG.workshop.url` + `date` when scheduled.
+19. **Signed token system** — HMAC-signed tokens for Render API protection, ~30 min.
+20. **Priority Queue System** — Trigger: OOM errors, queue depth >5.
+21. **Stream Ready deploy** — Backend ready. Frontend at `~/streamready/`.
+
+### KEY METRICS TO WATCH (Admin Dashboard)
+- **Anonymous → signup conversion**: If low, revisit CTA or simplify auth
+- **Free → paid conversion**: If low after 2 analyses, review upgrade nudge email + FreeLimitModal copy
+- **Country breakdown**: Validates LATAM vs US engine split
+- **Device breakdown**: Mobile vs desktop informs Stream Ready priority
+- **Prospector leads contacted vs converted**: Track outreach ROI
+- **Render analysis times**: Benchmark 68-73s. If >80s → clean rebuild
 
 ---
 
@@ -3701,3 +3694,88 @@ Both placements now live: full section between features and pricing, inline comp
 - All colors use CSS vars — works in both light and dark mode
 
 **Git state**: main on `73aeaa9`, pushed. Build clean.
+
+### Session 2026-02-28 — Testimonial Updates + Spacing Polish
+
+#### Testimonial Name Reveals + New Review
+- **J. A.** → **Jhonny Chaux** (Músico de sesión / Session Musician) — `c2333fc`
+- **J. P. C.** → **Juan Pablo Conde Aya** (Músico / Musician) — same commit
+- **NEW: Pedro Rovetto** (Productor, Ingeniero de Mezcla y Músico) — bilingual quote about catching true peaks on stereo bus
+
+#### Trimmed to 3 for Clean Row (`072f361`)
+- 4 testimonials → orphan card on second row looked incomplete
+- Removed Juan Pablo Conde Aya (saved for row 2 when 5-6 testimonials available)
+- Final 3: Giovanni (74→94 proof), Pedro (pro on real project), Jhonny ("la voy a recomendar" close)
+- Order strategic: hook → credibility → referral close (last thing before pricing)
+
+#### Card Spacing Tightened (`c238c93`)
+- Top padding: `1.5rem` → `1rem` (sides/bottom unchanged)
+- Quote mark margin-bottom: `0.25rem` → `-0.25rem` (pulls text up to quote mark)
+- ~50% less gap between `"` and quote text
+
+**Git state**: main on `c238c93`, pushed. Build clean.
+
+### Session 2026-02-28 Part 2 — Anti-Vibecode Polish (3 Phases)
+
+#### Context
+Audited MR against a viral "9 tells of vibecoded apps" checklist. MR already passed on 7/9 (route structure, tables with overflow, no force-dynamic, navigation, mobile responsiveness, no cluttered menus). Implemented fixes for remaining 3: default browser selects, "Loading..." text, and no data caching layer.
+
+#### Phase 1: Custom Select Component (`components/Select.tsx`)
+- Reusable `<Select>` replacing all 7 native `<select>` elements across 3 files
+- Features: `position: fixed` dropdown (avoids clipping), keyboard nav (Enter/Space/ArrowUp/Down/Escape/Tab), click-outside dismiss, entry animation (opacity + translateY 150ms), ARIA attributes (combobox/listbox/option)
+- All styling via `var(--mr-*)` CSS tokens — works in both themes
+- `compact` mode for filter bars (thinner padding)
+- **Replacements**:
+  - `app/page.tsx`: Genre selector (11 options)
+  - `app/history/page.tsx`: Sort By (4 options) + Status filter (5 options) — both `compact`
+  - `app/prospecting/page.tsx`: Status (5) + Source (5) + Category (7) — all `compact`
+
+#### Phase 2: Skeleton Loaders (`components/Skeleton.tsx`)
+- 3 primitives: `SkeletonBox`, `SkeletonText`, `SkeletonCircle`
+- Shimmer animation: `linear-gradient(90deg, var(--mr-bg-hover) → var(--mr-bg-elevated) → var(--mr-bg-hover))`, 1.5s ease-in-out
+- Keyframe injected via module-level flag (single `<style>` tag)
+- **Dashboard skeleton** (`DashboardSkeleton`): header + 3 stat cards + 3 analysis rows
+- **History skeleton** (`HistorySkeleton`): header + title + 3 filter boxes + 4 analysis rows
+- **Auth pages** (4 files): Pulsing Music icon (Lucide) replacing "Cargando..." text in Suspense fallbacks
+
+#### Phase 3: React Query (`@tanstack/react-query` ^5.90.21)
+- **New files**:
+  - `lib/query-client.ts`: Singleton QueryClient (staleTime 30s, gcTime 5min, retry 1, refetchOnWindowFocus false)
+  - `components/QueryProvider.tsx`: 'use client' wrapper
+  - `lib/queries/dashboard.ts`: 5 parallel queries via Promise.all (profile, subscription, analyses, status RPC, addon RPC)
+  - `lib/queries/history.ts`: 2 parallel queries (subscription, analyses — no limit)
+- **`app/layout.tsx`**: `<AuthProvider><QueryProvider>{children}</QueryProvider></AuthProvider>`
+- **`app/dashboard/page.tsx`**: Replaced ~100 lines of useEffect + manual state + 8s safety timeout with `useQuery`. `dashboardState` now computed via `useMemo`. All UI states preserved.
+- **`app/history/page.tsx`**: Same pattern, ~50 lines removed. Filtering/sorting still derived from cached data.
+- **NOT touched**: `app/page.tsx` (analyzer has imperative upload→poll→save flow, wrong for useQuery)
+
+#### New Files (6)
+- `components/Select.tsx`
+- `components/Skeleton.tsx`
+- `components/QueryProvider.tsx`
+- `lib/query-client.ts`
+- `lib/queries/dashboard.ts`
+- `lib/queries/history.ts`
+
+#### Modified Files (10)
+- `app/page.tsx` — genre select replacement
+- `app/history/page.tsx` — 2 selects + skeleton + useQuery
+- `app/prospecting/page.tsx` — 3 selects
+- `app/dashboard/page.tsx` — skeleton + useQuery
+- `app/layout.tsx` — QueryProvider
+- `app/auth/login/page.tsx` — pulse spinner
+- `app/auth/signup/page.tsx` — pulse spinner
+- `app/auth/forgot-password/page.tsx` — pulse spinner
+- `app/auth/reset-password/page.tsx` — pulse spinner
+- `package.json` — @tanstack/react-query
+
+#### Verification (4 parallel agents)
+- Select: All 7 replacements verified, keyboard nav, ARIA, CSS vars, no native `<select>` remaining
+- Skeleton: All skeletons render correctly, shimmer animation, "Cargando..." fully removed
+- React Query: All query keys, enabled guards, derived variables, UI state preservation confirmed
+- Dark mode: All new components use `var(--mr-*)` tokens exclusively, zero hardcoded hex
+
+#### Commits to main
+1. `565d56e` - feat: anti-vibecode polish — custom selects, skeleton loaders, React Query
+
+**Git state**: main on `565d56e`, pushed. Build clean. All 23 routes compiled.
