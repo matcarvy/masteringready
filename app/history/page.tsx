@@ -9,11 +9,14 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { useQuery } from '@tanstack/react-query'
 import { useAuth, UserMenu } from '@/components/auth'
-import { supabase, createFreshQueryClient } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase'
+import { fetchHistoryData } from '@/lib/queries/history'
 import { detectLanguage, setLanguageCookie } from '@/lib/language'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { clearNotification } from '@/components/NotificationBadge'
+import { SkeletonBox, SkeletonText, SkeletonCircle } from '@/components/Skeleton'
 import {
   Music,
   FileAudio,
@@ -28,6 +31,7 @@ import {
   Download,
   SlidersHorizontal
 } from 'lucide-react'
+import Select from '@/components/Select'
 
 // ============================================================================
 // TRANSLATIONS / TRADUCCIONES
@@ -262,6 +266,120 @@ const cleanReportText = (text: string): string => {
 }
 
 // ============================================================================
+// SKELETON LOADER
+// ============================================================================
+
+function HistorySkeleton({ lang, isMobile }: { lang: string; isMobile: boolean }) {
+  return (
+    <div style={{
+      minHeight: '100vh',
+      background: 'var(--mr-bg-elevated)',
+      fontFamily: 'Inter, system-ui, sans-serif',
+      overflowX: 'hidden'
+    }}>
+      {/* Header */}
+      <header style={{
+        background: 'var(--mr-bg-card)',
+        borderBottom: '1px solid var(--mr-border)',
+        padding: '1rem 1.5rem',
+        position: 'sticky',
+        top: 0,
+        zIndex: 50
+      }}>
+        <div style={{
+          maxWidth: '1200px',
+          margin: '0 auto',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between'
+        }}>
+          {/* Left side: Logo */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div style={{
+              width: '32px',
+              height: '32px',
+              background: 'var(--mr-gradient)',
+              borderRadius: '0.5rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <Music size={18} color="white" />
+            </div>
+            {!isMobile && (
+              <span style={{
+                fontWeight: '700',
+                background: 'var(--mr-gradient)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text'
+              }}>
+                Mastering Ready
+              </span>
+            )}
+          </div>
+
+          {/* Right side: Placeholder actions */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '0.5rem' : '0.75rem' }}>
+            <SkeletonBox width={40} height={28} borderRadius="0.25rem" />
+            <SkeletonCircle size={28} />
+            <SkeletonBox width={isMobile ? 80 : 100} height={32} borderRadius="9999px" />
+          </div>
+        </div>
+      </header>
+
+      {/* Main content skeleton */}
+      <main style={{
+        maxWidth: '1200px',
+        margin: '0 auto',
+        padding: isMobile ? '1rem' : '2rem 1.5rem'
+      }}>
+        {/* Title */}
+        <SkeletonText width="40%" style={{ marginBottom: '0.5rem', height: '1.5rem' }} />
+        <SkeletonText width="55%" style={{ marginBottom: '1.5rem', height: '0.875rem' }} />
+
+        {/* Filter bar */}
+        <div style={{
+          display: 'flex',
+          gap: '0.75rem',
+          marginBottom: '1.5rem',
+          flexWrap: 'wrap'
+        }}>
+          <SkeletonBox width={120} height={36} borderRadius="0.5rem" />
+          <SkeletonBox width={120} height={36} borderRadius="0.5rem" />
+          <SkeletonBox width={120} height={36} borderRadius="0.5rem" />
+        </div>
+
+        {/* Analysis rows */}
+        <div style={{
+          background: 'var(--mr-bg-card)',
+          borderRadius: '1rem',
+          padding: isMobile ? '1rem' : '1.5rem',
+          boxShadow: 'var(--mr-shadow)'
+        }}>
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '1rem',
+              padding: '1rem 0',
+              borderBottom: i < 3 ? '1px solid var(--mr-border)' : 'none'
+            }}>
+              <SkeletonCircle size={40} />
+              <div style={{ flex: 1 }}>
+                <SkeletonText width="60%" style={{ marginBottom: '0.5rem' }} />
+                <SkeletonText width="30%" style={{ height: '0.75rem' }} />
+              </div>
+              <SkeletonBox width={60} height={24} borderRadius="0.25rem" />
+            </div>
+          ))}
+        </div>
+      </main>
+    </div>
+  )
+}
+
+// ============================================================================
 // COMPONENT
 // ============================================================================
 
@@ -271,8 +389,6 @@ export default function HistoryPage() {
 
   const [lang, setLang] = useState<'es' | 'en'>('es')
   const [isMobile, setIsMobile] = useState(false)
-  const [analyses, setAnalyses] = useState<Analysis[]>([])
-  const [loading, setLoading] = useState(true)
   const [selectedAnalysis, setSelectedAnalysis] = useState<Analysis | null>(null)
   const [reportTab, setReportTab] = useState<'rapid' | 'summary' | 'complete'>('rapid')
 
@@ -281,10 +397,23 @@ export default function HistoryPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [currentPage, setCurrentPage] = useState(1)
 
-  // Check if Pro (for complete tab)
-  const [isPro, setIsPro] = useState(false)
   const [showContactModal, setShowContactModal] = useState(false)
   const [ctaAction, setCtaAction] = useState('')
+
+  // React Query — single fetch for all history data
+  const { data, isLoading } = useQuery({
+    queryKey: ['history', user?.id],
+    queryFn: () => fetchHistoryData({
+      accessToken: session!.access_token,
+      refreshToken: session!.refresh_token,
+      userId: user!.id,
+    }),
+    enabled: !!user && !!session?.access_token,
+  })
+
+  const loading = isLoading
+  const analyses = data?.analyses ?? []
+  const isPro = data?.isPro ?? false
 
   // Free users get Completo + PDF for their first 2 analyses (by creation date). Pro/admin get all.
   const hasFullAccess = isPro || isAdmin || (() => {
@@ -327,55 +456,14 @@ export default function HistoryPage() {
     }
   }, [authLoading, user, lang])
 
-  // Fetch data (fresh client avoids stale singleton after SPA navigation)
+  // Clear notifications when data loads
   useEffect(() => {
-    async function fetchData() {
-      if (!user || !session?.access_token) return
+    if (data) {
       clearNotification()
       sessionStorage.removeItem('mr_new_analyses')
-      setLoading(true)
-
-      try {
-        const client = await createFreshQueryClient(
-          { access_token: session.access_token, refresh_token: session.refresh_token }
-        )
-        if (!client) return
-
-        // Check subscription
-        const { data: subData } = await client
-          .from('subscriptions')
-          .select('*, plan:plans(type, name)')
-          .eq('user_id', user.id)
-          .eq('status', 'active')
-          .single()
-
-        if (subData?.plan?.type === 'pro' || subData?.plan?.type === 'studio') {
-          setIsPro(true)
-        }
-
-        // Fetch ALL analyses (no limit for history)
-        const { data: analysesData } = await client
-          .from('analyses')
-          .select('*')
-          .eq('user_id', user.id)
-          .is('deleted_at', null)
-          .order('created_at', { ascending: false })
-
-        if (analysesData) {
-          setAnalyses(analysesData)
-        }
-      } catch (error) {
-        console.error('Error fetching history data:', error)
-      } finally {
-        setLoading(false)
-      }
+      sessionStorage.removeItem('mr_hist_reload')
     }
-
-    if (user && session?.access_token) {
-      fetchData()
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id, session?.access_token])
+  }, [data])
 
   // Reset page when filters change
   useEffect(() => {
@@ -442,37 +530,9 @@ export default function HistoryPage() {
     setReportTab(tab)
   }
 
-  // Safety timeout — if fetch hangs (stale connections from SPA navigation), auto-reload (max 1 attempt)
-  useEffect(() => {
-    if (!loading) {
-      sessionStorage.removeItem('mr_hist_reload')
-      return
-    }
-    const alreadyReloaded = sessionStorage.getItem('mr_hist_reload')
-    if (alreadyReloaded) return
-    const timeout = setTimeout(() => {
-      sessionStorage.setItem('mr_hist_reload', '1')
-      window.location.reload()
-    }, 8000)
-    return () => clearTimeout(timeout)
-  }, [loading])
-
-  // Loading state
-  if (authLoading || loading) {
-    return (
-      <div style={{
-        minHeight: '100vh',
-        background: 'var(--mr-gradient)',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: '1rem'
-      }}>
-        <span style={{ fontSize: '2rem' }}>🎧</span>
-        <div style={{ color: 'var(--mr-text-primary)', fontSize: '1.25rem' }}>{t.loading}</div>
-      </div>
-    )
+  // Loading state — isLoading only true on first load, not background refetches
+  if (authLoading || isLoading) {
+    return <HistorySkeleton lang={lang} isMobile={isMobile} />
   }
 
   if (!user) return null
@@ -671,25 +731,17 @@ export default function HistoryPage() {
                 <label style={{ fontSize: '0.875rem', color: 'var(--mr-text-secondary)', fontWeight: '500' }}>
                   {t.sortBy}:
                 </label>
-                <select
+                <Select
+                  compact
                   value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as SortOption)}
-                  style={{
-                    padding: '0.375rem 0.75rem',
-                    border: '1px solid var(--mr-border-strong)',
-                    borderRadius: '0.375rem',
-                    fontSize: '0.875rem',
-                    color: 'var(--mr-text-primary)',
-                    background: 'var(--mr-bg-card)',
-                    cursor: 'pointer',
-                    outline: 'none'
-                  }}
-                >
-                  <option value="newest">{t.sortNewest}</option>
-                  <option value="oldest">{t.sortOldest}</option>
-                  <option value="score_high">{t.sortScoreHigh}</option>
-                  <option value="score_low">{t.sortScoreLow}</option>
-                </select>
+                  onChange={(v) => setSortBy(v as SortOption)}
+                  options={[
+                    { value: 'newest', label: t.sortNewest },
+                    { value: 'oldest', label: t.sortOldest },
+                    { value: 'score_high', label: t.sortScoreHigh },
+                    { value: 'score_low', label: t.sortScoreLow },
+                  ]}
+                />
               </div>
 
               {/* Status Filter */}
@@ -697,25 +749,17 @@ export default function HistoryPage() {
                 <label style={{ fontSize: '0.875rem', color: 'var(--mr-text-secondary)', fontWeight: '500' }}>
                   {t.statusFilter}:
                 </label>
-                <select
+                <Select
+                  compact
                   value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
-                  style={{
-                    padding: '0.375rem 0.75rem',
-                    border: '1px solid var(--mr-border-strong)',
-                    borderRadius: '0.375rem',
-                    fontSize: '0.875rem',
-                    color: 'var(--mr-text-primary)',
-                    background: 'var(--mr-bg-card)',
-                    cursor: 'pointer',
-                    outline: 'none'
-                  }}
-                >
-                  <option value="all">{t.statusAll}</option>
-                  <option value="ready">{t.statusReady}</option>
-                  <option value="needs_work">{t.statusNeedsWork}</option>
-                  <option value="review">{t.statusReview}</option>
-                </select>
+                  onChange={(v) => setStatusFilter(v as StatusFilter)}
+                  options={[
+                    { value: 'all', label: t.statusAll },
+                    { value: 'ready', label: t.statusReady },
+                    { value: 'needs_work', label: t.statusNeedsWork },
+                    { value: 'review', label: t.statusReview },
+                  ]}
+                />
               </div>
             </div>
 

@@ -6,11 +6,13 @@
  * Muestra historial de análisis e información de cuenta
  */
 
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect, Suspense, useMemo } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
+import { useQuery } from '@tanstack/react-query'
 import { useAuth, UserMenu } from '@/components/auth'
-import { supabase, createFreshQueryClient, UserDashboardStatus } from '@/lib/supabase'
+import { supabase, UserDashboardStatus } from '@/lib/supabase'
+import { fetchDashboardData } from '@/lib/queries/dashboard'
 import { useGeo } from '@/lib/useGeo'
 import { getAllPricesForCountry } from '@/lib/pricing-config'
 import { detectLanguage, setLanguageCookie } from '@/lib/language'
@@ -34,6 +36,7 @@ import {
 } from 'lucide-react'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { clearNotification } from '@/components/NotificationBadge'
+import { SkeletonBox, SkeletonText, SkeletonCircle } from '@/components/Skeleton'
 
 // ============================================================================
 // TRANSLATIONS / TRADUCCIONES
@@ -404,6 +407,128 @@ const cleanReportText = (text: string): string => {
 }
 
 // ============================================================================
+// SKELETON LOADER
+// ============================================================================
+
+function DashboardSkeleton({ lang, isMobile }: { lang: string; isMobile: boolean }) {
+  return (
+    <div style={{
+      minHeight: '100vh',
+      background: 'var(--mr-bg-elevated)',
+      fontFamily: 'Inter, system-ui, sans-serif',
+      overflowX: 'hidden'
+    }}>
+      {/* Header */}
+      <header style={{
+        background: 'var(--mr-bg-card)',
+        borderBottom: '1px solid var(--mr-border)',
+        padding: isMobile ? '0.75rem 1rem' : '1rem 1.5rem',
+        position: 'sticky',
+        top: 0,
+        zIndex: 50
+      }}>
+        <div style={{
+          maxWidth: '1200px',
+          margin: '0 auto',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between'
+        }}>
+          {/* Left side: Logo */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div style={{
+              width: '32px',
+              height: '32px',
+              background: 'var(--mr-gradient)',
+              borderRadius: '0.5rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <Music size={18} color="white" />
+            </div>
+            {!isMobile && (
+              <span style={{
+                fontWeight: '700',
+                background: 'var(--mr-gradient)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text'
+              }}>
+                Mastering Ready
+              </span>
+            )}
+          </div>
+
+          {/* Right side: Placeholder actions */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '0.5rem' : '0.75rem' }}>
+            <SkeletonBox width={40} height={28} borderRadius="0.25rem" />
+            <SkeletonCircle size={28} />
+            <SkeletonBox width={isMobile ? 80 : 100} height={32} borderRadius="9999px" />
+          </div>
+        </div>
+      </header>
+
+      {/* Main content skeleton */}
+      <main style={{
+        maxWidth: '1200px',
+        margin: '0 auto',
+        padding: isMobile ? '1rem' : '2rem 1.5rem',
+        overflowX: 'hidden'
+      }}>
+        {/* Stat cards grid */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(240px, 1fr))',
+          gap: '1rem',
+          marginBottom: '2rem'
+        }}>
+          {[0, 1, 2].map((i) => (
+            <div key={i} style={{
+              background: 'var(--mr-bg-card)',
+              borderRadius: '1rem',
+              padding: isMobile ? '1.25rem' : '1.5rem',
+              boxShadow: 'var(--mr-shadow)',
+              ...(i === 0 ? { gridColumn: isMobile ? 'span 1' : 'span 2' } : {})
+            }}>
+              <SkeletonText width="40%" style={{ marginBottom: '0.75rem', height: '0.875rem' }} />
+              <SkeletonText width="60%" style={{ marginBottom: '0.5rem', height: '1.5rem' }} />
+              <SkeletonText width="30%" style={{ height: '0.75rem' }} />
+            </div>
+          ))}
+        </div>
+
+        {/* Analysis list skeleton */}
+        <div style={{
+          background: 'var(--mr-bg-card)',
+          borderRadius: '1rem',
+          padding: isMobile ? '1rem' : '1.5rem',
+          boxShadow: 'var(--mr-shadow)'
+        }}>
+          <SkeletonText width="30%" style={{ marginBottom: '1.5rem', height: '1.25rem' }} />
+          {[0, 1, 2].map((i) => (
+            <div key={i} style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '1rem',
+              padding: '1rem 0',
+              borderBottom: i < 2 ? '1px solid var(--mr-border)' : 'none'
+            }}>
+              <SkeletonCircle size={48} />
+              <div style={{ flex: 1 }}>
+                <SkeletonText width="60%" style={{ marginBottom: '0.5rem' }} />
+                <SkeletonText width="30%" style={{ height: '0.75rem' }} />
+              </div>
+              <SkeletonBox width={60} height={24} borderRadius="0.25rem" />
+            </div>
+          ))}
+        </div>
+      </main>
+    </div>
+  )
+}
+
+// ============================================================================
 // COMPONENT
 // ============================================================================
 
@@ -413,22 +538,33 @@ function DashboardContent() {
   const { user, session, loading: authLoading, isAdmin } = useAuth()
 
   const [lang, setLang] = useState<'es' | 'en'>('es')
-  const [analyses, setAnalyses] = useState<Analysis[]>([])
-  const [profile, setProfile] = useState<Profile | null>(null)
-  const [subscription, setSubscription] = useState<Subscription | null>(null)
-  const [loading, setLoading] = useState(true)
   const [selectedAnalysis, setSelectedAnalysis] = useState<Analysis | null>(null)
   const [reportTab, setReportTab] = useState<'rapid' | 'summary' | 'complete'>('rapid')
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
   const [showContactModal, setShowContactModal] = useState(false)
   const [ctaAction, setCtaAction] = useState('')
-  const [userStatus, setUserStatus] = useState<UserDashboardStatus | null>(null)
-  const [dashboardState, setDashboardState] = useState<DashboardState>('new_user')
-  const [canBuyAddon, setCanBuyAddon] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const [fileInfoExpanded, setFileInfoExpanded] = useState(false)
   const [showWelcomeBanner, setShowWelcomeBanner] = useState(false)
   const [welcomeBonus, setWelcomeBonus] = useState(0)
+
+  // React Query — single fetch for all dashboard data
+  const { data, isLoading } = useQuery({
+    queryKey: ['dashboard', user?.id],
+    queryFn: () => fetchDashboardData({
+      accessToken: session!.access_token,
+      refreshToken: session!.refresh_token,
+      userId: user!.id,
+    }),
+    enabled: !!user && !!session?.access_token,
+  })
+
+  const loading = isLoading
+  const analyses = data?.analyses ?? []
+  const profile = data?.profile ?? null
+  const subscription = data?.subscription ?? null
+  const userStatus = data?.userStatus ?? null
+  const canBuyAddon = data?.canBuyAddon ?? false
 
   const { geo } = useGeo()
   const t = translations[lang]
@@ -442,6 +578,19 @@ function DashboardContent() {
   })()
 
   const prices = getAllPricesForCountry(geo?.countryCode || 'US')
+
+  // Derive dashboardState from query data
+  const dashboardState: DashboardState = useMemo(() => {
+    if (!userStatus) return 'new_user'
+    if (userStatus.subscription_status === 'canceled' || userStatus.subscription_status === 'past_due') return 'pro_expired'
+    if (userStatus.plan_type === 'pro' || userStatus.plan_type === 'studio') {
+      if (userStatus.analyses_used >= 30 && userStatus.addon_remaining === 0) return 'pro_limit_reached'
+      return 'pro_active'
+    }
+    if (userStatus.analyses_used >= 2) return 'free_limit_reached'
+    if (userStatus.analyses_used === 0 && analyses.length === 0) return 'new_user'
+    return 'has_analyses'
+  }, [userStatus, analyses.length])
 
   // Detect language: cookie > timezone > browser
   useEffect(() => {
@@ -476,108 +625,21 @@ function DashboardContent() {
     }
   }, [authLoading, user, lang])
 
-  // Fetch data — parallelized to avoid hitting safety timeout
+  // Clear notifications when data loads
   useEffect(() => {
-    let cancelled = false
-
-    async function fetchData() {
-      if (!user) return
-
-      // User arrived at dashboard — clear any pending notification + reset counter
+    if (data) {
       clearNotification()
       sessionStorage.removeItem('mr_new_analyses')
-
-      setLoading(true)
-
-      try {
-        // Use a fresh Supabase client — the shared singleton can have stale internal state
-        // (auth locks, pending requests) after SPA navigation from the analyzer page
-        // Pass session tokens directly from AuthProvider — avoids touching the shared
-        // Supabase singleton which can have stale internal state after SPA navigation
-        const client = await createFreshQueryClient(
-          session ? { access_token: session.access_token, refresh_token: session.refresh_token } : undefined
-        )
-        if (!client) return // No session — redirect guard will handle
-
-        // Parallel fetch: profile + subscription + analyses + status + addon check
-        const [profileResult, subResult, analysesResult, statusResult, addonResult] = await Promise.all([
-          client.from('profiles').select('*').eq('id', user.id).single(),
-          client.from('subscriptions').select('*, plan:plans(type, name)').eq('user_id', user.id).eq('status', 'active').single(),
-          client.from('analyses').select('*').eq('user_id', user.id).is('deleted_at', null).order('created_at', { ascending: false }).limit(50),
-          client.rpc('get_user_analysis_status', { p_user_id: user.id }),
-          client.rpc('can_buy_addon', { p_user_id: user.id })
-        ])
-
-        if (cancelled) return
-
-        // Profile
-        if (profileResult.error) console.error('[Dashboard] Profile error:', profileResult.error.message)
-        if (profileResult.data) {
-          setProfile(profileResult.data)
-          if (profileResult.data.preferred_language === 'en' || profileResult.data.preferred_language === 'es') {
-            setLang(profileResult.data.preferred_language as 'es' | 'en')
-          }
-        }
-
-        // Subscription
-        if (subResult.error && subResult.error.code !== 'PGRST116') console.error('[Dashboard] Subscription error:', subResult.error.message)
-        if (subResult.data) {
-          setSubscription(subResult.data)
-        }
-
-        // Analyses
-        const analysesData = analysesResult.data
-        if (analysesResult.error) console.error('[Dashboard] Analyses error:', analysesResult.error.message)
-        if (analysesData) {
-          setAnalyses(analysesData)
-        }
-
-        // User analysis status
-        if (statusResult.error) console.error('[Dashboard] Status error:', statusResult.error.message)
-        const status = statusResult.data ? (Array.isArray(statusResult.data) ? statusResult.data[0] : statusResult.data) : null
-        if (status) {
-          setUserStatus(status)
-
-          // Determine dashboard state based on spec
-          if (status.subscription_status === 'canceled' || status.subscription_status === 'past_due') {
-            setDashboardState('pro_expired')
-          } else if (status.plan_type === 'pro' || status.plan_type === 'studio') {
-            if (status.analyses_used >= 30 && status.addon_remaining === 0) {
-              setDashboardState('pro_limit_reached')
-            } else {
-              setDashboardState('pro_active')
-            }
-          } else {
-            // Free plan
-            if (status.analyses_used >= 2) {
-              setDashboardState('free_limit_reached')
-            } else if (status.analyses_used === 0 && (!analysesData || analysesData.length === 0)) {
-              setDashboardState('new_user')
-            } else {
-              setDashboardState('has_analyses')
-            }
-          }
-
-          // Use addon result from parallel batch
-          if (!cancelled && status.plan_type === 'pro') {
-            const addon = addonResult.data ? (Array.isArray(addonResult.data) ? addonResult.data[0] : addonResult.data) : null
-            setCanBuyAddon(addon?.can_buy ?? false)
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching dashboard data:', error)
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
+      sessionStorage.removeItem('mr_dash_reload')
     }
+  }, [data])
 
-    if (user) {
-      fetchData()
+  // Update language from profile
+  useEffect(() => {
+    if (profile?.preferred_language === 'en' || profile?.preferred_language === 'es') {
+      setLang(profile.preferred_language as 'es' | 'en')
     }
-
-    return () => { cancelled = true }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id])
+  }, [profile?.preferred_language])
 
   // Get score color
   const getScoreColor = (score: number) => {
@@ -670,21 +732,6 @@ function DashboardContent() {
     }
   }
 
-  // Safety timeout — if fetch hangs (stale connections from SPA navigation), auto-reload (max 1 attempt)
-  useEffect(() => {
-    if (!loading) {
-      sessionStorage.removeItem('mr_dash_reload')
-      return
-    }
-    const alreadyReloaded = sessionStorage.getItem('mr_dash_reload')
-    if (alreadyReloaded) return
-    const timeout = setTimeout(() => {
-      sessionStorage.setItem('mr_dash_reload', '1')
-      window.location.reload()
-    }, 8000)
-    return () => clearTimeout(timeout)
-  }, [loading])
-
   // Detect checkout success → show welcome banner
   useEffect(() => {
     if (loading || !profile || !subscription) return
@@ -696,22 +743,9 @@ function DashboardContent() {
     setShowWelcomeBanner(true)
   }, [loading, profile, subscription, searchParams])
 
-  // Loading state
-  if (authLoading || loading) {
-    return (
-      <div style={{
-        minHeight: '100vh',
-        background: 'var(--mr-gradient)',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: '1rem'
-      }}>
-        <span style={{ fontSize: '2rem' }}>🎧</span>
-        <div style={{ color: 'var(--mr-text-primary)', fontSize: '1.25rem' }}>{t.loading}</div>
-      </div>
-    )
+  // Loading state — isLoading only true on first load, not background refetches
+  if (authLoading || isLoading) {
+    return <DashboardSkeleton lang={lang} isMobile={isMobile} />
   }
 
   // Not logged in (will redirect)

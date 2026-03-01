@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { Download, Check, Upload, Zap, Shield, TrendingUp, Play, Music, Crown, X, AlertTriangle, Globe, Headphones, Menu, GraduationCap, Stethoscope, Wrench } from 'lucide-react'
+import { Download, Check, Upload, Zap, Shield, TrendingUp, Play, Music, Crown, X, AlertTriangle, Globe, Headphones, Menu, GraduationCap, Stethoscope, Wrench, ChevronDown } from 'lucide-react'
 import { UserMenu, useAuth, AuthModal } from '@/components/auth'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { analyzeFile, checkIpLimit, IpCheckResult } from '@/lib/api'
@@ -14,6 +14,7 @@ import { getAllPricesForCountry } from '@/lib/pricing-config'
 import { detectLanguage, setLanguageCookie } from '@/lib/language'
 import { getErrorMessage, ERROR_MESSAGES } from '@/lib/error-messages'
 import { NotificationBadge, setNotification, clearNotification } from '@/components/NotificationBadge'
+import Select from '@/components/Select'
 
 // Module-level quota cache — survives React state resets / component remounts
 // (GoTrueClient conflicts cause auth state flicker → state loss)
@@ -364,6 +365,7 @@ function Home() {
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false)
   const [workshopBannerDismissed, setWorkshopBannerDismissed] = useState(true) // default true to prevent flash
+  const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null)
   const [feedback, setFeedback] = useState({ rating: 0, liked: '', change: '', add: '' })
   // Feedback widget + CTA tracking state
   const [savedAnalysisId, setSavedAnalysisId] = useState<string | null>(null)
@@ -1707,6 +1709,36 @@ by Matías Carvajal
                 </span>
               )}
             </div>
+            {/* Desktop Section Links */}
+            {!isMobile && (
+              <nav style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
+                {[
+                  { href: '#features', es: 'Funciones', en: 'Features' },
+                  { href: '#pricing', es: 'Precios', en: 'Pricing' },
+                  { href: '#faq', es: 'FAQ', en: 'FAQ' }
+                ].map(link => (
+                  <a
+                    key={link.href}
+                    href={link.href}
+                    onClick={(e) => {
+                      e.preventDefault()
+                      document.querySelector(link.href)?.scrollIntoView({ behavior: 'smooth' })
+                    }}
+                    style={{
+                      color: 'var(--mr-text-secondary)',
+                      textDecoration: 'none',
+                      fontSize: '0.875rem',
+                      fontWeight: '500',
+                      transition: 'color 0.2s'
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--mr-text-primary)' }}
+                    onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--mr-text-secondary)' }}
+                  >
+                    {lang === 'es' ? link.es : link.en}
+                  </a>
+                ))}
+              </nav>
+            )}
             <div style={{ display: 'flex', gap: isMobile ? '0.5rem' : '0.75rem', alignItems: 'center', flexShrink: 0 }}>
               {/* Language Toggle */}
               <button
@@ -1812,6 +1844,36 @@ by Matías Carvajal
                       overflow: 'hidden',
                       zIndex: 50
                     }}>
+                      {/* Section links */}
+                      <div style={{ padding: '0.5rem 0', borderBottom: '1px solid var(--mr-border)' }}>
+                        {[
+                          { href: '#features', es: 'Funciones', en: 'Features' },
+                          { href: '#pricing', es: 'Precios', en: 'Pricing' },
+                          { href: '#faq', es: 'FAQ', en: 'FAQ' }
+                        ].map(link => (
+                          <a
+                            key={link.href}
+                            href={link.href}
+                            onClick={(e) => {
+                              e.preventDefault()
+                              setMobileMenuOpen(false)
+                              document.querySelector(link.href)?.scrollIntoView({ behavior: 'smooth' })
+                            }}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.75rem',
+                              padding: '0.75rem 1rem',
+                              color: 'var(--mr-text-secondary)',
+                              textDecoration: 'none',
+                              fontSize: '0.95rem',
+                              transition: 'background 0.2s'
+                            }}
+                          >
+                            {lang === 'es' ? link.es : link.en}
+                          </a>
+                        ))}
+                      </div>
                       {/* Auth links */}
                       <div style={{ padding: '0.5rem 0' }}>
                         <Link
@@ -2706,6 +2768,129 @@ by Matías Carvajal
         </div>
       </section>
 
+      {/* FAQ Section */}
+      <section id="faq" style={{
+        background: 'var(--mr-bg-base)',
+        borderTop: '1px solid var(--mr-border)'
+      }}>
+        <div style={{ maxWidth: '800px', margin: '0 auto', padding: isMobile ? '3rem 1.25rem' : '4rem 2rem' }}>
+          <h2 style={{
+            fontSize: isMobile ? '1.5rem' : '2rem',
+            fontWeight: 'bold',
+            textAlign: 'center',
+            marginBottom: '2rem',
+            color: 'var(--mr-text-primary)'
+          }}>
+            {lang === 'es' ? 'Preguntas frecuentes' : 'Frequently asked questions'}
+          </h2>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            {[
+              {
+                q_es: '¿Qué hace Mastering Ready?',
+                q_en: 'What does Mastering Ready do?',
+                a_es: 'Analiza tu mezcla y te dice si está lista para mastering. Mide headroom, LUFS, true peak, balance estéreo y distribución de frecuencias. Te da una puntuación de 0 a 100 con recomendaciones específicas. No masteriza tu audio, te ayuda a identificar qué corregir antes de enviarlo a mastering.',
+                a_en: 'It analyzes your mix and tells you if it is ready for mastering. It measures headroom, LUFS, true peak, stereo balance, and frequency distribution. You get a 0 to 100 score with specific recommendations. It does not master your audio. It helps you identify what to fix before sending it to mastering.'
+              },
+              {
+                q_es: '¿Mi audio se almacena después del análisis?',
+                q_en: 'Is my audio stored after analysis?',
+                a_es: 'No. Tu archivo se analiza en memoria y se elimina inmediatamente. Solo se guardan las métricas y puntuaciones derivadas en tu cuenta. Tu música sigue siendo tuya.',
+                a_en: 'No. Your file is analyzed in memory and immediately deleted. Only the derived metrics and scores are saved to your account. Your music stays yours.'
+              },
+              {
+                q_es: '¿Cuánto headroom debe tener mi mezcla antes de mastering?',
+                q_en: 'How much headroom should my mix have before mastering?',
+                a_es: 'Una mezcla bien preparada debería tener entre -6 dBFS y -3 dBFS de headroom (nivel de pico). Esto le da al ingeniero de mastering suficiente espacio para trabajar con EQ, compresión y limiting sin clipeo.',
+                a_en: 'A well-prepared mix should have between -6 dBFS and -3 dBFS of headroom (peak level). This gives the mastering engineer enough room to work with EQ, compression, and limiting without clipping.'
+              },
+              {
+                q_es: '¿A cuántos LUFS debería estar mi mezcla antes de mastering?',
+                q_en: 'What LUFS should my mix be before mastering?',
+                a_es: 'Antes de mastering, tu mezcla debería estar entre -18 y -14 LUFS integrados. Este no es el nivel final de loudness, eso depende de la plataforma de streaming. Mastering Ready mide tus LUFS y te avisa si tu mezcla está demasiado fuerte o débil para un mastering óptimo.',
+                a_en: 'Before mastering, your mix should typically sit between -18 and -14 LUFS integrated. This is not the final loudness target, which depends on the streaming platform. Mastering Ready measures your integrated LUFS and flags if your mix is too loud or too quiet for optimal mastering results.'
+              },
+              {
+                q_es: '¿Es gratis?',
+                q_en: 'Is Mastering Ready free?',
+                a_es: 'Sí. Tienes 2 análisis completos gratis con reportes e informe en PDF al crear tu cuenta. Sin tarjeta de crédito. Después puedes comprar análisis individuales por $5.99 o suscribirte a Pro por $9.99 al mes (30 análisis, precios regionales disponibles).',
+                a_en: 'Yes. You get 2 free full analyses with complete reports and PDF downloads when you create an account. No credit card required. After that, you can purchase individual analyses for $5.99 or subscribe to Pro for $9.99 per month (30 analyses, regional pricing available).'
+              },
+              {
+                q_es: '¿Qué formatos de audio soporta?',
+                q_en: 'What audio formats does it support?',
+                a_es: 'WAV, MP3, AIFF, AAC, M4A y OGG de hasta 500 MB. Para el análisis más preciso, recomendamos subir archivos WAV a la resolución más alta disponible desde tu DAW.',
+                a_en: 'WAV, MP3, AIFF, AAC, M4A, and OGG files up to 500 MB. For the most accurate analysis, we recommend uploading WAV files at the highest resolution available from your DAW.'
+              },
+              {
+                q_es: '¿Cómo se calcula la puntuación de 0 a 100?',
+                q_en: 'How is the 0 to 100 score calculated?',
+                a_es: 'La puntuación se basa en el análisis ponderado de cinco métricas técnicas: headroom, true peak, relación pico-loudness (PLR), correlación estéreo y balance de frecuencias. Cada métrica se evalúa contra estándares profesionales de mastering. 85 o más significa que tu mezcla está técnicamente lista.',
+                a_en: 'The score is based on weighted analysis of five technical metrics: headroom, true peak, peak to loudness ratio (PLR), stereo correlation, and frequency balance. Each metric is evaluated against professional mastering standards. 85 or above means your mix is technically ready.'
+              },
+              {
+                q_es: '¿El mastering puede arreglar una mala mezcla?',
+                q_en: 'Can mastering fix a bad mix?',
+                a_es: 'No. El mastering puede mejorar una buena mezcla, pero no puede corregir problemas fundamentales como balance pobre, headroom excesivo o problemas de fase. Por eso importa analizar tu mezcla antes. Mastering Ready identifica los problemas específicos que debes resolver para que el ingeniero de mastering pueda hacer su mejor trabajo.',
+                a_en: 'No. Mastering can enhance a good mix but cannot fix fundamental problems like poor balance, excessive headroom issues, or phase problems. That is why analyzing your mix before mastering matters. Mastering Ready identifies the issues you should address so the mastering engineer can do their best work.'
+              }
+            ].map((faq, i) => {
+              const isOpen = openFaqIndex === i
+              return (
+                <div key={i} style={{
+                  background: 'var(--mr-bg-card)',
+                  borderRadius: '0.75rem',
+                  border: '1px solid var(--mr-border)',
+                  overflow: 'hidden'
+                }}>
+                  <button
+                    onClick={() => setOpenFaqIndex(isOpen ? null : i)}
+                    style={{
+                      width: '100%',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      padding: '1rem 1.25rem',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      color: 'var(--mr-text-primary)',
+                      fontWeight: '600',
+                      fontSize: isMobile ? '0.9375rem' : '1rem',
+                      gap: '1rem'
+                    }}
+                    aria-expanded={isOpen}
+                  >
+                    <span>{lang === 'es' ? faq.q_es : faq.q_en}</span>
+                    <ChevronDown size={18} style={{
+                      flexShrink: 0,
+                      color: 'var(--mr-text-tertiary)',
+                      transform: isOpen ? 'rotate(180deg)' : 'rotate(0)',
+                      transition: 'transform 0.2s'
+                    }} />
+                  </button>
+                  <div style={{
+                    maxHeight: isOpen ? '300px' : '0',
+                    overflow: 'hidden',
+                    transition: 'max-height 0.3s ease'
+                  }}>
+                    <p style={{
+                      padding: '0 1.25rem 1rem',
+                      color: 'var(--mr-text-secondary)',
+                      fontSize: '0.9375rem',
+                      lineHeight: '1.6',
+                      margin: 0
+                    }}>
+                      {lang === 'es' ? faq.a_es : faq.a_en}
+                    </p>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      </section>
+
       {/* Analyzer Section - Same as before but with inline styles */}
       <section id="analyze" className="analyzer-section" style={{
         background: 'var(--mr-bg-card)'
@@ -3033,38 +3218,24 @@ by Matías Carvajal
                       <Music size={16} style={{ color: 'var(--mr-primary)' }} />
                       {lang === 'es' ? 'Género' : 'Genre'}
                     </label>
-                    <select
+                    <Select
                       value={genre || ''}
-                      onChange={(e) => setGenre(e.target.value || null)}
-                      style={{
-                        marginTop: '0.375rem',
-                        width: '100%',
-                        padding: '0.5rem 0.75rem',
-                        borderRadius: '0.5rem',
-                        border: '1px solid var(--mr-border)',
-                        background: 'var(--mr-bg-input)',
-                        color: 'var(--mr-text-primary)',
-                        fontSize: '0.875rem',
-                        cursor: 'pointer',
-                        appearance: 'none',
-                        backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
-                        backgroundRepeat: 'no-repeat',
-                        backgroundPosition: 'right 0.75rem center',
-                        paddingRight: '2rem',
-                      }}
-                    >
-                      <option value="">{lang === 'es' ? 'Universal (todos los géneros)' : 'Universal (All Genres)'}</option>
-                      <option value="Pop/Balada">{lang === 'es' ? 'Pop / Balada' : 'Pop / Ballad'}</option>
-                      <option value="Rock">Rock</option>
-                      <option value="Hip-Hop/Trap">Hip-Hop / Trap</option>
-                      <option value="EDM/Electrónica">EDM / {lang === 'es' ? 'Electrónica' : 'Electronic'}</option>
-                      <option value="R&B/Soul">R&B / Soul</option>
-                      <option value="Latin/Reggaeton">{lang === 'es' ? 'Latino / Reggaeton' : 'Latin / Reggaeton'}</option>
-                      <option value="Metal">Metal</option>
-                      <option value="Jazz/Acústico">Jazz / {lang === 'es' ? 'Acústica' : 'Acoustic'}</option>
-                      <option value="Clásica">{lang === 'es' ? 'Clásica' : 'Classical'}</option>
-                      <option value="Country">Country</option>
-                    </select>
+                      onChange={(v) => setGenre(v || null)}
+                      options={[
+                        { value: '', label: lang === 'es' ? 'Universal (todos los géneros)' : 'Universal (All Genres)' },
+                        { value: 'Pop/Balada', label: lang === 'es' ? 'Pop / Balada' : 'Pop / Ballad' },
+                        { value: 'Rock', label: 'Rock' },
+                        { value: 'Hip-Hop/Trap', label: 'Hip-Hop / Trap' },
+                        { value: 'EDM/Electrónica', label: lang === 'es' ? 'EDM / Electrónica' : 'EDM / Electronic' },
+                        { value: 'Jazz/Acústico', label: lang === 'es' ? 'Jazz / Acústica' : 'Jazz / Acoustic' },
+                        { value: 'R&B/Soul', label: 'R&B / Soul' },
+                        { value: 'Latino/Reggaeton', label: lang === 'es' ? 'Latino / Reggaeton' : 'Latin / Reggaeton' },
+                        { value: 'Metal', label: 'Metal' },
+                        { value: 'Clásica', label: lang === 'es' ? 'Clásica' : 'Classical' },
+                        { value: 'Country', label: 'Country' },
+                      ]}
+                      style={{ marginTop: '0.375rem' }}
+                    />
                     <p style={{ fontSize: '0.75rem', color: 'var(--mr-text-secondary)', marginTop: '0.25rem' }}>
                       {lang === 'es'
                         ? 'Ajusta los umbrales de balance tonal para tu género'

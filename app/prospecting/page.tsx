@@ -15,6 +15,7 @@ import {
   MessageCircle, XCircle, CheckCircle, Eye, ChevronDown,
   ChevronUp, Globe, LogOut, Clock
 } from 'lucide-react'
+import Select from '@/components/Select'
 
 // ============================================================================
 // TYPES
@@ -424,34 +425,46 @@ export default function ProspectingPage() {
           display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1rem',
           alignItems: 'center',
         }}>
-          <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1) }}
-            style={{ padding: '0.375rem 0.75rem', background: 'var(--mr-bg-input)', border: '1px solid var(--mr-bg-hover)', borderRadius: '6px', color: 'var(--mr-text-primary)', fontSize: '0.8125rem' }}>
-            <option value="all">{labels.allStatuses}</option>
-            <option value="new">{labels.new}</option>
-            <option value="contacted">{labels.contacted}</option>
-            <option value="dismissed">{labels.dismissed}</option>
-            <option value="converted">{labels.converted}</option>
-          </select>
+          <Select
+            compact
+            value={statusFilter}
+            onChange={(v) => { setStatusFilter(v); setPage(1) }}
+            options={[
+              { value: 'all', label: labels.allStatuses },
+              { value: 'new', label: labels.new },
+              { value: 'contacted', label: labels.contacted },
+              { value: 'dismissed', label: labels.dismissed },
+              { value: 'converted', label: labels.converted },
+            ]}
+          />
 
-          <select value={sourceFilter} onChange={e => { setSourceFilter(e.target.value); setPage(1) }}
-            style={{ padding: '0.375rem 0.75rem', background: 'var(--mr-bg-input)', border: '1px solid var(--mr-bg-hover)', borderRadius: '6px', color: 'var(--mr-text-primary)', fontSize: '0.8125rem' }}>
-            <option value="all">{labels.allSources}</option>
-            <option value="reddit">Reddit</option>
-            <option value="youtube">YouTube</option>
-            <option value="hackernews">Hacker News</option>
-            <option value="stackexchange">Stack Exchange</option>
-          </select>
+          <Select
+            compact
+            value={sourceFilter}
+            onChange={(v) => { setSourceFilter(v); setPage(1) }}
+            options={[
+              { value: 'all', label: labels.allSources },
+              { value: 'reddit', label: 'Reddit' },
+              { value: 'youtube', label: 'YouTube' },
+              { value: 'hackernews', label: 'Hacker News' },
+              { value: 'stackexchange', label: 'Stack Exchange' },
+            ]}
+          />
 
-          <select value={categoryFilter} onChange={e => { setCategoryFilter(e.target.value); setPage(1) }}
-            style={{ padding: '0.375rem 0.75rem', background: 'var(--mr-bg-input)', border: '1px solid var(--mr-bg-hover)', borderRadius: '6px', color: 'var(--mr-text-primary)', fontSize: '0.8125rem' }}>
-            <option value="all">{labels.allCategories}</option>
-            <option value="loudness">{labels.loudness}</option>
-            <option value="lufs_targets">{labels.lufs_targets}</option>
-            <option value="streaming_targets">{labels.streaming_targets}</option>
-            <option value="mastering_quality">{labels.mastering_quality}</option>
-            <option value="mix_readiness">{labels.mix_readiness}</option>
-            <option value="general_mastering">{labels.general_mastering}</option>
-          </select>
+          <Select
+            compact
+            value={categoryFilter}
+            onChange={(v) => { setCategoryFilter(v); setPage(1) }}
+            options={[
+              { value: 'all', label: labels.allCategories },
+              { value: 'loudness', label: labels.loudness },
+              { value: 'lufs_targets', label: labels.lufs_targets },
+              { value: 'streaming_targets', label: labels.streaming_targets },
+              { value: 'mastering_quality', label: labels.mastering_quality },
+              { value: 'mix_readiness', label: labels.mix_readiness },
+              { value: 'general_mastering', label: labels.general_mastering },
+            ]}
+          />
 
           <div style={{ position: 'relative', flex: isMobile ? '1 1 100%' : '1 1 200px' }}>
             <Search size={14} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--mr-text-tertiary)' }} />

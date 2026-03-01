@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import { AuthProvider } from '@/components/auth'
+import { QueryProvider } from '@/components/QueryProvider'
 import './globals.css'
 
 // =============================================================================
@@ -28,13 +29,18 @@ export const metadata: Metadata = {
   // BASIC META
   // ─────────────────────────────────────────────────────────────────────────────
   title: {
-    default: 'Mastering Ready | Analyze your mix before mastering',
+    default: 'Mastering Ready | Analiza tu mezcla antes de masterizar',
     template: '%s | Mastering Ready'
   },
-  description: "Upload your mix and find out if it's ready for mastering. 0-100 score, professional metrics and specific recommendations in 60 seconds. 2 free full analyses.",
+  description: 'Sube tu mezcla y descubre si está lista para mastering. Puntuación de 0 a 100, métricas profesionales y recomendaciones específicas en 60 segundos. 2 análisis completos gratis.',
   keywords: [
     'mix analysis',
     'prepare mix for mastering',
+    'is my mix ready for mastering',
+    'mix analysis tool online',
+    'check mix before mastering',
+    'analizar mezcla antes de mastering',
+    'mezcla lista para mastering',
     'headroom',
     'LUFS',
     'true peak',
@@ -42,9 +48,9 @@ export const metadata: Metadata = {
     'mix analyzer',
     'audio analysis',
     'mastering preparation',
-    'professional mix',
-    'audio engineering',
-    'pre-mastering checklist'
+    'pre-mastering checklist',
+    'análisis de mezcla',
+    'preparar mezcla para mastering'
   ],
   authors: [{ name: siteConfig.author, url: 'https://matcarvy.com' }],
   creator: siteConfig.author,
@@ -234,6 +240,78 @@ const structuredData = {
     ]
   },
 
+  // FAQPage Schema — targets high-intent queries for both SEO rich snippets and AI citation
+  faqPage: {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: [
+      {
+        '@type': 'Question',
+        name: 'What does Mastering Ready do?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'Mastering Ready analyzes your audio mix and tells you if it is ready for mastering. It measures headroom, LUFS, true peak, stereo balance, and frequency distribution, then gives you a 0 to 100 score with specific recommendations. It does not master your audio. It helps you identify what to fix before sending your mix to a mastering engineer.'
+        }
+      },
+      {
+        '@type': 'Question',
+        name: 'Is my audio stored after analysis?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'No. Mastering Ready never stores your audio files. Your file is analyzed in memory and immediately deleted. Only the derived metrics and scores are saved to your account. Your music stays yours.'
+        }
+      },
+      {
+        '@type': 'Question',
+        name: 'How much headroom should my mix have before mastering?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'A well-prepared mix should have between -6 dBFS and -3 dBFS of headroom (peak level). This gives the mastering engineer enough room to work with EQ, compression, and limiting without clipping. Mastering Ready measures your headroom and tells you if it falls within the recommended range.'
+        }
+      },
+      {
+        '@type': 'Question',
+        name: 'What LUFS should my mix be before mastering?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'Before mastering, your mix should typically sit between -18 and -14 LUFS integrated. This is not the final loudness target, which depends on the streaming platform. Mastering Ready measures your integrated LUFS and flags if your mix is too loud or too quiet for optimal mastering results.'
+        }
+      },
+      {
+        '@type': 'Question',
+        name: 'Is Mastering Ready free?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'Yes. You get 2 free full analyses with complete reports and PDF downloads when you create an account. No credit card required. After that, you can purchase individual analyses for $5.99 or subscribe to Pro for $9.99 per month (30 analyses, regional pricing available).'
+        }
+      },
+      {
+        '@type': 'Question',
+        name: 'What audio formats does Mastering Ready support?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'Mastering Ready supports WAV, MP3, AIFF, AIF, AAC, M4A, and OGG files up to 500 MB. For the most accurate analysis, we recommend uploading WAV files at the highest resolution available from your DAW.'
+        }
+      },
+      {
+        '@type': 'Question',
+        name: 'How is the 0 to 100 score calculated?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'The score is based on weighted analysis of five technical metrics: headroom, true peak, peak to loudness ratio (PLR), stereo correlation, and frequency balance. Each metric is evaluated against professional mastering standards. A score of 85 or above means your mix is technically ready for mastering.'
+        }
+      },
+      {
+        '@type': 'Question',
+        name: 'Can mastering fix a bad mix?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'No. Mastering can enhance a good mix but cannot fix fundamental problems like poor balance, excessive headroom issues, or phase problems. That is why analyzing your mix before mastering matters. Mastering Ready identifies the specific issues you should address in your mix so the mastering engineer can do their best work.'
+        }
+      }
+    ]
+  },
+
   // Product Schema (para el eBook relacionado)
   product: {
     '@context': 'https://schema.org',
@@ -301,6 +379,12 @@ export default function RootLayout({
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
+            __html: JSON.stringify(structuredData.faqPage)
+          }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
             __html: JSON.stringify(structuredData.product)
           }}
         />
@@ -339,7 +423,9 @@ export default function RootLayout({
       </head>
       <body>
         <AuthProvider>
-          {children}
+          <QueryProvider>
+            {children}
+          </QueryProvider>
         </AuthProvider>
       </body>
     </html>

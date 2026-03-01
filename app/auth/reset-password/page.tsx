@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { detectLanguage, setLanguageCookie } from '@/lib/language'
-import { Headphones, Lock, ArrowLeft, Eye, EyeOff, CheckCircle } from 'lucide-react'
+import { Headphones, Lock, ArrowLeft, Eye, EyeOff, CheckCircle, Music } from 'lucide-react'
 
 const translations = {
   es: {
@@ -453,10 +453,24 @@ export default function ResetPasswordPage() {
         minHeight: '100vh',
         background: 'var(--mr-gradient)',
         display: 'flex',
+        flexDirection: 'column',
         alignItems: 'center',
-        justifyContent: 'center'
+        justifyContent: 'center',
+        gap: '1rem'
       }}>
-        <div style={{ color: 'var(--mr-text-primary)', fontSize: '1.25rem' }}>Cargando...</div>
+        <style>{`@keyframes mr-pulse { 0%,100% { opacity: 0.6; transform: scale(0.95); } 50% { opacity: 1; transform: scale(1); } }`}</style>
+        <div style={{
+          width: '48px',
+          height: '48px',
+          background: 'rgba(255,255,255,0.2)',
+          borderRadius: '0.75rem',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          animation: 'mr-pulse 1.5s ease-in-out infinite'
+        }}>
+          <Music size={24} color="white" />
+        </div>
       </div>
     }>
       <ResetPasswordContent />
