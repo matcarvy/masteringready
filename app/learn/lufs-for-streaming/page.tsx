@@ -1,8 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { detectLanguage, setLanguageCookie } from '@/lib/language'
+import { useLearn } from '../LearnContext'
 
 type Lang = 'es' | 'en'
 
@@ -127,64 +126,12 @@ const platforms = [
 ]
 
 export default function LufsForStreamingPage() {
-  const [lang, setLang] = useState<Lang>('es')
-
-  useEffect(() => {
-    setLang(detectLanguage())
-  }, [])
-
-  const toggleLang = () => {
-    const next: Lang = lang === 'es' ? 'en' : 'es'
-    setLang(next)
-    setLanguageCookie(next)
-  }
+  const { lang } = useLearn()
 
   const s = t[lang]
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'var(--mr-bg-base)',
-      color: 'var(--mr-text-primary)',
-    }}>
-      {/* Header */}
-      <header style={{
-        maxWidth: 800,
-        margin: '0 auto',
-        padding: '1.5rem 1.5rem 0',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-      }}>
-        <Link href="/" style={{
-          color: 'var(--mr-primary)',
-          textDecoration: 'none',
-          fontSize: '0.9375rem',
-          fontWeight: 500,
-        }}>
-          {s.backHome}
-        </Link>
-        <button
-          onClick={toggleLang}
-          aria-label={lang === 'es' ? 'Switch to English' : 'Cambiar a Español'}
-          style={{
-            background: 'var(--mr-bg-elevated)',
-            color: 'var(--mr-text-primary)',
-            border: '1px solid var(--mr-border)',
-            borderRadius: 'var(--mr-radius-sm)',
-            padding: '0.375rem 0.75rem',
-            fontSize: '0.8125rem',
-            fontWeight: 600,
-            cursor: 'pointer',
-            letterSpacing: '0.05em',
-          }}
-        >
-          {s.langToggle}
-        </button>
-      </header>
-
-      {/* Content */}
-      <main style={{
+    <article style={{
         maxWidth: 800,
         margin: '0 auto',
         padding: '2rem 1.5rem 4rem',
@@ -341,8 +288,7 @@ export default function LufsForStreamingPage() {
             {s.ctaSub}
           </p>
         </div>
-      </main>
-    </div>
+    </article>
   )
 }
 

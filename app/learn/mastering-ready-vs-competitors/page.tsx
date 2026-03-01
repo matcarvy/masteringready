@@ -1,8 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { detectLanguage, setLanguageCookie } from '@/lib/language'
+import { useLearn } from '../LearnContext'
 
 type Lang = 'es' | 'en'
 
@@ -230,17 +229,7 @@ const t = {
 }
 
 export default function MasteringReadyVsCompetitorsPage() {
-  const [lang, setLang] = useState<Lang>('es')
-
-  useEffect(() => {
-    setLang(detectLanguage())
-  }, [])
-
-  const toggleLang = () => {
-    const newLang: Lang = lang === 'es' ? 'en' : 'es'
-    setLang(newLang)
-    setLanguageCookie(newLang)
-  }
+  const { lang } = useLearn()
 
   const s = t[lang]
 
@@ -275,47 +264,6 @@ export default function MasteringReadyVsCompetitorsPage() {
   const naStyle: React.CSSProperties = { color: 'var(--mr-text-tertiary)', fontStyle: 'italic' }
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'var(--mr-bg-base)',
-      color: 'var(--mr-text-primary)',
-    }}>
-      {/* Header */}
-      <header style={{
-        maxWidth: 800,
-        margin: '0 auto',
-        padding: '1rem 1.5rem',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-      }}>
-        <Link href="/" style={{
-          color: 'var(--mr-primary)',
-          textDecoration: 'none',
-          fontSize: '0.875rem',
-          fontWeight: 500,
-        }}>
-          {s.backToHome}
-        </Link>
-        <button
-          onClick={toggleLang}
-          style={{
-            background: 'var(--mr-bg-card)',
-            border: '1px solid var(--mr-border)',
-            borderRadius: 'var(--mr-radius-sm)',
-            padding: '0.375rem 0.75rem',
-            fontSize: '0.8125rem',
-            fontWeight: 600,
-            color: 'var(--mr-primary)',
-            cursor: 'pointer',
-          }}
-          aria-label={lang === 'es' ? 'Switch to English' : 'Cambiar a Español'}
-        >
-          {s.langToggle}
-        </button>
-      </header>
-
-      {/* Content */}
       <main style={{
         maxWidth: 800,
         margin: '0 auto',
@@ -632,17 +580,6 @@ export default function MasteringReadyVsCompetitorsPage() {
           </Link>
         </div>
 
-        {/* Footer link */}
-        <div style={{ textAlign: 'center' }}>
-          <Link href="/" style={{
-            color: 'var(--mr-primary)',
-            textDecoration: 'none',
-            fontSize: '0.875rem',
-          }}>
-            {s.backToHome}
-          </Link>
-        </div>
       </main>
-    </div>
   )
 }

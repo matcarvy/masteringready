@@ -1,76 +1,17 @@
 'use client'
 
-import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { detectLanguage, setLanguageCookie } from '@/lib/language'
+import { useLearn } from '../LearnContext'
 
 export default function IsMyMixReadyPage() {
-  const [lang, setLang] = useState('es')
-
-  useEffect(() => {
-    setLang(detectLanguage())
-  }, [])
-
-  const toggleLang = () => {
-    const next = lang === 'es' ? 'en' : 'es'
-    setLang(next)
-    setLanguageCookie(next as 'es' | 'en')
-  }
+  const { lang } = useLearn()
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'var(--mr-bg-base)',
-      color: 'var(--mr-text-primary)',
+    <article style={{
+      maxWidth: '800px',
+      margin: '0 auto',
+      padding: 'clamp(2rem, 6vw, 4rem) clamp(1rem, 5vw, 2rem)',
     }}>
-      {/* Language Toggle */}
-      <div style={{
-        position: 'fixed',
-        top: '1rem',
-        right: '1rem',
-        zIndex: 50,
-      }}>
-        <button
-          onClick={toggleLang}
-          aria-label={lang === 'es' ? 'Switch to English' : 'Cambiar a Español'}
-          style={{
-            background: 'var(--mr-bg-card)',
-            border: '1px solid var(--mr-border)',
-            borderRadius: 'var(--mr-radius-sm)',
-            padding: '0.5rem 0.75rem',
-            fontSize: '0.8125rem',
-            fontWeight: 600,
-            color: 'var(--mr-primary)',
-            cursor: 'pointer',
-            boxShadow: 'var(--mr-shadow)',
-          }}
-        >
-          {lang === 'es' ? 'EN' : 'ES'}
-        </button>
-      </div>
-
-      <article style={{
-        maxWidth: '800px',
-        margin: '0 auto',
-        padding: 'clamp(2rem, 6vw, 4rem) clamp(1rem, 5vw, 2rem)',
-      }}>
-        {/* Back link */}
-        <Link
-          href="/"
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '0.375rem',
-            color: 'var(--mr-primary)',
-            textDecoration: 'none',
-            fontSize: '0.875rem',
-            fontWeight: 500,
-            marginBottom: '2rem',
-          }}
-        >
-          ← {lang === 'es' ? 'Mastering Ready' : 'Mastering Ready'}
-        </Link>
-
         {/* H1 */}
         <h1 style={{
           fontSize: 'clamp(1.75rem, 5vw, 2.5rem)',
@@ -528,20 +469,7 @@ export default function IsMyMixReadyPage() {
           </Link>
         </div>
 
-        {/* Footer note */}
-        <p style={{
-          textAlign: 'center',
-          fontSize: '0.8125rem',
-          color: 'var(--mr-text-tertiary)',
-          marginTop: '2rem',
-          lineHeight: 1.6,
-        }}>
-          {lang === 'es'
-            ? '© 2026 Mastering Ready. Todos los derechos reservados.'
-            : '© 2026 Mastering Ready. All rights reserved.'}
-        </p>
-      </article>
-    </div>
+    </article>
   )
 }
 

@@ -1,73 +1,17 @@
 'use client'
 
-import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { detectLanguage, setLanguageCookie } from '@/lib/language'
+import { useLearn } from '../LearnContext'
 
 export default function PrepareMixForMasteringPage() {
-  const [lang, setLang] = useState<'es' | 'en'>('es')
-
-  useEffect(() => {
-    setLang(detectLanguage())
-  }, [])
-
-  const toggleLang = () => {
-    const next = lang === 'es' ? 'en' : 'es'
-    setLang(next)
-    setLanguageCookie(next)
-  }
+  const { lang } = useLearn()
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'var(--mr-bg-base)',
-      color: 'var(--mr-text-primary)',
+    <article style={{
+      maxWidth: '800px',
+      margin: '0 auto',
+      padding: '3rem 1.5rem 4rem',
     }}>
-      {/* Language toggle */}
-      <div style={{
-        position: 'fixed',
-        top: '1rem',
-        right: '1rem',
-        zIndex: 50,
-      }}>
-        <button
-          onClick={toggleLang}
-          style={{
-            background: 'var(--mr-bg-card)',
-            color: 'var(--mr-text-primary)',
-            border: '1px solid var(--mr-border)',
-            borderRadius: '8px',
-            padding: '0.5rem 1rem',
-            fontSize: '0.875rem',
-            fontWeight: 600,
-            cursor: 'pointer',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-          }}
-          aria-label={lang === 'es' ? 'Switch to English' : 'Cambiar a Español'}
-        >
-          {lang === 'es' ? 'EN' : 'ES'}
-        </button>
-      </div>
-
-      <article style={{
-        maxWidth: '800px',
-        margin: '0 auto',
-        padding: '3rem 1.5rem 4rem',
-      }}>
-        {/* Back link */}
-        <Link
-          href="/"
-          style={{
-            color: 'var(--mr-primary)',
-            fontSize: '0.875rem',
-            textDecoration: 'none',
-            display: 'inline-block',
-            marginBottom: '2rem',
-          }}
-        >
-          {lang === 'es' ? '← Volver a Mastering Ready' : '← Back to Mastering Ready'}
-        </Link>
-
         {/* H1 */}
         <h1 style={{
           fontSize: 'clamp(1.75rem, 5vw, 2.5rem)',
@@ -411,8 +355,7 @@ export default function PrepareMixForMasteringPage() {
               : 'WAV, MP3, AIFF, AAC, M4A or OGG. Max 200 MB.'}
           </p>
         </div>
-      </article>
-    </div>
+    </article>
   )
 }
 

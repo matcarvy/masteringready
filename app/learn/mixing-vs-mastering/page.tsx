@@ -6,10 +6,8 @@
  * Bilingual: ES LATAM Neutro + US English
  */
 
-import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { detectLanguage, setLanguageCookie } from '@/lib/language'
-import type { Lang } from '@/lib/language'
+import { useLearn } from '../LearnContext'
 
 // ============================================================================
 // TRANSLATIONS
@@ -239,69 +237,16 @@ function Section({ title, body }: { title: string; body: string }) {
 // ============================================================================
 
 export default function MixingVsMasteringPage() {
-  const [lang, setLang] = useState<Lang>('es')
-
-  useEffect(() => {
-    setLang(detectLanguage())
-  }, [])
-
-  const handleToggle = () => {
-    const next: Lang = lang === 'es' ? 'en' : 'es'
-    setLang(next)
-    setLanguageCookie(next)
-  }
+  const { lang } = useLearn()
 
   const c = t[lang]
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'var(--mr-bg-base)',
-      color: 'var(--mr-text-primary)',
+    <main style={{
+      maxWidth: 800,
+      margin: '0 auto',
+      padding: '2rem 1.5rem 4rem',
     }}>
-      {/* Header: back link left, lang toggle right */}
-      <header style={{
-        maxWidth: 800,
-        margin: '0 auto',
-        padding: '1.25rem 1.5rem 0',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-      }}>
-        <Link href="/" style={{
-          color: 'var(--mr-text-secondary)',
-          textDecoration: 'none',
-          fontSize: '0.875rem',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.375rem',
-        }}>
-          &larr; {c.backToHome}
-        </Link>
-        <button
-          onClick={handleToggle}
-          aria-label={lang === 'es' ? 'Switch to English' : 'Cambiar a Español'}
-          style={{
-            background: 'var(--mr-bg-card)',
-            border: '1px solid var(--mr-border)',
-            borderRadius: 'var(--mr-radius-sm)',
-            padding: '0.375rem 0.75rem',
-            fontSize: '0.8125rem',
-            fontWeight: 600,
-            color: 'var(--mr-primary)',
-            cursor: 'pointer',
-          }}
-        >
-          {c.langToggle}
-        </button>
-      </header>
-
-      {/* Article content */}
-      <main style={{
-        maxWidth: 800,
-        margin: '0 auto',
-        padding: '2rem 1.5rem 4rem',
-      }}>
         {/* H1 */}
         <h1 style={{
           fontSize: 'clamp(1.75rem, 4vw, 2.25rem)',
@@ -432,7 +377,6 @@ export default function MixingVsMasteringPage() {
             {c.ctaButton}
           </Link>
         </div>
-      </main>
-    </div>
+    </main>
   )
 }
