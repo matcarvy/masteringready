@@ -3779,3 +3779,67 @@ Audited MR against a viral "9 tells of vibecoded apps" checklist. MR already pas
 1. `565d56e` - feat: anti-vibecode polish — custom selects, skeleton loaders, React Query
 
 **Git state**: main on `565d56e`, pushed. Build clean. All 23 routes compiled.
+
+### Session 2026-03-01 — Phase 2 SEO: Authority Pages + Sitemap
+
+#### Context
+Continuing SEO plan from previous session. Phase 1 (meta tags, FAQ schema, nav links, AI crawler access) was completed. Phase 2: create 5 structured authority pages under `/app/learn/` targeting high-intent keywords.
+
+#### 5 Authority Pages Created (5 parallel agents)
+
+| Page | Path | Target Query | Size |
+|------|------|-------------|------|
+| Is My Mix Ready | `/learn/is-my-mix-ready` | "is my mix ready for mastering" | 8.28 kB |
+| Prepare Mix for Mastering | `/learn/prepare-mix-for-mastering` | "how to prepare mix for mastering" | 8.61 kB |
+| LUFS for Streaming | `/learn/lufs-for-streaming` | "LUFS for streaming" | 5.95 kB |
+| Mixing vs Mastering | `/learn/mixing-vs-mastering` | "mixing vs mastering" | 7.71 kB |
+| MR vs Competitors | `/learn/mastering-ready-vs-competitors` | "mastering ready vs EXPOSE" | 7.25 kB |
+
+**All pages share:**
+- `'use client'` with `useState`/`useEffect` for language detection
+- Imports from `@/lib/language` (detectLanguage, setLanguageCookie) + `next/link`
+- Full bilingual content (ES LATAM Neutro + US English)
+- Language toggle top-right, back link to home top-left
+- All colors via `var(--mr-*)` CSS tokens (dark/light mode compatible)
+- Inline styles, max-width 800px centered, responsive `clamp()` headings
+- Answer-first format (first 200 words directly answer the query)
+- CTA gradient button linking to `/#analyze`
+- MR voice: second person "tu", no em dashes, "Mastering Ready" (with space), vivid analogies
+
+**Content highlights:**
+1. **Is My Mix Ready**: 5 metrics explained (Headroom, True Peak, PLR, Stereo, Freq Balance + LUFS callout), score range cards, common problems, clear coat analogy, 10-item checklist
+2. **Prepare Mix**: 10-step guide from eBook, export checklist card, chef/orchestra/GPS analogies
+3. **LUFS for Streaming**: Platform loudness table (8 platforms: Spotify -14, Apple -16, YouTube -14, etc.), pre-mastering range (-24 to -16, center -18), True Peak vs LUFS with chip badges
+4. **Mixing vs Mastering**: Comparison table (5 rows), what mastering cannot fix (5 items), where MR fits in the gap, clear coat metaphor
+5. **MR vs Competitors**: Feature matrix (MR vs EXPOSE 2 vs Mix Check Studio vs LANDR/eMastered, 10 rows), honest head-to-head sections, limitations acknowledged
+
+**Accuracy verified (all 5 pages):**
+- File size: 200 MB (not 500 MB)
+- LUFS: -24 to -16, center -18, weight 0
+- Headroom: -6 to -3 dBFS
+- Score 85+ = ready
+- Brand: "Mastering Ready" (with space) in all user-facing text
+
+#### Sitemap Updated (`public/sitemap.xml`)
+- Added 5 new URLs with priority 0.7-0.8, lastmod 2026-03-01
+- Total indexed pages: 3 → 8
+
+#### New Files (5)
+- `app/learn/is-my-mix-ready/page.tsx`
+- `app/learn/prepare-mix-for-mastering/page.tsx`
+- `app/learn/lufs-for-streaming/page.tsx`
+- `app/learn/mixing-vs-mastering/page.tsx`
+- `app/learn/mastering-ready-vs-competitors/page.tsx`
+
+#### Modified Files (1)
+- `public/sitemap.xml` — 5 new learn URLs
+
+**Build**: Clean, all 28 routes compiled, zero errors.
+
+**Git state**: Not yet committed. Ready to commit and push.
+
+#### SEO Plan Status
+- [x] Phase 1: Meta tags, FAQ schema, nav links, AI crawler access
+- [x] Phase 2: 5 authority pages + sitemap update
+- [ ] Phase 3: Third-party presence (Stack Overflow answers, forum posts, Quora)
+- [ ] Phase 4: Track AI citations (monitor Google AI Overviews, ChatGPT, Perplexity)
