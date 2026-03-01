@@ -274,7 +274,7 @@ const structuredData = {
         name: 'What LUFS should my mix be before mastering?',
         acceptedAnswer: {
           '@type': 'Answer',
-          text: 'Before mastering, your mix should typically sit between -18 and -14 LUFS integrated. This is not the final loudness target, which depends on the streaming platform. Mastering Ready measures your integrated LUFS and flags if your mix is too loud or too quiet for optimal mastering results.'
+          text: 'Before mastering, your mix should typically sit between -24 and -16 LUFS integrated, with -18 LUFS being a comfortable center point. This is not the final loudness target, which depends on the streaming platform. The loudness of your mix is not the priority at this stage. Mastering Ready measures your integrated LUFS and lets you know if your level needs attention before sending to mastering.'
         }
       },
       {
@@ -290,7 +290,7 @@ const structuredData = {
         name: 'What audio formats does Mastering Ready support?',
         acceptedAnswer: {
           '@type': 'Answer',
-          text: 'Mastering Ready supports WAV, MP3, AIFF, AIF, AAC, M4A, and OGG files up to 500 MB. For the most accurate analysis, we recommend uploading WAV files at the highest resolution available from your DAW.'
+          text: 'Mastering Ready supports WAV, MP3, AIFF, AIF, AAC, M4A, and OGG files up to 200 MB. For the most accurate analysis, we recommend uploading WAV files at the highest resolution available from your DAW.'
         }
       },
       {

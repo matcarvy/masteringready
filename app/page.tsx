@@ -2806,8 +2806,8 @@ by Matías Carvajal
               {
                 q_es: '¿A cuántos LUFS debería estar mi mezcla antes de mastering?',
                 q_en: 'What LUFS should my mix be before mastering?',
-                a_es: 'Antes de mastering, tu mezcla debería estar entre -18 y -14 LUFS integrados. Este no es el nivel final de loudness, eso depende de la plataforma de streaming. Mastering Ready mide tus LUFS y te avisa si tu mezcla está demasiado fuerte o débil para un mastering óptimo.',
-                a_en: 'Before mastering, your mix should typically sit between -18 and -14 LUFS integrated. This is not the final loudness target, which depends on the streaming platform. Mastering Ready measures your integrated LUFS and flags if your mix is too loud or too quiet for optimal mastering results.'
+                a_es: 'Antes de mastering, tu mezcla debería estar entre -24 y -16 LUFS integrados, con -18 LUFS como punto central cómodo. Este no es el nivel final de loudness, eso depende de la plataforma de streaming. El volumen de tu mezcla no es la prioridad en esta etapa. Mastering Ready mide tus LUFS y te avisa si el nivel necesita atención antes de enviar a mastering.',
+                a_en: 'Before mastering, your mix should typically sit between -24 and -16 LUFS integrated, with -18 LUFS being a comfortable center point. This is not the final loudness target, which depends on the streaming platform. The loudness of your mix is not the priority at this stage. Mastering Ready measures your integrated LUFS and lets you know if your level needs attention before sending to mastering.'
               },
               {
                 q_es: '¿Es gratis?',
@@ -2818,8 +2818,8 @@ by Matías Carvajal
               {
                 q_es: '¿Qué formatos de audio soporta?',
                 q_en: 'What audio formats does it support?',
-                a_es: 'WAV, MP3, AIFF, AAC, M4A y OGG de hasta 500 MB. Para el análisis más preciso, recomendamos subir archivos WAV a la resolución más alta disponible desde tu DAW.',
-                a_en: 'WAV, MP3, AIFF, AAC, M4A, and OGG files up to 500 MB. For the most accurate analysis, we recommend uploading WAV files at the highest resolution available from your DAW.'
+                a_es: 'WAV, MP3, AIFF, AAC, M4A y OGG de hasta 200 MB. Para el análisis más preciso, recomendamos subir archivos WAV a la resolución más alta disponible desde tu DAW.',
+                a_en: 'WAV, MP3, AIFF, AAC, M4A, and OGG files up to 200 MB. For the most accurate analysis, we recommend uploading WAV files at the highest resolution available from your DAW.'
               },
               {
                 q_es: '¿Cómo se calcula la puntuación de 0 a 100?',
