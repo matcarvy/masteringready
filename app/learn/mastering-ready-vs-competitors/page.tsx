@@ -20,6 +20,11 @@ const t = {
     categoryBullet2: 'Plugins de medición en DAW (como LEVELS o iZotope Insight)',
     categoryBullet3: 'Herramientas de mezcla automatizada',
     categoryP2: 'Su función es una sola: decirte qué tan preparada está tu mezcla antes de enviarla a mastering, y qué puedes mejorar.',
+    // Philosophy
+    philosophyTitle: 'Nuestro enfoque: análisis, no automatización',
+    philosophyP1: 'La mayoría de las herramientas de audio con IA quieren hacer el trabajo por ti. Masterizan tu canción, mezclan tus stems, ajustan tu EQ. Mix Check Studio te analiza para después venderte mastering con IA. LANDR y eMastered reemplazan directamente al ingeniero humano con un algoritmo.',
+    philosophyP2: 'Mastering Ready hace lo opuesto. Te da datos claros y recomendaciones específicas, y después se hace a un lado. Tu mezcla es tuya. Tus decisiones creativas son tuyas. Nosotros solo te decimos qué corregir desde lo técnico para que llegues preparado.',
+    philosophyP3: 'Y si necesitas ayuda con la mezcla o el mastering, el trabajo lo hace un ingeniero humano con más de 300 masters y crédito de Latin Grammy. No un algoritmo. No reemplazamos tu criterio. Te damos la información que necesitas para que tomes mejores decisiones con tu música.',
     // Comparison table
     tableTitle: 'Tabla de comparación',
     tableFeature: 'Característica',
@@ -54,7 +59,7 @@ const t = {
     mcFree: 'Sí, completo',
     mcYes: 'Sí',
     mcNo: 'No',
-    mcLimited: 'Básico',
+    mcLimited: 'Genéricas por género',
     // LANDR column
     landrType: 'Mastering con IA',
     landrPlatform: 'Web',
@@ -74,13 +79,13 @@ const t = {
     vsExposeP3: 'No son mutuamente excluyentes. Puedes usar EXPOSE durante la mezcla y Mastering Ready como verificación final.',
     // VS Mix Check
     vsMixCheckTitle: 'Mastering Ready vs Mix Check Studio',
-    vsMixCheckP1: 'Mix Check Studio de RoEx es una herramienta web gratuita que analiza tu mezcla con feedback basado en IA. Es fácil de usar y accesible.',
+    vsMixCheckP1: 'Mix Check Studio de RoEx es una herramienta web gratuita que analiza tu mezcla con feedback basado en IA. Su análisis es gratuito porque funciona como entrada a sus servicios pagos de mastering con IA (Mastering+ y Studio Pro). Es fácil de usar y accesible.',
     vsMixCheckP2: 'Tanto Mix Check como Mastering Ready funcionan en el navegador. Las diferencias:',
     vsMixCheckBullet1: 'Mastering Ready analiza 5 métricas ponderadas con umbrales calibrados para mastering. Mix Check ofrece un análisis más general.',
-    vsMixCheckBullet2: 'Mastering Ready genera recomendaciones específicas por métrica (por ejemplo: "tu headroom está en -1.2 dBFS, necesitas al menos -3 dBFS para mastering"). Mix Check da feedback más amplio.',
+    vsMixCheckBullet2: 'Mastering Ready genera recomendaciones específicas por métrica con valores exactos de tu archivo (por ejemplo: "tu headroom está en -1.2 dBFS, necesitas al menos -3 dBFS para mastering"). Mix Check ofrece sugerencias generales basadas en el género que seleccionas (por ejemplo: "usa un ecualizador paramétrico para ajustar niveles entre 2-5 kHz"), sin referencia a los valores reales de tu mezcla ni análisis temporal por secciones.',
     vsMixCheckBullet3: 'Mastering Ready incluye ajuste por género en el balance de frecuencias. Mix Check no diferencia por género.',
     vsMixCheckBullet4: 'Mastering Ready genera un informe PDF descargable. Mix Check no.',
-    vsMixCheckP3: 'Mix Check es una buena opción para una segunda opinión rápida. Mastering Ready es más profundo si necesitas saber qué corregir y por qué.',
+    vsMixCheckP3: 'Mix Check es una buena opción para una segunda opinión rápida. Mastering Ready es más preciso si necesitas saber exactamente qué corregir, con qué valores, y en qué parte de tu canción.',
     // VS AI Mastering
     vsAITitle: 'Mastering Ready vs mastering con IA (LANDR, eMastered)',
     vsAIP1: 'LANDR y eMastered son servicios de mastering automatizado con IA. Subes tu mezcla y te devuelven un master. Son categorías completamente distintas a Mastering Ready.',
@@ -127,6 +132,11 @@ const t = {
     categoryBullet2: 'DAW metering plugins (like LEVELS or iZotope Insight)',
     categoryBullet3: 'Automated mixing tools',
     categoryP2: 'It does one thing: tell you how ready your mix is before sending it to mastering, and what you can improve.',
+    // Philosophy
+    philosophyTitle: 'Our approach: analysis, not automation',
+    philosophyP1: 'Most AI audio tools want to do the work for you. They master your song, mix your stems, adjust your EQ. Mix Check Studio analyzes your mix to then sell you AI mastering. LANDR and eMastered replace the human engineer with an algorithm.',
+    philosophyP2: 'Mastering Ready does the opposite. It gives you clear data and specific recommendations, then steps aside. Your mix is yours. Your creative decisions are yours. We only tell you what to fix technically so you arrive prepared.',
+    philosophyP3: 'And if you need help with mixing or mastering, the work is done by a human engineer with over 300 masters and a Latin Grammy credit. Not an algorithm. We do not replace your judgment. We give you the information you need to make better decisions with your music.',
     // Comparison table
     tableTitle: 'Comparison table',
     tableFeature: 'Feature',
@@ -161,7 +171,7 @@ const t = {
     mcFree: 'Yes, full',
     mcYes: 'Yes',
     mcNo: 'No',
-    mcLimited: 'Basic',
+    mcLimited: 'Generic per genre',
     // LANDR column
     landrType: 'AI mastering',
     landrPlatform: 'Web',
@@ -181,13 +191,13 @@ const t = {
     vsExposeP3: 'They are not mutually exclusive. You can use EXPOSE during mixing and Mastering Ready as a final verification.',
     // VS Mix Check
     vsMixCheckTitle: 'Mastering Ready vs Mix Check Studio',
-    vsMixCheckP1: 'Mix Check Studio by RoEx is a free web-based tool that analyzes your mix with AI-based feedback. It is easy to use and accessible.',
+    vsMixCheckP1: 'Mix Check Studio by RoEx is a free web-based tool that analyzes your mix with AI-based feedback. Their analysis is free because it serves as an entry point to their paid AI mastering services (Mastering+ and Studio Pro). It is easy to use and accessible.',
     vsMixCheckP2: 'Both Mix Check and Mastering Ready work in the browser. The differences:',
     vsMixCheckBullet1: 'Mastering Ready analyzes 5 weighted metrics with thresholds calibrated for mastering. Mix Check offers a more general analysis.',
-    vsMixCheckBullet2: 'Mastering Ready generates specific recommendations per metric (e.g., "your headroom is at -1.2 dBFS, you need at least -3 dBFS for mastering"). Mix Check gives broader feedback.',
+    vsMixCheckBullet2: 'Mastering Ready generates specific recommendations per metric with exact values from your file (e.g., "your headroom is at -1.2 dBFS, you need at least -3 dBFS for mastering"). Mix Check offers general suggestions based on the genre you select (e.g., "use a parametric equalizer to adjust levels around 2-5 kHz"), without reference to your actual mix values or temporal analysis by section.',
     vsMixCheckBullet3: 'Mastering Ready includes genre-aware frequency balance. Mix Check does not differentiate by genre.',
     vsMixCheckBullet4: 'Mastering Ready generates a downloadable PDF report. Mix Check does not.',
-    vsMixCheckP3: 'Mix Check is a good option for a quick second opinion. Mastering Ready goes deeper if you need to know what to fix and why.',
+    vsMixCheckP3: 'Mix Check is a good option for a quick second opinion. Mastering Ready is more precise if you need to know exactly what to fix, with what values, and in which part of your song.',
     // VS AI Mastering
     vsAITitle: 'Mastering Ready vs AI mastering (LANDR, eMastered)',
     vsAIP1: 'LANDR and eMastered are automated AI mastering services. You upload your mix and they return a master. They are completely different categories from Mastering Ready.',
@@ -316,6 +326,22 @@ export default function MasteringReadyVsCompetitorsPage() {
           {s.categoryP2}
         </p>
 
+        {/* Philosophy — Our Approach */}
+        <div className="learn-callout" style={{ borderLeftColor: 'var(--mr-primary)', marginBottom: '2.5rem' }}>
+          <h2 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: '0.75rem', marginTop: 0, color: 'var(--mr-text-primary)' }}>
+            {s.philosophyTitle}
+          </h2>
+          <p style={{ lineHeight: 1.7, marginBottom: '0.75rem', color: 'var(--mr-text-secondary)' }}>
+            {s.philosophyP1}
+          </p>
+          <p style={{ lineHeight: 1.7, marginBottom: '0.75rem', color: 'var(--mr-text-secondary)' }}>
+            {s.philosophyP2}
+          </p>
+          <p style={{ lineHeight: 1.7, margin: 0, fontStyle: 'italic', color: 'var(--mr-text-secondary)' }}>
+            {s.philosophyP3}
+          </p>
+        </div>
+
         {/* Comparison Table */}
         <h2 style={{ fontSize: '1.375rem', fontWeight: 600, marginBottom: '1rem', color: 'var(--mr-text-primary)' }}>
           {s.tableTitle}
@@ -417,6 +443,7 @@ export default function MasteringReadyVsCompetitorsPage() {
         </div>
 
         {/* VS EXPOSE 2 */}
+        <div className="learn-section">
         <h2 style={{ fontSize: '1.375rem', fontWeight: 600, marginBottom: '0.75rem', color: 'var(--mr-text-primary)' }}>
           {s.vsExposeTitle}
         </h2>
@@ -426,17 +453,21 @@ export default function MasteringReadyVsCompetitorsPage() {
         <p style={{ lineHeight: 1.7, marginBottom: '0.75rem', color: 'var(--mr-text-secondary)' }}>
           {s.vsExposeP2}
         </p>
-        <ul style={{ paddingLeft: '1.25rem', marginBottom: '1rem', lineHeight: 1.8 }}>
+        <div className="learn-card">
+        <ul style={{ paddingLeft: '1.25rem', marginBottom: '0', lineHeight: 1.8 }}>
           <li style={{ color: 'var(--mr-text-secondary)', marginBottom: '0.25rem' }}>{s.vsExposeBullet1}</li>
           <li style={{ color: 'var(--mr-text-secondary)', marginBottom: '0.25rem' }}>{s.vsExposeBullet2}</li>
           <li style={{ color: 'var(--mr-text-secondary)', marginBottom: '0.25rem' }}>{s.vsExposeBullet3}</li>
           <li style={{ color: 'var(--mr-text-secondary)', marginBottom: '0.25rem' }}>{s.vsExposeBullet4}</li>
         </ul>
-        <p style={{ lineHeight: 1.7, marginBottom: '2.5rem', color: 'var(--mr-text-secondary)' }}>
+        </div>
+        <p style={{ lineHeight: 1.7, marginTop: '1rem', marginBottom: '0', color: 'var(--mr-text-secondary)' }}>
           {s.vsExposeP3}
         </p>
+        </div>
 
         {/* VS Mix Check Studio */}
+        <div className="learn-section">
         <h2 style={{ fontSize: '1.375rem', fontWeight: 600, marginBottom: '0.75rem', color: 'var(--mr-text-primary)' }}>
           {s.vsMixCheckTitle}
         </h2>
@@ -446,17 +477,21 @@ export default function MasteringReadyVsCompetitorsPage() {
         <p style={{ lineHeight: 1.7, marginBottom: '0.75rem', color: 'var(--mr-text-secondary)' }}>
           {s.vsMixCheckP2}
         </p>
-        <ul style={{ paddingLeft: '1.25rem', marginBottom: '1rem', lineHeight: 1.8 }}>
+        <div className="learn-card">
+        <ul style={{ paddingLeft: '1.25rem', marginBottom: '0', lineHeight: 1.8 }}>
           <li style={{ color: 'var(--mr-text-secondary)', marginBottom: '0.25rem' }}>{s.vsMixCheckBullet1}</li>
           <li style={{ color: 'var(--mr-text-secondary)', marginBottom: '0.25rem' }}>{s.vsMixCheckBullet2}</li>
           <li style={{ color: 'var(--mr-text-secondary)', marginBottom: '0.25rem' }}>{s.vsMixCheckBullet3}</li>
           <li style={{ color: 'var(--mr-text-secondary)', marginBottom: '0.25rem' }}>{s.vsMixCheckBullet4}</li>
         </ul>
-        <p style={{ lineHeight: 1.7, marginBottom: '2.5rem', color: 'var(--mr-text-secondary)' }}>
+        </div>
+        <p style={{ lineHeight: 1.7, marginTop: '1rem', marginBottom: '0', color: 'var(--mr-text-secondary)' }}>
           {s.vsMixCheckP3}
         </p>
+        </div>
 
         {/* VS AI Mastering */}
+        <div className="learn-section">
         <h2 style={{ fontSize: '1.375rem', fontWeight: 600, marginBottom: '0.75rem', color: 'var(--mr-text-primary)' }}>
           {s.vsAITitle}
         </h2>
@@ -469,11 +504,13 @@ export default function MasteringReadyVsCompetitorsPage() {
         <p style={{ lineHeight: 1.7, marginBottom: '1rem', color: 'var(--mr-text-secondary)' }}>
           {s.vsAIP3}
         </p>
-        <p style={{ lineHeight: 1.7, marginBottom: '2.5rem', color: 'var(--mr-text-secondary)' }}>
+        <p style={{ lineHeight: 1.7, marginBottom: '0', color: 'var(--mr-text-secondary)' }}>
           {s.vsAIP4}
         </p>
+        </div>
 
         {/* VS Metering plugins */}
+        <div className="learn-section">
         <h2 style={{ fontSize: '1.375rem', fontWeight: 600, marginBottom: '0.75rem', color: 'var(--mr-text-primary)' }}>
           {s.vsMetersTitle}
         </h2>
@@ -483,50 +520,61 @@ export default function MasteringReadyVsCompetitorsPage() {
         <p style={{ lineHeight: 1.7, marginBottom: '1rem', color: 'var(--mr-text-secondary)' }}>
           {s.vsMetersP2}
         </p>
-        <p style={{ lineHeight: 1.7, marginBottom: '2.5rem', color: 'var(--mr-text-secondary)' }}>
+        <p style={{ lineHeight: 1.7, marginBottom: '0', color: 'var(--mr-text-secondary)' }}>
           {s.vsMetersP3}
         </p>
+        </div>
 
         {/* When to use what */}
+        <div className="learn-section">
         <h2 style={{ fontSize: '1.375rem', fontWeight: 600, marginBottom: '0.75rem', color: 'var(--mr-text-primary)' }}>
           {s.whenTitle}
         </h2>
         <p style={{ lineHeight: 1.7, marginBottom: '0.75rem', color: 'var(--mr-text-secondary)' }}>
           {s.whenP1}
         </p>
-        <ol style={{ paddingLeft: '1.25rem', marginBottom: '1rem', lineHeight: 1.8 }}>
+        <div className="learn-card">
+        <ol style={{ paddingLeft: '1.25rem', marginBottom: '0', lineHeight: 1.8 }}>
           <li style={{ color: 'var(--mr-text-secondary)', marginBottom: '0.25rem' }}>{s.whenStep1}</li>
           <li style={{ color: 'var(--mr-text-secondary)', marginBottom: '0.25rem' }}>{s.whenStep2}</li>
           <li style={{ color: 'var(--mr-text-secondary)', marginBottom: '0.25rem' }}>{s.whenStep3}</li>
           <li style={{ color: 'var(--mr-text-secondary)', marginBottom: '0.25rem' }}>{s.whenStep4}</li>
         </ol>
-        <p style={{ lineHeight: 1.7, marginBottom: '1rem', color: 'var(--mr-text-secondary)' }}>
+        </div>
+        <p style={{ lineHeight: 1.7, marginTop: '1rem', marginBottom: '1rem', color: 'var(--mr-text-secondary)' }}>
           {s.whenP2}
         </p>
-        <p style={{ lineHeight: 1.7, marginBottom: '2.5rem', color: 'var(--mr-text-secondary)' }}>
+        <p style={{ lineHeight: 1.7, marginBottom: '0', color: 'var(--mr-text-secondary)' }}>
           {s.whenP3}
         </p>
+        </div>
 
         {/* Limitations */}
+        <div className="learn-section">
         <h2 style={{ fontSize: '1.375rem', fontWeight: 600, marginBottom: '0.75rem', color: 'var(--mr-text-primary)' }}>
           {s.limitationsTitle}
         </h2>
         <p style={{ lineHeight: 1.7, marginBottom: '0.75rem', color: 'var(--mr-text-secondary)' }}>
           {s.limitationsP1}
         </p>
-        <ul style={{ paddingLeft: '1.25rem', marginBottom: '1rem', lineHeight: 1.8 }}>
+        <div className="learn-card">
+        <ul style={{ paddingLeft: '1.25rem', marginBottom: '0', lineHeight: 1.8 }}>
           <li style={{ color: 'var(--mr-text-secondary)', marginBottom: '0.25rem' }}>{s.limitationsBullet1}</li>
           <li style={{ color: 'var(--mr-text-secondary)', marginBottom: '0.25rem' }}>{s.limitationsBullet2}</li>
           <li style={{ color: 'var(--mr-text-secondary)', marginBottom: '0.25rem' }}>{s.limitationsBullet3}</li>
         </ul>
+        </div>
+        <div className="learn-callout" style={{ marginTop: '1rem' }}>
         <p style={{
           lineHeight: 1.7,
-          marginBottom: '3rem',
+          margin: 0,
           color: 'var(--mr-text-secondary)',
           fontStyle: 'italic',
         }}>
           {s.limitationsP2}
         </p>
+        </div>
+        </div>
 
         {/* CTA */}
         <div style={{
@@ -557,25 +605,7 @@ export default function MasteringReadyVsCompetitorsPage() {
           </p>
           <Link
             href="/#analyze"
-            style={{
-              display: 'inline-block',
-              background: 'var(--mr-gradient)',
-              color: '#ffffff',
-              padding: '0.875rem 2rem',
-              borderRadius: 'var(--mr-radius)',
-              fontWeight: 600,
-              fontSize: '1rem',
-              textDecoration: 'none',
-              transition: 'transform 0.2s, box-shadow 0.2s',
-            }}
-            onMouseEnter={e => {
-              ;(e.target as HTMLElement).style.transform = 'translateY(-2px)'
-              ;(e.target as HTMLElement).style.boxShadow = '0 4px 16px rgba(102, 126, 234, 0.4)'
-            }}
-            onMouseLeave={e => {
-              ;(e.target as HTMLElement).style.transform = 'translateY(0)'
-              ;(e.target as HTMLElement).style.boxShadow = 'none'
-            }}
+            className="learn-cta"
           >
             {s.ctaButton}
           </Link>
@@ -586,17 +616,17 @@ export default function MasteringReadyVsCompetitorsPage() {
           <h3 style={{ fontSize: '1.125rem', fontWeight: 600, marginBottom: '1rem', color: 'var(--mr-text-primary)' }}>
             {lang === 'es' ? 'Artículos relacionados' : 'Related articles'}
           </h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            <Link href="/learn/is-my-mix-ready" style={{ color: 'var(--mr-primary)', textDecoration: 'none', fontSize: '0.9375rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <Link href="/learn/is-my-mix-ready" className="learn-link-card" style={{ color: 'var(--mr-primary)', fontSize: '0.9375rem' }}>
               {lang === 'es' ? '¿Mi mezcla está lista para mastering?' : 'Is my mix ready for mastering?'}
             </Link>
-            <Link href="/learn/prepare-mix-for-mastering" style={{ color: 'var(--mr-primary)', textDecoration: 'none', fontSize: '0.9375rem' }}>
+            <Link href="/learn/prepare-mix-for-mastering" className="learn-link-card" style={{ color: 'var(--mr-primary)', fontSize: '0.9375rem' }}>
               {lang === 'es' ? '10 pasos para preparar tu mezcla para mastering' : '10 steps to prepare your mix for mastering'}
             </Link>
-            <Link href="/learn/lufs-for-streaming" style={{ color: 'var(--mr-primary)', textDecoration: 'none', fontSize: '0.9375rem' }}>
+            <Link href="/learn/lufs-for-streaming" className="learn-link-card" style={{ color: 'var(--mr-primary)', fontSize: '0.9375rem' }}>
               {lang === 'es' ? 'LUFS para streaming: guía práctica' : 'LUFS for streaming: practical guide'}
             </Link>
-            <Link href="/learn/mixing-vs-mastering" style={{ color: 'var(--mr-primary)', textDecoration: 'none', fontSize: '0.9375rem' }}>
+            <Link href="/learn/mixing-vs-mastering" className="learn-link-card" style={{ color: 'var(--mr-primary)', fontSize: '0.9375rem' }}>
               {lang === 'es' ? 'Mezcla vs mastering: diferencias clave' : 'Mixing vs mastering: key differences'}
             </Link>
           </div>

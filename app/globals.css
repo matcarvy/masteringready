@@ -106,6 +106,118 @@
   --mr-purple-text: #b8a8f0;
 }
 
+/* ===== LEARN PAGE CONTENT COMPONENTS ===== */
+
+/* Card container — wraps major content sections */
+.learn-card {
+  background: var(--mr-bg-card);
+  border: var(--mr-card-border);
+  border-radius: var(--mr-radius);
+  box-shadow: var(--mr-shadow);
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+/* Callout — info/tip/warning blocks with left accent */
+.learn-callout {
+  background: var(--mr-bg-elevated);
+  border: 1px solid var(--mr-border);
+  border-left: 3px solid var(--mr-primary);
+  border-radius: var(--mr-radius);
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.5rem;
+  color: var(--mr-text-secondary);
+  font-size: 0.9375rem;
+  line-height: 1.75;
+}
+
+/* Section wrapper with consistent bottom spacing */
+.learn-section {
+  margin-bottom: 2.5rem;
+}
+
+/* Gradient CTA button */
+.learn-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--mr-gradient);
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border-radius: 9999px;
+  font-weight: 600;
+  font-size: 1rem;
+  text-decoration: none;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.learn-cta:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+}
+
+/* Styled table */
+.learn-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9375rem;
+  margin-bottom: 1.5rem;
+}
+.learn-table th {
+  background: var(--mr-bg-elevated);
+  color: var(--mr-text-primary);
+  font-weight: 600;
+  text-align: left;
+  padding: 0.75rem 1rem;
+  border-bottom: 2px solid var(--mr-border);
+}
+.learn-table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--mr-border);
+  color: var(--mr-text-secondary);
+}
+.learn-table tr:nth-child(even) {
+  background: var(--mr-bg-elevated);
+}
+.learn-table tr:hover {
+  background: var(--mr-bg-hover);
+}
+
+/* Inline badge / chip */
+.learn-badge {
+  display: inline-block;
+  padding: 0.25rem 0.625rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+/* Related article link card */
+.learn-link-card {
+  display: block;
+  text-decoration: none;
+  padding: 1rem 1.25rem;
+  background: var(--mr-bg-card);
+  border: var(--mr-card-border);
+  border-radius: var(--mr-radius-sm);
+  box-shadow: var(--mr-shadow);
+  color: var(--mr-text-primary);
+  font-weight: 500;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.learn-link-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--mr-shadow-lg);
+}
+
+/* Score-colored left border variants */
+.learn-card--green { border-left: 3px solid var(--mr-green); }
+.learn-card--amber { border-left: 3px solid var(--mr-amber); }
+.learn-card--red { border-left: 3px solid var(--mr-red); }
+.learn-card--purple { border-left: 3px solid var(--mr-primary); }
+
 /* ===== BASE STYLES ===== */
 * {
   box-sizing: border-box;

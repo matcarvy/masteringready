@@ -33,14 +33,7 @@ export default function PrepareMixForMasteringPage() {
         </h1>
 
         {/* Opening: answer-first summary */}
-        <div style={{
-          background: 'var(--mr-bg-card)',
-          border: '1px solid var(--mr-border)',
-          borderRadius: '12px',
-          padding: '1.5rem',
-          marginBottom: '2.5rem',
-          borderLeft: '3px solid var(--mr-primary)',
-        }}>
+        <div className="learn-callout" style={{ marginBottom: '2.5rem' }}>
           <p style={{
             fontSize: '1.0625rem',
             lineHeight: 1.7,
@@ -75,10 +68,12 @@ export default function PrepareMixForMasteringPage() {
             es="Antes de exportar un solo archivo, hazte una pregunta: ¿qué quieres que suene al final? No es lo mismo preparar un track para un EP indie que para un single de reggaetón que va a competir en playlists de Spotify."
             en="Before you export a single file, ask yourself one question: what do you want the final result to sound like? Preparing a track for an indie EP is not the same as preparing a single meant to compete on Spotify playlists."
           />
-          <P lang={lang}
-            es="Piensa en la mezcla como los ingredientes de un plato. El ingeniero de mastering es el chef que le da el toque final. Pero si los ingredientes están en mal estado o no combinan, no hay técnica que salve el resultado."
-            en="Think of the mix as the ingredients of a dish. The mastering engineer is the chef who gives it the final touch. But if the ingredients are in bad shape or don't combine well, no technique can save the result."
-          />
+          <div className="learn-callout">
+            <P lang={lang}
+              es="Piensa en la mezcla como los ingredientes de un plato. El ingeniero de mastering es el chef que le da el toque final. Pero si los ingredientes están en mal estado o no combinan, no hay técnica que salve el resultado."
+              en="Think of the mix as the ingredients of a dish. The mastering engineer is the chef who gives it the final touch. But if the ingredients are in bad shape or don't combine well, no technique can save the result."
+            />
+          </div>
           <P lang={lang}
             es="Define el sonido de referencia, el rango dinámico que buscas, y si necesitas versiones alternativas (instrumental, vocal up, TV mix). Eso le da al ingeniero un mapa claro para trabajar."
             en="Define your reference sound, the dynamic range you are aiming for, and whether you need alternate versions (instrumental, vocal up, TV mix). That gives your engineer a clear map to work with."
@@ -98,10 +93,12 @@ export default function PrepareMixForMasteringPage() {
             es="Revisa cada pista en solo. Busca ruidos de fondo, clics, pops, respiraciones no deseadas. Lo que no escuchas en la mezcla puede aparecer después del mastering, cuando la compresión y el EQ amplifican lo que estaba oculto."
             en="Solo every track. Look for background noise, clicks, pops, unwanted breaths. What you don't hear in the mix can surface after mastering, when compression and EQ amplify what was hidden."
           />
-          <P lang={lang}
-            es="Es como los cimientos de un edificio. No los ves, pero si están mal, todo lo que construyas encima se mueve."
-            en="It is like a building's foundation. You don't see it, but if it is flawed, everything you build on top shifts."
-          />
+          <div className="learn-callout">
+            <P lang={lang}
+              es="Es como los cimientos de un edificio. No los ves, pero si están mal, todo lo que construyas encima se mueve."
+              en="It is like a building's foundation. You don't see it, but if it is flawed, everything you build on top shifts."
+            />
+          </div>
         </Section>
 
         {/* Section 3 */}
@@ -109,10 +106,12 @@ export default function PrepareMixForMasteringPage() {
           titleEs="Balancea las frecuencias"
           titleEn="Balance your frequencies"
         >
-          <P lang={lang}
-            es="Piensa en el espectro de frecuencias como una orquesta. Cada instrumento tiene su rango. Si todos tocan en el mismo registro, se genera un caos donde nadie brilla."
-            en="Think of the frequency spectrum like an orchestra. Every instrument has its range. If everyone plays in the same register, you get chaos where nothing shines."
-          />
+          <div className="learn-callout">
+            <P lang={lang}
+              es="Piensa en el espectro de frecuencias como una orquesta. Cada instrumento tiene su rango. Si todos tocan en el mismo registro, se genera un caos donde nadie brilla."
+              en="Think of the frequency spectrum like an orchestra. Every instrument has its range. If everyone plays in the same register, you get chaos where nothing shines."
+            />
+          </div>
           <P lang={lang}
             es="Trabaja con EQ sustractivo antes que aditivo. Antes de subir un brillo, pregúntate qué está ocupando ese espacio y quítalo. Corta los graves innecesarios en voces y guitarras. Limpia el rango medio de acumulaciones. Dale espacio al bajo y al kick para que respiren."
             en="Work with subtractive EQ before additive. Before boosting brightness, ask yourself what is occupying that space and remove it. Cut unnecessary lows on vocals and guitars. Clean up mud in the midrange. Give the bass and kick room to breathe."
@@ -132,10 +131,12 @@ export default function PrepareMixForMasteringPage() {
             es="La compresión es una de las herramientas más poderosas y más abusadas. Comprimir bien es saber cuándo apretar y cuándo dejar pasar."
             en="Compression is one of the most powerful and most abused tools. Good compression is knowing when to squeeze and when to let go."
           />
-          <P lang={lang}
-            es="Comprime donde sea necesario: una voz que se pierde en el coro, un bajo que se descontrola en ciertas notas, un snare que no tiene pegada consistente. Pero no comprimas el master bus para que suene más fuerte. Eso es como intentar meter un elefante en una caja de zapatos."
-            en="Compress where it is needed: a vocal that gets lost in the chorus, a bass that gets unruly on certain notes, a snare that lacks consistent punch. But don't compress the master bus just to make it louder. That is like trying to fit an elephant into a shoebox."
-          />
+          <div className="learn-callout">
+            <P lang={lang}
+              es="Comprime donde sea necesario: una voz que se pierde en el coro, un bajo que se descontrola en ciertas notas, un snare que no tiene pegada consistente. Pero no comprimas el master bus para que suene más fuerte. Eso es como intentar meter un elefante en una caja de zapatos."
+              en="Compress where it is needed: a vocal that gets lost in the chorus, a bass that gets unruly on certain notes, a snare that lacks consistent punch. But don't compress the master bus just to make it louder. That is like trying to fit an elephant into a shoebox."
+            />
+          </div>
           <P lang={lang}
             es="Deja que el mastering se encargue de la dinámica global. Tu trabajo es que cada elemento tenga un rango dinámico controlado pero natural. Si aplastas todo, le quitas al ingeniero el material con el que trabaja."
             en="Let mastering handle the global dynamics. Your job is to make sure each element has a controlled but natural dynamic range. If you crush everything, you remove the material the engineer needs to work with."
@@ -166,10 +167,12 @@ export default function PrepareMixForMasteringPage() {
           titleEs="Usa tracks de referencia"
           titleEn="Use reference tracks"
         >
-          <P lang={lang}
-            es="Elegir 1 a 3 tracks de referencia del mismo género es una de las decisiones más inteligentes que puedes tomar. No para copiar, sino para tener un norte. Es tu GPS sonoro."
-            en="Choosing 1 to 3 reference tracks from the same genre is one of the smartest decisions you can make. Not to copy, but to have a compass. It is your sonic GPS."
-          />
+          <div className="learn-callout">
+            <P lang={lang}
+              es="Elegir 1 a 3 tracks de referencia del mismo género es una de las decisiones más inteligentes que puedes tomar. No para copiar, sino para tener un norte. Es tu GPS sonoro."
+              en="Choosing 1 to 3 reference tracks from the same genre is one of the smartest decisions you can make. Not to copy, but to have a compass. It is your sonic GPS."
+            />
+          </div>
           <P lang={lang}
             es="Cárgalos en tu sesión, baja su volumen unos -6 dB para compensar el mastering que ya tienen, y compara regularmente. ¿Cómo suenan tus graves en relación a la referencia? ¿Tu voz tiene el mismo espacio? ¿Tu mezcla respira igual?"
             en="Load them into your session, turn them down about -6 dB to compensate for the mastering they already have, and compare regularly. How do your lows sound compared to the reference? Does your vocal have the same space? Does your mix breathe the same way?"
@@ -227,13 +230,7 @@ export default function PrepareMixForMasteringPage() {
             es="Aquí no hay atajos. Hay criterio, oído y decisiones conscientes."
             en="There are no shortcuts here. Just judgment, ears, and conscious decisions."
           />
-          <div style={{
-            background: 'var(--mr-bg-card)',
-            border: '1px solid var(--mr-border)',
-            borderRadius: '12px',
-            padding: '1.5rem',
-            margin: '1rem 0 1.5rem',
-          }}>
+          <div className="learn-callout" style={{ margin: '1rem 0 1.5rem' }}>
             <h3 style={{
               fontSize: '1.0625rem',
               fontWeight: 700,
@@ -257,10 +254,12 @@ export default function PrepareMixForMasteringPage() {
               <li><strong>Dither:</strong> {lang === 'es' ? 'Solo aplica dither si estás reduciendo la profundidad de bits (por ejemplo, de 32 a 24). Si exportas a la misma profundidad de tu sesión, no apliques dither.' : 'Only apply dither if you are reducing bit depth (for example, from 32 to 24). If you are exporting at the same bit depth as your session, do not apply dither.'}</li>
             </ul>
           </div>
-          <P lang={lang}
-            es="Es como el barniz transparente de un auto. No lo ves, pero si lo haces mal, arruinas todo el trabajo de pintura que hay debajo."
-            en="It is like the clear coat on a car. You don't see it, but if you do it wrong, you ruin all the paint work underneath."
-          />
+          <div className="learn-callout">
+            <P lang={lang}
+              es="Es como el barniz transparente de un auto. No lo ves, pero si lo haces mal, arruinas todo el trabajo de pintura que hay debajo."
+              en="It is like the clear coat on a car. You don't see it, but if you do it wrong, you ruin all the paint work underneath."
+            />
+          </div>
         </Section>
 
         {/* Section 10 */}
@@ -328,25 +327,7 @@ export default function PrepareMixForMasteringPage() {
           </p>
           <Link
             href="/#analyze"
-            style={{
-              display: 'inline-block',
-              background: 'var(--mr-gradient)',
-              color: '#ffffff',
-              padding: '0.875rem 2rem',
-              borderRadius: '10px',
-              fontSize: '1.0625rem',
-              fontWeight: 700,
-              textDecoration: 'none',
-              transition: 'transform 0.2s, box-shadow 0.2s',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'translateY(-2px)'
-              e.currentTarget.style.boxShadow = '0 8px 24px rgba(102, 126, 234, 0.35)'
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'translateY(0)'
-              e.currentTarget.style.boxShadow = 'none'
-            }}
+            className="learn-cta"
           >
             {lang === 'es'
               ? 'Verifica tu mezcla con Mastering Ready'
@@ -368,17 +349,17 @@ export default function PrepareMixForMasteringPage() {
           <h3 style={{ fontSize: '1.125rem', fontWeight: 600, marginBottom: '1rem', color: 'var(--mr-text-primary)' }}>
             {lang === 'es' ? 'Artículos relacionados' : 'Related articles'}
           </h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            <Link href="/learn/is-my-mix-ready" style={{ color: 'var(--mr-primary)', textDecoration: 'none', fontSize: '0.9375rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <Link href="/learn/is-my-mix-ready" className="learn-link-card">
               {lang === 'es' ? '¿Mi mezcla está lista para mastering?' : 'Is my mix ready for mastering?'}
             </Link>
-            <Link href="/learn/lufs-for-streaming" style={{ color: 'var(--mr-primary)', textDecoration: 'none', fontSize: '0.9375rem' }}>
+            <Link href="/learn/lufs-for-streaming" className="learn-link-card">
               {lang === 'es' ? 'LUFS para streaming: guía práctica' : 'LUFS for streaming: practical guide'}
             </Link>
-            <Link href="/learn/mixing-vs-mastering" style={{ color: 'var(--mr-primary)', textDecoration: 'none', fontSize: '0.9375rem' }}>
+            <Link href="/learn/mixing-vs-mastering" className="learn-link-card">
               {lang === 'es' ? 'Mezcla vs mastering: diferencias clave' : 'Mixing vs mastering: key differences'}
             </Link>
-            <Link href="/learn/mastering-ready-vs-competitors" style={{ color: 'var(--mr-primary)', textDecoration: 'none', fontSize: '0.9375rem' }}>
+            <Link href="/learn/mastering-ready-vs-competitors" className="learn-link-card">
               {lang === 'es' ? 'Mastering Ready vs la competencia' : 'Mastering Ready vs competitors'}
             </Link>
           </div>
@@ -398,18 +379,35 @@ function Section({ number, lang, titleEs, titleEn, children }: {
   children: React.ReactNode
 }) {
   return (
-    <section style={{ marginBottom: '2.5rem' }}>
-      <h2 style={{
-        fontSize: 'clamp(1.25rem, 3.5vw, 1.5rem)',
-        fontWeight: 700,
-        lineHeight: 1.3,
-        marginBottom: '1rem',
-        color: 'var(--mr-text-primary)',
-      }}>
-        {number}. {lang === 'es' ? titleEs : titleEn}
-      </h2>
-      {children}
-    </section>
+    <div className="learn-section">
+      <div className="learn-card">
+        <h2 style={{
+          fontSize: 'clamp(1.25rem, 3.5vw, 1.5rem)',
+          fontWeight: 700,
+          lineHeight: 1.3,
+          marginBottom: '1rem',
+          color: 'var(--mr-text-primary)',
+        }}>
+          <span style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '2rem',
+            height: '2rem',
+            borderRadius: '50%',
+            background: 'var(--mr-gradient)',
+            color: '#ffffff',
+            fontSize: '0.875rem',
+            fontWeight: 800,
+            marginRight: '0.75rem',
+            flexShrink: 0,
+            verticalAlign: 'middle',
+          }}>{number}</span>
+          {lang === 'es' ? titleEs : titleEn}
+        </h2>
+        {children}
+      </div>
+    </div>
   )
 }
 

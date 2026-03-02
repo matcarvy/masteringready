@@ -273,73 +273,88 @@ export default function MixingVsMasteringPage() {
         </div>
 
         {/* What is mixing? */}
-        <Section title={c.whatIsMixingTitle} body={c.whatIsMixingBody} />
+        <div className="learn-section">
+          <Section title={c.whatIsMixingTitle} body={c.whatIsMixingBody} />
+        </div>
 
         {/* What is mastering? */}
-        <Section title={c.whatIsMasteringTitle} body={c.whatIsMasteringBody} />
+        <div className="learn-section">
+          <Section title={c.whatIsMasteringTitle} body={c.whatIsMasteringBody} />
+        </div>
 
         {/* Side-by-side comparison table */}
-        <h2 style={h2Style}>{c.comparisonTitle}</h2>
-        <div style={{
-          overflowX: 'auto',
-          marginBottom: '2.5rem',
-          border: '1px solid var(--mr-border)',
-          borderRadius: 'var(--mr-radius)',
-        }}>
-          <table style={{
-            width: '100%',
-            borderCollapse: 'collapse',
-            fontSize: '0.9375rem',
-            lineHeight: 1.6,
-          }}>
-            <thead>
-              <tr>
-                {c.comparisonHeaders.map((h, i) => (
-                  <th key={i} style={{
-                    textAlign: 'left',
-                    padding: '0.75rem 1rem',
-                    background: 'var(--mr-bg-elevated)',
-                    color: 'var(--mr-text-primary)',
-                    fontWeight: 700,
-                    borderBottom: '1px solid var(--mr-border)',
-                    whiteSpace: 'nowrap',
-                  }}>
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {c.comparisonRows.map((row, ri) => (
-                <tr key={ri}>
-                  {row.map((cell, ci) => (
-                    <td key={ci} style={{
-                      padding: '0.75rem 1rem',
-                      borderBottom: ri < c.comparisonRows.length - 1 ? '1px solid var(--mr-border)' : 'none',
-                      color: ci === 0 ? 'var(--mr-text-primary)' : 'var(--mr-text-secondary)',
-                      fontWeight: ci === 0 ? 600 : 400,
-                      verticalAlign: 'top',
-                    }}>
-                      {cell}
-                    </td>
+        <div className="learn-section">
+          <h2 style={h2Style}>{c.comparisonTitle}</h2>
+          <div style={{ overflowX: 'auto' }}>
+            <table className="learn-table">
+              <thead>
+                <tr>
+                  {c.comparisonHeaders.map((h, i) => (
+                    <th key={i}>{h}</th>
                   ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {c.comparisonRows.map((row, ri) => (
+                  <tr key={ri}>
+                    {row.map((cell, ci) => (
+                      <td key={ci} style={{
+                        color: ci === 0 ? 'var(--mr-text-primary)' : undefined,
+                        fontWeight: ci === 0 ? 600 : undefined,
+                      }}>
+                        {cell}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
 
         {/* The clear coat metaphor */}
-        <Section title={c.metaphorTitle} body={c.metaphorBody} />
+        <div className="learn-section">
+          <h2 style={h2Style}>{c.metaphorTitle}</h2>
+          <div className="learn-callout" style={{
+            fontSize: '1rem',
+            lineHeight: 1.75,
+            color: 'var(--mr-text-secondary)',
+            whiteSpace: 'pre-line',
+          }}>
+            {c.metaphorBody}
+          </div>
+        </div>
 
         {/* What mastering CANNOT fix */}
-        <Section title={c.cannotFixTitle} body={c.cannotFixBody} />
+        <div className="learn-section">
+          <h2 style={h2Style}>{c.cannotFixTitle}</h2>
+          <div className="learn-card learn-card--red" style={{
+            fontSize: '1rem',
+            lineHeight: 1.75,
+            color: 'var(--mr-text-secondary)',
+            whiteSpace: 'pre-line',
+          }}>
+            {c.cannotFixBody}
+          </div>
+        </div>
 
         {/* The gap between mixing and mastering */}
-        <Section title={c.gapTitle} body={c.gapBody} />
+        <div className="learn-section">
+          <h2 style={h2Style}>{c.gapTitle}</h2>
+          <div className="learn-callout" style={{
+            fontSize: '1rem',
+            lineHeight: 1.75,
+            color: 'var(--mr-text-secondary)',
+            whiteSpace: 'pre-line',
+          }}>
+            {c.gapBody}
+          </div>
+        </div>
 
         {/* How to close the gap */}
-        <Section title={c.closeGapTitle} body={c.closeGapBody} />
+        <div className="learn-section">
+          <Section title={c.closeGapTitle} body={c.closeGapBody} />
+        </div>
 
         {/* CTA gradient button */}
         <div style={{
@@ -366,17 +381,7 @@ export default function MixingVsMasteringPage() {
           }}>
             {c.ctaSubtext}
           </p>
-          <Link href="/#analyze" style={{
-            display: 'inline-block',
-            padding: '0.875rem 2rem',
-            background: '#ffffff',
-            color: '#6366f1',
-            fontWeight: 700,
-            fontSize: '1rem',
-            borderRadius: 'var(--mr-radius)',
-            textDecoration: 'none',
-            transition: 'transform 0.15s, box-shadow 0.15s',
-          }}>
+          <Link href="/#analyze" className="learn-cta">
             {c.ctaButton}
           </Link>
         </div>
@@ -387,16 +392,16 @@ export default function MixingVsMasteringPage() {
             {lang === 'es' ? 'Artículos relacionados' : 'Related articles'}
           </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            <Link href="/learn/is-my-mix-ready" style={{ color: 'var(--mr-primary)', textDecoration: 'none', fontSize: '0.9375rem' }}>
+            <Link href="/learn/is-my-mix-ready" className="learn-link-card">
               {lang === 'es' ? '¿Mi mezcla está lista para mastering?' : 'Is my mix ready for mastering?'}
             </Link>
-            <Link href="/learn/prepare-mix-for-mastering" style={{ color: 'var(--mr-primary)', textDecoration: 'none', fontSize: '0.9375rem' }}>
+            <Link href="/learn/prepare-mix-for-mastering" className="learn-link-card">
               {lang === 'es' ? '10 pasos para preparar tu mezcla para mastering' : '10 steps to prepare your mix for mastering'}
             </Link>
-            <Link href="/learn/lufs-for-streaming" style={{ color: 'var(--mr-primary)', textDecoration: 'none', fontSize: '0.9375rem' }}>
+            <Link href="/learn/lufs-for-streaming" className="learn-link-card">
               {lang === 'es' ? 'LUFS para streaming: guía práctica' : 'LUFS for streaming: practical guide'}
             </Link>
-            <Link href="/learn/mastering-ready-vs-competitors" style={{ color: 'var(--mr-primary)', textDecoration: 'none', fontSize: '0.9375rem' }}>
+            <Link href="/learn/mastering-ready-vs-competitors" className="learn-link-card">
               {lang === 'es' ? 'Mastering Ready vs la competencia' : 'Mastering Ready vs competitors'}
             </Link>
           </div>

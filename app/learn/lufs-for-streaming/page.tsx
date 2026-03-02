@@ -163,50 +163,39 @@ export default function LufsForStreamingPage() {
         </p>
 
         {/* What is LUFS */}
+        <div className="learn-section">
         <h2 style={h2Style}>{s.h2What}</h2>
         <p style={paragraphStyle}>{s.whatP1}</p>
         <p style={paragraphStyle}>{s.whatP2}</p>
         <p style={paragraphStyle}>{s.whatP3}</p>
+        </div>
 
         {/* Platform targets */}
+        <div className="learn-section">
         <h2 style={h2Style}>{s.h2Platforms}</h2>
         <p style={paragraphStyle}>{s.platformsIntro}</p>
 
-        <div style={{
-          overflowX: 'auto',
-          marginBottom: '2rem',
-          borderRadius: 'var(--mr-radius)',
-          border: '1px solid var(--mr-border)',
-        }}>
-          <table style={{
-            width: '100%',
-            borderCollapse: 'collapse',
-            fontSize: '0.9375rem',
-          }}>
+        <div style={{ overflowX: 'auto' }}>
+          <table className="learn-table">
             <thead>
-              <tr style={{
-                background: 'var(--mr-bg-elevated)',
-              }}>
-                <th style={thStyle}>{s.colPlatform}</th>
-                <th style={thStyle}>{s.colTarget}</th>
-                <th style={{ ...thStyle, minWidth: 200 }}>{s.colNotes}</th>
+              <tr>
+                <th>{s.colPlatform}</th>
+                <th>{s.colTarget}</th>
+                <th style={{ minWidth: 200 }}>{s.colNotes}</th>
               </tr>
             </thead>
             <tbody>
-              {platforms.map((p, i) => (
-                <tr key={p.name} style={{
-                  background: i % 2 === 0 ? 'var(--mr-bg-card)' : 'var(--mr-bg-elevated)',
-                }}>
-                  <td style={{ ...tdStyle, fontWeight: 600 }}>{p.name}</td>
+              {platforms.map((p) => (
+                <tr key={p.name}>
+                  <td style={{ fontWeight: 600 }}>{p.name}</td>
                   <td style={{
-                    ...tdStyle,
                     fontFamily: 'monospace',
                     fontWeight: 600,
                     color: 'var(--mr-primary)',
                   }}>
                     {'targetEs' in p ? (lang === 'es' ? p.targetEs : p.targetEn) : p.target}
                   </td>
-                  <td style={{ ...tdStyle, color: 'var(--mr-text-secondary)' }}>
+                  <td>
                     {s[p.noteKey]}
                   </td>
                 </tr>
@@ -214,11 +203,13 @@ export default function LufsForStreamingPage() {
             </tbody>
           </table>
         </div>
+        </div>
 
         {/* Mix LUFS */}
+        <div className="learn-section">
         <h2 style={h2Style}>{s.h2Mix}</h2>
         <p style={paragraphStyle}>{s.mixP1}</p>
-        <div style={highlightBoxStyle}>
+        <div className="learn-callout" style={{ textAlign: 'center', color: 'var(--mr-primary)' }}>
           <span style={{
             fontWeight: 700,
             fontFamily: 'monospace',
@@ -229,37 +220,45 @@ export default function LufsForStreamingPage() {
         </div>
         <p style={paragraphStyle}>{s.mixP2}</p>
         <p style={paragraphStyle}>{s.mixP3}</p>
+        </div>
 
         {/* Loudness war */}
+        <div className="learn-section">
         <h2 style={h2Style}>{s.h2War}</h2>
         <p style={paragraphStyle}>{s.warP1}</p>
         <p style={paragraphStyle}>{s.warP2}</p>
         <p style={paragraphStyle}>{s.warP3}</p>
+        </div>
 
         {/* True Peak vs LUFS */}
+        <div className="learn-section">
         <h2 style={h2Style}>{s.h2TruePeak}</h2>
+        <div className="learn-card">
         <p style={paragraphStyle}>{s.truePeakP1}</p>
         <p style={paragraphStyle}>{s.truePeakP2}</p>
-        <p style={paragraphStyle}>{s.truePeakP3}</p>
+        <p style={{ ...paragraphStyle, marginBottom: '1.25rem' }}>{s.truePeakP3}</p>
         <div style={{
           display: 'flex',
           gap: '1rem',
           flexWrap: 'wrap',
-          marginBottom: '2rem',
         }}>
-          <div style={chipStyle}>
+          <span className="learn-badge" style={{ background: 'var(--mr-blue-bg)', color: 'var(--mr-blue-text)' }}>
             {s.truePeakMix}
-          </div>
-          <div style={chipStyle}>
+          </span>
+          <span className="learn-badge" style={{ background: 'var(--mr-purple-bg)', color: 'var(--mr-purple-text)' }}>
             {s.truePeakMaster}
-          </div>
+          </span>
+        </div>
+        </div>
         </div>
 
         {/* How MR measures */}
+        <div className="learn-section">
         <h2 style={h2Style}>{s.h2MR}</h2>
         <p style={paragraphStyle}>{s.mrP1}</p>
         <p style={paragraphStyle}>{s.mrP2}</p>
         <p style={paragraphStyle}>{s.mrP3}</p>
+        </div>
 
         {/* CTA */}
         <div style={{
@@ -270,17 +269,7 @@ export default function LufsForStreamingPage() {
           background: 'var(--mr-bg-card)',
           border: '1px solid var(--mr-border)',
         }}>
-          <Link href="/#analyze" style={{
-            display: 'inline-block',
-            background: 'var(--mr-gradient)',
-            color: '#ffffff',
-            padding: '0.875rem 2rem',
-            borderRadius: 'var(--mr-radius)',
-            fontSize: '1.0625rem',
-            fontWeight: 600,
-            textDecoration: 'none',
-            transition: 'transform 0.15s, box-shadow 0.15s',
-          }}>
+          <Link href="/#analyze" className="learn-cta">
             {s.cta}
           </Link>
           <p style={{
@@ -297,17 +286,17 @@ export default function LufsForStreamingPage() {
           <h3 style={{ fontSize: '1.125rem', fontWeight: 600, marginBottom: '1rem', color: 'var(--mr-text-primary)' }}>
             {lang === 'es' ? 'Artículos relacionados' : 'Related articles'}
           </h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            <Link href="/learn/is-my-mix-ready" style={{ color: 'var(--mr-primary)', textDecoration: 'none', fontSize: '0.9375rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <Link href="/learn/is-my-mix-ready" className="learn-link-card">
               {lang === 'es' ? '¿Mi mezcla está lista para mastering?' : 'Is my mix ready for mastering?'}
             </Link>
-            <Link href="/learn/prepare-mix-for-mastering" style={{ color: 'var(--mr-primary)', textDecoration: 'none', fontSize: '0.9375rem' }}>
+            <Link href="/learn/prepare-mix-for-mastering" className="learn-link-card">
               {lang === 'es' ? '10 pasos para preparar tu mezcla para mastering' : '10 steps to prepare your mix for mastering'}
             </Link>
-            <Link href="/learn/mixing-vs-mastering" style={{ color: 'var(--mr-primary)', textDecoration: 'none', fontSize: '0.9375rem' }}>
+            <Link href="/learn/mixing-vs-mastering" className="learn-link-card">
               {lang === 'es' ? 'Mezcla vs mastering: diferencias clave' : 'Mixing vs mastering: key differences'}
             </Link>
-            <Link href="/learn/mastering-ready-vs-competitors" style={{ color: 'var(--mr-primary)', textDecoration: 'none', fontSize: '0.9375rem' }}>
+            <Link href="/learn/mastering-ready-vs-competitors" className="learn-link-card">
               {lang === 'es' ? 'Mastering Ready vs la competencia' : 'Mastering Ready vs competitors'}
             </Link>
           </div>
@@ -343,40 +332,3 @@ const calloutStyle: React.CSSProperties = {
   borderLeft: '3px solid var(--mr-primary)',
 }
 
-const thStyle: React.CSSProperties = {
-  textAlign: 'left',
-  padding: '0.75rem 1rem',
-  fontWeight: 600,
-  fontSize: '0.8125rem',
-  textTransform: 'uppercase',
-  letterSpacing: '0.04em',
-  color: 'var(--mr-text-secondary)',
-  borderBottom: '1px solid var(--mr-border)',
-}
-
-const tdStyle: React.CSSProperties = {
-  padding: '0.75rem 1rem',
-  borderBottom: '1px solid var(--mr-border)',
-  verticalAlign: 'top',
-}
-
-const highlightBoxStyle: React.CSSProperties = {
-  background: 'var(--mr-bg-elevated)',
-  border: '1px solid var(--mr-border)',
-  borderRadius: 'var(--mr-radius-sm)',
-  padding: '1rem 1.25rem',
-  marginBottom: '1.25rem',
-  textAlign: 'center',
-  color: 'var(--mr-primary)',
-}
-
-const chipStyle: React.CSSProperties = {
-  background: 'var(--mr-bg-elevated)',
-  border: '1px solid var(--mr-border)',
-  borderRadius: 'var(--mr-radius-sm)',
-  padding: '0.5rem 1rem',
-  fontSize: '0.875rem',
-  fontWeight: 600,
-  fontFamily: 'monospace',
-  color: 'var(--mr-text-primary)',
-}

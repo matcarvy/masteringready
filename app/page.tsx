@@ -2234,7 +2234,8 @@ by Matías Carvajal
 
       {/* Features Section */}
       <section id="features" className="features-section" style={{
-        background: 'var(--mr-bg-base)'
+        background: 'var(--mr-bg-base)',
+        scrollMarginTop: '80px',
       }}>
         <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
           <div className="features-title-container" style={{
@@ -2409,7 +2410,8 @@ by Matías Carvajal
       {/* Pricing Section */}
       <section id="pricing" className="pricing-section" style={{
         background: 'var(--mr-bg-base)',
-        borderTop: '1px solid var(--mr-border)'
+        borderTop: '1px solid var(--mr-border)',
+        scrollMarginTop: '80px',
       }}>
         <div style={{ maxWidth: '1080px', margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
@@ -2832,7 +2834,8 @@ by Matías Carvajal
       {/* FAQ Section */}
       <section id="faq" style={{
         background: 'var(--mr-bg-base)',
-        borderTop: '1px solid var(--mr-border)'
+        borderTop: '1px solid var(--mr-border)',
+        scrollMarginTop: '80px',
       }}>
         <div style={{ maxWidth: '800px', margin: '0 auto', padding: isMobile ? '3rem 1.25rem' : '4rem 2rem' }}>
           <h2 style={{

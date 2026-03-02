@@ -97,6 +97,7 @@ export default function IsMyMixReadyPage() {
         </h2>
 
         {/* Headroom */}
+        <div className="learn-section">
         <h3 style={h3Style}>
           {lang === 'es' ? '1. Headroom (margen de picos)' : '1. Headroom (peak margin)'}
         </h3>
@@ -105,8 +106,10 @@ export default function IsMyMixReadyPage() {
             ? 'Tu mezcla debe tener sus picos entre -6 y -3 dBFS. Esto le da al ingeniero de mastering espacio para trabajar sin que el audio se distorsione. Si tus picos están a -1 dBFS o peor, a 0 dBFS, el mastering no tiene dónde moverse. Es como pedirle a un chef que cocine en una olla que ya está llena hasta el borde.'
             : 'Your mix should have its peaks between -6 and -3 dBFS. This gives the mastering engineer room to work without distortion. If your peaks sit at -1 dBFS or worse, at 0 dBFS, mastering has nowhere to go. It is like asking a chef to cook in a pot that is already full to the brim.'}
         </p>
+        </div>
 
         {/* True Peak */}
+        <div className="learn-section">
         <h3 style={h3Style}>
           {lang === 'es' ? '2. True Peak (pico real)' : '2. True Peak'}
         </h3>
@@ -115,8 +118,10 @@ export default function IsMyMixReadyPage() {
             ? 'Los picos reales deben estar por debajo de -1 dBTP. El True Peak mide los picos inter-muestra, los que ocurren entre las muestras digitales y que un medidor convencional no detecta. Si tu True Peak supera -1 dBTP, estás demasiado cerca del techo digital y el ingeniero de mastering no tiene margen para trabajar.'
             : 'True peaks must stay below -1 dBTP. True Peak measures inter-sample peaks, the ones that occur between digital samples and that a conventional meter misses. If your True Peak exceeds -1 dBTP, you are too close to the digital ceiling and the mastering engineer has no room to work.'}
         </p>
+        </div>
 
         {/* PLR */}
+        <div className="learn-section">
         <h3 style={h3Style}>
           {lang === 'es' ? '3. PLR (rango dinámico)' : '3. PLR (dynamic range)'}
         </h3>
@@ -125,8 +130,10 @@ export default function IsMyMixReadyPage() {
             ? 'El PLR (Peak-to-Loudness Ratio) mide cuánto espacio hay entre tus picos y tu loudness integrado. Un PLR saludable está por encima de 8 dB, idealmente entre 10 y 14. Si tu PLR es bajo, significa que tu mezcla está sobre-comprimida. Le quitaste la vida al audio. El mastering necesita dinámica para trabajar. Sin dinámica, el resultado final suena plano y fatigante.'
             : 'PLR (Peak-to-Loudness Ratio) measures how much space exists between your peaks and your integrated loudness. A healthy PLR sits above 8 dB, ideally between 10 and 14. If your PLR is low, your mix is over-compressed. You squeezed the life out of the audio. Mastering needs dynamics to work with. Without dynamics, the final result sounds flat and fatiguing.'}
         </p>
+        </div>
 
         {/* Stereo Correlation */}
+        <div className="learn-section">
         <h3 style={h3Style}>
           {lang === 'es' ? '4. Correlación estéreo' : '4. Stereo correlation'}
         </h3>
@@ -135,8 +142,10 @@ export default function IsMyMixReadyPage() {
             ? 'La correlación estéreo mide qué tan compatible es tu mezcla con la reproducción mono. Un valor de 1.0 es mono perfecto, 0.0 es estéreo completamente decorrelacionado y los valores negativos significan problemas de fase. Para mastering, necesitas estar por encima de 0.5, idealmente por encima de 0.7. Si tu correlación es baja, tu mezcla puede desaparecer en sistemas mono como teléfonos, PA de clubes o televisores. El mastering no puede arreglar problemas de fase.'
             : 'Stereo correlation measures how compatible your mix is with mono playback. A value of 1.0 is perfect mono, 0.0 is completely decorrelated stereo, and negative values mean phase problems. For mastering, you need to be above 0.5, ideally above 0.7. If your correlation is low, your mix can disappear on mono systems like phones, club PAs, or TVs. Mastering cannot fix phase issues.'}
         </p>
+        </div>
 
         {/* Frequency Balance */}
+        <div className="learn-section">
         <h3 style={h3Style}>
           {lang === 'es' ? '5. Balance de frecuencias' : '5. Frequency balance'}
         </h3>
@@ -145,6 +154,7 @@ export default function IsMyMixReadyPage() {
             ? 'El balance de frecuencias revisa cómo se distribuye la energía entre graves, medios y agudos. No existe un balance "perfecto" universal porque depende del género, pero sí existen desbalances que causan problemas. Si tus graves acumulan demasiada energía, el mastering va a generar un master turbio. Si tus agudos están exagerados, el limitador del mastering los va a aplastar. El ingeniero puede hacer ajustes sutiles con EQ, pero no puede reconstruir un balance roto.'
             : 'Frequency balance checks how energy is distributed across lows, mids, and highs. There is no universally "perfect" balance because it depends on genre, but there are imbalances that cause problems. If your lows accumulate too much energy, mastering will produce a muddy master. If your highs are exaggerated, the mastering limiter will crush them. The engineer can make subtle EQ adjustments, but cannot reconstruct a broken balance.'}
         </p>
+        </div>
 
         {/* Note about LUFS */}
         <div style={{
@@ -185,6 +195,7 @@ export default function IsMyMixReadyPage() {
               range: '85 – 100',
               color: 'var(--mr-green)',
               bg: 'var(--mr-green-bg)',
+              cardClass: 'learn-card learn-card--green',
               es: 'Lista para mastering. Tus métricas están en rango. Puedes enviar tu mezcla con confianza.',
               en: 'Ready for mastering. Your metrics are in range. You can send your mix with confidence.',
             },
@@ -192,6 +203,7 @@ export default function IsMyMixReadyPage() {
               range: '60 – 84',
               color: 'var(--mr-amber)',
               bg: 'var(--mr-amber-bg)',
+              cardClass: 'learn-card learn-card--amber',
               es: 'Casi lista. Hay una o dos áreas que conviene revisar antes de enviar. Los ajustes suelen ser rápidos.',
               en: 'Almost ready. There are one or two areas worth reviewing before sending. The fixes are usually quick.',
             },
@@ -199,6 +211,7 @@ export default function IsMyMixReadyPage() {
               range: '40 – 59',
               color: 'var(--mr-red)',
               bg: 'var(--mr-red-bg)',
+              cardClass: 'learn-card learn-card--red',
               es: 'Necesita trabajo. Hay problemas técnicos que el mastering no puede resolver. Vuelve a tu DAW.',
               en: 'Needs work. There are technical problems that mastering cannot solve. Go back to your DAW.',
             },
@@ -206,16 +219,16 @@ export default function IsMyMixReadyPage() {
               range: '0 – 39',
               color: 'var(--mr-red)',
               bg: 'var(--mr-red-bg)',
+              cardClass: 'learn-card learn-card--red',
               es: 'No lista. La mezcla tiene problemas serios que requieren atención antes de pensar en mastering.',
               en: 'Not ready. The mix has serious issues that need attention before thinking about mastering.',
             },
           ].map((item, i) => (
-            <div key={i} style={{
+            <div key={i} className={item.cardClass} style={{
               display: 'flex',
               gap: '1rem',
               marginBottom: '0.75rem',
               padding: '0.875rem 1rem',
-              borderRadius: 'var(--mr-radius-sm)',
               background: item.bg,
               border: `1px solid ${item.color}20`,
               alignItems: 'flex-start',
@@ -316,15 +329,12 @@ export default function IsMyMixReadyPage() {
             : 'The clear coat analogy'}
         </h2>
 
-        <div style={{
-          borderLeft: '3px solid var(--mr-primary)',
-          paddingLeft: '1.25rem',
-          marginBottom: '1rem',
-        }}>
+        <div className="learn-callout">
           <p style={{
             ...pStyle,
             fontStyle: 'italic',
             color: 'var(--mr-text-secondary)',
+            marginBottom: 0,
           }}>
             {lang === 'es'
               ? '"El mastering no es una varita mágica."'
@@ -358,14 +368,7 @@ export default function IsMyMixReadyPage() {
             : 'Quick self-check before sending to mastering'}
         </h2>
 
-        <div style={{
-          background: 'var(--mr-bg-card)',
-          border: 'var(--mr-card-border)',
-          borderRadius: 'var(--mr-radius)',
-          padding: '1.5rem',
-          marginBottom: '2.5rem',
-          boxShadow: 'var(--mr-shadow)',
-        }}>
+        <div className="learn-callout">
           <ol style={{
             margin: 0,
             paddingLeft: '1.25rem',
@@ -458,17 +461,7 @@ export default function IsMyMixReadyPage() {
           </p>
           <Link
             href="/#analyze"
-            style={{
-              display: 'inline-block',
-              background: 'var(--mr-gradient)',
-              color: '#ffffff',
-              padding: '0.875rem 2rem',
-              borderRadius: 'var(--mr-radius)',
-              fontSize: '1rem',
-              fontWeight: 600,
-              textDecoration: 'none',
-              transition: 'transform 0.2s, box-shadow 0.2s',
-            }}
+            className="learn-cta"
           >
             {lang === 'es'
               ? 'Analizar mi mezcla →'
@@ -481,17 +474,17 @@ export default function IsMyMixReadyPage() {
           <h3 style={{ fontSize: '1.125rem', fontWeight: 600, marginBottom: '1rem', color: 'var(--mr-text-primary)' }}>
             {lang === 'es' ? 'Artículos relacionados' : 'Related articles'}
           </h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            <Link href="/learn/prepare-mix-for-mastering" style={{ color: 'var(--mr-primary)', textDecoration: 'none', fontSize: '0.9375rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <Link href="/learn/prepare-mix-for-mastering" className="learn-link-card">
               {lang === 'es' ? '10 pasos para preparar tu mezcla para mastering' : '10 steps to prepare your mix for mastering'}
             </Link>
-            <Link href="/learn/lufs-for-streaming" style={{ color: 'var(--mr-primary)', textDecoration: 'none', fontSize: '0.9375rem' }}>
+            <Link href="/learn/lufs-for-streaming" className="learn-link-card">
               {lang === 'es' ? 'LUFS para streaming: guía práctica' : 'LUFS for streaming: practical guide'}
             </Link>
-            <Link href="/learn/mixing-vs-mastering" style={{ color: 'var(--mr-primary)', textDecoration: 'none', fontSize: '0.9375rem' }}>
+            <Link href="/learn/mixing-vs-mastering" className="learn-link-card">
               {lang === 'es' ? 'Mezcla vs mastering: diferencias clave' : 'Mixing vs mastering: key differences'}
             </Link>
-            <Link href="/learn/mastering-ready-vs-competitors" style={{ color: 'var(--mr-primary)', textDecoration: 'none', fontSize: '0.9375rem' }}>
+            <Link href="/learn/mastering-ready-vs-competitors" className="learn-link-card">
               {lang === 'es' ? 'Mastering Ready vs la competencia' : 'Mastering Ready vs competitors'}
             </Link>
           </div>
