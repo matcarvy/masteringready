@@ -3491,34 +3491,36 @@ Detailed plan at `/Users/matcarvy/.claude/plans/peppy-bubbling-whisper.md`. Thre
 
 ## NEXT STEPS (Priority Order) — GETTING CLIENTS
 
-### NOW (this week, Feb 28+)
-1. **Founding member DMs** — DM warm leads from IG/WhatsApp with founding offer ($4.99/mo locked, 50% off). Stripe coupon `FOUNDING10` (10 redemptions). Template in Session 2026-02-21 Part 4.
-2. **Lead prospector outreach** — Reply to top YouTube/HN leads from `/prospecting`. 20-30 quality replies/day. Help first, link second.
-3. **Testimonials: get to 6** — Juan Pablo Conde Aya ready for slot 4. Need 2 more for clean 2-row grid. Ask every user who analyzes.
-4. **Welcome email (manual)** — Gmail to every new signup. Template in Session 2026-02-21 Part 4.
-5. **Community engagement** — FB groups (Producción Musical, Mezcla y Mastering LATAM), Discord (Birdzhouse 58K, We Suck At Producing). Answer questions, drop link when relevant.
+### NOW (this week, Mar 1+)
+1. **SEO Phase 3: Third-party presence** — Answer questions on Stack Overflow, Quora, forums with links to learn pages. Builds backlinks + authority.
+2. **SEO Phase 4: Track AI citations** — Monitor Google AI Overviews, ChatGPT, Perplexity for MR mentions. Verify learn pages get indexed.
+3. **Founding member DMs** — DM warm leads from IG/WhatsApp with founding offer ($4.99/mo locked, 50% off). Stripe coupon `FOUNDING10` (10 redemptions). Template in Session 2026-02-21 Part 4.
+4. **Lead prospector outreach** — Reply to top YouTube/HN leads from `/prospecting`. 20-30 quality replies/day. Help first, link second.
+5. **Testimonials: get to 6** — Juan Pablo Conde Aya ready for slot 4. Need 2 more for clean 2-row grid. Ask every user who analyzes.
+6. **Welcome email (manual)** — Gmail to every new signup. Template in Session 2026-02-21 Part 4.
+7. **Community engagement** — FB groups (Producción Musical, Mezcla y Mastering LATAM), Discord (Birdzhouse 58K, We Suck At Producing). Answer questions, drop link when relevant.
 
 ### WEEK 2-3 (Mar 7-21)
-6. **Email service (Resend)** — $0 for 3K emails/mo. Automate 4-email sequence (welcome, score explained, upgrade nudge, re-engagement).
-7. **Monthly live master review #2** — Recurring series. Gate replay behind email signup.
-8. **Outreach templates** — 15 bilingual templates for all channels (YouTube, HN, Discord, FB, forums).
-9. **F5Bot + ForumScout** — Free automated alerts for Reddit + forums. Zero effort after setup.
-10. **Fill SERVICES_CONFIG URLs** — As Matias creates service pages (Carrd/Stripe links), update URL strings → buttons go live. Zero code changes.
+8. **Email service (Resend)** — $0 for 3K emails/mo. Automate 4-email sequence (welcome, score explained, upgrade nudge, re-engagement).
+9. **Monthly live master review #2** — Recurring series. Gate replay behind email signup.
+10. **Outreach templates** — 15 bilingual templates for all channels (YouTube, HN, Discord, FB, forums).
+11. **F5Bot + ForumScout** — Free automated alerts for Reddit + forums. Zero effort after setup.
+12. **Fill SERVICES_CONFIG URLs** — As Matias creates service pages (Carrd/Stripe links), update URL strings → buttons go live. Zero code changes.
 
 ### MONTH 2 (data-driven, based on admin dashboard metrics)
-11. **LATAM payments (PSE/Nequi)** — Trigger: Colombian signups hitting paywall without intl card.
-12. **SEO blog posts** — Zero-competition ES keywords first ("cómo saber si mi mezcla está lista").
-13. **eBook migration from Payhip** — Stripe product `ebook` at $15 USD.
-14. **Referral program (manual)** — "Refer a friend, both get 2 extra analyses."
-15. **Genre profile calibration** — Analyze ~102 reference tracks. Batched across sessions.
+13. **LATAM payments (PSE/Nequi)** — Trigger: Colombian signups hitting paywall without intl card.
+14. **More SEO learn pages** — Expand `/learn/` with more topics based on Search Console data (what queries bring traffic).
+15. **eBook migration from Payhip** — Stripe product `ebook` at $15 USD.
+16. **Referral program (manual)** — "Refer a friend, both get 2 extra analyses."
+17. **Genre profile calibration** — Analyze ~102 reference tracks. Batched across sessions.
 
 ### MONTH 3+ (scale what works)
-16. **Product Hunt** — After 6+ testimonials, proven conversion flow, polished onboarding.
-17. **DLocal integration** — If LATAM signups high but paid conversion <3%.
-18. **Workshop banner activation** — Set `SERVICES_CONFIG.workshop.url` + `date` when scheduled.
-19. **Signed token system** — HMAC-signed tokens for Render API protection, ~30 min.
-20. **Priority Queue System** — Trigger: OOM errors, queue depth >5.
-21. **Stream Ready deploy** — Backend ready. Frontend at `~/streamready/`.
+18. **Product Hunt** — After 6+ testimonials, proven conversion flow, polished onboarding.
+19. **DLocal integration** — If LATAM signups high but paid conversion <3%.
+20. **Workshop banner activation** — Set `SERVICES_CONFIG.workshop.url` + `date` when scheduled.
+21. **Signed token system** — HMAC-signed tokens for Render API protection, ~30 min.
+22. **Priority Queue System** — Trigger: OOM errors, queue depth >5.
+23. **Stream Ready deploy** — Backend ready. Frontend at `~/streamready/`.
 
 ### KEY METRICS TO WATCH (Admin Dashboard)
 - **Anonymous → signup conversion**: If low, revisit CTA or simplify auth
@@ -3527,6 +3529,7 @@ Detailed plan at `/Users/matcarvy/.claude/plans/peppy-bubbling-whisper.md`. Thre
 - **Device breakdown**: Mobile vs desktop informs Stream Ready priority
 - **Prospector leads contacted vs converted**: Track outreach ROI
 - **Render analysis times**: Benchmark 68-73s. If >80s → clean rebuild
+- **Search Console**: Which learn pages get indexed first, which queries drive clicks
 
 ---
 
@@ -3838,8 +3841,77 @@ Continuing SEO plan from previous session. Phase 1 (meta tags, FAQ schema, nav l
 
 **Git state**: Not yet committed. Ready to commit and push.
 
+#### Audit Fixes Applied (post-creation)
+- **Comparison page (~55+ Spanish accents)**: Massive fix across entire ES translation section (análisis, métricas, técnicas, estéreo, dinámica, correlación, categoría, función, diagnóstico, comparación, medición, opción, rápida, más, crédito, etc.)
+- **LUFS page em dash**: SoundCloud `'—'` → `'-'` (MR voice rule: no em dashes)
+- **LUFS page bilingual CD target**: Split `'-9 a -12 LUFS'` into `targetEs`/`targetEn` fields with language-aware rendering
+- **Comparison page "5 metrics" (ES + EN)**: Removed LUFS from parenthetical list in both languages (LUFS has weight 0, only 5 metrics are weighted)
+
+#### Audit Results (5 parallel agents + manual cross-page checks)
+| Page | Voice | Accuracy | Accents | Bilingual | Technical |
+|------|-------|----------|---------|-----------|-----------|
+| Is My Mix Ready | PASS | PASS | PASS | PASS | PASS |
+| Prepare Mix | PASS | PASS | PASS | PASS | PASS |
+| LUFS for Streaming | PASS (fixed) | PASS | PASS | PASS (fixed) | PASS |
+| Mixing vs Mastering | PASS | PASS | PASS | PASS | PASS |
+| MR vs Competitors | PASS (fixed) | PASS (fixed) | PASS (fixed) | PASS | PASS |
+
 #### SEO Plan Status
 - [x] Phase 1: Meta tags, FAQ schema, nav links, AI crawler access
-- [x] Phase 2: 5 authority pages + sitemap update
+- [x] Phase 2: 5 authority pages + sitemap update + audit fixes
 - [ ] Phase 3: Third-party presence (Stack Overflow answers, forum posts, Quora)
 - [ ] Phase 4: Track AI citations (monitor Google AI Overviews, ChatGPT, Perplexity)
+
+#### Commits to main (Session 2026-03-01)
+1. `84f0109` - feat: Phase 2 SEO — 5 bilingual authority pages + sitemap update
+
+### Session 2026-03-01 Part 2 — Final Comprehensive Audit Fixes
+
+#### Context
+Continued from Phase 2 SEO session. 4 parallel audit agents (voice/copy, SEO/AI, learn pages, secondary pages) found issues across severity levels. All fixes applied, verified by agent, build clean.
+
+#### Changes Applied (commit `ae8849d`)
+
+**CRITICAL — True Peak threshold:**
+- `is-my-mix-ready`: 4 locations changed 0 dBTP → -1 dBTP (descriptions, problem labels, checklist)
+- `lufs-for-streaming`: 2 locations changed 0 dBTP → -1 dBTP (ES + EN)
+
+**CRITICAL — Per-page SEO metadata:**
+- New `useLearnMeta` hook in `LearnContext.tsx` — sets document.title, meta description, og:title, og:description, og:type via useEffect
+- All 5 learn pages now have unique bilingual SEO titles + descriptions targeting specific search queries
+- Workaround for `'use client'` layout blocking server-side metadata export
+
+**HIGH — JSON-LD scoping + robots.txt:**
+- Moved 4 schemas (SoftwareApplication, HowTo, FAQPage, Book) from `layout.tsx` to `page.tsx` as `HOMEPAGE_JSONLD` array
+- Kept only Organization schema in `layout.tsx` (site-wide)
+- Fixed `operatingSystem: 'Web Browser'` → `'Web'`, `priceValidUntil` → `'2027-12-31'`, removed WhatsApp from sameAs
+- `robots.txt`: AI crawler directives (GPTBot, ClaudeBot, PerplexityBot, Google-Extended), auth/subscription/prospecting disallowed
+- Sitemap homepage lastmod updated to 2026-03-01
+
+**MEDIUM — Score colors:**
+- Dashboard + history `getScoreColor`: `>=80` → `>=85` for green, removed blue band (3-zone: green/amber/red)
+
+**MEDIUM — Copy fixes:**
+- Dashboard + history: "vale la pena" → "conviene" (4 locations), "máster" → "master" (2 locations)
+- Subscription: "Cancellation failed" → "Subscription could not be cancelled", "conexion" → "conexión"
+- AuthModal: `#fecaca` → `var(--mr-red)`, `#bbf7d0` → `var(--mr-green)` (dark mode fix)
+- is-my-mix-ready: "bloquean" → "impiden" (near-forbidden word)
+
+**MEDIUM — Cross-links completed:**
+- All 5 learn pages now link to all 4 siblings (was missing competitors on 3 pages, lufs on competitors, mixing-vs on prepare-mix)
+
+**LOW — Dead code + accessibility:**
+- Dashboard: missing `¿` in `addonAvailable` key fixed
+- Signup: dead `cancelAnytime` translation key removed (ES + EN)
+- Layout: `alt=""` added to FB pixel `<img>`
+- Page.tsx: FLAC removed from `allowedTypes` and `allowedExtensions`
+
+#### Verification
+- Agent audited all learn page changes: imports, cross-links, accents, brand name, True Peak — ALL PASS
+- `npx next build` → clean, 28 routes, zero errors
+- Diff reviewed for all 17 files — only improvements, no regressions
+
+#### Commits to main (Session 2026-03-01 Part 2)
+1. `ae8849d` - fix: final audit — SEO metadata, score colors, cross-links, copy, accessibility
+
+**Git state**: main on `ae8849d`, pushed. Build clean. All 28 routes compiled.
