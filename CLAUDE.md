@@ -3915,3 +3915,49 @@ Continued from Phase 2 SEO session. 4 parallel audit agents (voice/copy, SEO/AI,
 1. `ae8849d` - fix: final audit — SEO metadata, score colors, cross-links, copy, accessibility
 
 **Git state**: main on `ae8849d`, pushed. Build clean. All 28 routes compiled.
+
+---
+
+### Session 2026-03-01 Part 3 — Learn Pages Visual Polish + Competitors Philosophy
+
+#### What was done
+1. **Shared CSS classes in `globals.css`** — Added ~112 lines of reusable `.learn-*` classes:
+   - `.learn-card` (bg-card, border, radius, shadow, padding)
+   - `.learn-callout` (bg-elevated, 3px purple left accent)
+   - `.learn-section` (consistent spacing wrapper)
+   - `.learn-cta` (gradient button with hover translateY + shadow, CSS-only)
+   - `.learn-table` (striped rows, hover, styled th/td)
+   - `.learn-badge` (inline chip)
+   - `.learn-link-card` (related article card with hover lift)
+   - `.learn-card--green/amber/red/purple` (left border color variants)
+   - All classes use only `var(--mr-*)` tokens — dark/light mode compatible
+
+2. **Competitors page philosophy section** — Added bilingual "Nuestro enfoque / Our Approach" section:
+   - Key message: MR is a diagnostic analysis tool, not AI automation
+   - Contrasts with Mix Check (funnels to AI mastering), LANDR/eMastered (replace human engineer)
+   - Emphasizes: if you need mixing/mastering help, work is done by a **human engineer** (Matías, 300+ masters, Latin Grammy credit) — not an algorithm
+   - Rendered as `.learn-callout` with purple left border accent
+
+3. **All 5 learn pages visually polished** (parallel agents, one per page):
+   - `is-my-mix-ready`: Score range cards with `.learn-card--green/amber/red`, metric sections in cards, analogies in callouts
+   - `prepare-mix-for-mastering`: 10 steps in `.learn-card` with gradient number circles, analogies + export checklist in callouts
+   - `lufs-for-streaming`: Platform table uses `.learn-table`, LUFS badges use `.learn-badge`, removed 4 unused inline style objects
+   - `mixing-vs-mastering`: Comparison table uses `.learn-table`, "what mastering can't fix" in `.learn-card--red`
+   - `mastering-ready-vs-competitors`: Philosophy section, VS sections in cards, limitations in callout, feature matrix table styled
+
+#### Files modified (6)
+- `app/globals.css`
+- `app/learn/is-my-mix-ready/page.tsx`
+- `app/learn/prepare-mix-for-mastering/page.tsx`
+- `app/learn/lufs-for-streaming/page.tsx`
+- `app/learn/mixing-vs-mastering/page.tsx`
+- `app/learn/mastering-ready-vs-competitors/page.tsx`
+
+#### Verification
+- Agent audited all 5 pages: JSX structure, className attributes, bilingual content, accents, CTAs, link cards, dark mode — ALL PASS
+- `npx next build` → clean, 30 routes, zero errors
+
+#### Commits to main (Session 2026-03-01 Part 3)
+1. `4ac6a86` - ux: learn pages visual polish + competitors philosophy section
+
+**Git state**: main on `4ac6a86`, pushed. Build clean. All 30 routes compiled.
