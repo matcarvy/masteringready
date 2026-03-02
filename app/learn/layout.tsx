@@ -198,22 +198,47 @@ function LearnFooter() {
             </div>
           </div>
 
-          {/* About */}
+          {/* Resources */}
           <div>
             <h4 style={{ fontWeight: '600', color: '#ffffff', marginBottom: '1rem' }}>
-              {lang === 'es' ? 'Acerca de' : 'About'}
+              {lang === 'es' ? 'Recursos' : 'Resources'}
             </h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              <p style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.875rem', lineHeight: '1.6' }}>
-                {lang === 'es'
-                  ? 'Análisis profesional de mezclas basado en la metodología Mastering Ready.'
-                  : 'Professional mix analysis based on the Mastering Ready methodology.'}
-              </p>
+              <Link href="/learn/is-my-mix-ready" style={footerLinkStyle}
+                onMouseEnter={(e) => e.currentTarget.style.color = '#ffffff'}
+                onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)'}
+              >
+                {lang === 'es' ? '¿Mi mezcla está lista?' : 'Is my mix ready?'}
+              </Link>
+              <Link href="/learn/prepare-mix-for-mastering" style={footerLinkStyle}
+                onMouseEnter={(e) => e.currentTarget.style.color = '#ffffff'}
+                onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)'}
+              >
+                {lang === 'es' ? 'Preparar mezcla para mastering' : 'Prepare mix for mastering'}
+              </Link>
+              <Link href="/learn/lufs-for-streaming" style={footerLinkStyle}
+                onMouseEnter={(e) => e.currentTarget.style.color = '#ffffff'}
+                onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)'}
+              >
+                {lang === 'es' ? 'LUFS para streaming' : 'LUFS for streaming'}
+              </Link>
+              <Link href="/learn/mixing-vs-mastering" style={footerLinkStyle}
+                onMouseEnter={(e) => e.currentTarget.style.color = '#ffffff'}
+                onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)'}
+              >
+                {lang === 'es' ? 'Mezcla vs mastering' : 'Mixing vs mastering'}
+              </Link>
+              <Link href="/learn/mastering-ready-vs-competitors" style={footerLinkStyle}
+                onMouseEnter={(e) => e.currentTarget.style.color = '#ffffff'}
+                onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)'}
+              >
+                {lang === 'es' ? 'Mastering Ready vs alternativas' : 'Mastering Ready vs alternatives'}
+              </Link>
               <a href="https://payhip.com/b/TXrCn" target="_blank" rel="noopener noreferrer" style={footerLinkStyle}
                 onMouseEnter={(e) => e.currentTarget.style.color = '#ffffff'}
                 onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)'}
               >
-                <span>📖</span><span>{lang === 'es' ? 'Profundiza en el eBook' : 'Learn more in the eBook'}</span>
+                <span>📖</span><span>{lang === 'es' ? 'eBook Mastering Ready' : 'Mastering Ready eBook'}</span>
               </a>
             </div>
           </div>

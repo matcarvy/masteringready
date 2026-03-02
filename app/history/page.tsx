@@ -129,7 +129,7 @@ function getCtaForScore(score: number, lang: 'es' | 'en'): { title: string; body
   }
   if (score >= 75) {
     return lang === 'es'
-      ? { title: 'Tu mezcla está cerca.', body: 'Hay aspectos técnicos que vale la pena revisar antes del mastering. Si necesitas orientación, escríbenos.', button: 'Preparar mi mezcla', action: 'preparation' }
+      ? { title: 'Tu mezcla está cerca.', body: 'Hay aspectos técnicos que conviene revisar antes del mastering. Si necesitas orientación, escríbenos.', button: 'Preparar mi mezcla', action: 'preparation' }
       : { title: 'Your mix is close.', body: 'There are technical aspects worth reviewing before mastering. If you need guidance, write us.', button: 'Prepare my mix', action: 'preparation' }
   }
   if (score >= 60) {
@@ -500,9 +500,8 @@ export default function HistoryPage() {
 
   // Helpers
   const getScoreColor = (score: number) => {
-    if (score >= 80) return 'var(--mr-green)'
-    if (score >= 60) return 'var(--mr-blue)'
-    if (score >= 40) return 'var(--mr-amber)'
+    if (score >= 85) return 'var(--mr-green)'
+    if (score >= 60) return 'var(--mr-amber)'
     return 'var(--mr-red)'
   }
 
@@ -1147,7 +1146,7 @@ export default function HistoryPage() {
                         fontStyle: 'italic'
                       }}>
                         {lang === 'es'
-                          ? 'Estos indicadores no significan que tu mezcla esté mal, sino que hay decisiones técnicas que vale la pena revisar antes del máster final.'
+                          ? 'Estos indicadores no significan que tu mezcla esté mal, sino que hay decisiones técnicas que conviene revisar antes del master final.'
                           : 'These indicators don\'t mean your mix is wrong, but there are technical decisions worth reviewing before the final master.'}
                       </p>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>

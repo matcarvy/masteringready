@@ -319,6 +319,62 @@ function InterpretativeSection({ title, interpretation, recommendation, metrics,
   )
 }
 
+// Homepage-only structured data (moved from layout.tsx to avoid appearing on all pages)
+const HOMEPAGE_JSONLD = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'SoftwareApplication',
+    name: 'Mastering Ready',
+    applicationCategory: 'MultimediaApplication',
+    operatingSystem: 'Web',
+    offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD', availability: 'https://schema.org/InStock', priceValidUntil: '2027-12-31' },
+    author: { '@type': 'Person', name: 'Matías Carvajal', url: 'https://matcarvy.com' },
+    description: 'Analyze your audio mix in 60 seconds. Detect headroom, LUFS, true peak and stereo balance issues before sending to mastering.',
+    url: 'https://masteringready.com',
+    screenshot: 'https://masteringready.com/og-image.png',
+    featureList: ['Headroom Analysis', 'LUFS Measurement', 'True Peak Detection', 'Stereo Balance', 'Frequency Analysis', 'Downloadable PDF Report'],
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'HowTo',
+    name: 'How to analyze your mix before mastering',
+    description: 'Step-by-step guide to verify your mix is ready for professional mastering using Mastering Ready.',
+    totalTime: 'PT2M',
+    tool: [{ '@type': 'HowToTool', name: 'Audio file (WAV, MP3, AIFF, AAC, M4A or OGG)' }],
+    step: [
+      { '@type': 'HowToStep', name: 'Upload your mix', text: 'Drag and drop your audio file (WAV, MP3, AIFF, AAC, M4A or OGG, max 200MB) into the analyzer.', position: 1 },
+      { '@type': 'HowToStep', name: 'Wait for analysis', text: 'The system analyzes headroom, LUFS, true peak, stereo balance and frequencies in under 60 seconds.', position: 2 },
+      { '@type': 'HowToStep', name: 'Review results', text: 'Get a score from 0-100 with interpretations and specific recommendations for your mix.', position: 3 },
+      { '@type': 'HowToStep', name: 'Download report', text: 'Generate a professional PDF with all technical details to share or archive.', position: 4 },
+    ],
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: [
+      { '@type': 'Question', name: 'What does Mastering Ready do?', acceptedAnswer: { '@type': 'Answer', text: 'Mastering Ready analyzes your audio mix and tells you if it is ready for mastering. It measures headroom, LUFS, true peak, stereo balance, and frequency distribution, then gives you a 0 to 100 score with specific recommendations. It does not master your audio. It helps you identify what to fix before sending your mix to a mastering engineer.' } },
+      { '@type': 'Question', name: 'Is my audio stored after analysis?', acceptedAnswer: { '@type': 'Answer', text: 'No. Mastering Ready never stores your audio files. Your file is analyzed in memory and immediately deleted. Only the derived metrics and scores are saved to your account. Your music stays yours.' } },
+      { '@type': 'Question', name: 'How much headroom should my mix have before mastering?', acceptedAnswer: { '@type': 'Answer', text: 'A well-prepared mix should have between -6 dBFS and -3 dBFS of headroom (peak level). This gives the mastering engineer enough room to work with EQ, compression, and limiting without clipping. Mastering Ready measures your headroom and tells you if it falls within the recommended range.' } },
+      { '@type': 'Question', name: 'What LUFS should my mix be before mastering?', acceptedAnswer: { '@type': 'Answer', text: 'Before mastering, your mix should typically sit between -24 and -16 LUFS integrated, with -18 LUFS being a comfortable center point. This is not the final loudness target, which depends on the streaming platform. The loudness of your mix is not the priority at this stage. Mastering Ready measures your integrated LUFS and lets you know if your level needs attention before sending to mastering.' } },
+      { '@type': 'Question', name: 'Is Mastering Ready free?', acceptedAnswer: { '@type': 'Answer', text: 'Yes. You get 2 free full analyses with complete reports and PDF downloads when you create an account. No credit card required. After that, you can purchase individual analyses for $5.99 or subscribe to Pro for $9.99 per month (30 analyses, regional pricing available).' } },
+      { '@type': 'Question', name: 'What audio formats does Mastering Ready support?', acceptedAnswer: { '@type': 'Answer', text: 'Mastering Ready supports WAV, MP3, AIFF, AIF, AAC, M4A, and OGG files up to 200 MB. For the most accurate analysis, we recommend uploading WAV files at the highest resolution available from your DAW.' } },
+      { '@type': 'Question', name: 'How is the 0 to 100 score calculated?', acceptedAnswer: { '@type': 'Answer', text: 'The score is based on weighted analysis of five technical metrics: headroom, true peak, peak to loudness ratio (PLR), stereo correlation, and frequency balance. Each metric is evaluated against professional mastering standards. A score of 85 or above means your mix is technically ready for mastering.' } },
+      { '@type': 'Question', name: 'Can mastering fix a bad mix?', acceptedAnswer: { '@type': 'Answer', text: 'No. Mastering can enhance a good mix but cannot fix fundamental problems like poor balance, excessive headroom issues, or phase problems. That is why analyzing your mix before mastering matters. Mastering Ready identifies the specific issues you should address in your mix so the mastering engineer can do their best work.' } },
+    ],
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'Book',
+    name: 'Mastering Ready: Ensure mastering success from the mix',
+    author: { '@type': 'Person', name: 'Matías Carvajal' },
+    description: 'A guide to understanding which decisions truly matter when preparing a mix for mastering. Learn to deliver clear, stable, and well-prepared mixes.',
+    url: 'https://payhip.com/b/TXrCn',
+    offers: { '@type': 'Offer', price: '15', priceCurrency: 'USD', availability: 'https://schema.org/InStock' },
+    inLanguage: 'es',
+    bookFormat: 'https://schema.org/EBook',
+  },
+]
+
 function Home() {
   // Auth state - check if user is logged in
   const { user, session, loading: authLoading, isAdmin, savePendingAnalysis, pendingAnalysisQuotaExceeded, clearPendingAnalysisQuotaExceeded, pendingAnalysisSaved, clearPendingAnalysisSaved } = useAuth()
@@ -758,8 +814,8 @@ function Home() {
   // File validation helper
   const validateFile = (file: File): { valid: boolean; error?: string } => {
     const maxSize = 200 * 1024 * 1024 // 200MB
-    const allowedTypes = ['audio/wav', 'audio/mpeg', 'audio/mp3', 'audio/aiff', 'audio/x-aiff', 'audio/aac', 'audio/mp4', 'audio/x-m4a', 'audio/ogg', 'audio/opus', 'audio/flac', 'audio/x-flac']
-    const allowedExtensions = ['.wav', '.mp3', '.aiff', '.aif', '.aac', '.m4a', '.ogg', '.flac']
+    const allowedTypes = ['audio/wav', 'audio/mpeg', 'audio/mp3', 'audio/aiff', 'audio/x-aiff', 'audio/aac', 'audio/mp4', 'audio/x-m4a', 'audio/ogg', 'audio/opus']
+    const allowedExtensions = ['.wav', '.mp3', '.aiff', '.aif', '.aac', '.m4a', '.ogg']
     
     const fileName = file.name.toLowerCase()
     const hasValidExtension = allowedExtensions.some(ext => fileName.endsWith(ext))
@@ -1513,7 +1569,7 @@ ${new Date().toLocaleDateString()}
           const url = URL.createObjectURL(blob)
           const a = document.createElement('a')
           a.href = url
-          const filename = result.filename?.replace(/\.(wav|mp3|flac|aac|m4a|ogg|aiff|aif)$/i, '') || 'análisis'
+          const filename = result.filename?.replace(/\.(wav|mp3|aac|m4a|ogg|aiff|aif)$/i, '') || 'análisis'
           a.download = `masteringready-${lang === 'es' ? 'detallado' : 'detailed'}-${filename}.pdf`
           document.body.appendChild(a)
           a.click()
@@ -1564,7 +1620,7 @@ by Matías Carvajal
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      const filename = result.filename?.replace(/\.(wav|mp3|flac)$/i, '') || 'análisis'
+      const filename = result.filename?.replace(/\.(wav|mp3|aiff|aif|aac|m4a|ogg)$/i, '') || 'análisis'
       a.download = `masteringready-${lang === 'es' ? 'detallado' : 'detailed'}-${filename}.txt`
       document.body.appendChild(a)
       a.click()
@@ -1669,6 +1725,11 @@ by Matías Carvajal
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--mr-bg-card)', fontFamily: 'Inter, system-ui, sans-serif' }}>
+      {/* Homepage-only structured data */}
+      {HOMEPAGE_JSONLD.map((schema, i) => (
+        <script key={i} type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
+      ))}
+
       {/* Navigation */}
       <nav style={{
         position: 'fixed',
@@ -1991,7 +2052,7 @@ by Matías Carvajal
                 padding: 'clamp(0.375rem, 1vw, 0.5rem) clamp(0.75rem, 2vw, 1rem)'
               }}>
                 <span style={{ fontSize: 'clamp(0.8rem, 1.8vw, 1rem)', fontWeight: '500' }}>
-                  ✨ {lang === 'es' 
+                  🎚️ {lang === 'es'
                     ? 'Metodología probada en más de 300 producciones profesionales'
                     : 'Methodology proven in over 300 professional productions'}
                 </span>
@@ -2620,7 +2681,7 @@ by Matías Carvajal
                   Mix Review + Master
                 </h3>
                 <p style={{ fontSize: '0.875rem', color: 'var(--mr-text-tertiary)' }}>
-                  {lang === 'es' ? 'Revisamos tu mezcla, te damos feedback y masterizamos cuando esté lista.' : 'We review your mix, give you feedback, and master it when it\'s ready.'}
+                  {lang === 'es' ? 'Revisamos tu mezcla, te damos retroalimentación y masterizamos cuando esté lista.' : 'We review your mix, give you feedback, and master it when it\'s ready.'}
                 </p>
               </div>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', marginBottom: '0.75rem' }}>
@@ -2643,7 +2704,7 @@ by Matías Carvajal
               </span>
               <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 1.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                 {[
-                  lang === 'es' ? 'Feedback detallado de tu mezcla' : 'Detailed mix feedback',
+                  lang === 'es' ? 'Revisión detallada de tu mezcla' : 'Detailed mix feedback',
                   lang === 'es' ? '1 ronda de revisión incluida' : '1 revision round included',
                   lang === 'es' ? 'Master profesional' : 'Professional master',
                   lang === 'es' ? '5-7 días hábiles' : '5-7 business days'
@@ -3019,7 +3080,7 @@ by Matías Carvajal
                     id="file-input"
                     type="file"
                     aria-label={lang === 'es' ? 'Seleccionar archivo de audio' : 'Select audio file'}
-                    accept=".wav,.mp3,.aiff,.aif,.aac,.m4a,.ogg,.flac"
+                    accept=".wav,.mp3,.aiff,.aif,.aac,.m4a,.ogg"
                     onChange={(e) => {
                       const selectedFile = e.target.files?.[0] || null
                       
@@ -3057,11 +3118,11 @@ by Matías Carvajal
                   </p>
                   <p style={{ fontSize: 'clamp(0.8125rem, 2vw, 0.875rem)', color: 'var(--mr-text-secondary)' }}>
                     {lang === 'es'
-                      ? 'o haz click para seleccionar'
+                      ? 'o haz clic para seleccionar'
                       : 'or click to select'}
                   </p>
                   <p style={{ fontSize: '0.75rem', color: 'var(--mr-text-tertiary)', marginTop: '0.5rem' }}>
-                    {lang === 'es' ? 'WAV, MP3, AIFF, FLAC, AAC, M4A u OGG • Máximo 200MB' : 'WAV, MP3, AIFF, FLAC, AAC, M4A or OGG • Max 200MB'}
+                    {lang === 'es' ? 'WAV, MP3, AIFF, AAC, M4A u OGG • Máximo 200MB' : 'WAV, MP3, AIFF, AAC, M4A or OGG • Max 200MB'}
                   </p>
                 </div>
               </div>
@@ -3114,8 +3175,8 @@ by Matías Carvajal
                       </p>
                       <p style={{ fontSize: '0.75rem', color: 'var(--mr-amber-text)' }}>
                         {lang === 'es'
-                          ? `Tu archivo será comprimido automáticamente de ${(file.size / 1024 / 1024).toFixed(1)}MB a ~${Math.min(35, (file.size / 1024 / 1024) * 0.3).toFixed(1)}MB antes del análisis. Esto no afecta la fidelidad del análisis. Toma ~10-15 segundos.`
-                          : `Your file will be automatically compressed from ${(file.size / 1024 / 1024).toFixed(1)}MB to ~${Math.min(35, (file.size / 1024 / 1024) * 0.3).toFixed(1)}MB before analysis. This does not affect analysis fidelity. Takes ~10-15 seconds.`}
+                          ? `Tu archivo se comprimirá antes del análisis: de ${(file.size / 1024 / 1024).toFixed(1)}MB a ~${Math.min(35, (file.size / 1024 / 1024) * 0.3).toFixed(1)}MB. Esto no afecta la fidelidad del análisis. Toma ~10-15 segundos.`
+                          : `Your file will be compressed before analysis: from ${(file.size / 1024 / 1024).toFixed(1)}MB to ~${Math.min(35, (file.size / 1024 / 1024) * 0.3).toFixed(1)}MB. This does not affect analysis fidelity. Takes ~10-15 seconds.`}
                       </p>
                     </div>
                   )}
@@ -3765,7 +3826,7 @@ by Matías Carvajal
                           fontStyle: 'italic'
                         }}>
                           {lang === 'es'
-                            ? 'Estos indicadores no significan que tu mezcla esté mal, sino que hay decisiones técnicas que vale la pena revisar antes del máster final.'
+                            ? 'Estos indicadores no significan que tu mezcla esté mal, sino que hay decisiones técnicas que conviene revisar antes del master final.'
                             : 'These indicators don\'t mean your mix is wrong, but there are technical decisions worth reviewing before the final master.'}
                         </p>
                         
@@ -3925,7 +3986,7 @@ by Matías Carvajal
                             <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--mr-green)' }}></span>
                             {lang === 'es' ? 'Margen cómodo' : 'Comfortable margin'}
                           </span>
-                          <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }} title={lang === 'es' ? 'Funcional, con margen suficiente para el máster' : 'Functional, with sufficient margin for mastering'}>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }} title={lang === 'es' ? 'Funcional, con margen suficiente para el master' : 'Functional, with sufficient margin for mastering'}>
                             <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--mr-blue)' }}></span>
                             {lang === 'es' ? 'Margen suficiente' : 'Sufficient margin'}
                           </span>
@@ -3933,7 +3994,7 @@ by Matías Carvajal
                             <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--mr-amber)' }}></span>
                             {lang === 'es' ? 'Margen reducido' : 'Reduced margin'}
                           </span>
-                          <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }} title={lang === 'es' ? 'Revisión prioritaria antes del máster final' : 'Priority review before final master'}>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }} title={lang === 'es' ? 'Revisión prioritaria antes del master final' : 'Priority review before final master'}>
                             <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--mr-red)' }}></span>
                             {lang === 'es' ? 'Margen comprometido' : 'Compromised margin'}
                           </span>
@@ -4816,7 +4877,7 @@ by Matías Carvajal
                     {analysisRating ? '👍' : '👎'}
                   </div>
                   <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: 'var(--mr-green-text)', marginBottom: '0.25rem' }}>
-                    {lang === 'es' ? '¡Gracias por tu feedback!' : 'Thank you for your feedback!'}
+                    {lang === 'es' ? '¡Gracias por tu opinión!' : 'Thank you for your feedback!'}
                   </h3>
                   <p style={{ fontSize: '0.8125rem', color: 'var(--mr-green-text)' }}>
                     {lang === 'es'
@@ -5171,7 +5232,7 @@ by Matías Carvajal
                   }}>
                     -37%
                   </span>
-                  <span>{lang === 'es' ? 'Precio especial por tiempo limitado' : 'Limited-time special price'}</span>
+                  <span>{lang === 'es' ? 'Precio de lanzamiento' : 'Launch price'}</span>
                 </div>
                 <p style={{
                   fontSize: '0.8rem',
@@ -5300,20 +5361,54 @@ by Matías Carvajal
                 fontWeight: '600', 
                 color: '#ffffff' 
               }}>
-                {lang === 'es' ? 'Acerca de' : 'About'}
+                {lang === 'es' ? 'Recursos' : 'Resources'}
               </h4>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                <p style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.875rem', lineHeight: '1.6' }}>
-                  {lang === 'es'
-                    ? 'Análisis profesional de mezclas basado en la metodología Mastering Ready.'
-                    : 'Professional mix analysis based on the Mastering Ready methodology.'}
-                </p>
-                <a 
+                <Link
+                  href="/learn/is-my-mix-ready"
+                  style={{
+                    color: 'rgba(255, 255, 255, 0.7)',
+                    textDecoration: 'none',
+                    fontSize: '0.875rem',
+                    transition: 'color 0.2s'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.color = '#ffffff'}
+                  onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)'}
+                >
+                  {lang === 'es' ? '¿Mi mezcla está lista?' : 'Is my mix ready?'}
+                </Link>
+                <Link
+                  href="/learn/prepare-mix-for-mastering"
+                  style={{
+                    color: 'rgba(255, 255, 255, 0.7)',
+                    textDecoration: 'none',
+                    fontSize: '0.875rem',
+                    transition: 'color 0.2s'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.color = '#ffffff'}
+                  onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)'}
+                >
+                  {lang === 'es' ? 'Preparar mezcla para mastering' : 'Prepare mix for mastering'}
+                </Link>
+                <Link
+                  href="/learn/lufs-for-streaming"
+                  style={{
+                    color: 'rgba(255, 255, 255, 0.7)',
+                    textDecoration: 'none',
+                    fontSize: '0.875rem',
+                    transition: 'color 0.2s'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.color = '#ffffff'}
+                  onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)'}
+                >
+                  {lang === 'es' ? 'LUFS para streaming' : 'LUFS for streaming'}
+                </Link>
+                <a
                   href="https://payhip.com/b/TXrCn"
                   target="_blank"
                   rel="noopener noreferrer"
-                  style={{ 
-                    color: 'rgba(255, 255, 255, 0.7)', 
+                  style={{
+                    color: 'rgba(255, 255, 255, 0.7)',
                     textDecoration: 'none',
                     fontSize: '0.875rem',
                     display: 'flex',
@@ -5325,23 +5420,7 @@ by Matías Carvajal
                   onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)'}
                 >
                   <span>📖</span>
-                  <span>{lang === 'es' ? 'Profundiza en el eBook' : 'Learn more in the eBook'}</span>
-                </a>
-                <a
-                  href="https://www.masteringready.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{
-                    color: 'rgba(255, 255, 255, 0.7)',
-                    textDecoration: 'none',
-                    fontSize: '0.875rem',
-                    transition: 'color 0.2s',
-                    display: 'block'
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.color = '#ffffff'}
-                  onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)'}
-                >
-                  masteringready.com
+                  <span>{lang === 'es' ? 'eBook Mastering Ready' : 'Mastering Ready eBook'}</span>
                 </a>
               </div>
             </div>
@@ -5687,7 +5766,7 @@ by Matías Carvajal
               </h3>
               <p style={{ color: 'var(--mr-text-secondary)', fontSize: '0.875rem' }}>
                 {lang === 'es'
-                  ? 'Tu feedback nos ayuda a mejorar Mastering Ready'
+                  ? 'Tu opinión nos ayuda a mejorar Mastering Ready'
                   : 'Your feedback helps us improve Mastering Ready'}
               </p>
             </div>
@@ -5851,7 +5930,7 @@ by Matías Carvajal
                   e.currentTarget.style.boxShadow = 'none'
                 }}
               >
-                {lang === 'es' ? 'Enviar Feedback' : 'Send Feedback'}
+                {lang === 'es' ? 'Enviar opinión' : 'Send Feedback'}
               </button>
             </div>
           </div>

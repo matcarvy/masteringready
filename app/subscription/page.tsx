@@ -328,7 +328,7 @@ export default function SubscriptionPage() {
       })
       const data = await response.json()
       if (!response.ok) {
-        setCancelError(data.error || (lang === 'es' ? 'Error al cancelar' : 'Cancellation failed'))
+        setCancelError(data.error || (lang === 'es' ? 'No se pudo cancelar la suscripción' : 'Subscription could not be cancelled'))
         setCancelling(false)
         return
       }
@@ -337,7 +337,7 @@ export default function SubscriptionPage() {
       window.location.reload()
     } catch (error) {
       console.error('Cancel error:', error)
-      setCancelError(lang === 'es' ? 'Error de conexion' : 'Connection error')
+      setCancelError(lang === 'es' ? 'Error de conexión' : 'Connection error')
       setCancelling(false)
     }
   }

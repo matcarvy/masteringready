@@ -1,10 +1,17 @@
 'use client'
 
 import Link from 'next/link'
-import { useLearn } from '../LearnContext'
+import { useLearn, useLearnMeta } from '../LearnContext'
 
 export default function IsMyMixReadyPage() {
   const { lang } = useLearn()
+
+  useLearnMeta({
+    titleEs: '¿Tu mezcla está lista para mastering? 5 métricas clave',
+    titleEn: 'Is Your Mix Ready for Mastering? 5 Key Metrics',
+    descEs: 'Descubre si tu mezcla está lista para mastering con 5 métricas técnicas: headroom, True Peak, PLR, imagen estéreo y balance de frecuencias. Analiza gratis con Mastering Ready.',
+    descEn: 'Find out if your mix is ready for mastering with 5 technical metrics: headroom, True Peak, PLR, stereo image, and frequency balance. Analyze free with Mastering Ready.',
+  })
 
   return (
     <article style={{
@@ -105,8 +112,8 @@ export default function IsMyMixReadyPage() {
         </h3>
         <p style={pStyle}>
           {lang === 'es'
-            ? 'Los picos reales deben estar por debajo de 0 dBTP. El True Peak mide los picos inter-muestra, los que ocurren entre las muestras digitales y que un medidor convencional no detecta. Si tu True Peak supera 0 dBTP, hay clipping digital que se traduce en distorsión audible, especialmente después de la conversión a formatos comprimidos como MP3 o AAC.'
-            : 'True peaks must stay below 0 dBTP. True Peak measures inter-sample peaks, the ones that occur between digital samples and that a conventional meter misses. If your True Peak exceeds 0 dBTP, there is digital clipping that translates into audible distortion, especially after conversion to compressed formats like MP3 or AAC.'}
+            ? 'Los picos reales deben estar por debajo de -1 dBTP. El True Peak mide los picos inter-muestra, los que ocurren entre las muestras digitales y que un medidor convencional no detecta. Si tu True Peak supera -1 dBTP, estás demasiado cerca del techo digital y el ingeniero de mastering no tiene margen para trabajar.'
+            : 'True peaks must stay below -1 dBTP. True Peak measures inter-sample peaks, the ones that occur between digital samples and that a conventional meter misses. If your True Peak exceeds -1 dBTP, you are too close to the digital ceiling and the mastering engineer has no room to work.'}
         </p>
 
         {/* PLR */}
@@ -190,8 +197,8 @@ export default function IsMyMixReadyPage() {
             },
             {
               range: '40 – 59',
-              color: 'var(--mr-amber)',
-              bg: 'var(--mr-amber-bg)',
+              color: 'var(--mr-red)',
+              bg: 'var(--mr-red-bg)',
               es: 'Necesita trabajo. Hay problemas técnicos que el mastering no puede resolver. Vuelve a tu DAW.',
               en: 'Needs work. There are technical problems that mastering cannot solve. Go back to your DAW.',
             },
@@ -236,7 +243,7 @@ export default function IsMyMixReadyPage() {
         {/* ===== H2: COMMON PROBLEMS ===== */}
         <h2 style={h2Style}>
           {lang === 'es'
-            ? 'Problemas comunes que bloquean el mastering'
+            ? 'Problemas comunes que impiden un buen mastering'
             : 'Common problems that block mastering readiness'}
         </h2>
 
@@ -249,8 +256,8 @@ export default function IsMyMixReadyPage() {
               descEn: 'The most common mistake. Peaks sit at -1 dBFS or higher. The fix is to pull down the master bus fader 3 to 6 dB. Do not touch the mix proportions, just lower the overall volume.',
             },
             {
-              es: 'Clipping digital (True Peak sobre 0 dBTP)',
-              en: 'Digital clipping (True Peak above 0 dBTP)',
+              es: 'True Peak sobre -1 dBTP (sin margen)',
+              en: 'True Peak above -1 dBTP (no margin)',
               descEs: 'Hay distorsión inter-muestra que se escucha especialmente en conversiones a MP3/AAC. Baja el volumen y revisa si tienes un limitador en el master bus. Si lo tienes, quítalo. El mastering pone el suyo.',
               descEn: 'There is inter-sample distortion that becomes audible especially in MP3/AAC conversions. Lower the volume and check if you have a limiter on the master bus. If you do, remove it. Mastering will apply its own.',
             },
@@ -369,7 +376,7 @@ export default function IsMyMixReadyPage() {
             {(lang === 'es' ? [
               'Quita el limitador y el compresor del master bus. El mastering pone los suyos.',
               'Baja el fader del master bus hasta que tus picos estén entre -6 y -3 dBFS.',
-              'Revisa que no haya clipping. Tu True Peak debe estar por debajo de 0 dBTP.',
+              'Revisa que no haya clipping. Tu True Peak debe estar por debajo de -1 dBTP.',
               'Escucha tu mezcla en mono. Si algo desaparece o suena raro, tienes un problema de fase.',
               'Compara tu balance de frecuencias con una referencia comercial del mismo género.',
               'Exporta en WAV o AIFF a la misma resolución de tu sesión (no hagas upsample).',
@@ -380,7 +387,7 @@ export default function IsMyMixReadyPage() {
             ] : [
               'Remove the limiter and compressor from the master bus. Mastering applies its own.',
               'Pull down the master bus fader until your peaks sit between -6 and -3 dBFS.',
-              'Check for clipping. Your True Peak must be below 0 dBTP.',
+              'Check for clipping. Your True Peak must be below -1 dBTP.',
               'Listen to your mix in mono. If something disappears or sounds weird, you have a phase problem.',
               'Compare your frequency balance against a commercial reference in the same genre.',
               'Export as WAV or AIFF at the same resolution as your session (do not upsample).',
@@ -467,6 +474,27 @@ export default function IsMyMixReadyPage() {
               ? 'Analizar mi mezcla →'
               : 'Analyze my mix →'}
           </Link>
+        </div>
+
+        {/* Related Articles */}
+        <div style={{ marginTop: '3rem' }}>
+          <h3 style={{ fontSize: '1.125rem', fontWeight: 600, marginBottom: '1rem', color: 'var(--mr-text-primary)' }}>
+            {lang === 'es' ? 'Artículos relacionados' : 'Related articles'}
+          </h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <Link href="/learn/prepare-mix-for-mastering" style={{ color: 'var(--mr-primary)', textDecoration: 'none', fontSize: '0.9375rem' }}>
+              {lang === 'es' ? '10 pasos para preparar tu mezcla para mastering' : '10 steps to prepare your mix for mastering'}
+            </Link>
+            <Link href="/learn/lufs-for-streaming" style={{ color: 'var(--mr-primary)', textDecoration: 'none', fontSize: '0.9375rem' }}>
+              {lang === 'es' ? 'LUFS para streaming: guía práctica' : 'LUFS for streaming: practical guide'}
+            </Link>
+            <Link href="/learn/mixing-vs-mastering" style={{ color: 'var(--mr-primary)', textDecoration: 'none', fontSize: '0.9375rem' }}>
+              {lang === 'es' ? 'Mezcla vs mastering: diferencias clave' : 'Mixing vs mastering: key differences'}
+            </Link>
+            <Link href="/learn/mastering-ready-vs-competitors" style={{ color: 'var(--mr-primary)', textDecoration: 'none', fontSize: '0.9375rem' }}>
+              {lang === 'es' ? 'Mastering Ready vs la competencia' : 'Mastering Ready vs competitors'}
+            </Link>
+          </div>
         </div>
 
     </article>

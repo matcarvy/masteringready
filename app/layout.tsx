@@ -153,13 +153,13 @@ const structuredData = {
     '@type': 'SoftwareApplication',
     name: 'Mastering Ready',
     applicationCategory: 'MultimediaApplication',
-    operatingSystem: 'Web Browser',
+    operatingSystem: 'Web',
     offers: {
       '@type': 'Offer',
       price: '0',
       priceCurrency: 'USD',
       availability: 'https://schema.org/InStock',
-      priceValidUntil: '2026-12-31'
+      priceValidUntil: '2027-12-31'
     },
     // aggregateRating removed — will add when real reviews exist
     author: {
@@ -190,14 +190,14 @@ const structuredData = {
     tool: [
       {
         '@type': 'HowToTool',
-        name: 'Audio file (WAV, MP3, AIFF, FLAC, AAC, M4A or OGG)'
+        name: 'Audio file (WAV, MP3, AIFF, AAC, M4A or OGG)'
       }
     ],
     step: [
       {
         '@type': 'HowToStep',
         name: 'Upload your mix',
-        text: 'Drag and drop your audio file (WAV, MP3, AIFF, FLAC, AAC, M4A or OGG, max 200MB) into the analyzer.',
+        text: 'Drag and drop your audio file (WAV, MP3, AIFF, AAC, M4A or OGG, max 200MB) into the analyzer.',
         position: 1
       },
       {
@@ -235,8 +235,7 @@ const structuredData = {
       availableLanguage: ['Spanish', 'English']
     },
     sameAs: [
-      'https://instagram.com/matcarvy',
-      'https://wa.me/573155576115'
+      'https://instagram.com/matcarvy'
     ]
   },
 
@@ -357,35 +356,11 @@ export default function RootLayout({
           }
         `}} />
 
-        {/* Structured Data */}
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify(structuredData.softwareApplication)
-          }}
-        />
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify(structuredData.howTo)
-          }}
-        />
+        {/* Organization Schema (site-wide) */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
             __html: JSON.stringify(structuredData.organization)
-          }}
-        />
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify(structuredData.faqPage)
-          }}
-        />
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify(structuredData.product)
           }}
         />
         
@@ -416,7 +391,7 @@ export default function RootLayout({
           fbq('track', 'PageView');
         `}} />
         <noscript>
-          <img height="1" width="1" style={{ display: 'none' }}
+          <img height="1" width="1" style={{ display: 'none' }} alt=""
             src="https://www.facebook.com/tr?id=1634157831233542&ev=PageView&noscript=1"
           />
         </noscript>

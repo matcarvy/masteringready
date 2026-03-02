@@ -93,7 +93,7 @@ const translations = {
     lifetimeLimit: 'para empezar',
     proAnalysesLeft: 'análisis restantes este mes',
     proLimit: 'de 30',
-    addonAvailable: 'Necesitas más? Compra un paquete adicional',
+    addonAvailable: '¿Necesitas más? Compra un paquete adicional',
     buyAddon: 'Comprar 10 análisis extra',
     singlePurchase: 'Comprar 1 análisis',
     limitReached: 'Límite alcanzado',
@@ -210,7 +210,7 @@ function getCtaForScore(score: number, lang: 'es' | 'en'): { title: string; body
   }
   if (score >= 75) {
     return lang === 'es'
-      ? { title: 'Tu mezcla está cerca.', body: 'Hay aspectos técnicos que vale la pena revisar antes del mastering. Si necesitas orientación, escríbenos.', button: 'Preparar mi mezcla', action: 'preparation' }
+      ? { title: 'Tu mezcla está cerca.', body: 'Hay aspectos técnicos que conviene revisar antes del mastering. Si necesitas orientación, escríbenos.', button: 'Preparar mi mezcla', action: 'preparation' }
       : { title: 'Your mix is close.', body: 'There are technical aspects worth reviewing before mastering. If you need guidance, write us.', button: 'Prepare my mix', action: 'preparation' }
   }
   if (score >= 60) {
@@ -643,9 +643,8 @@ function DashboardContent() {
 
   // Get score color
   const getScoreColor = (score: number) => {
-    if (score >= 80) return '#10b981'
-    if (score >= 60) return '#3b82f6'
-    if (score >= 40) return '#f59e0b'
+    if (score >= 85) return '#10b981'
+    if (score >= 60) return '#f59e0b'
     return '#ef4444'
   }
 
@@ -1608,7 +1607,7 @@ function DashboardContent() {
                         fontStyle: 'italic'
                       }}>
                         {lang === 'es'
-                          ? 'Estos indicadores no significan que tu mezcla esté mal, sino que hay decisiones técnicas que vale la pena revisar antes del máster final.'
+                          ? 'Estos indicadores no significan que tu mezcla esté mal, sino que hay decisiones técnicas que conviene revisar antes del master final.'
                           : 'These indicators don\'t mean your mix is wrong, but there are technical decisions worth reviewing before the final master.'}
                       </p>
 

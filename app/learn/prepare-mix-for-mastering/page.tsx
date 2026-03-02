@@ -1,16 +1,23 @@
 'use client'
 
 import Link from 'next/link'
-import { useLearn } from '../LearnContext'
+import { useLearn, useLearnMeta } from '../LearnContext'
 
 export default function PrepareMixForMasteringPage() {
   const { lang } = useLearn()
+
+  useLearnMeta({
+    titleEs: 'Cómo preparar tu mezcla para mastering: guía en 10 pasos',
+    titleEn: 'How to Prepare Your Mix for Mastering: 10-Step Guide',
+    descEs: 'Guía práctica para preparar tu mezcla antes de enviarla a mastering. Headroom, True Peak, exportación, dithering y más. Verifica gratis con Mastering Ready.',
+    descEn: 'Step-by-step guide to prepare your mix before sending it to mastering. Headroom, True Peak, export settings, dithering and more. Verify free with Mastering Ready.',
+  })
 
   return (
     <article style={{
       maxWidth: '800px',
       margin: '0 auto',
-      padding: '3rem 1.5rem 4rem',
+      padding: 'clamp(2rem, 6vw, 4rem) clamp(1rem, 5vw, 2rem)',
     }}>
         {/* H1 */}
         <h1 style={{
@@ -145,7 +152,7 @@ export default function PrepareMixForMasteringPage() {
             en="Reverb and delay are your depth tools. They create a sense of space, distance, and atmosphere. But when overused, they turn the mix into a puddle where nothing stands out."
           />
           <P lang={lang}
-            es="Usa pre-delay en las reverbs para mantener la definición de la fuente. Filtra los graves de la reverb para que no engorde el rango bajo. Y revisa los colas: si la reverb de un elemento todavía suena cuando entra el siguiente, hay conflicto."
+            es="Usa pre-delay en las reverbs para mantener la definición de la fuente. Filtra los graves de la reverb para que no engorde el rango bajo. Y revisa las colas: si la reverb de un elemento todavía suena cuando entra el siguiente, hay conflicto."
             en="Use pre-delay on reverbs to maintain source definition. Filter the lows out of your reverb so it doesn't bloat the low end. And check the tails: if one element's reverb is still ringing when the next element enters, there is a conflict."
           />
           <P lang={lang}
@@ -203,7 +210,7 @@ export default function PrepareMixForMasteringPage() {
           />
           <P lang={lang}
             es="Monitorea a un nivel constante, idealmente entre 80 y 85 dB SPL. A ese volumen, tus oídos tienen la respuesta en frecuencia más equilibrada. Subir el volumen hace que todo suene bien, y eso es justamente el problema: esconde los errores."
-            en="Monitor at a consistent level, ideally between 80 and 85 dB SPL. At that volume, your ears have the most balanced frequency response. Turning the volume up makes everything sound good, and that is exactly the problem: it hides mistakes."
+            en="Monitor at a consistent level, ideally between 80 and 85 dB SPL. At that volume, your ears have the most balanced frequency response. Turning the volume up makes everything sound good, and that is the problem: it hides mistakes."
           />
           <P lang={lang}
             es="Si tu mezcla funciona en el parlante del teléfono y suena bien en los monitores, es una buena señal. Si solo funciona en tu sistema de estudio, probablemente estás compensando con tu cuarto en lugar de con tu mezcla."
@@ -316,7 +323,7 @@ export default function PrepareMixForMasteringPage() {
             marginBottom: '1.5rem',
           }}>
             {lang === 'es'
-              ? 'Mastering Ready analiza tu archivo y te da un puntaje de 0 a 100 con recomendaciones específicas. 2 análisis completos gratis.'
+              ? 'Mastering Ready analiza tu archivo y te da un Score de 0 a 100 con recomendaciones específicas. 2 análisis completos gratis.'
               : 'Mastering Ready analyzes your file and gives you a score from 0 to 100 with specific recommendations. 2 free full analyses.'}
           </p>
           <Link
@@ -355,6 +362,28 @@ export default function PrepareMixForMasteringPage() {
               : 'WAV, MP3, AIFF, AAC, M4A or OGG. Max 200 MB.'}
           </p>
         </div>
+
+        {/* Related Articles */}
+        <div style={{ marginTop: '3rem' }}>
+          <h3 style={{ fontSize: '1.125rem', fontWeight: 600, marginBottom: '1rem', color: 'var(--mr-text-primary)' }}>
+            {lang === 'es' ? 'Artículos relacionados' : 'Related articles'}
+          </h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <Link href="/learn/is-my-mix-ready" style={{ color: 'var(--mr-primary)', textDecoration: 'none', fontSize: '0.9375rem' }}>
+              {lang === 'es' ? '¿Mi mezcla está lista para mastering?' : 'Is my mix ready for mastering?'}
+            </Link>
+            <Link href="/learn/lufs-for-streaming" style={{ color: 'var(--mr-primary)', textDecoration: 'none', fontSize: '0.9375rem' }}>
+              {lang === 'es' ? 'LUFS para streaming: guía práctica' : 'LUFS for streaming: practical guide'}
+            </Link>
+            <Link href="/learn/mixing-vs-mastering" style={{ color: 'var(--mr-primary)', textDecoration: 'none', fontSize: '0.9375rem' }}>
+              {lang === 'es' ? 'Mezcla vs mastering: diferencias clave' : 'Mixing vs mastering: key differences'}
+            </Link>
+            <Link href="/learn/mastering-ready-vs-competitors" style={{ color: 'var(--mr-primary)', textDecoration: 'none', fontSize: '0.9375rem' }}>
+              {lang === 'es' ? 'Mastering Ready vs la competencia' : 'Mastering Ready vs competitors'}
+            </Link>
+          </div>
+        </div>
+
     </article>
   )
 }
@@ -389,7 +418,7 @@ function P({ lang, es, en }: { lang: 'es' | 'en'; es: string; en: string }) {
     <p style={{
       fontSize: '1.0625rem',
       lineHeight: 1.75,
-      color: 'var(--mr-text-primary)',
+      color: 'var(--mr-text-secondary)',
       marginBottom: '1rem',
     }}>
       {lang === 'es' ? es : en}

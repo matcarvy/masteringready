@@ -1,13 +1,12 @@
 'use client'
 
 import Link from 'next/link'
-import { useLearn } from '../LearnContext'
+import { useLearn, useLearnMeta } from '../LearnContext'
 
 type Lang = 'es' | 'en'
 
 const t = {
   es: {
-    langToggle: 'EN',
     h1: 'LUFS para streaming: guía de niveles por plataforma',
     intro1: 'Si estás preparando tu mezcla para mastering, probablemente te has topado con el término LUFS. Es la unidad que las plataformas de streaming usan para normalizar el volumen entre canciones.',
     intro2: 'Lo más importante que debes saber: el volumen final no es tu responsabilidad en la mezcla. Esa es la función del mastering. Tu trabajo es entregar una mezcla con buen headroom, dinámica saludable y balance tonal. El nivel de LUFS viene después.',
@@ -46,8 +45,8 @@ const t = {
     h2TruePeak: 'True Peak vs LUFS',
     truePeakP1: 'LUFS mide el volumen promedio percibido. True Peak mide el nivel máximo absoluto de la señal, incluyendo los picos inter-muestra que ocurren entre samples digitales.',
     truePeakP2: 'Son métricas complementarias. LUFS te dice qué tan fuerte suena tu pista en promedio. True Peak te dice si hay picos que podrían distorsionar al convertir a formatos comprimidos (MP3, AAC, OGG).',
-    truePeakP3: 'Para tu mezcla pre-mastering, el True Peak debería estar por debajo de 0 dBTP. El ingeniero de mastering apunta a -1 dBTP o -2 dBTP en el master final, dependiendo de la plataforma.',
-    truePeakMix: 'Mezcla: por debajo de 0 dBTP',
+    truePeakP3: 'Para tu mezcla pre-mastering, el True Peak debería estar por debajo de -1 dBTP. El ingeniero de mastering apunta a -1 dBTP o -2 dBTP en el master final, dependiendo de la plataforma.',
+    truePeakMix: 'Mezcla: por debajo de -1 dBTP',
     truePeakMaster: 'Master: -1 dBTP a -2 dBTP',
 
     h2MR: 'Cómo mide LUFS Mastering Ready',
@@ -57,10 +56,8 @@ const t = {
 
     cta: 'Mide los LUFS de tu mezcla',
     ctaSub: 'Gratis. 2 análisis completos con informe detallado y PDF.',
-    backHome: '← Mastering Ready',
   },
   en: {
-    langToggle: 'ES',
     h1: 'LUFS for streaming: platform level guide',
     intro1: 'If you\'re preparing your mix for mastering, you\'ve probably come across the term LUFS. It\'s the unit streaming platforms use to normalize volume between songs.',
     intro2: 'The most important thing to know: the final loudness is not your responsibility in the mix. That\'s what mastering is for. Your job is to deliver a mix with good headroom, healthy dynamics, and tonal balance. The LUFS level comes later.',
@@ -99,8 +96,8 @@ const t = {
     h2TruePeak: 'True Peak vs LUFS',
     truePeakP1: 'LUFS measures average perceived loudness. True Peak measures the absolute maximum level of the signal, including the inter-sample peaks that occur between digital samples.',
     truePeakP2: 'They\'re complementary metrics. LUFS tells you how loud your track sounds on average. True Peak tells you if there are peaks that could distort when converting to compressed formats (MP3, AAC, OGG).',
-    truePeakP3: 'For your pre-mastering mix, True Peak should be below 0 dBTP. The mastering engineer targets -1 dBTP or -2 dBTP on the final master, depending on the platform.',
-    truePeakMix: 'Mix: below 0 dBTP',
+    truePeakP3: 'For your pre-mastering mix, True Peak should be below -1 dBTP. The mastering engineer targets -1 dBTP or -2 dBTP on the final master, depending on the platform.',
+    truePeakMix: 'Mix: below -1 dBTP',
     truePeakMaster: 'Master: -1 dBTP to -2 dBTP',
 
     h2MR: 'How Mastering Ready measures LUFS',
@@ -110,7 +107,6 @@ const t = {
 
     cta: 'Measure your mix\'s LUFS',
     ctaSub: 'Free. 2 full analyses with detailed report and PDF.',
-    backHome: '← Mastering Ready',
   },
 }
 
@@ -127,6 +123,13 @@ const platforms = [
 
 export default function LufsForStreamingPage() {
   const { lang } = useLearn()
+
+  useLearnMeta({
+    titleEs: 'LUFS para streaming: niveles por plataforma (Spotify, Apple, YouTube)',
+    titleEn: 'LUFS for Streaming: Loudness Levels by Platform (Spotify, Apple, YouTube)',
+    descEs: 'Tabla de niveles LUFS por plataforma de streaming. Spotify -14, Apple Music -16, YouTube -14. Aprende la diferencia entre LUFS y True Peak para tu mezcla.',
+    descEn: 'LUFS loudness targets by streaming platform. Spotify -14, Apple Music -16, YouTube -14. Learn the difference between LUFS and True Peak for your mix.',
+  })
 
   const s = t[lang]
 
@@ -288,6 +291,28 @@ export default function LufsForStreamingPage() {
             {s.ctaSub}
           </p>
         </div>
+
+        {/* Related Articles */}
+        <div style={{ marginTop: '3rem' }}>
+          <h3 style={{ fontSize: '1.125rem', fontWeight: 600, marginBottom: '1rem', color: 'var(--mr-text-primary)' }}>
+            {lang === 'es' ? 'Artículos relacionados' : 'Related articles'}
+          </h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <Link href="/learn/is-my-mix-ready" style={{ color: 'var(--mr-primary)', textDecoration: 'none', fontSize: '0.9375rem' }}>
+              {lang === 'es' ? '¿Mi mezcla está lista para mastering?' : 'Is my mix ready for mastering?'}
+            </Link>
+            <Link href="/learn/prepare-mix-for-mastering" style={{ color: 'var(--mr-primary)', textDecoration: 'none', fontSize: '0.9375rem' }}>
+              {lang === 'es' ? '10 pasos para preparar tu mezcla para mastering' : '10 steps to prepare your mix for mastering'}
+            </Link>
+            <Link href="/learn/mixing-vs-mastering" style={{ color: 'var(--mr-primary)', textDecoration: 'none', fontSize: '0.9375rem' }}>
+              {lang === 'es' ? 'Mezcla vs mastering: diferencias clave' : 'Mixing vs mastering: key differences'}
+            </Link>
+            <Link href="/learn/mastering-ready-vs-competitors" style={{ color: 'var(--mr-primary)', textDecoration: 'none', fontSize: '0.9375rem' }}>
+              {lang === 'es' ? 'Mastering Ready vs la competencia' : 'Mastering Ready vs competitors'}
+            </Link>
+          </div>
+        </div>
+
     </article>
   )
 }

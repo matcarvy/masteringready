@@ -7,7 +7,7 @@
  */
 
 import Link from 'next/link'
-import { useLearn } from '../LearnContext'
+import { useLearn, useLearnMeta } from '../LearnContext'
 
 // ============================================================================
 // TRANSLATIONS
@@ -15,12 +15,10 @@ import { useLearn } from '../LearnContext'
 
 const t = {
   es: {
-    langToggle: 'EN',
-    backToHome: 'Volver al inicio',
     h1: 'Mezcla vs Mastering: ¿cuál es la diferencia?',
     opening: `La mezcla y el mastering son dos procesos completamente distintos, con herramientas, objetivos y resultados diferentes. La mezcla toma las pistas individuales de tu proyecto (voces, baterías, guitarras, sintetizadores) y las combina en un archivo estéreo cohesivo. El mastering toma esa mezcla estéreo terminada y la optimiza para distribución: streaming, vinilo, CD o descarga digital.
 
-Muchos productores confunden los dos procesos, o asumen que el mastering va a corregir problemas de la mezcla. La realidad es otra: el mastering no remezcla, refina. Si la base no es sólida, el mastering no puede construir encima de ella. Entender esta diferencia es lo que separa una producción amateur de una profesional. Y es exactamente el espacio donde Mastering Ready te ayuda a verificar si tu mezcla está lista antes de enviarla a masterizar.`,
+Muchos productores confunden los dos procesos, o asumen que el mastering va a corregir problemas de la mezcla. La realidad es otra: el mastering no remezcla, refina. Si la base no es sólida, el mastering no puede construir encima de ella. Entender esta diferencia es lo que separa una producción amateur de una profesional. Y ese es el espacio donde Mastering Ready te ayuda a verificar si tu mezcla está lista antes de enviarla a masterizar.`,
 
     whatIsMixingTitle: '¿Qué es la mezcla?',
     whatIsMixingBody: `La mezcla es el proceso de combinar múltiples pistas de audio en un archivo estéreo (o surround). Es donde tomas las grabaciones individuales y las integras en un todo coherente.
@@ -91,7 +89,7 @@ Mastering Ready existe para cerrar esta brecha. Es el paso de verificación entr
 
 \u2022 Headroom: ¿tienes entre -6 y -3 dBFS de espacio? Si no, el ingeniero de mastering no tiene dónde trabajar.
 
-\u2022 True Peak: ¿tus picos reales están por debajo de 0 dBTP? Valores por encima generan distorsión en la conversión a formatos de streaming.
+\u2022 True Peak: ¿tus picos reales están por debajo de -1 dBTP? Valores por encima generan distorsión en la conversión a formatos de streaming.
 
 \u2022 Imagen estéreo: ¿la correlación estéreo es saludable? Valores bajos pueden causar problemas de compatibilidad mono.
 
@@ -107,8 +105,6 @@ Tienes 2 análisis completos gratis, con informe detallado y PDF descargable. L�
   },
 
   en: {
-    langToggle: 'ES',
-    backToHome: 'Back to home',
     h1: 'Mixing vs Mastering: what\'s the difference?',
     opening: `Mixing and mastering are two completely different processes, with different tools, objectives, and outcomes. Mixing takes the individual tracks of your project (vocals, drums, guitars, synths) and combines them into a cohesive stereo file. Mastering takes that finished stereo mix and optimizes it for distribution: streaming, vinyl, CD, or digital download.
 
@@ -183,7 +179,7 @@ Mastering Ready exists to close this gap. It is the verification step between yo
 
 \u2022 Headroom: do you have between -6 and -3 dBFS of space? If not, the mastering engineer has nowhere to work.
 
-\u2022 True Peak: are your real peaks below 0 dBTP? Values above that threshold cause distortion when converting to streaming formats.
+\u2022 True Peak: are your real peaks below -1 dBTP? Values above that threshold cause distortion when converting to streaming formats.
 
 \u2022 Stereo image: is the stereo correlation healthy? Low values can cause mono compatibility issues.
 
@@ -239,10 +235,17 @@ function Section({ title, body }: { title: string; body: string }) {
 export default function MixingVsMasteringPage() {
   const { lang } = useLearn()
 
+  useLearnMeta({
+    titleEs: 'Mezcla vs Mastering: diferencia, proceso y cuándo tu mezcla está lista',
+    titleEn: 'Mixing vs Mastering: Difference, Process, and When Your Mix Is Ready',
+    descEs: 'Entiende la diferencia entre mezcla y mastering. Qué hace cada proceso, qué puede y qué no puede corregir el mastering, y cómo saber si tu mezcla está lista.',
+    descEn: 'Understand the difference between mixing and mastering. What each process does, what mastering can and cannot fix, and how to know if your mix is ready.',
+  })
+
   const c = t[lang]
 
   return (
-    <main style={{
+    <article style={{
       maxWidth: 800,
       margin: '0 auto',
       padding: '2rem 1.5rem 4rem',
@@ -377,6 +380,28 @@ export default function MixingVsMasteringPage() {
             {c.ctaButton}
           </Link>
         </div>
-    </main>
+
+        {/* Related Articles */}
+        <div style={{ marginTop: '3rem' }}>
+          <h3 style={{ fontSize: '1.125rem', fontWeight: 600, marginBottom: '1rem', color: 'var(--mr-text-primary)' }}>
+            {lang === 'es' ? 'Artículos relacionados' : 'Related articles'}
+          </h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <Link href="/learn/is-my-mix-ready" style={{ color: 'var(--mr-primary)', textDecoration: 'none', fontSize: '0.9375rem' }}>
+              {lang === 'es' ? '¿Mi mezcla está lista para mastering?' : 'Is my mix ready for mastering?'}
+            </Link>
+            <Link href="/learn/prepare-mix-for-mastering" style={{ color: 'var(--mr-primary)', textDecoration: 'none', fontSize: '0.9375rem' }}>
+              {lang === 'es' ? '10 pasos para preparar tu mezcla para mastering' : '10 steps to prepare your mix for mastering'}
+            </Link>
+            <Link href="/learn/lufs-for-streaming" style={{ color: 'var(--mr-primary)', textDecoration: 'none', fontSize: '0.9375rem' }}>
+              {lang === 'es' ? 'LUFS para streaming: guía práctica' : 'LUFS for streaming: practical guide'}
+            </Link>
+            <Link href="/learn/mastering-ready-vs-competitors" style={{ color: 'var(--mr-primary)', textDecoration: 'none', fontSize: '0.9375rem' }}>
+              {lang === 'es' ? 'Mastering Ready vs la competencia' : 'Mastering Ready vs competitors'}
+            </Link>
+          </div>
+        </div>
+
+    </article>
   )
 }

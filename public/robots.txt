@@ -1,11 +1,34 @@
 User-agent: *
 Allow: /
-
 Disallow: /dashboard
 Disallow: /history
 Disallow: /settings
 Disallow: /admin
+Disallow: /subscription
+Disallow: /prospecting
 Disallow: /auth/callback
+Disallow: /auth/login
+Disallow: /auth/signup
+Disallow: /auth/forgot-password
+Disallow: /auth/reset-password
 Disallow: /api/
+Disallow: /api
+
+# AI crawlers — welcome to index learn pages and homepage
+User-agent: GPTBot
+Allow: /
+Allow: /learn/
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
 
 Sitemap: https://masteringready.com/sitemap.xml

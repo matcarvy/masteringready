@@ -528,7 +528,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, lang }: AuthModalProps) 
               {error && (
                 <div style={{
                   background: 'var(--mr-red-bg)',
-                  border: '1px solid #fecaca',
+                  border: '1px solid var(--mr-red)',
                   color: 'var(--mr-red)',
                   padding: '0.625rem 0.875rem',
                   borderRadius: '0.5rem',
@@ -543,7 +543,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, lang }: AuthModalProps) 
               {successMessage && (
                 <div style={{
                   background: 'var(--mr-green-bg)',
-                  border: '1px solid #bbf7d0',
+                  border: '1px solid var(--mr-green)',
                   color: 'var(--mr-green-text)',
                   padding: '0.625rem 0.875rem',
                   borderRadius: '0.5rem',

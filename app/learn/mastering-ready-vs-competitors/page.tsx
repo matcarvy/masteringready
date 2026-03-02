@@ -1,13 +1,12 @@
 'use client'
 
 import Link from 'next/link'
-import { useLearn } from '../LearnContext'
+import { useLearn, useLearnMeta } from '../LearnContext'
 
 type Lang = 'es' | 'en'
 
 const t = {
   es: {
-    langToggle: 'EN',
     title: 'Mastering Ready vs alternativas: cuál herramienta necesitas',
     metaNote: 'Guía de comparación actualizada a 2026',
     // Opening
@@ -32,7 +31,7 @@ const t = {
     tablePDF: 'Informe PDF',
     tableRecommendations: 'Recomendaciones específicas',
     tableGenreAware: 'Ajuste por género',
-    tablePrivacy: 'Privacidad (sin audio almacenado)',
+    tablePrivacy: 'Sin almacenamiento de audio',
     tableRealtime: 'Tiempo real en DAW',
     // MR column
     mrType: 'Análisis pre-mastering',
@@ -59,7 +58,7 @@ const t = {
     // LANDR column
     landrType: 'Mastering con IA',
     landrPlatform: 'Web',
-    landrPrice: 'Desde $9.99/mes',
+    landrPrice: 'Desde $12.99/mes',
     landrFree: 'Vista previa limitada',
     landrYes: 'Sí',
     landrNo: 'No',
@@ -81,7 +80,7 @@ const t = {
     vsMixCheckBullet2: 'Mastering Ready genera recomendaciones específicas por métrica (por ejemplo: "tu headroom está en -1.2 dBFS, necesitas al menos -3 dBFS para mastering"). Mix Check da feedback más amplio.',
     vsMixCheckBullet3: 'Mastering Ready incluye ajuste por género en el balance de frecuencias. Mix Check no diferencia por género.',
     vsMixCheckBullet4: 'Mastering Ready genera un informe PDF descargable. Mix Check no.',
-    vsMixCheckP3: 'Mix Check es una buena opción para una segunda opinión rápida. Mastering Ready es más profundo si necesitas saber exactamente qué corregir.',
+    vsMixCheckP3: 'Mix Check es una buena opción para una segunda opinión rápida. Mastering Ready es más profundo si necesitas saber qué corregir y por qué.',
     // VS AI Mastering
     vsAITitle: 'Mastering Ready vs mastering con IA (LANDR, eMastered)',
     vsAIP1: 'LANDR y eMastered son servicios de mastering automatizado con IA. Subes tu mezcla y te devuelven un master. Son categorías completamente distintas a Mastering Ready.',
@@ -104,7 +103,7 @@ const t = {
     whenP3: 'Si quieres mastering con IA, LANDR o eMastered funcionan. Pero revisa tu mezcla primero.',
     // Limitations
     limitationsTitle: 'Limitaciones de Mastering Ready',
-    limitationsP1: 'Mastering Ready no es perfecto. Algunas limitaciones que vale la pena conocer:',
+    limitationsP1: 'Mastering Ready no es perfecto. Algunas limitaciones que conviene conocer:',
     limitationsBullet1: 'No funciona en tiempo real dentro del DAW. Necesitas exportar y subir el archivo.',
     limitationsBullet2: 'No reemplaza los oídos de un ingeniero experimentado. Es un complemento, no un sustituto.',
     limitationsBullet3: 'No analiza aspectos subjetivos como balance de instrumentos, arreglo o emoción.',
@@ -113,11 +112,8 @@ const t = {
     ctaTitle: 'Prueba Mastering Ready gratis',
     ctaP: 'Sube tu mezcla y descubre si está lista para mastering. 2 análisis completos gratis, con informe PDF.',
     ctaButton: 'Analiza tu mezcla gratis',
-    // Footer
-    backToHome: 'Volver al inicio',
   },
   en: {
-    langToggle: 'ES',
     title: 'Mastering Ready vs alternatives: which tool do you need',
     metaNote: 'Comparison guide updated for 2026',
     // Opening
@@ -142,7 +138,7 @@ const t = {
     tablePDF: 'PDF Report',
     tableRecommendations: 'Specific recommendations',
     tableGenreAware: 'Genre-aware',
-    tablePrivacy: 'Privacy (no audio stored)',
+    tablePrivacy: 'No audio storage',
     tableRealtime: 'Real-time in DAW',
     // MR column
     mrType: 'Pre-mastering analysis',
@@ -169,7 +165,7 @@ const t = {
     // LANDR column
     landrType: 'AI mastering',
     landrPlatform: 'Web',
-    landrPrice: 'From $9.99/mo',
+    landrPrice: 'From $12.99/mo',
     landrFree: 'Limited preview',
     landrYes: 'Yes',
     landrNo: 'No',
@@ -191,7 +187,7 @@ const t = {
     vsMixCheckBullet2: 'Mastering Ready generates specific recommendations per metric (e.g., "your headroom is at -1.2 dBFS, you need at least -3 dBFS for mastering"). Mix Check gives broader feedback.',
     vsMixCheckBullet3: 'Mastering Ready includes genre-aware frequency balance. Mix Check does not differentiate by genre.',
     vsMixCheckBullet4: 'Mastering Ready generates a downloadable PDF report. Mix Check does not.',
-    vsMixCheckP3: 'Mix Check is a good option for a quick second opinion. Mastering Ready goes deeper if you need to know exactly what to fix.',
+    vsMixCheckP3: 'Mix Check is a good option for a quick second opinion. Mastering Ready goes deeper if you need to know what to fix and why.',
     // VS AI Mastering
     vsAITitle: 'Mastering Ready vs AI mastering (LANDR, eMastered)',
     vsAIP1: 'LANDR and eMastered are automated AI mastering services. You upload your mix and they return a master. They are completely different categories from Mastering Ready.',
@@ -223,13 +219,18 @@ const t = {
     ctaTitle: 'Try Mastering Ready free',
     ctaP: 'Upload your mix and find out if it is ready for mastering. 2 full analyses free, with PDF report.',
     ctaButton: 'Analyze your mix free',
-    // Footer
-    backToHome: 'Back to home',
   },
 }
 
 export default function MasteringReadyVsCompetitorsPage() {
   const { lang } = useLearn()
+
+  useLearnMeta({
+    titleEs: 'Mastering Ready vs EXPOSE 2 vs Mix Check Studio vs LANDR: comparación',
+    titleEn: 'Mastering Ready vs EXPOSE 2 vs Mix Check Studio vs LANDR: Comparison',
+    descEs: 'Comparación detallada entre Mastering Ready, EXPOSE 2, Mix Check Studio, LANDR y eMastered. Funciones, precios y cuál herramienta necesitas según tu objetivo.',
+    descEn: 'Detailed comparison of Mastering Ready, EXPOSE 2, Mix Check Studio, LANDR, and eMastered. Features, pricing, and which tool you need based on your goal.',
+  })
 
   const s = t[lang]
 
@@ -264,7 +265,7 @@ export default function MasteringReadyVsCompetitorsPage() {
   const naStyle: React.CSSProperties = { color: 'var(--mr-text-tertiary)', fontStyle: 'italic' }
 
   return (
-      <main style={{
+      <article style={{
         maxWidth: 800,
         margin: '0 auto',
         padding: '0 1.5rem 4rem',
@@ -401,7 +402,7 @@ export default function MasteringReadyVsCompetitorsPage() {
                 <td style={featureCellStyle}>{s.tablePrivacy}</td>
                 <td style={{ ...cellStyle, ...yesStyle }}>{s.mrYes}</td>
                 <td style={{ ...cellStyle, ...yesStyle }}>{s.exposeYes}</td>
-                <td style={{ ...cellStyle, ...noStyle }}>{s.mcNo}</td>
+                <td style={{ ...cellStyle, ...naStyle }}>{'N/A'}</td>
                 <td style={{ ...cellStyle, ...noStyle }}>{s.landrNo}</td>
               </tr>
               <tr>
@@ -580,6 +581,27 @@ export default function MasteringReadyVsCompetitorsPage() {
           </Link>
         </div>
 
-      </main>
+        {/* Related Articles */}
+        <div style={{ marginTop: '3rem' }}>
+          <h3 style={{ fontSize: '1.125rem', fontWeight: 600, marginBottom: '1rem', color: 'var(--mr-text-primary)' }}>
+            {lang === 'es' ? 'Artículos relacionados' : 'Related articles'}
+          </h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <Link href="/learn/is-my-mix-ready" style={{ color: 'var(--mr-primary)', textDecoration: 'none', fontSize: '0.9375rem' }}>
+              {lang === 'es' ? '¿Mi mezcla está lista para mastering?' : 'Is my mix ready for mastering?'}
+            </Link>
+            <Link href="/learn/prepare-mix-for-mastering" style={{ color: 'var(--mr-primary)', textDecoration: 'none', fontSize: '0.9375rem' }}>
+              {lang === 'es' ? '10 pasos para preparar tu mezcla para mastering' : '10 steps to prepare your mix for mastering'}
+            </Link>
+            <Link href="/learn/lufs-for-streaming" style={{ color: 'var(--mr-primary)', textDecoration: 'none', fontSize: '0.9375rem' }}>
+              {lang === 'es' ? 'LUFS para streaming: guía práctica' : 'LUFS for streaming: practical guide'}
+            </Link>
+            <Link href="/learn/mixing-vs-mastering" style={{ color: 'var(--mr-primary)', textDecoration: 'none', fontSize: '0.9375rem' }}>
+              {lang === 'es' ? 'Mezcla vs mastering: diferencias clave' : 'Mixing vs mastering: key differences'}
+            </Link>
+          </div>
+        </div>
+
+      </article>
   )
 }
