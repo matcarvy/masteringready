@@ -340,9 +340,9 @@ const HOMEPAGE_JSONLD = [
     name: 'How to analyze your mix before mastering',
     description: 'Step-by-step guide to verify your mix is ready for professional mastering using Mastering Ready.',
     totalTime: 'PT2M',
-    tool: [{ '@type': 'HowToTool', name: 'Audio file (WAV, MP3, AIFF, AAC, M4A or OGG)' }],
+    tool: [{ '@type': 'HowToTool', name: 'Audio file (WAV, MP3, AIFF, FLAC, AAC, M4A or OGG)' }],
     step: [
-      { '@type': 'HowToStep', name: 'Upload your mix', text: 'Drag and drop your audio file (WAV, MP3, AIFF, AAC, M4A or OGG, max 200MB) into the analyzer.', position: 1 },
+      { '@type': 'HowToStep', name: 'Upload your mix', text: 'Drag and drop your audio file (WAV, MP3, AIFF, FLAC, AAC, M4A or OGG, max 200MB) into the analyzer.', position: 1 },
       { '@type': 'HowToStep', name: 'Wait for analysis', text: 'The system analyzes headroom, LUFS, true peak, stereo balance and frequencies in under 60 seconds.', position: 2 },
       { '@type': 'HowToStep', name: 'Review results', text: 'Get a score from 0-100 with interpretations and specific recommendations for your mix.', position: 3 },
       { '@type': 'HowToStep', name: 'Download report', text: 'Generate a professional PDF with all technical details to share or archive.', position: 4 },
@@ -357,7 +357,7 @@ const HOMEPAGE_JSONLD = [
       { '@type': 'Question', name: 'How much headroom should my mix have before mastering?', acceptedAnswer: { '@type': 'Answer', text: 'A well-prepared mix should have between -6 dBFS and -3 dBFS of headroom (peak level). This gives the mastering engineer enough room to work with EQ, compression, and limiting without clipping. Mastering Ready measures your headroom and tells you if it falls within the recommended range.' } },
       { '@type': 'Question', name: 'What LUFS should my mix be before mastering?', acceptedAnswer: { '@type': 'Answer', text: 'Before mastering, your mix should typically sit between -24 and -16 LUFS integrated, with -18 LUFS being a comfortable center point. This is not the final loudness target, which depends on the streaming platform. The loudness of your mix is not the priority at this stage. Mastering Ready measures your integrated LUFS and lets you know if your level needs attention before sending to mastering.' } },
       { '@type': 'Question', name: 'Is Mastering Ready free?', acceptedAnswer: { '@type': 'Answer', text: 'Yes. You get 2 free full analyses with complete reports and PDF downloads when you create an account. No credit card required. After that, you can purchase individual analyses for $5.99 or subscribe to Pro for $9.99 per month (30 analyses, regional pricing available).' } },
-      { '@type': 'Question', name: 'What audio formats does Mastering Ready support?', acceptedAnswer: { '@type': 'Answer', text: 'Mastering Ready supports WAV, MP3, AIFF, AIF, AAC, M4A, and OGG files up to 200 MB. For the most accurate analysis, we recommend uploading WAV files at the highest resolution available from your DAW.' } },
+      { '@type': 'Question', name: 'What audio formats does Mastering Ready support?', acceptedAnswer: { '@type': 'Answer', text: 'Mastering Ready supports WAV, MP3, AIFF, FLAC, AAC, M4A, and OGG files up to 200 MB. For the most accurate analysis, we recommend uploading WAV files at the highest resolution available from your DAW.' } },
       { '@type': 'Question', name: 'How is the 0 to 100 score calculated?', acceptedAnswer: { '@type': 'Answer', text: 'The score is based on weighted analysis of five technical metrics: headroom, true peak, peak to loudness ratio (PLR), stereo correlation, and frequency balance. Each metric is evaluated against professional mastering standards. A score of 85 or above means your mix is technically ready for mastering.' } },
       { '@type': 'Question', name: 'Can mastering fix a bad mix?', acceptedAnswer: { '@type': 'Answer', text: 'No. Mastering can enhance a good mix but cannot fix fundamental problems like poor balance, excessive headroom issues, or phase problems. That is why analyzing your mix before mastering matters. Mastering Ready identifies the specific issues you should address in your mix so the mastering engineer can do their best work.' } },
     ],
@@ -814,8 +814,8 @@ function Home() {
   // File validation helper
   const validateFile = (file: File): { valid: boolean; error?: string } => {
     const maxSize = 200 * 1024 * 1024 // 200MB
-    const allowedTypes = ['audio/wav', 'audio/mpeg', 'audio/mp3', 'audio/aiff', 'audio/x-aiff', 'audio/aac', 'audio/mp4', 'audio/x-m4a', 'audio/ogg', 'audio/opus']
-    const allowedExtensions = ['.wav', '.mp3', '.aiff', '.aif', '.aac', '.m4a', '.ogg']
+    const allowedTypes = ['audio/wav', 'audio/mpeg', 'audio/mp3', 'audio/aiff', 'audio/x-aiff', 'audio/flac', 'audio/x-flac', 'audio/aac', 'audio/mp4', 'audio/x-m4a', 'audio/ogg', 'audio/opus']
+    const allowedExtensions = ['.wav', '.mp3', '.aiff', '.aif', '.flac', '.aac', '.m4a', '.ogg']
     
     const fileName = file.name.toLowerCase()
     const hasValidExtension = allowedExtensions.some(ext => fileName.endsWith(ext))
@@ -2886,8 +2886,8 @@ by Matías Carvajal
               {
                 q_es: '¿Qué formatos de audio soporta?',
                 q_en: 'What audio formats does it support?',
-                a_es: 'WAV, MP3, AIFF, AAC, M4A y OGG de hasta 200 MB. Para el análisis más preciso, recomendamos subir archivos WAV a la resolución más alta disponible desde tu DAW.',
-                a_en: 'WAV, MP3, AIFF, AAC, M4A, and OGG files up to 200 MB. For the most accurate analysis, we recommend uploading WAV files at the highest resolution available from your DAW.'
+                a_es: 'WAV, MP3, AIFF, FLAC, AAC, M4A y OGG de hasta 200 MB. Para el análisis más preciso, recomendamos subir archivos WAV a la resolución más alta disponible desde tu DAW.',
+                a_en: 'WAV, MP3, AIFF, FLAC, AAC, M4A, and OGG files up to 200 MB. For the most accurate analysis, we recommend uploading WAV files at the highest resolution available from your DAW.'
               },
               {
                 q_es: '¿Cómo se calcula la puntuación de 0 a 100?',
@@ -3129,7 +3129,7 @@ by Matías Carvajal
                       : 'or click to select'}
                   </p>
                   <p style={{ fontSize: '0.75rem', color: 'var(--mr-text-tertiary)', marginTop: '0.5rem' }}>
-                    {lang === 'es' ? 'WAV, MP3, AIFF, AAC, M4A u OGG • Máximo 200MB' : 'WAV, MP3, AIFF, AAC, M4A or OGG • Max 200MB'}
+                    {lang === 'es' ? 'WAV, MP3, AIFF, FLAC, AAC, M4A u OGG • Máximo 200MB' : 'WAV, MP3, AIFF, FLAC, AAC, M4A or OGG • Max 200MB'}
                   </p>
                 </div>
               </div>

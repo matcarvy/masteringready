@@ -339,8 +339,8 @@ export default function PrepareMixForMasteringPage() {
             marginTop: '0.75rem',
           }}>
             {lang === 'es'
-              ? 'WAV, MP3, AIFF, AAC, M4A u OGG. Máximo 200 MB.'
-              : 'WAV, MP3, AIFF, AAC, M4A or OGG. Max 200 MB.'}
+              ? 'WAV, MP3, AIFF, FLAC, AAC, M4A u OGG. Máximo 200 MB.'
+              : 'WAV, MP3, AIFF, FLAC, AAC, M4A or OGG. Max 200 MB.'}
           </p>
         </div>
 

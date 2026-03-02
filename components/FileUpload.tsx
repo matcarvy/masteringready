@@ -10,7 +10,7 @@ export default function FileUpload({
   return (
     <input
       type="file"
-      accept=".wav,.aif,.aiff"
+      accept=".wav,.aif,.aiff,.flac,.mp3,.aac,.m4a,.ogg"
       disabled={disabled}
       onChange={(e) => onFileSelect(e.target.files?.[0] ?? null)}
     />

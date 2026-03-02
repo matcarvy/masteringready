@@ -422,8 +422,8 @@ export default function IsMyMixReadyPage() {
           </strong>
           <br />
           {lang === 'es'
-            ? 'Formatos soportados: WAV, MP3, AIFF, AAC, M4A, OGG. Tamaño máximo: 200 MB. Incluye 2 análisis completos gratis con informe detallado y PDF.'
-            : 'Supported formats: WAV, MP3, AIFF, AAC, M4A, OGG. Max file size: 200 MB. Includes 2 free full analyses with detailed report and PDF.'}
+            ? 'Formatos soportados: WAV, MP3, AIFF, FLAC, AAC, M4A, OGG. Tamaño máximo: 200 MB. Incluye 2 análisis completos gratis con informe detallado y PDF.'
+            : 'Supported formats: WAV, MP3, AIFF, FLAC, AAC, M4A, OGG. Max file size: 200 MB. Includes 2 free full analyses with detailed report and PDF.'}
         </div>
 
         {/* ===== CTA SECTION ===== */}

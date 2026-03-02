@@ -190,14 +190,14 @@ const structuredData = {
     tool: [
       {
         '@type': 'HowToTool',
-        name: 'Audio file (WAV, MP3, AIFF, AAC, M4A or OGG)'
+        name: 'Audio file (WAV, MP3, AIFF, FLAC, AAC, M4A or OGG)'
       }
     ],
     step: [
       {
         '@type': 'HowToStep',
         name: 'Upload your mix',
-        text: 'Drag and drop your audio file (WAV, MP3, AIFF, AAC, M4A or OGG, max 200MB) into the analyzer.',
+        text: 'Drag and drop your audio file (WAV, MP3, AIFF, FLAC, AAC, M4A or OGG, max 200MB) into the analyzer.',
         position: 1
       },
       {
@@ -289,7 +289,7 @@ const structuredData = {
         name: 'What audio formats does Mastering Ready support?',
         acceptedAnswer: {
           '@type': 'Answer',
-          text: 'Mastering Ready supports WAV, MP3, AIFF, AIF, AAC, M4A, and OGG files up to 200 MB. For the most accurate analysis, we recommend uploading WAV files at the highest resolution available from your DAW.'
+          text: 'Mastering Ready supports WAV, MP3, AIFF, FLAC, AAC, M4A, and OGG files up to 200 MB. For the most accurate analysis, we recommend uploading WAV files at the highest resolution available from your DAW.'
         }
       },
       {
