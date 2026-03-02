@@ -1545,7 +1545,11 @@ ${new Date().toLocaleDateString()}
           duration_seconds: result.file?.duration || null,
           sample_rate: result.file?.sample_rate || null,
           bit_depth: result.file?.bit_depth || null,
-          metrics: result.metrics || [],
+          metrics: {
+            metrics: result.metrics || [],
+            metrics_bars: (result as any).metrics_bars || null,
+            user_genre: (result as any).user_genre || null,
+          },
           interpretations: result.interpretations || null,
           strict_mode: result.strict || strict || false,
           report_visual: result.report_visual || null,
