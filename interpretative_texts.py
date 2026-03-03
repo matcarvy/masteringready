@@ -51,19 +51,24 @@ def generate_interpretative_texts(
     dr_status = _get_dr_status(dr_value, strict)
     level_status = _get_level_status(lufs, strict)
     stereo_status = _get_stereo_status(stereo_balance, stereo_correlation, ms_ratio, strict)
-    
+
+    # LUFS + PLR correlation: only flag LUFS as actionable when corroborated by low dynamics
+    # lufs > -12: above "good" upper bound (genre-safe for modern loud mixes)
+    # dr_value < 8: PLR in warning/critical territory (aligned with ScoringThresholds)
+    compression_suspected = (lufs > -12) and (dr_value < 8)
+
     if lang == 'es':
         return {
             "headroom": _generate_headroom_text_es(headroom, true_peak, headroom_status),
             "dynamic_range": _generate_dr_text_es(dr_value, dr_status),
-            "overall_level": _generate_level_text_es(lufs, level_status),
+            "overall_level": _generate_level_text_es(lufs, level_status, compression_suspected),
             "stereo_balance": _generate_stereo_text_es(stereo_balance, stereo_correlation, ms_ratio, stereo_status)
         }
     else:
         return {
             "headroom": _generate_headroom_text_en(headroom, true_peak, headroom_status),
             "dynamic_range": _generate_dr_text_en(dr_value, dr_status),
-            "overall_level": _generate_level_text_en(lufs, level_status),
+            "overall_level": _generate_level_text_en(lufs, level_status, compression_suspected),
             "stereo_balance": _generate_stereo_text_en(stereo_balance, stereo_correlation, ms_ratio, stereo_status)
         }
 
@@ -239,7 +244,7 @@ def _generate_headroom_text_es(headroom: float, true_peak: float, status: str) -
     if status == "excellent":
         return {
             "interpretation": (
-                "Tu mezcla presenta un headroom óptimo para mastering. "
+                "Tu mezcla presenta un headroom (margen antes del máximo digital) óptimo para mastering. "
                 "Hay espacio sobrado entre los picos y 0 dBFS, lo que permite aplicar "
                 "procesamiento dinámico, ecualización y limitación de manera transparente "
                 "sin riesgo de distorsión digital."
@@ -253,26 +258,26 @@ def _generate_headroom_text_es(headroom: float, true_peak: float, status: str) -
     elif status == "good":
         return {
             "interpretation": (
-                "Tu mezcla presenta un headroom adecuado para mastering. "
+                "Tu mezcla presenta un margen adecuado para mastering. "
                 "Hay suficiente espacio entre los picos y 0 dBFS para aplicar compresión, "
                 "ecualización y limitación sin comprometer la claridad ni introducir distorsión."
             ),
             "recommendation": (
                 "No es necesario realizar ajustes de ganancia antes del mastering. "
-                "El headroom actual permite trabajar cómodamente."
+                "El margen actual permite trabajar cómodamente."
             )
         }
     
     elif status == "warning":
         return {
             "interpretation": (
-                "Tu mezcla necesita más headroom antes del mastering. "
+                "Tu mezcla necesita más margen antes del mastering. "
                 "Los picos están muy cerca de 0 dBFS, lo que limita el espacio disponible "
                 "para aplicar compresión y limitación de manera transparente durante el mastering."
             ),
             "recommendation": (
-                f"Se recomienda reducir el nivel del bus master entre 3-4 dB antes de exportar. "
-                f"Esto dejará un headroom de aproximadamente {abs(headroom) + 3.5:.1f} dBFS, "
+                f"Se recomienda reducir el nivel del bus principal entre 3-4 dB antes de exportar. "
+                f"Esto dejará un margen de aproximadamente {abs(headroom) + 3.5:.1f} dBFS, "
                 f"ideal para la sesión de mastering."
             )
         }
@@ -280,13 +285,13 @@ def _generate_headroom_text_es(headroom: float, true_peak: float, status: str) -
     else:  # error
         return {
             "interpretation": (
-                "El headroom de tu mezcla es insuficiente para el proceso de mastering. "
+                "El margen de tu mezcla es insuficiente para el proceso de mastering. "
                 "Los picos están demasiado cerca o tocando 0 dBFS, lo que no deja espacio "
                 "para aplicar procesamiento sin introducir distorsión digital o limitar "
                 "las posibilidades creativas del mastering."
             ),
             "recommendation": (
-                f"Es necesario reducir el nivel del bus master entre 5-6 dB antes de exportar. "
+                f"Es necesario reducir el nivel del bus principal entre 5-6 dB antes de exportar. "
                 f"Esto creará el espacio necesario (aproximadamente {abs(headroom) + 5.5:.1f} dBFS) "
                 f"para que el ingeniero de mastering pueda trabajar correctamente."
             )
@@ -306,7 +311,7 @@ def _generate_dr_text_es(dr_value: float, status: str) -> Dict[str, str]:
             ),
             "recommendation": (
                 "No comprimas más la mezcla - este nivel de dinámica es perfecto para "
-                "el proceso de mastering. Mantén los bus compressors con settings conservadores."
+                "el proceso de mastering. Mantén los compresores de bus con ajustes conservadores."
             )
         }
     
@@ -333,9 +338,9 @@ def _generate_dr_text_es(dr_value: float, status: str) -> Dict[str, str]:
                 "el resultado final suene algo plano o fatigante."
             ),
             "recommendation": (
-                "Revisa la compresión en el bus master y en los buses de grupo. "
-                "Considera reducir el ratio o aumentar el threshold en los compresores "
-                "más agresivos para recuperar algo de dinámica natural."
+                "El rango dinámico se encuentra reducido en esta mezcla. "
+                "Esto puede indicar un nivel alto de compresión o limitación antes del mastering. "
+                "Si no es una decisión intencional, conviene revisar cómo está siendo controlada la dinámica."
             )
         }
     
@@ -348,34 +353,35 @@ def _generate_dr_text_es(dr_value: float, status: str) -> Dict[str, str]:
                 "el mastering pueda añadir el impacto final deseado."
             ),
             "recommendation": (
-                "Es necesario reducir significativamente la compresión en toda la mezcla. "
-                "Revisa todos los compresores, especialmente los del bus master y subgrupos. "
-                "El objetivo es recuperar contraste dinámico entre las secciones de la canción."
+                "La dinámica general es limitada para esta etapa. "
+                "Esto puede afectar la sensación de profundidad y contraste en mastering. "
+                "Revise si el nivel de compresión aplicado responde a la intención estética buscada."
             )
         }
 
 
-def _generate_level_text_es(lufs: float, status: str) -> Dict[str, str]:
+def _generate_level_text_es(lufs: float, status: str, compression_suspected: bool = False) -> Dict[str, str]:
     """
     Generate Spanish interpretation for overall level.
-    
-    NOTE: These texts are INFORMATIVE. LUFS for pre-mastering mixes
-    is not prescriptive - a wide range (-15 to -35) is acceptable.
+
+    NOTE: LUFS is INFORMATIVE for pre-mastering mixes.
+    It should never generate "reduce X dB" target advice.
+    It CAN flag possible over-compression when corroborated by low PLR
+    (compression_suspected flag computed upstream).
     """
-    
+
     if status == "excellent":
         return {
             "interpretation": (
-                "El nivel general de tu mezcla es óptimo para mastering. "
-                "Está en un rango que permite al ingeniero trabajar con libertad para "
-                "alcanzar el loudness objetivo de la plataforma de destino sin comprometer "
-                "la dinámica ni introducir distorsión."
+                "El nivel general de tu mezcla está dentro del margen recomendado para mastering. "
+                "Permite al ingeniero trabajar con libertad para alcanzar el loudness objetivo "
+                "de la plataforma de destino sin comprometer la dinámica."
             ),
             "recommendation": (
-                "El nivel actual es perfecto. No ajustes el gain staging del bus master."
+                "El nivel actual no requiere ajustes de niveles de ganancia."
             )
         }
-    
+
     elif status == "good":
         return {
             "interpretation": (
@@ -384,62 +390,89 @@ def _generate_level_text_es(lufs: float, status: str) -> Dict[str, str]:
                 "objetivos de las plataformas de streaming sin forzar el procesamiento."
             ),
             "recommendation": (
-                "El nivel es adecuado. Si vas a hacer ajustes, que sean menores (±1-2 dB)."
+                "El nivel es adecuado. El volumen final se define en mastering."
             )
         }
-    
+
     elif status == "warning":
         if lufs > -14:
-            return {
-                "interpretation": (
-                    "El nivel general de tu mezcla está alto para mastering. "
-                    "Un loudness muy elevado antes del mastering puede indicar sobrecompresión "
-                    "o puede limitar las opciones del ingeniero para alcanzar el balance final deseado."
-                ),
-                "recommendation": (
-                    f"Considera reducir el nivel del bus master en 3-5 dB. Actualmente está "
-                    f"en {lufs:.1f} LUFS; para mezclas pre-mastering, un rango de -18 a -24 LUFS "
-                    f"es cómodo para trabajar."
-                )
-            }
+            if compression_suspected:
+                return {
+                    "interpretation": (
+                        f"El nivel general de tu mezcla ({lufs:.1f} LUFS) es elevado. "
+                        "Combinado con un rango dinámico reducido (PLR bajo), esto puede indicar "
+                        "que la mezcla ya está muy comprimida o limitada antes del mastering. "
+                        "Si no estás usando limitador en el bus principal, este dato es solo informativo."
+                    ),
+                    "recommendation": (
+                        "Verifica si hay limitación o compresión agresiva en el bus principal. "
+                        "Si el nivel alto responde a una decisión creativa, no es necesario cambiarlo. "
+                        "El volumen final se define en mastering."
+                    )
+                }
+            else:
+                return {
+                    "interpretation": (
+                        f"El nivel general de tu mezcla ({lufs:.1f} LUFS) es elevado, "
+                        "pero la dinámica está preservada. Esto puede ser normal según el género "
+                        "y el estilo de mezcla."
+                    ),
+                    "recommendation": (
+                        "LUFS es informativo. El volumen final se define en mastering."
+                    )
+                }
         else:
             return {
                 "interpretation": (
-                    "El nivel general de tu mezcla está bajo, pero esto es informativo. "
-                    "Para mezclas pre-mastering, un rango amplio de -15 a -35 LUFS es aceptable. "
+                    f"El nivel general de tu mezcla ({lufs:.1f} LUFS) está por debajo del rango típico, "
+                    "pero esto es informativo. Para mezclas pre-mastering, un rango amplio es aceptable. "
                     "El loudness final se ajusta en mastering."
                 ),
                 "recommendation": (
-                    f"El nivel actual ({lufs:.1f} LUFS) es válido. Si deseas, puedes subir "
-                    f"2-4 dB para un nivel más cómodo de monitoreo, pero no es obligatorio."
+                    "LUFS es informativo. Si deseas, puedes ajustar los niveles de ganancia para un nivel "
+                    "más cómodo de monitoreo, pero no es obligatorio."
                 )
             }
-    
+
     else:  # error
         if lufs > -10:
-            return {
-                "interpretation": (
-                    "El nivel general de tu mezcla es excesivamente alto. "
-                    "Este loudness indica sobrecompresión severa o limitación agresiva, "
-                    "lo que reduce significativamente el margen disponible para el mastering "
-                    "y limita las opciones de procesamiento."
-                ),
-                "recommendation": (
-                    f"Es necesario reducir significativamente el nivel (6-10 dB mínimo) y "
-                    f"revisar toda la cadena de procesamiento del bus master. El objetivo "
-                    f"es dejar espacio para el mastering."
-                )
-            }
+            if compression_suspected:
+                return {
+                    "interpretation": (
+                        f"El nivel general de tu mezcla ({lufs:.1f} LUFS) es muy elevado. "
+                        "Junto con un rango dinámico muy reducido, esto sugiere sobrecompresión "
+                        "o limitación agresiva en la cadena del bus principal, lo que puede reducir "
+                        "el margen disponible para el mastering."
+                    ),
+                    "recommendation": (
+                        "Revisa la cadena de procesamiento del bus principal. "
+                        "Si hay limitadores o compresores, verifica que estén cumpliendo una función "
+                        "creativa y no solo subiendo el nivel. El volumen final se define en mastering."
+                    )
+                }
+            else:
+                return {
+                    "interpretation": (
+                        f"El nivel general de tu mezcla ({lufs:.1f} LUFS) es muy elevado, "
+                        "aunque la dinámica se mantiene. Esto puede ser intencional según el género."
+                    ),
+                    "recommendation": (
+                        "LUFS es informativo. Si no estás usando procesamiento en el bus principal "
+                        "para subir el nivel, este dato no requiere acción. "
+                        "El volumen final se define en mastering."
+                    )
+                }
         else:
             return {
                 "interpretation": (
-                    "El nivel general de tu mezcla es muy bajo. "
+                    f"El nivel general de tu mezcla ({lufs:.1f} LUFS) es muy bajo. "
                     "Aunque el loudness final se ajusta en mastering, un nivel muy bajo "
-                    "puede indicar problemas de gain staging en la mezcla."
+                    "puede indicar problemas de estructura de ganancia en la mezcla."
                 ),
                 "recommendation": (
-                    f"Revisa el gain staging de tu sesión. Actualmente en {lufs:.1f} LUFS. "
-                    f"Considera subir el nivel general si todo suena demasiado bajo."
+                    "Revisa la estructura de ganancia de tu sesión. "
+                    "Si todo suena bien a nivel de monitoreo, el ingeniero de mastering "
+                    "puede trabajar con este nivel sin problema."
                 )
             }
 
@@ -473,7 +506,7 @@ def _generate_stereo_text_es(balance: float, correlation: float, ms_ratio: float
                 "(parlantes Bluetooth, teléfonos, clubes)."
             ),
             "recommendation": (
-                "Revisa plugins de widening estéreo, reverbs con mucha información Side, "
+                "Revisa plugins de ensanchamiento estéreo, reverbs con mucha información Side, "
                 "y la fase de instrumentos grabados en estéreo. Prueba siempre en mono."
             )
         }
@@ -524,12 +557,12 @@ def _generate_stereo_text_es(balance: float, correlation: float, ms_ratio: float
                 "interpretation": (
                     f"La imagen estéreo de tu mezcla está muy ancha (M/S: {ms_ratio:.2f}). "
                     "Puede sonar débil en parlantes o perder impacto en mono. "
-                    "Los efectos de estéreo widening pueden estar exagerados."
+                    "Los efectos de ensanchamiento estéreo pueden estar exagerados."
                 ),
                 "recommendation": (
-                    "Considera reducir el estéreo widening en algunos elementos. "
-                    "Verifica que el centro (voz, bajo, kick) no esté disperso. "
-                    "Prueba en mono para verificar."
+                    "Se detecta una correlación estéreo baja en algunos pasajes. "
+                    "Esto puede generar cancelaciones parciales al reproducirse en mono. "
+                    "Conviene verificar el comportamiento en mono y revisar los procesos estéreo aplicados."
                 )
             }
         elif correlation > 0.97:  # Almost mono
@@ -565,7 +598,7 @@ def _generate_stereo_text_es(balance: float, correlation: float, ms_ratio: float
                     "Verifica el comportamiento en mono para asegurar compatibilidad."
                 ),
                 "recommendation": (
-                    "Revisa los plugins de widening estéreo y verifica la fase en instrumentos "
+                    "Revisa los plugins de ensanchamiento estéreo y verifica la fase en instrumentos "
                     "grabados en estéreo. Considera ajustar el width en algunos elementos si es necesario."
                 )
             }
@@ -580,7 +613,7 @@ def _generate_stereo_text_es(balance: float, correlation: float, ms_ratio: float
             ),
             "recommendation": (
                 "Es necesario revisar toda la imagen estéreo: panoramas de elementos centrales, "
-                "fase de instrumentos estéreo, y efectos de widening. Verifica siempre en mono "
+                "fase de instrumentos estéreo, y efectos de ensanchamiento. Verifica siempre en mono "
                 "para detectar cancelaciones de fase."
             )
         }
@@ -685,8 +718,9 @@ def _generate_dr_text_en(dr_value: float, status: str) -> Dict[str, str]:
                 "to add impact or result in a final product that sounds flat or fatiguing."
             ),
             "recommendation": (
-                "Review compression on master bus and group buses. Consider reducing ratio "
-                "or increasing threshold on aggressive compressors to recover natural dynamics."
+                "The dynamic range appears reduced in this mix. "
+                "This can indicate heavy compression or limiting before mastering. "
+                "If this is not intentional, it may be worth reviewing how dynamics are being controlled."
             )
         }
     
@@ -698,33 +732,35 @@ def _generate_dr_text_en(dr_value: float, status: str) -> Dict[str, str]:
                 "with no space for mastering to add desired final impact."
             ),
             "recommendation": (
-                "Significantly reduce compression throughout mix. Review all compressors, "
-                "especially on master bus and subgroups. Goal is to recover dynamic contrast "
-                "between song sections."
+                "The overall dynamics are limited at this stage. "
+                "This may affect depth and contrast during mastering. "
+                "Review whether the amount of compression aligns with the intended aesthetic."
             )
         }
 
 
-def _generate_level_text_en(lufs: float, status: str) -> Dict[str, str]:
+def _generate_level_text_en(lufs: float, status: str, compression_suspected: bool = False) -> Dict[str, str]:
     """
     Generate English interpretation for overall level.
-    
-    NOTE: These texts are INFORMATIVE. LUFS for pre-mastering mixes
-    is not prescriptive - a wide range (-15 to -35) is acceptable.
+
+    NOTE: LUFS is INFORMATIVE for pre-mastering mixes.
+    It should never generate "reduce X dB" target advice.
+    It CAN flag possible over-compression when corroborated by low PLR
+    (compression_suspected flag computed upstream).
     """
-    
+
     if status == "excellent":
         return {
             "interpretation": (
-                "Your mix's overall level is optimal for mastering. "
-                "It provides excellent headroom for the mastering engineer to work freely, "
-                "achieving target loudness without compromising dynamics or introducing distortion."
+                "Your mix's overall level is within the recommended margin for mastering. "
+                "It allows the mastering engineer to work freely toward target loudness "
+                "without compromising dynamics."
             ),
             "recommendation": (
-                "Current level is perfect. Maintain this headroom for mastering."
+                "Current level requires no gain staging adjustments."
             )
         }
-    
+
     elif status == "good":
         return {
             "interpretation": (
@@ -733,60 +769,89 @@ def _generate_level_text_en(lufs: float, status: str) -> Dict[str, str]:
                 "work to achieve streaming platform targets."
             ),
             "recommendation": (
-                "Level is adequate. Any adjustments should be minimal (±1-2 dB)."
+                "Level is adequate. Final loudness is set during mastering."
             )
         }
-    
+
     elif status == "warning":
         if lufs > -14:
-            return {
-                "interpretation": (
-                    "Your mix's overall level is quite hot for mastering. "
-                    "Insufficient headroom may limit the mastering engineer's options "
-                    "and could indicate over-processing on the master bus."
-                ),
-                "recommendation": (
-                    f"Consider reducing master bus level by 3-5 dB. Currently at "
-                    f"{lufs:.1f} LUFS; for pre-mastering mixes, -18 to -24 LUFS is comfortable."
-                )
-            }
+            if compression_suspected:
+                return {
+                    "interpretation": (
+                        f"Your mix's overall level ({lufs:.1f} LUFS) is elevated. "
+                        "Combined with a reduced dynamic range (low PLR), this may indicate "
+                        "that the mix is already heavily compressed or limited before mastering. "
+                        "If you're not using a limiter on the master bus, this is just informational."
+                    ),
+                    "recommendation": (
+                        "Check for limiting or aggressive compression on the master bus. "
+                        "If the high level is a creative decision, no changes are needed. "
+                        "Final loudness is set during mastering."
+                    )
+                }
+            else:
+                return {
+                    "interpretation": (
+                        f"Your mix's overall level ({lufs:.1f} LUFS) is elevated, "
+                        "but dynamics are preserved. This can be normal depending on genre "
+                        "and mixing style."
+                    ),
+                    "recommendation": (
+                        "LUFS is informational. Final loudness is set during mastering."
+                    )
+                }
         else:
             return {
                 "interpretation": (
-                    "Your mix's overall level is quite low, but this is informative. "
-                    "For pre-mastering mixes, a wide range of -15 to -35 LUFS is acceptable. "
+                    f"Your mix's overall level ({lufs:.1f} LUFS) is below the typical range, "
+                    "but this is informational. For pre-mastering mixes, a wide range is acceptable. "
                     "Final loudness is adjusted during mastering."
                 ),
                 "recommendation": (
-                    f"Current level ({lufs:.1f} LUFS) is valid. You may raise 2-4 dB "
-                    f"for more comfortable monitoring, but it's not required."
+                    "LUFS is informational. You may adjust gain staging for more comfortable "
+                    "monitoring, but it's not required."
                 )
             }
-    
+
     else:  # error
         if lufs > -10:
-            return {
-                "interpretation": (
-                    "Your mix's overall level is excessively high. "
-                    "This indicates severe over-compression or limiting on the mix bus, "
-                    "significantly reducing available margin for mastering and "
-                    "limiting processing options."
-                ),
-                "recommendation": (
-                    f"Significantly reduce level (6-10 dB) and remove or reduce limiting/compression "
-                    f"on master bus. Leave room for mastering to work."
-                )
-            }
+            if compression_suspected:
+                return {
+                    "interpretation": (
+                        f"Your mix's overall level ({lufs:.1f} LUFS) is very high. "
+                        "Combined with very reduced dynamic range, this suggests over-compression "
+                        "or aggressive limiting on the master bus chain, which may reduce "
+                        "the margin available for mastering."
+                    ),
+                    "recommendation": (
+                        "Review the master bus processing chain. "
+                        "If there are limiters or compressors, verify they serve a creative purpose "
+                        "and are not just raising the level. Final loudness is set during mastering."
+                    )
+                }
+            else:
+                return {
+                    "interpretation": (
+                        f"Your mix's overall level ({lufs:.1f} LUFS) is very high, "
+                        "though dynamics are maintained. This may be intentional depending on genre."
+                    ),
+                    "recommendation": (
+                        "LUFS is informational. If you're not using master bus processing "
+                        "to raise the level, no action is needed. "
+                        "Final loudness is set during mastering."
+                    )
+                }
         else:
             return {
                 "interpretation": (
-                    "Your mix's overall level is very low. "
+                    f"Your mix's overall level ({lufs:.1f} LUFS) is very low. "
                     "While final loudness is adjusted in mastering, a very low level "
                     "may indicate gain staging issues in the mix."
                 ),
                 "recommendation": (
-                    f"Review your session's gain staging. Currently at {lufs:.1f} LUFS. "
-                    f"Consider raising the overall level if everything sounds too quiet."
+                    "Review your session's gain staging. "
+                    "If everything sounds fine at your monitoring level, the mastering engineer "
+                    "can work with this level without issue."
                 )
             }
 
@@ -873,9 +938,9 @@ def _generate_stereo_text_en(balance: float, correlation: float, ms_ratio: float
                     "Stereo widening effects may be exaggerated."
                 ),
                 "recommendation": (
-                    "Consider reducing stereo widening on some elements. "
-                    "Verify center elements (vocal, bass, kick) aren't dispersed. "
-                    "Test in mono to verify."
+                    "Low stereo correlation is detected in certain passages. "
+                    "This may cause partial cancellations when summed to mono. "
+                    "It is advisable to check mono compatibility and review stereo processing in those sections."
                 )
             }
         elif correlation > 0.97:  # Almost mono
@@ -976,7 +1041,7 @@ def format_for_api_response(
             "interpretation": interpretations["stereo_balance"]["interpretation"],
             "recommendation": interpretations["stereo_balance"]["recommendation"],
             "metrics": {
-                "balance_l_r": metrics.get('stereo_balance', 0),
+                "balance_l_r": metrics.get('lr_balance_db', 0),
                 "ms_ratio": ms_ratio,
                 "correlation": metrics.get('stereo_correlation', 0),
                 "status": _get_stereo_status(
@@ -1034,7 +1099,7 @@ def format_for_api_response_v2(
             },
             "stereo_balance": {
                 "metrics": {
-                    "balance_l_r": metrics.get('stereo_balance', 0),
+                    "balance_l_r": metrics.get('lr_balance_db', 0),
                     "ms_ratio": ms_ratio,
                     "correlation": metrics.get('stereo_correlation', 0),
                     "status": _get_stereo_status(

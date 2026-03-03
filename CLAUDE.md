@@ -3961,3 +3961,62 @@ Continued from Phase 2 SEO session. 4 parallel audit agents (voice/copy, SEO/AI,
 1. `4ac6a86` - ux: learn pages visual polish + competitors philosophy section
 
 **Git state**: main on `4ac6a86`, pushed. Build clean. All 30 routes compiled.
+
+### Session 2026-03-02 — FLAC Format Support (Frontend Alignment)
+
+#### Problem
+Backend (`main.py` + `analyzer.py`) already supported `.flac` in `ALLOWED_EXTENSIONS` and processed it natively via libsndfile. But the frontend was missing FLAC in:
+- File input `accept` attribute (FileUpload component)
+- `allowedTypes` and `allowedExtensions` validation arrays
+- Upload hint text, FAQ accordion, JSON-LD schemas, terms, learn pages
+
+#### Fix (`6ccf4a1`)
+Added FLAC to all 15 frontend format references across 7 files:
+
+| File | Changes |
+|------|---------|
+| `components/FileUpload.tsx` | `accept` attribute: `.wav,.aif,.aiff` → all 8 formats |
+| `app/page.tsx` | `allowedTypes` (+`audio/flac`, `audio/x-flac`), `allowedExtensions` (+`.flac`), upload hint, 3 JSON-LD schemas, FAQ accordion (ES+EN) |
+| `app/layout.tsx` | 3 JSON-LD schemas (HowToTool, HowToStep, FAQ answer) |
+| `app/terms/page.tsx` | Service description (ES + EN) |
+| `app/learn/is-my-mix-ready/page.tsx` | Supported formats spec (ES + EN) |
+| `app/learn/prepare-mix-for-mastering/page.tsx` | CTA subtext (ES + EN) |
+| `lib/error-messages.ts` | Already had FLAC — no change needed |
+
+#### Supported Formats (complete, all aligned)
+| Format | Extension(s) | Backend Handling | MIME Types |
+|--------|-------------|-----------------|------------|
+| WAV | .wav | Native (libsndfile) | audio/wav |
+| MP3 | .mp3 | Native (librosa) | audio/mpeg, audio/mp3 |
+| AIFF | .aiff, .aif | Native (libsndfile) | audio/aiff, audio/x-aiff |
+| FLAC | .flac | Native (libsndfile) | audio/flac, audio/x-flac |
+| AAC | .aac | Converted to WAV (ffmpeg) | audio/aac |
+| M4A | .m4a | Converted to WAV (ffmpeg) | audio/mp4, audio/x-m4a |
+| OGG | .ogg | Native (libsndfile) | audio/ogg, audio/opus |
+
+#### Verification
+- `grep "WAV, MP3, AIFF," --include="*.tsx" --include="*.ts" | grep -v FLAC` → zero results
+- `npx next build` → clean, 30 routes, zero errors
+
+#### Commits to main (Session 2026-03-02)
+1. `6ccf4a1` - fix: add FLAC to accepted formats across frontend — validation, UI copy, schemas, learn pages
+
+**Git state**: main on `6ccf4a1`, pushed. Build clean. All 30 routes compiled.
+
+---
+
+### Session 2026-03-02 Part 2 — Favicon Fix + Footer Audit
+
+#### What was done
+1. **Main site footer audit** — Agents verified FAQ content, structured data, sitemap, cross-links all consistent with learn pages. No edits needed to FAQ or main site content.
+2. **Footer link decision** — Briefly added 2 missing learn page links (mixing-vs-mastering, competitors) to main footer, then reverted per user preference. 3 curated links is better than 5 exhaustive ones — other 2 pages discoverable via sitemap + cross-links.
+3. **SVG favicon fix** — Removed `rx="22"` rounded corners from `public/icon.svg`. Chrome was showing white corner artifacts around the rounded rect; Firefox handled it fine. Without `rx`, the gradient fills edge to edge and the browser handles display sizing.
+
+#### Files modified
+- `public/icon.svg` — Removed `rx="22"` from rect element
+
+#### Commits to main (Session 2026-03-02 Part 2)
+1. `5b94d9d` - docs: update CLAUDE.md with learn pages polish session log
+2. `29f8150` - fix: remove rounded corners from SVG favicon to prevent white corner artifacts in Chrome
+
+**Git state**: main on `29f8150`, pushed. Build clean. All 30 routes compiled.

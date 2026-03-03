@@ -1582,30 +1582,44 @@ def calculate_metrics_bars_percentages(metrics: List[Dict[str, Any]], strict: bo
         # ============================================
         # TRUE PEAK (dBTP) - Mastering Ready ranges
         # ============================================
+        # Mode-aware: strict uses tighter thresholds (aligned with ScoringThresholds.TRUE_PEAK)
         elif "true_peak" in key:
-            # 🟢 Verde: ≤ -1.5 dBTP (Ideal)
-            # 🔵 Azul: -1.5 a -1.0 dBTP (Seguro)
-            # 🟡 Amarillo: -1.0 a -0.5 dBTP (Riesgo potencial)
-            # 🔴 Rojo: > -0.5 dBTP (Riesgo real) - ONLY if > 0 dBTP OR combined with other issues
-            if value <= -1.5:
-                percentage = 100
-                bar_status = "excellent"
-            elif -1.5 < value <= -1.0:
-                percentage = 85
-                bar_status = "good"
-            elif -1.0 < value <= -0.5:
-                percentage = 65
-                bar_status = "warning"
-                warnings_count += 1
-            else:  # > -0.5
-                # Rojo solo si > 0 dBTP (clipping real) O combinado con LUFS alto / Headroom bajo
-                if value > 0.0 or (lufs_val > -10 or headroom_val > -2):
-                    percentage = 35
-                    bar_status = "critical"
-                else:
-                    percentage = 50
+            if strict:
+                # Strict: 🟢 ≤ -3.0 | 🔵 -3.0 to -0.5 | 🟡 n/a | 🔴 ≥ -0.5
+                if value <= -3.0:
+                    percentage = 100
+                    bar_status = "excellent"
+                elif -3.0 < value < -0.5:
+                    percentage = 85
+                    bar_status = "good"
+                else:  # >= -0.5
+                    if value > 0.0 or (lufs_val > -10 or headroom_val > -2):
+                        percentage = 35
+                        bar_status = "critical"
+                    else:
+                        percentage = 50
+                        bar_status = "warning"
+                        warnings_count += 1
+            else:
+                # Normal: 🟢 ≤ -1.5 | 🔵 -1.5 to -1.0 | 🟡 -1.0 to -0.5 | 🔴 ≥ -0.5
+                if value <= -1.5:
+                    percentage = 100
+                    bar_status = "excellent"
+                elif -1.5 < value <= -1.0:
+                    percentage = 85
+                    bar_status = "good"
+                elif -1.0 < value <= -0.5:
+                    percentage = 65
                     bar_status = "warning"
                     warnings_count += 1
+                else:  # > -0.5
+                    if value > 0.0 or (lufs_val > -10 or headroom_val > -2):
+                        percentage = 35
+                        bar_status = "critical"
+                    else:
+                        percentage = 50
+                        bar_status = "warning"
+                        warnings_count += 1
         
         # ============================================
         # PLR (Peak-to-Loudness Ratio) - Mastering Ready ranges
@@ -1713,35 +1727,21 @@ def calculate_metrics_bars_percentages(metrics: List[Dict[str, Any]], strict: bo
                 bar_status = "critical"
         
         # ============================================
-        # FREQUENCY BALANCE - Based on deviation from profile
+        # FREQUENCY BALANCE - Aligned with metric status (dB delta method)
+        # Ensures bar agrees with table icon and Completo text
         # ============================================
         elif "frequency" in key or "tonal" in key:
-            # Based on tonal_percentage from genre detection
-            tonal_pct = m.get("tonal_percentage", 100)
-            
-            # 🟢 Verde: Dentro del perfil (≥90%)
-            # 🔵 Azul: Muy cercano (70-90%)
-            # 🟡 Amarillo: Desviación notable (50-70%)
-            # 🔴 Rojo: Desviación severa (<50%) - only if affects bass or critical presence
-            if tonal_pct >= 90:
+            freq_status = m.get("status", "pass")
+            if freq_status == "perfect":
                 percentage = 100
                 bar_status = "excellent"
-            elif tonal_pct >= 70:
+            elif freq_status == "pass":
                 percentage = 85
                 bar_status = "good"
-            elif tonal_pct >= 50:
+            else:  # warning (worst possible for freq balance)
                 percentage = 65
                 bar_status = "warning"
-            else:
-                # Check if issues affect bass (never red for creative color choices)
-                tonal_issues = m.get("tonal_issues", [])
-                has_bass_issue = any("bass" in str(issue).lower() or "grave" in str(issue).lower() for issue in tonal_issues)
-                if has_bass_issue:
-                    percentage = 45
-                    bar_status = "critical"
-                else:
-                    percentage = 55
-                    bar_status = "warning"
+                warnings_count += 1
         
         # ============================================
         # DC OFFSET - Simple pass/fail
@@ -2531,7 +2531,7 @@ def evaluate_stereo_field_comprehensive(corr: float, ms_ratio: float, lr_balance
                 context_parts.append(f"ℹ️ Centered stereo image (corr: {corr:.2f}, M/S: {ms_ratio:.2f}). Good mono compatibility with stereo information present.")
     elif ms_ratio > 1.5:
         if lang == 'es':
-            context_parts.append(f"⚠️ Estéreo muy ancho (M/S: {ms_ratio:.2f}). Puede sonar débil en parlantes o mono. Considera reducir stereo widening.")
+            context_parts.append(f"⚠️ Estéreo muy ancho (M/S: {ms_ratio:.2f}). Puede sonar débil en parlantes o mono. Considera reducir el ensanchamiento estéreo.")
         else:
             context_parts.append(f"⚠️ Very wide stereo (M/S: {ms_ratio:.2f}). May sound weak on speakers or mono. Consider reducing stereo widening.")
     
@@ -2552,16 +2552,16 @@ def evaluate_stereo_field_comprehensive(corr: float, ms_ratio: float, lr_balance
             if lang == 'es':
                 enhanced_message = (base_message + 
                     f" M/S Ratio: {ms_ratio:.2f} (rango comercial: 0.3-0.7), "
-                    f"Balance L/R: {lr_balance:+.1f} dB (tolerancia profesional: ±3 dB).")
+                    f"Balance L/R: {_fmt_lr(lr_balance)} dB (tolerancia profesional: ±3 dB).")
             else:
                 enhanced_message = (base_message + 
                     f" M/S Ratio: {ms_ratio:.2f} (commercial range: 0.3-0.7), "
-                    f"L/R Balance: {lr_balance:+.1f} dB (professional tolerance: ±3 dB).")
+                    f"L/R Balance: {_fmt_lr(lr_balance)} dB (professional tolerance: ±3 dB).")
         else:
             if lang == 'es':
-                enhanced_message = base_message + f" M/S Ratio: {ms_ratio:.2f} (balanceado), Balance L/R: {lr_balance:+.1f} dB (centrado)."
+                enhanced_message = base_message + f" M/S Ratio: {ms_ratio:.2f} (balanceado), Balance L/R: {_fmt_lr(lr_balance)} dB (centrado)."
             else:
-                enhanced_message = base_message + f" M/S Ratio: {ms_ratio:.2f} (balanced), L/R Balance: {lr_balance:+.1f} dB (centered)."
+                enhanced_message = base_message + f" M/S Ratio: {ms_ratio:.2f} (balanced), L/R Balance: {_fmt_lr(lr_balance)} dB (centered)."
     
     return base_status, enhanced_message
 
@@ -2810,6 +2810,27 @@ def calculate_categorical_flags(peak: float, tp: float, plr, corr: float, ms_rat
     }
 
 
+def _fmt_lr(val: float) -> str:
+    """Format L/R balance: signed for non-zero, plain for zero."""
+    return f"{val:+.1f}" if val != 0.0 else "0.0"
+
+
+# ----------------------------
+# Shared headroom recommendation helper
+# ----------------------------
+def calculate_headroom_recommendation(peak_db: float, strict: bool = False) -> int:
+    """
+    Calculate how many dB the user should reduce to reach the target headroom.
+    Returns a rounded integer. Used by all report generators for consistency.
+
+    Target: -6 dBFS (strict) or -4 dBFS (normal).
+    These sit comfortably within the 'perfect' range for each mode.
+    """
+    target = -6.0 if strict else -4.0
+    reduction = max(0, round(peak_db - target))
+    return reduction if reduction > 0 else 1  # At least 1 dB if status triggered
+
+
 # ----------------------------
 # Reglas / estados
 # ----------------------------
@@ -2820,33 +2841,34 @@ def _status_headroom_en(peak_db: float, strict: bool = False) -> Tuple[str, str,
     """
     # TRACK 1: Calculate (language-neutral)
     status, score = calculate_headroom_score(peak_db, strict)
-    
+    reduction_db = calculate_headroom_recommendation(peak_db, strict)
+
     # TRACK 2: Format message (Matías Voice - English)
     mode = "strict" if strict else "normal"
-    
+
     messages = {
-        "critical": "Too little headroom / clipping risk. Use a Gain/Utility plugin AFTER your master bus chain (lower 6-8 dB), then re-export. This preserves your mix balance and plugin sound.",
+        "critical": f"Too little headroom, clipping risk. Use a Gain/Utility plugin AFTER your master bus chain (lower approximately {reduction_db} dB), then re-export. This preserves your mix balance and plugin sound.",
         "warning": {
-            "strict": "Mix is running hot. Lower ~1–2 dB to leave comfortable headroom.",
-            "normal": "Mix is a bit hot. Lower ~1–2 dB to leave margin.",
+            "strict": f"Mix is running hot. Lower approximately {reduction_db} dB to leave comfortable headroom.",
+            "normal": f"Mix is a bit hot. Lower approximately {reduction_db} dB to leave margin.",
         },
         "perfect": {
             "strict": "Ideal headroom for commercial mastering delivery.",
-            "normal": f"Headroom of {abs(peak_db):.1f} dB is what I'm looking for - gives me room to work with EQ, compression and limiting without compromising quality.",
+            "normal": f"Headroom of {abs(peak_db):.1f} dB is what I'm looking for, gives me room to work with EQ, compression and limiting without compromising quality.",
         },
         "pass": {
             "strict": "Headroom is acceptable for mastering delivery.",
             "normal": "Headroom is appropriate for mastering.",
         },
-        "conservative": "Very conservative level. Not wrong, but you could raise ~1–3 dB if desired.",
+        "conservative": "Very conservative level. Not wrong, but you could raise 1 to 3 dB if desired.",
     }
-    
+
     # Select appropriate message
     if status in ["warning", "perfect", "pass"]:
         message = messages[status][mode]
     else:
         message = messages[status]
-    
+
     return status, message, score
 
 def _status_true_peak_en(tp_db: float, strict: bool = False) -> Tuple[str, str, float, bool]:
@@ -3076,25 +3098,26 @@ def _status_headroom_es(peak_db: float, strict: bool = False) -> Tuple[str, str,
     """
     # TRACK 1: Calcular (language-neutral)
     status, score = calculate_headroom_score(peak_db, strict)
-    
+    reduction_db = calculate_headroom_recommendation(peak_db, strict)
+
     # TRACK 2: Formatear mensaje (Matías Voice - del eBook)
     mode = "strict" if strict else "normal"
-    
+
     messages = {
-        "critical": "Muy poco headroom / riesgo de clipping. Usa un plugin de Gain/Utility DESPUÉS de tu cadena del master bus (bájalo 6-8 dB), luego re-exporta. Esto preserva el balance de tu mezcla y el sonido de tus plugins.",
+        "critical": f"Muy poco headroom (margen antes del máximo digital), con riesgo de clipping (saturación digital). Añade un plugin de ganancia al final del bus principal y reduce aproximadamente {reduction_db} dB antes de exportar nuevamente. Esto preserva el balance de tu mezcla y el sonido de tus plugins.",
         "warning": {
-            "strict": "Headroom insuficiente para entrega comercial. Ideal: -6 a -4 dBFS.",
-            "normal": "La mezcla está algo caliente. Baja 1–2 dB para dejar margen.",
+            "strict": f"Margen insuficiente para entrega comercial. Reduce aproximadamente {reduction_db} dB para llegar a la zona ideal.",
+            "normal": f"La mezcla está algo caliente. Baja aproximadamente {reduction_db} dB para dejar margen.",
         },
         "perfect": {
-            "strict": "Headroom perfecto para entrega comercial profesional.",
-            "normal": f"El headroom de {abs(peak_db):.1f} dB es lo que busco - me da espacio para trabajar EQ, compresión y limiting sin comprometer la calidad.",
+            "strict": "Margen óptimo para entrega comercial profesional.",
+            "normal": f"El margen de {abs(peak_db):.1f} dB es lo que busco, me da espacio para trabajar EQ, compresión y limitación sin comprometer la calidad.",
         },
         "pass": {
-            "strict": "Headroom aceptable, pero -6 a -4 dBFS es ideal para clientes/labels.",
-            "normal": "Headroom adecuado para mastering.",
+            "strict": "Margen aceptable, pero -6 a -4 dBFS es ideal para clientes/labels.",
+            "normal": "Margen adecuado para mastering.",
         },
-        "conservative": "Nivel muy conservador. No es un problema, pero podrías subir 1–3 dB si lo deseas.",
+        "conservative": "Nivel muy conservador. No es un problema, pero podrías subir 1 a 3 dB si lo deseas.",
     }
     
     # Seleccionar mensaje apropiado
@@ -3176,13 +3199,13 @@ def _status_plr_es(plr: Optional[float], has_real_lufs: bool, strict: bool = Fal
     messages = {
         "perfect": {
             "strict": "Excelente PLR: dinámica óptima para entrega comercial.",
-            "normal": f"La dinámica está muy bien preservada (PLR: {plr:.1f} dB). No has sobre-limitado en el master bus, lo que me da mucho espacio para trabajar el volumen final sin sacrificar la musicalidad.",
+            "normal": f"La dinámica está muy bien preservada (PLR: {plr:.1f} dB). No has sobre-limitado en el bus principal, lo que me da mucho espacio para trabajar el volumen final sin sacrificar la musicalidad.",
         },
         "pass": {
             "strict": "PLR bueno para comercial, pero ≥14 dB es ideal para máxima flexibilidad.",
             "normal": "PLR adecuado para mastering.",
         },
-        "warning": f"La mezcla ya puede estar bastante limitada (PLR: {plr:.1f} dB). Revisa limitadores/compresores en el master bus. Si te gusta su color, manténlos pero ajústalos para que no reduzcan ganancia (sube threshold/ceiling). Así conservas el carácter mientras recuperas dinámica.",
+        "warning": f"La mezcla ya puede estar bastante limitada (PLR: {plr:.1f} dB). Revisa limitadores/compresores en el bus principal. Si te gusta su color, manténlos pero ajústalos para que no reduzcan ganancia (sube el umbral y el techo). Así conservas el carácter mientras recuperas dinámica.",
         "critical": f"PLR muy bajo ({plr:.1f} dB): sobre-comprimida/limitada. Quita limitadores o ajústalos para que el audio solo PASE sin reducción de ganancia (solo para color). Alternativamente, usa menos compresión en buses de grupos.",
     }
     
@@ -3296,7 +3319,7 @@ def _status_crest_factor_es(crest: float) -> Tuple[str, str, float]:
         return "pass", "Buena dinámica para mastering.", 0.7
     if crest >= 10.0:
         return "warning", "Dinámica algo comprimida. Revisa compresión en el bus.", 0.4
-    return "critical", "Dinámica muy comprimida/limitada. Reduce procesamiento en master bus.", -0.5
+    return "critical", "Dinámica muy comprimida/limitada. Reduce procesamiento en bus principal.", -0.5
 
 def _status_dc_offset_es(dc_data: Dict[str, Any]) -> Tuple[str, str, float]:
     """Evalúa DC offset."""
@@ -3722,7 +3745,7 @@ def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, s
     stereo_metric = {
         "name": METRIC_NAMES[_pick_lang(lang)]["Stereo Width"],
         "internal_key": "Stereo Width",
-        "value": f"{corr*100:.0f}% corr | M/S: {ms_ratio:.2f} | L/R: {lr_balance_db:+.1f} dB",
+        "value": f"{corr*100:.0f}% corr | M/S: {ms_ratio:.2f} | L/R: {_fmt_lr(lr_balance_db)} dB",
         "correlation": corr,
         "ms_ratio": round(ms_ratio, 2),
         "lr_balance_db": round(lr_balance_db, 1),
@@ -3895,7 +3918,8 @@ def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, s
             
             balance_ratio = max(0.0, min(1.0, balance_ratio))  # Clamp 0-1
             interpretation_metrics['stereo_balance'] = balance_ratio
-            
+            interpretation_metrics['lr_balance_db'] = round(lr_balance_db, 1)
+
             # Extract correlation
             interpretation_metrics['stereo_correlation'] = float(corr)
             interpretation_metrics['ms_ratio'] = float(stereo_metric.get('ms_ratio', 0))
@@ -4297,7 +4321,7 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
             if ms_ratio:
                 details += f"   • M/S Ratio: {ms_ratio:.2f}\n"
             if lr_balance is not None:
-                details += f"   • L/R Balance: {abs(lr_balance):.1f} dB\n"
+                details += f"   • L/R Balance: {_fmt_lr(lr_balance)} dB\n"
             details += "\n"
             
             # Check for temporal analysis (from chunked mode)
@@ -4601,7 +4625,7 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
             if ms_ratio:
                 details += f"   • M/S Ratio: {ms_ratio:.2f}\n"
             if lr_balance is not None:
-                details += f"   • L/R Balance: {abs(lr_balance):.1f} dB\n"
+                details += f"   • L/R Balance: {_fmt_lr(lr_balance)} dB\n"
             details += "\n"
             
             # Check for temporal analysis (from chunked mode)
@@ -5751,7 +5775,7 @@ def analyze_file_chunked(
         stereo_metric = {
             "name": "Stereo Width",
             "internal_key": "Stereo Width",
-            "value": f"{final_correlation*100:.0f}% corr | M/S: {final_ms_ratio:.2f} | L/R: {final_lr_balance:+.1f} dB",
+            "value": f"{final_correlation*100:.0f}% corr | M/S: {final_ms_ratio:.2f} | L/R: {_fmt_lr(final_lr_balance)} dB",
             "correlation": final_correlation,
             "ms_ratio": round(final_ms_ratio, 2),
             "lr_balance_db": round(final_lr_balance, 1),
@@ -5909,7 +5933,8 @@ def analyze_file_chunked(
             
             balance_ratio = max(0.0, min(1.0, balance_ratio))  # Clamp 0-1
             interpretation_metrics['stereo_balance'] = balance_ratio
-            
+            interpretation_metrics['lr_balance_db'] = round(final_lr_balance, 1)
+
             # Extract correlation
             interpretation_metrics['stereo_correlation'] = float(final_correlation)
             interpretation_metrics['ms_ratio'] = float(stereo_metric.get('ms_ratio', 0))
@@ -6386,9 +6411,9 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                 "⚠️ SI ESTE ARCHIVO CORRESPONDE A UNA MEZCLA:\n"
                 "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
                 "Si tu intención es enviarla a mastering, vuelve a la sesión original sin limitación "
-                "en el bus maestro y ajusta el nivel antes del bounce:\n\n"
+                "en el bus principal y ajusta el nivel antes de exportar:\n\n"
                 "1. Vuelve a tu sesión de mezcla\n"
-                "2. Inserta un plugin de Gain/Utility al final del bus master (DESPUÉS de toda tu cadena)\n"
+                "2. Inserta un plugin de ganancia al final del bus principal (DESPUÉS de toda tu cadena)\n"
                 f"3. Reduce el nivel aproximadamente {reduction_rounded} dB\n"
                 "4. Verifica que los picos queden alrededor de -6 dBFS\n"
                 "5. Re-exporta\n\n"
@@ -6412,7 +6437,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                     "💡 Tu decisión:\n"
                     "Si tu master traduce bien en diferentes sistemas y suena como buscas, el archivo es "
                     "funcional para distribución. El riesgo de clipping intersample es bajo en codecs modernos.\n\n"
-                    "Si prefieres máxima seguridad técnica: reduce 1–2 dB con Gain/Utility al final de la cadena "
+                    "Si prefieres máxima seguridad técnica: reduce 1 a 2 dB con un plugin de ganancia al final de la cadena "
                     "y re-exporta.\n\n"
                     "🎧 Al final del día, tus oídos tienen la última palabra. Si el master suena balanceado, "
                     "impactante y se traduce bien en múltiples sistemas, confía en tu decisión."
@@ -6738,7 +6763,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                     "💡 Your decision:\n"
                     "If your master translates well across systems and sounds the way you want, the file is "
                     "functional for distribution. The risk of intersample clipping is low in modern codecs.\n\n"
-                    "If you prefer maximum technical safety: lower by 1–2 dB with a Gain/Utility plugin at the "
+                    "If you prefer maximum technical safety: lower by 1 to 2 dB with a Gain/Utility plugin at the "
                     "end of your chain and re-export.\n\n"
                     "🎧 At the end of the day, your ears have the final say. If the master sounds balanced, "
                     "impactful, and translates well across systems, trust your decision."
@@ -6784,8 +6809,10 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
         # PLR / Dynamics
         plr_metric = next((m for m in metrics if "PLR" in m.get("internal_key", "")), None)
         if plr_metric and plr_metric.get("value") != "N/A":
-            if plr_metric.get("status") in ["perfect", "pass"]:
+            if plr_metric.get("status") == "perfect":
                 tech_parts.append("Excelente rango dinámico")
+            elif plr_metric.get("status") == "pass":
+                tech_parts.append("Buen rango dinámico")
             elif plr_metric.get("status") == "warning":
                 tech_parts.append("Rango dinámico algo comprimido")
         
@@ -6846,7 +6873,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                     
                     # PLR warning
                     elif "PLR" in internal_key:
-                        plr_val = f"{metric_value:.1f}" if isinstance(metric_value, (int, float)) else str(metric_value)
+                        plr_val = f"{metric_value:.1f}" if isinstance(metric_value, (int, float)) else str(metric_value).replace(" dB", "").replace("dB", "")
                         issues_details.append(
                             f"• Rango Dinámico (PLR): está en {plr_val} dB. "
                             f"Para máxima flexibilidad en mastering, ideal 12-14 dB en modo strict."
@@ -6901,7 +6928,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                         "   • Perfecto - algunas producciones vintage o artísticas usan mono\n"
                         "   • Solo confirma que sea la decisión correcta\n\n"
                         "   Si NO es intencional, verifica:\n"
-                        "   • ¿Exportaste en mono por error? Revisa configuración de bounce\n"
+                        "   • ¿Exportaste en mono por error? Revisa configuración de exportación\n"
                         "   • ¿Tienes routing mal configurado en el DAW?\n"
                         "   • ¿Todos los elementos están centrados sin paneo?\n\n"
                         "   💡 Para mastering:\n"
@@ -6926,7 +6953,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                     "   • Exceso de reverb/delay en los sides\n"
                     "   • Efectos estéreo muy agresivos\n\n"
                     "   💡 Cómo corregirlo:\n"
-                    "   1. Reduce o quita plugins de 'stereo widening'\n"
+                    "   1. Reduce o quita plugins de ensanchamiento estéreo\n"
                     "   2. Baja el nivel de reverbs y delays panoramizados\n"
                     "   3. Trae elementos importantes más al centro\n"
                     "   4. Prueba la mezcla en MONO - si pierde mucho cuerpo, está muy ancha"
@@ -7018,8 +7045,10 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
         # PLR / Dynamics
         plr_metric = next((m for m in metrics if "PLR" in m.get("internal_key", "")), None)
         if plr_metric and plr_metric.get("value") != "N/A":
-            if plr_metric.get("status") in ["perfect", "pass"]:
+            if plr_metric.get("status") == "perfect":
                 tech_parts.append("excellent dynamic range")
+            elif plr_metric.get("status") == "pass":
+                tech_parts.append("good dynamic range")
             elif plr_metric.get("status") == "warning":
                 tech_parts.append("somewhat compressed dynamic range")
         
@@ -7064,9 +7093,10 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                     if "Headroom" in internal_key:
                         # metric_value already includes unit (e.g., "-2.5 dBFS")
                         peak_val = str(metric_value) if not isinstance(metric_value, (int, float)) else f"{metric_value:.1f} dBFS"
+                        target_range = "-6 to -5 dBFS" if strict else "-6 to -3 dBFS"
                         issues_details.append(
                             f"• Overall headroom: peak levels sit around {peak_val}. "
-                            f"For optimal mastering flexibility, peaks closer to -6 to -4 dBFS are recommended."
+                            f"For optimal mastering flexibility, peaks closer to {target_range} are recommended."
                         )
                     
                     # True Peak warning
@@ -7080,7 +7110,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                     
                     # PLR warning
                     elif "PLR" in internal_key:
-                        plr_val = f"{metric_value:.1f}" if isinstance(metric_value, (int, float)) else str(metric_value)
+                        plr_val = f"{metric_value:.1f}" if isinstance(metric_value, (int, float)) else str(metric_value).replace(" dB", "").replace("dB", "")
                         issues_details.append(
                             f"• Dynamic Range (PLR): currently at {plr_val} dB. "
                             f"For maximum mastering flexibility, 12-14 dB is ideal in strict mode."
@@ -7378,7 +7408,10 @@ def generate_visual_report(report: Dict[str, Any], strict: bool = False, lang: s
             elif "True Peak" in name:
                 positive_aspects.append("True Peak seguro para mastering" if lang == "es" else "Safe True Peak for mastering")
             elif "PLR" in name or "dinám" in message.lower() or "dynamic" in message.lower():
-                positive_aspects.append("Excelente rango dinámico" if lang == "es" else "Excellent dynamic range")
+                if status == "perfect":
+                    positive_aspects.append("Excelente rango dinámico" if lang == "es" else "Excellent dynamic range")
+                else:
+                    positive_aspects.append("Buen rango dinámico" if lang == "es" else "Good dynamic range")
             elif "Stereo" in name or "stéreo" in name.lower():
                 positive_aspects.append("Imagen estéreo sólida y centrada" if lang == "es" else "Solid and centered stereo image")
             elif "Frequency" in name or "Frecuen" in name:
@@ -7401,7 +7434,7 @@ def generate_visual_report(report: Dict[str, Any], strict: bool = False, lang: s
             elif "Frequency" in name or "Frecuen" in name:
                 areas_to_review.append("Revisar balance de frecuencias - Ajustar EQ si es necesario" if lang == "es" else "Review frequency balance - Adjust EQ if needed")
             elif "LUFS" in name:
-                areas_to_review.append("Revisar nivel general - Ajustar gain staging" if lang == "es" else "Review overall level - Adjust gain staging")
+                areas_to_review.append("Revisar nivel general - Ajustar niveles de ganancia" if lang == "es" else "Review overall level - Adjust gain staging")
     
     # Remove duplicates while preserving order
     positive_aspects = list(dict.fromkeys(positive_aspects))
@@ -8415,7 +8448,7 @@ def main() -> None:
                     print("💼 Este archivo parece ser un master o hotmix.")
                     print()
                     print("Si tu intención era enviar una mezcla para mastering, necesitas:")
-                    print("• Volver a la sesión sin limitador en el bus maestro")
+                    print("• Volver a la sesión sin limitador en el bus principal")
                     print("• Bajar ~6 dB (picos en -6 dBFS)")
                     print("• Re-exportar la mezcla")
                     print()
