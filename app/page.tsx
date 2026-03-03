@@ -3087,7 +3087,7 @@ by Matías Carvajal
                     id="file-input"
                     type="file"
                     aria-label={lang === 'es' ? 'Seleccionar archivo de audio' : 'Select audio file'}
-                    accept=".wav,.mp3,.aiff,.aif,.aac,.m4a,.ogg"
+                    accept=".wav,.mp3,.aiff,.aif,.flac,.aac,.m4a,.ogg"
                     onChange={(e) => {
                       const selectedFile = e.target.files?.[0] || null
                       
