@@ -60,7 +60,7 @@ def generate_interpretative_texts(
 
     if lang == 'es':
         return {
-            "headroom": _generate_headroom_text_es(headroom, true_peak, headroom_status),
+            "headroom": _generate_headroom_text_es(headroom, true_peak, headroom_status, strict),
             "dynamic_range": _generate_dr_text_es(dr_value, dr_status),
             "overall_level": _generate_level_text_es(lufs, level_status, compression_suspected),
             "stereo_balance": _generate_stereo_text_es(stereo_balance, stereo_correlation, ms_ratio, stereo_status),
@@ -68,7 +68,7 @@ def generate_interpretative_texts(
         }
     else:
         return {
-            "headroom": _generate_headroom_text_en(headroom, true_peak, headroom_status),
+            "headroom": _generate_headroom_text_en(headroom, true_peak, headroom_status, strict),
             "dynamic_range": _generate_dr_text_en(dr_value, dr_status),
             "overall_level": _generate_level_text_en(lufs, level_status, compression_suspected),
             "stereo_balance": _generate_stereo_text_en(stereo_balance, stereo_correlation, ms_ratio, stereo_status),
@@ -241,9 +241,12 @@ def _get_stereo_status(balance: float, correlation: float, ms_ratio: float = 0.5
 # SPANISH TEXT GENERATORS - UPDATED
 # ============================================================================
 
-def _generate_headroom_text_es(headroom: float, true_peak: float, status: str) -> Dict[str, str]:
+def _generate_headroom_text_es(headroom: float, true_peak: float, status: str, strict: bool = False) -> Dict[str, str]:
     """Generate Spanish interpretation for headroom & true peak"""
-    
+    # Dynamic reduction calculation aligned with calculate_headroom_recommendation()
+    target = -6.0 if strict else -4.0
+    reduction = max(1, round(headroom - target))
+
     if status == "excellent":
         return {
             "interpretation": (
@@ -257,7 +260,7 @@ def _generate_headroom_text_es(headroom: float, true_peak: float, status: str) -
                 "El nivel actual es ideal para trabajar con libertad."
             )
         }
-    
+
     elif status == "good":
         return {
             "interpretation": (
@@ -270,7 +273,7 @@ def _generate_headroom_text_es(headroom: float, true_peak: float, status: str) -
                 "El margen actual permite trabajar cómodamente."
             )
         }
-    
+
     elif status == "warning":
         return {
             "interpretation": (
@@ -279,12 +282,12 @@ def _generate_headroom_text_es(headroom: float, true_peak: float, status: str) -
                 "para aplicar compresión y limitación de manera transparente durante el mastering."
             ),
             "recommendation": (
-                f"Se recomienda reducir el nivel del bus principal entre 3-4 dB antes de exportar. "
-                f"Esto dejará un margen de aproximadamente {abs(headroom) + 3.5:.1f} dBFS, "
+                f"Se recomienda reducir el nivel del bus principal entre {reduction}-{reduction+1} dB antes de exportar. "
+                f"Esto dejará un margen de aproximadamente {abs(headroom) + reduction + 0.5:.1f} dBFS, "
                 f"ideal para la sesión de mastering."
             )
         }
-    
+
     else:  # error
         return {
             "interpretation": (
@@ -294,8 +297,8 @@ def _generate_headroom_text_es(headroom: float, true_peak: float, status: str) -
                 "las posibilidades creativas del mastering."
             ),
             "recommendation": (
-                f"Es necesario reducir el nivel del bus principal entre 5-6 dB antes de exportar. "
-                f"Esto creará el espacio necesario (aproximadamente {abs(headroom) + 5.5:.1f} dBFS) "
+                f"Es necesario reducir el nivel del bus principal entre {reduction}-{reduction+1} dB antes de exportar. "
+                f"Esto creará el espacio necesario (aproximadamente {abs(headroom) + reduction + 0.5:.1f} dBFS) "
                 f"para que el ingeniero de mastering pueda trabajar correctamente."
             )
         }
@@ -625,9 +628,12 @@ def _generate_stereo_text_es(balance: float, correlation: float, ms_ratio: float
 # ENGLISH TEXT GENERATORS - UPDATED
 # ============================================================================
 
-def _generate_headroom_text_en(headroom: float, true_peak: float, status: str) -> Dict[str, str]:
+def _generate_headroom_text_en(headroom: float, true_peak: float, status: str, strict: bool = False) -> Dict[str, str]:
     """Generate English interpretation for headroom & true peak"""
-    
+    # Dynamic reduction calculation aligned with calculate_headroom_recommendation()
+    target = -6.0 if strict else -4.0
+    reduction = max(1, round(headroom - target))
+
     if status == "excellent":
         return {
             "interpretation": (
@@ -640,7 +646,7 @@ def _generate_headroom_text_en(headroom: float, true_peak: float, status: str) -
                 "The current level is ideal for working with freedom."
             )
         }
-    
+
     elif status == "good":
         return {
             "interpretation": (
@@ -653,7 +659,7 @@ def _generate_headroom_text_en(headroom: float, true_peak: float, status: str) -
                 "Current headroom allows comfortable working space."
             )
         }
-    
+
     elif status == "warning":
         return {
             "interpretation": (
@@ -662,12 +668,12 @@ def _generate_headroom_text_en(headroom: float, true_peak: float, status: str) -
                 "compression and limiting during the mastering process."
             ),
             "recommendation": (
-                f"Consider reducing master bus level by 3-4 dB before export. "
-                f"This will provide approximately {abs(headroom) + 3.5:.1f} dBFS headroom, "
+                f"Consider reducing master bus level by {reduction}-{reduction+1} dB before export. "
+                f"This will provide approximately {abs(headroom) + reduction + 0.5:.1f} dBFS headroom, "
                 f"ideal for the mastering session."
             )
         }
-    
+
     else:  # error
         return {
             "interpretation": (
@@ -676,8 +682,8 @@ def _generate_headroom_text_en(headroom: float, true_peak: float, status: str) -
                 "without introducing digital distortion or limiting creative mastering possibilities."
             ),
             "recommendation": (
-                f"Reduce master bus level by 5-6 dB before export. "
-                f"This will create necessary space (approximately {abs(headroom) + 5.5:.1f} dBFS) "
+                f"Reduce master bus level by {reduction}-{reduction+1} dB before export. "
+                f"This will create necessary space (approximately {abs(headroom) + reduction + 0.5:.1f} dBFS) "
                 f"for proper mastering work."
             )
         }
@@ -1083,6 +1089,14 @@ def format_for_api_response(
                     metrics.get('stereo_correlation', 0),
                     ms_ratio
                 )
+            }
+        },
+        "crest_factor": {
+            "interpretation": interpretations["crest_factor"]["interpretation"],
+            "recommendation": interpretations["crest_factor"]["recommendation"],
+            "metrics": {
+                "crest_factor_db": metrics.get('crest_factor', 0),
+                "status": "info"
             }
         }
     }

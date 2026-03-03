@@ -8020,12 +8020,13 @@ def generate_complete_pdf(
             
             interps = report['interpretations']
             
-            # Order: Headroom, Dynamic Range, Overall Level, Stereo Balance
+            # Order: Headroom, Dynamic Range, Overall Level, Stereo Balance, Crest Factor
             sections = [
                 ('headroom', 'Headroom', 'Headroom'),
                 ('dynamic_range', 'Rango Dinámico (PLR)', 'Dynamic Range (PLR)'),
                 ('overall_level', 'Nivel General (LUFS)', 'Overall Level (LUFS)'),
-                ('stereo_balance', 'Balance Estéreo', 'Stereo Balance')
+                ('stereo_balance', 'Balance Estéreo', 'Stereo Balance'),
+                ('crest_factor', 'Crest Factor', 'Crest Factor')
             ]
             
             for section_key, title_es, title_en in sections:
@@ -8107,14 +8108,31 @@ def generate_complete_pdf(
                             bal_val = metrics_info.get('balance_l_r', metrics_info.get('balance_lr', 0))
                             corr_val = metrics_info.get('correlation', 0)
                             ms_val = metrics_info.get('ms_ratio', 0)
-                            
+
                             # Create table with gray background
                             data = [
                                 [f"Balance L/R: {bal_val:+.1f} dB"],
                                 [f"M/S Ratio: {ms_val:.2f}"],
-                                [f"Correlación: {corr_val:.2f}"]
+                                [f"{'Correlación' if lang == 'es' else 'Correlation'}: {corr_val:.2f}"]
                             ]
-                            
+
+                            table = Table(data, colWidths=[5*inch])
+                            table.setStyle(TableStyle([
+                                ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#f3f4f6')),
+                                ('PADDING', (0, 0), (-1, -1), 8),
+                                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                                ('FONTNAME', (0, 0), (-1, -1), base_font),
+                                ('FONTSIZE', (0, 0), (-1, -1), 10),
+                                ('TEXTCOLOR', (0, 0), (-1, -1), colors.HexColor('#374151')),
+                                ('BOX', (0, 0), (-1, -1), 0.5, colors.HexColor('#e5e7eb')),
+                            ]))
+                            story.append(table)
+
+                        elif section_key == 'crest_factor':
+                            cf_val = metrics_info.get('crest_factor_db', 0)
+
+                            data = [[f"Crest Factor: {cf_val:.1f} dB"]]
+
                             table = Table(data, colWidths=[5*inch])
                             table.setStyle(TableStyle([
                                 ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#f3f4f6')),
@@ -8151,7 +8169,7 @@ def generate_complete_pdf(
                     story.append(Spacer(1, 0.1*inch))
                     
                     # Add separator line between sections (except after last section)
-                    if section_key != 'stereo_balance':
+                    if section_key != 'crest_factor':
                         story.append(HRFlowable(
                             width="100%",
                             thickness=1,
