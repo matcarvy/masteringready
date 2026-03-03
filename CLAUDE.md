@@ -4020,3 +4020,94 @@ Added FLAC to all 15 frontend format references across 7 files:
 2. `29f8150` - fix: remove rounded corners from SVG favicon to prevent white corner artifacts in Chrome
 
 **Git state**: main on `29f8150`, pushed. Build clean. All 30 routes compiled.
+
+### Session 2026-03-03 — Spanish Terminology Localization (PDF Consistency + Voice)
+
+#### Context
+Continuation of multi-session PDF consistency + voice work. Previous sessions fixed 9 PDF bugs (L/R balance, True Peak bars, headroom contradictions, frequency balance, sign stripping, dB dB typo, PLR severity, voice compliance), `+0.0 dB` UX polish, and `_fmt_lr` helper. This session completed the strategic Spanish terminology localization.
+
+#### Spanish Terminology Lexicon Created (`mr-terminology-es.md`)
+Locked decisions for all user-facing Spanish copy. Target: 19-year-old producer in Medellín who learned from YouTube in Spanish.
+
+**Tier 1 — Keep in English**: plugin, LUFS, True Peak, dBFS, dBTP, PLR, M/S, EQ, mono
+**Tier 2 — Anchor once, then Spanish**:
+- headroom → "headroom (margen antes del máximo digital)" first mention, then "margen"
+- clipping → "clipping (saturación digital)" first mention, then "saturación digital"
+
+**Tier 3 — Fully localize**:
+- gain staging → estructura de ganancia / niveles de ganancia
+- stereo widening → ensanchamiento estéreo
+- bounce → exportación / exportar
+- threshold → umbral
+- ceiling → techo
+- limiting → limitación
+- master bus / bus master / bus maestro → bus principal
+- stereo (adjective) → estéreo
+- bus compressor → compresor de bus
+- settings → ajustes / configuración
+- Gain/Utility → plugin de ganancia
+
+#### Changes Applied
+
+**`analyzer.py`** (15 edits):
+- `_status_headroom_es` critical: anchors both "headroom" and "clipping" with Spanish explanations, uses "plugin de ganancia" and "bus principal"
+- `_status_headroom_es` all other messages: "Headroom" → "Margen", "limiting" → "limitación"
+- `_status_plr_es` perfect: "master bus" → "bus principal"
+- `_status_plr_es` warning: "master bus" → "bus principal", "threshold/ceiling" → "umbral y el techo"
+- `_status_crest_factor_es` critical: "master bus" → "bus principal"
+- `evaluate_stereo_field_comprehensive`: "stereo widening" → "ensanchamiento estéreo"
+- Completo generator: "stereo widening" → "ensanchamiento estéreo", "bounce" → "exportación", "Gain/Utility" → "plugin de ganancia", "bus master/maestro" → "bus principal"
+- `generate_short_mode_report` LUFS area: "gain staging" → "niveles de ganancia"
+
+**`interpretative_texts.py`** (22 edits):
+- 7 "headroom" → first anchored "headroom (margen antes del máximo digital)", rest "margen"
+- 6 "bus master" → "bus principal" (replace_all)
+- 4 "gain staging" → "estructura de ganancia" / "niveles de ganancia"
+- 4 "widening" → "ensanchamiento estéreo" / "ensanchamiento"
+- 1 "bus compressors con settings conservadores" → "compresores de bus con ajustes conservadores"
+
+#### Verification (3 parallel agents + syntax check)
+- **EN strings unchanged**: ALL PASS — every English function intact with original terminology
+- **ES strings correct**: 12/12 terminology rules compliant, zero anglicisms remaining in Spanish strings
+- **Chunked path parity**: 100% aligned — both paths use same unified scoring engine, same `_status_*_es` functions, same `interpretative_texts.py` calls
+- **Syntax**: Both files compile clean
+- **No regressions**: Scoring logic, thresholds, weights all untouched
+
+#### Memory Updated
+- Created `mr-terminology-es.md` lexicon in auto-memory
+- Added lexicon reference to `MEMORY.md` cross-project patterns
+
+#### Commits to main (Session 2026-03-03)
+1. `4f2fa19` - feat: Spanish terminology localization — eliminate anglicisms from ES user-facing copy
+
+**Git state**: main on `4f2fa19`, pushed. Build clean.
+
+---
+
+## NEXT STEPS (Priority Order) — Updated 2026-03-03
+
+### IMMEDIATE (this week)
+1. **Regression test on Render** — Run 5-10 real mixes (different genres) through production. Read Spanish reports aloud. Listen for: sentences that feel long, phrasing that feels academic, repetition of "margen" that feels mechanical, rhythm that could improve. Fix any micro-copy issues found.
+2. **Founding member DMs** — DM warm leads from IG/WhatsApp with founding offer ($4.99/mo locked). Stripe coupon `FOUNDING10`. Template in Session 2026-02-21 Part 4.
+3. **Lead prospector outreach** — Reply to top YouTube/HN leads from `/prospecting`. 20-30 quality replies/day.
+4. **Testimonials: get to 6** — Need 3 more for clean 2-row grid. Ask every user who analyzes.
+5. **Welcome email (manual)** — Gmail to every new signup.
+
+### WEEK 2-3 (Mar 7-21)
+6. **Email service (Resend)** — $0 for 3K emails/mo. Automate 4-email sequence.
+7. **Monthly live master review #2** — Recurring series.
+8. **F5Bot + ForumScout** — Free automated alerts for Reddit + forums.
+9. **Fill SERVICES_CONFIG URLs** — As service pages are created, update URL strings.
+
+### MONTH 2 (data-driven)
+10. **LATAM payments (PSE/Nequi)** — Trigger: Colombian signups hitting paywall without intl card.
+11. **More SEO learn pages** — Based on Search Console data.
+12. **eBook migration from Payhip** — Stripe product at $15 USD.
+13. **Genre profile calibration** — Analyze ~102 reference tracks across 10 genres.
+
+### MONTH 3+ (scale what works)
+14. **Product Hunt** — After 6+ testimonials + proven conversion.
+15. **DLocal integration** — If LATAM signups high but paid conversion <3%.
+16. **Signed token system** — HMAC-signed tokens for Render API protection.
+17. **Priority Queue System** — Trigger: OOM errors or queue depth >5.
+18. **Stream Ready deploy** — Backend ready in `main.py`.
