@@ -4111,3 +4111,97 @@ Locked decisions for all user-facing Spanish copy. Target: 19-year-old producer 
 16. **Signed token system** — HMAC-signed tokens for Render API protection.
 17. **Priority Queue System** — Trigger: OOM errors or queue depth >5.
 18. **Stream Ready deploy** — Backend ready in `main.py`.
+
+---
+
+### Session 2026-03-03 — PDF Report Cross-Section Inconsistency Audit
+
+#### Problem
+User did live demo, noticed feedback text and data differ between the 4 report sections (Rápido, Resumen, Detallado, Completo) and the metrics table / Áreas de Atención bars. Analyzed 6 PDFs spanning scores 28-100.
+
+#### Architecture Root Cause
+6 independent threshold/text systems have drifted apart, all reading the same analysis result but evaluating independently:
+1. `ScoringThresholds` class (analyzer.py:475) → Score + ✓/⚠/✗ icons
+2. `calculate_metrics_bars_percentages()` (analyzer.py:1442) → Áreas bar %
+3. `interpretative_texts.py` functions → Detallado text
+4. `generate_visual_report()` (analyzer.py:~6500) → Rápido bullets
+5. `generate_short_mode_report()` → Resumen narrative
+6. `generate_complete_report_text()` (analyzer.py:~6800) → Completo narrative
+
+#### Bugs Found (9 data bugs + 4 polish issues)
+
+**BUG 1 (CRITICAL): L/R Balance hardcoded +0.5 dB in Detallado**
+- analyzer.py:8040 → `metrics_info.get('balance_l_r')` field doesn't exist, falls back to `balance_ratio=0.5`
+- Real value at `stereo_metric["lr_balance_db"]` (line 3728)
+- 5/6 PDFs showed wrong value
+
+**BUG 2: LUFS always ✓ in table but Detallado/Áreas flag issues**
+- LUFS weight=0.0 → table always ✓, but other systems apply real thresholds
+
+**BUG 3: True Peak Áreas 100% when table shows ⚠ (Calor -1.9 dBTP)**
+
+**BUG 4: Headroom Completo contradicts itself**
+
+**BUG 5: Headroom reduction advice varies per section (3 different numbers)**
+
+**BUG 6: PLR "Excelente" in Rápido for 10.5 dB (should be "adecuado")**
+
+**BUG 7: Freq Balance ✓ in table but Completo flags warnings**
+
+**BUG 8: L/R sign stripped in Completo** — `-0.1 dB` → `0.1 dB`
+
+**BUG 9: "dB dB" double unit typo** — Calor Completo PLR text
+
+**ISSUES 10-13**: Voice/tone, LUFS framing, Crest Factor absent, Ejemplo.flac English body text
+
+#### Fix Strategy
+All 6 systems must derive from `ScoringThresholds`. No independent threshold constants.
+
+#### Status: PENDING
+- Need to cross-reference against MasteringReady eBook Chapter 11 before changing thresholds
+- Full details in memory: `mr-pdf-inconsistencies.md` + `mr-pdf-fix-plan.md`
+
+### Session 2026-03-03 Part 2 — FLAC File Picker Fix
+
+#### Problem
+FLAC files were greyed out (unselectable) in the browser file picker dialog on the main analyzer page, despite FLAC being supported everywhere else (backend, validation arrays, UI copy, schemas).
+
+#### Root Cause
+The inline `<input type="file">` in `app/page.tsx` line 3090 had `accept=".wav,.mp3,.aiff,.aif,.aac,.m4a,.ogg"` — missing `.flac`. The browser uses the `accept` attribute to determine which files to grey out in the native file picker. The separate `FileUpload.tsx` component already had `.flac`, but the main page uses its own inline input.
+
+#### Fix (`854aa15`)
+Added `.flac` to the `accept` attribute: `accept=".wav,.mp3,.aiff,.aif,.flac,.aac,.m4a,.ogg"`
+
+#### Verification (agent + build)
+- All 8 format verification points confirmed aligned (frontend accept, validation arrays, backend ALLOWED_EXTENSIONS, analyzer exts, UI copy, schemas, learn pages, NEEDS_CONVERSION exclusion)
+- `npx next build` → clean, 30 routes, zero errors
+- User confirmed FLAC file selectable and working after deploy
+
+### Session 2026-03-03 Part 3 — PDF Report Consistency Fixes (Round 2)
+
+#### Context
+Continued from Part 1 (PDF inconsistency audit). Round 1 (previous sessions) fixed bugs 1, 3, 6, 8, 9. This session fixed the remaining 7 issues from the 13 originally identified across 6 PDFs.
+
+#### Fixes Applied
+
+| # | Bug | File(s) | Change |
+|---|-----|---------|--------|
+| 1 | **Headroom regression in Completo** (Bug 5) | `analyzer.py` ~line 6400 (ES) + ~6726 (EN) | Replaced hardcoded `target_peak_dbfs = -6.0` calculation with shared `calculate_headroom_recommendation(peak_value, strict)` |
+| 2 | **First-person voice in Resumen** (Bug 10) | `analyzer.py` lines 3114, 3202 | "lo que busco, me da espacio" → "deja espacio suficiente"; "lo que me da mucho espacio" → "lo que deja amplio espacio" |
+| 3 | **Low-LUFS "muy bajo" language** (Bug 2/11) | `interpretative_texts.py` lines 466-477 | Replaced opinionated "muy bajo" + "problemas de estructura de ganancia" with neutral informational text |
+| 4 | **Treble threshold mismatch** (Bug 7) | `analyzer.py` line 1415 | Changed `highs_pct < 5` to `highs_pct < 3` in `calculate_tonal_balance_percentage()` to prevent false flagging (e.g., Tiempo Live 3% highs) |
+| 5 | **Crest Factor absent from Detallado** (Bug 12) | `analyzer.py` + `interpretative_texts.py` | Added `crest_factor` to `interpretation_metrics` (normal + chunked paths). Created `_generate_crest_factor_text_es/en()`. Added to return dicts. |
+| 6 | **Mode indicator missing from PDF** | `analyzer.py` ~line 7767 | Added "Modo: Normal/Estricto" row to PDF file info table |
+| 7 | **Frequency band % rounding** | `analyzer.py` (helper + 2 applications) | Added `round_band_percentages()` using largest-remainder method. Applied to normal (~3875) and chunked (~5891) paths. Graves/Medios/Agudos always sum to exactly 100%. |
+
+#### Files Changed
+- `analyzer.py` — 10 edits
+- `interpretative_texts.py` — 4 edits
+
+#### Verification
+- Both files pass `py_compile` clean
+- All 13 original PDF bugs now addressed
+
+#### Status: IMPLEMENTED, NOT YET COMMITTED
+- Needs testing with real audio files (same 6 tracks: Paraíso Fractal, Calor, Mis Pueblos, Tiempo Live, Amazing, Ejemplo)
+- Generate new PDFs and compare against bug checklist

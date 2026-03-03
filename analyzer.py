@@ -1412,8 +1412,8 @@ def calculate_tonal_balance_percentage(bass_pct: float, mids_pct: float, highs_p
         severity += excess * 3  # Harsh (more critical)
         issues.append(f"harsh_highs ({highs_pct:.0f}%)")
         issues_es.append(f"agudos excesivos ({highs_pct:.0f}%)")
-    elif highs_pct < 5:
-        deficit = 5 - highs_pct
+    elif highs_pct < 3:
+        deficit = 3 - highs_pct
         severity += deficit * 2  # Very dull
         issues.append(f"dull_highs ({highs_pct:.0f}%)")
         issues_es.append(f"agudos insuficientes ({highs_pct:.0f}%)")
@@ -2831,6 +2831,28 @@ def calculate_headroom_recommendation(peak_db: float, strict: bool = False) -> i
     return reduction if reduction > 0 else 1  # At least 1 dB if status triggered
 
 
+def round_band_percentages(low: float, mid: float, high: float) -> tuple:
+    """
+    Round three frequency band percentages so they always sum to exactly 100%.
+    Uses largest-remainder method: round all, then adjust the band with the
+    largest fractional remainder to compensate for any rounding drift.
+    """
+    raw = [low, mid, high]
+    rounded = [round(v) for v in raw]
+    diff = 100 - sum(rounded)
+    if diff != 0:
+        # Find band with largest fractional part to absorb the difference
+        remainders = [v - int(v) for v in raw]
+        if diff > 0:
+            # Need to add — pick the band with the largest remainder
+            idx = remainders.index(max(remainders))
+        else:
+            # Need to subtract — pick the band with the smallest remainder
+            idx = remainders.index(min(remainders))
+        rounded[idx] += diff
+    return rounded[0], rounded[1], rounded[2]
+
+
 # ----------------------------
 # Reglas / estados
 # ----------------------------
@@ -3111,7 +3133,7 @@ def _status_headroom_es(peak_db: float, strict: bool = False) -> Tuple[str, str,
         },
         "perfect": {
             "strict": "Margen óptimo para entrega comercial profesional.",
-            "normal": f"El margen de {abs(peak_db):.1f} dB es lo que busco, me da espacio para trabajar EQ, compresión y limitación sin comprometer la calidad.",
+            "normal": f"El margen de {abs(peak_db):.1f} dB deja espacio suficiente para trabajar EQ, compresión y limitación sin comprometer la calidad.",
         },
         "pass": {
             "strict": "Margen aceptable, pero -6 a -4 dBFS es ideal para clientes/labels.",
@@ -3199,7 +3221,7 @@ def _status_plr_es(plr: Optional[float], has_real_lufs: bool, strict: bool = Fal
     messages = {
         "perfect": {
             "strict": "Excelente PLR: dinámica óptima para entrega comercial.",
-            "normal": f"La dinámica está muy bien preservada (PLR: {plr:.1f} dB). No has sobre-limitado en el bus principal, lo que me da mucho espacio para trabajar el volumen final sin sacrificar la musicalidad.",
+            "normal": f"La dinámica está muy bien preservada (PLR: {plr:.1f} dB). No hay sobre-limitación en el bus principal, lo que deja amplio espacio para trabajar el volumen final sin sacrificar la musicalidad.",
         },
         "pass": {
             "strict": "PLR bueno para comercial, pero ≥14 dB es ideal para máxima flexibilidad.",
@@ -3850,18 +3872,21 @@ def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, s
         delta_low_mid = "ΔL-M"
         delta_high_mid = "ΔH-M"
     
+    # Round percentages so they always sum to exactly 100%
+    low_r, mid_r, high_r = round_band_percentages(fb['low_percent'], fb['mid_percent'], fb['high_percent'])
+
     metrics.append({
         "name": METRIC_NAMES[lang_picked]["Frequency Balance"],
         "internal_key": "Frequency Balance",  # For WEIGHTS lookup
         "value": (
-            f"{low_label}: {fb['low_percent']:.0f}% | "
-            f"{mid_label}: {fb['mid_percent']:.0f}% | "
-            f"{high_label}: {fb['high_percent']:.0f}%"
+            f"{low_label}: {low_r}% | "
+            f"{mid_label}: {mid_r}% | "
+            f"{high_label}: {high_r}%"
         ),
         "value_detailed": (
-            f"{low_label}: {fb['low_db']:.1f} dB ({fb['low_percent']:.0f}%) | "
-            f"{mid_label}: {fb['mid_db']:.1f} dB ({fb['mid_percent']:.0f}%) | "
-            f"{high_label}: {fb['high_db']:.1f} dB ({fb['high_percent']:.0f}%) | "
+            f"{low_label}: {fb['low_db']:.1f} dB ({low_r}%) | "
+            f"{mid_label}: {fb['mid_db']:.1f} dB ({mid_r}%) | "
+            f"{high_label}: {fb['high_db']:.1f} dB ({high_r}%) | "
             f"{delta_low_mid}: {fb['d_low_mid_db']:+.1f} dB | "
             f"{delta_high_mid}: {fb['d_high_mid_db']:+.1f} dB"
         ),
@@ -3923,7 +3948,10 @@ def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, s
             # Extract correlation
             interpretation_metrics['stereo_correlation'] = float(corr)
             interpretation_metrics['ms_ratio'] = float(stereo_metric.get('ms_ratio', 0))
-            
+
+            # Crest Factor (informational)
+            interpretation_metrics['crest_factor'] = float(crest)
+
             # Generate interpretative texts
             interpretations_raw = generate_interpretative_texts(
                 metrics=interpretation_metrics,
@@ -5863,18 +5891,21 @@ def analyze_file_chunked(
         delta_low_mid = "ΔL-M"
         delta_high_mid = "ΔH-M"
     
+    # Round percentages so they always sum to exactly 100%
+    low_r, mid_r, high_r = round_band_percentages(fb['low_percent'], fb['mid_percent'], fb['high_percent'])
+
     metrics.append({
         "name": METRIC_NAMES[lang_picked]["Frequency Balance"],
         "internal_key": "Frequency Balance",
         "value": (
-            f"{low_label}: {fb['low_percent']:.0f}% | "
-            f"{mid_label}: {fb['mid_percent']:.0f}% | "
-            f"{high_label}: {fb['high_percent']:.0f}%"
+            f"{low_label}: {low_r}% | "
+            f"{mid_label}: {mid_r}% | "
+            f"{high_label}: {high_r}%"
         ),
         "value_detailed": (
-            f"{low_label}: {fb['low_db']:.1f} dB ({fb['low_percent']:.0f}%) | "
-            f"{mid_label}: {fb['mid_db']:.1f} dB ({fb['mid_percent']:.0f}%) | "
-            f"{high_label}: {fb['high_db']:.1f} dB ({fb['high_percent']:.0f}%) | "
+            f"{low_label}: {fb['low_db']:.1f} dB ({low_r}%) | "
+            f"{mid_label}: {fb['mid_db']:.1f} dB ({mid_r}%) | "
+            f"{high_label}: {fb['high_db']:.1f} dB ({high_r}%) | "
             f"{delta_low_mid}: {fb['d_low_mid_db']:+.1f} dB | "
             f"{delta_high_mid}: {fb['d_high_mid_db']:+.1f} dB"
         ),
@@ -5938,7 +5969,10 @@ def analyze_file_chunked(
             # Extract correlation
             interpretation_metrics['stereo_correlation'] = float(final_correlation)
             interpretation_metrics['ms_ratio'] = float(stereo_metric.get('ms_ratio', 0))
-            
+
+            # Crest Factor (informational)
+            interpretation_metrics['crest_factor'] = float(crest)
+
             # Generate interpretative texts
             interpretations_raw = generate_interpretative_texts(
                 metrics=interpretation_metrics,
@@ -6398,14 +6432,12 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                 message += "💡 Estas observaciones NO invalidan el master, solo contextualizan las decisiones técnicas tomadas durante el proceso.\n\n"
             
             # SECTION 4: Bifurcation - If Mix
-            # Calculate how much to reduce (correct formula)
-            target_peak_dbfs = -6.0
+            # Calculate how much to reduce using shared helper
             if peak_value is not None:
-                reduction_needed = max(0.0, peak_value - target_peak_dbfs)
-                reduction_rounded = round(reduction_needed)
+                reduction_rounded = calculate_headroom_recommendation(peak_value, strict)
             else:
                 reduction_rounded = 6
-            
+
             message += (
                 "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
                 "⚠️ SI ESTE ARCHIVO CORRESPONDE A UNA MEZCLA:\n"
@@ -6724,14 +6756,12 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                 message += "💡 These observations do NOT invalidate the master, they simply contextualize the technical decisions made during the process.\n\n"
             
             # SECTION 4: Bifurcation - If Mix
-            # Calculate how much to reduce (correct formula)
-            target_peak_dbfs = -6.0
+            # Calculate how much to reduce using shared helper
             if peak_value is not None:
-                reduction_needed = max(0.0, peak_value - target_peak_dbfs)
-                reduction_rounded = round(reduction_needed)
+                reduction_rounded = calculate_headroom_recommendation(peak_value, strict)
             else:
                 reduction_rounded = 6
-            
+
             message += (
                 "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
                 "⚠️ IF THIS FILE IS INTENDED TO BE A MIX:\n"
@@ -7734,12 +7764,16 @@ def generate_complete_pdf(
         # Format bit depth
         bit_depth_str = f"{bit_depth}-bit" if bit_depth > 0 else "N/A"
         
+        mode_label = "Modo" if lang == 'es' else "Mode"
+        mode_value = "Estricto" if lang == 'es' and strict else ("Strict" if strict else ("Normal" if lang != 'es' else "Normal"))
+
         file_info_data = [
             ["Archivo" if lang == 'es' else "File", clean_filename],
             ["Fecha" if lang == 'es' else "Date", _format_analysis_date(report)],
             ["Duración" if lang == 'es' else "Duration", duration_str],
             ["Sample Rate" if lang == 'es' else "Sample Rate", sample_rate_str],
             ["Bit Depth" if lang == 'es' else "Bit Depth", bit_depth_str],
+            [mode_label, mode_value],
             ["Puntuación MR" if lang == 'es' else "MR Score", f"{report.get('score', 0)}/100"],
             ["Veredicto" if lang == 'es' else "Verdict", verdict_text]
         ]

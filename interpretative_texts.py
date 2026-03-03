@@ -45,7 +45,8 @@ def generate_interpretative_texts(
     stereo_balance = metrics.get('stereo_balance', 0.5)
     stereo_correlation = metrics.get('stereo_correlation', 0.85)
     ms_ratio = metrics.get('ms_ratio', 0.5)  # ADDED: M/S ratio support
-    
+    crest_factor = metrics.get('crest_factor', 0)
+
     # Determine status for each metric (considering strict mode)
     headroom_status = _get_headroom_status(headroom, strict)
     dr_status = _get_dr_status(dr_value, strict)
@@ -62,14 +63,16 @@ def generate_interpretative_texts(
             "headroom": _generate_headroom_text_es(headroom, true_peak, headroom_status),
             "dynamic_range": _generate_dr_text_es(dr_value, dr_status),
             "overall_level": _generate_level_text_es(lufs, level_status, compression_suspected),
-            "stereo_balance": _generate_stereo_text_es(stereo_balance, stereo_correlation, ms_ratio, stereo_status)
+            "stereo_balance": _generate_stereo_text_es(stereo_balance, stereo_correlation, ms_ratio, stereo_status),
+            "crest_factor": _generate_crest_factor_text_es(crest_factor)
         }
     else:
         return {
             "headroom": _generate_headroom_text_en(headroom, true_peak, headroom_status),
             "dynamic_range": _generate_dr_text_en(dr_value, dr_status),
             "overall_level": _generate_level_text_en(lufs, level_status, compression_suspected),
-            "stereo_balance": _generate_stereo_text_en(stereo_balance, stereo_correlation, ms_ratio, stereo_status)
+            "stereo_balance": _generate_stereo_text_en(stereo_balance, stereo_correlation, ms_ratio, stereo_status),
+            "crest_factor": _generate_crest_factor_text_en(crest_factor)
         }
 
 
@@ -465,14 +468,13 @@ def _generate_level_text_es(lufs: float, status: str, compression_suspected: boo
         else:
             return {
                 "interpretation": (
-                    f"El nivel general de tu mezcla ({lufs:.1f} LUFS) es muy bajo. "
-                    "Aunque el loudness final se ajusta en mastering, un nivel muy bajo "
-                    "puede indicar problemas de estructura de ganancia en la mezcla."
+                    f"El nivel general de tu mezcla está en {lufs:.1f} LUFS. "
+                    "Este valor es más bajo que el rango habitual para mezclas pre-mastering. "
+                    "El volumen final se ajusta durante el proceso de mastering."
                 ),
                 "recommendation": (
-                    "Revisa la estructura de ganancia de tu sesión. "
-                    "Si todo suena bien a nivel de monitoreo, el ingeniero de mastering "
-                    "puede trabajar con este nivel sin problema."
+                    "Un ingeniero de mastering puede trabajar con cualquier nivel "
+                    "siempre que la mezcla tenga buena estructura de ganancia interna."
                 )
             }
 
@@ -994,6 +996,38 @@ def _generate_stereo_text_en(balance: float, correlation: float, ms_ratio: float
                 "and widening effects. Always check in mono to detect phase cancellations."
             )
         }
+
+
+# ============================================================================
+# CREST FACTOR TEXT GENERATORS (INFORMATIONAL)
+# ============================================================================
+
+def _generate_crest_factor_text_es(crest: float) -> Dict[str, str]:
+    """Generate Spanish informational text for Crest Factor."""
+    return {
+        "interpretation": (
+            f"El Crest Factor de tu mezcla es {crest:.1f} dB. "
+            "Este valor indica la diferencia entre los picos y el nivel RMS promedio."
+        ),
+        "recommendation": (
+            "Valores entre 10 y 20 dB son habituales en música con buen rango dinámico. "
+            "Este dato es informativo. Usa PLR como métrica principal de dinámica."
+        )
+    }
+
+
+def _generate_crest_factor_text_en(crest: float) -> Dict[str, str]:
+    """Generate English informational text for Crest Factor."""
+    return {
+        "interpretation": (
+            f"Your mix's Crest Factor is {crest:.1f} dB. "
+            "This value indicates the difference between peaks and the average RMS level."
+        ),
+        "recommendation": (
+            "Values between 10 and 20 dB are typical in music with good dynamic range. "
+            "This is informational. Use PLR as the primary dynamics metric."
+        )
+    }
 
 
 # ============================================================================
