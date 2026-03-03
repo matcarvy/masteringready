@@ -270,6 +270,8 @@ function InterpretativeSection({ title, interpretation, recommendation, metrics,
               formattedKey = 'Correlation'
             } else if (key === 'lufs') {
               formattedKey = 'LUFS'
+            } else if (key === 'crest_factor_db') {
+              formattedKey = 'Crest Factor'
             } else {
               // Generic formatting for other keys
               formattedKey = key
@@ -279,10 +281,22 @@ function InterpretativeSection({ title, interpretation, recommendation, metrics,
                 .join(' ')
             }
             
+            // Format the value with proper signs and units
+            let formattedValue: string
+            if (typeof value === 'number') {
+              if (key === 'balance_l_r' || key === 'balance_lr') {
+                formattedValue = `${value >= 0 ? '+' : ''}${value.toFixed(1)} dB`
+              } else {
+                formattedValue = value.toFixed(2)
+              }
+            } else {
+              formattedValue = String(value)
+            }
+
             return (
               <div key={key} style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <strong>{formattedKey}:</strong>
-                <span>{typeof value === 'number' ? value.toFixed(2) : value}</span>
+                <span>{formattedValue}</span>
               </div>
             )
           })}
@@ -1417,6 +1431,8 @@ ${'─'.repeat(50)}
               formattedKey = 'Correlation'
             } else if (key === 'lufs') {
               formattedKey = 'LUFS'
+            } else if (key === 'crest_factor_db') {
+              formattedKey = 'Crest Factor'
             } else {
               // Generic formatting for other keys
               formattedKey = key
@@ -1425,8 +1441,17 @@ ${'─'.repeat(50)}
                 .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
                 .join(' ')
             }
-            
-            const formattedValue = typeof value === 'number' ? value.toFixed(2) : value
+
+            let formattedValue: string
+            if (typeof value === 'number') {
+              if (key === 'balance_l_r' || key === 'balance_lr') {
+                formattedValue = `${value >= 0 ? '+' : ''}${value.toFixed(1)} dB`
+              } else {
+                formattedValue = value.toFixed(2)
+              }
+            } else {
+              formattedValue = String(value)
+            }
             output += `  • ${formattedKey}: ${formattedValue}\n`
             }
           }
@@ -4155,6 +4180,17 @@ by Matías Carvajal
                             interpretation={result.interpretations.stereo_balance.interpretation}
                             recommendation={result.interpretations.stereo_balance.recommendation}
                             metrics={result.interpretations.stereo_balance.metrics}
+                            lang={lang}
+                          />
+                        )}
+
+                        {/* Crest Factor */}
+                        {result.interpretations.crest_factor && (
+                          <InterpretativeSection
+                            title="Crest Factor"
+                            interpretation={result.interpretations.crest_factor.interpretation}
+                            recommendation={result.interpretations.crest_factor.recommendation}
+                            metrics={result.interpretations.crest_factor.metrics}
                             lang={lang}
                           />
                         )}
