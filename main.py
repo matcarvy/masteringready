@@ -1270,6 +1270,7 @@ async def download_pdf(
                 },
                 "metrics": metrics_obj.get("metrics", []) if isinstance(metrics_obj, dict) else metrics_obj,
                 "metrics_bars": metrics_obj.get("metrics_bars", {}) if isinstance(metrics_obj, dict) else {},
+                "score_penalties": data.get("score_penalties") or (metrics_obj.get("score_penalties", {}) if isinstance(metrics_obj, dict) else {}),
                 "interpretations": data.get("interpretations"),
                 "report_visual": data.get("report_visual"),
                 "report_short": data.get("report_short"),
@@ -1767,36 +1768,36 @@ async def stream_analyze(
             detail=_sr_bilingual_error('video_format_not_supported', lang)
         )
 
-    # Read file content
-    content = await file.read()
-    file_size = len(content)
-
-    if file_size > SR_MAX_FILE_SIZE:
-        raise HTTPException(
-            status_code=413,
-            detail=_sr_bilingual_error('video_too_large', lang)
-        )
-
-    if file_size == 0:
-        raise HTTPException(
-            status_code=400,
-            detail=_sr_bilingual_error('video_format_not_supported', lang)
-        )
-
-    logger.info(f"🎬 [StreamReady] File size: {file_size / 1024 / 1024:.2f} MB")
-
+    # Stream file directly to disk — never hold entire video in Python memory
     video_path = None
     wav_path = None
 
     try:
-        # Step 1: Save video to temp file
         video_temp = tempfile.NamedTemporaryFile(delete=False, suffix=file_ext)
         video_path = video_temp.name
-        video_temp.write(content)
+        file_size = 0
+        chunk_size = 64 * 1024  # 64KB chunks
+        while True:
+            chunk = await file.read(chunk_size)
+            if not chunk:
+                break
+            file_size += len(chunk)
+            if file_size > SR_MAX_FILE_SIZE:
+                video_temp.close()
+                raise HTTPException(
+                    status_code=413,
+                    detail=_sr_bilingual_error('video_too_large', lang)
+                )
+            video_temp.write(chunk)
         video_temp.close()
 
-        # Free upload bytes immediately
-        del content
+        if file_size == 0:
+            raise HTTPException(
+                status_code=400,
+                detail=_sr_bilingual_error('video_format_not_supported', lang)
+            )
+
+        logger.info(f"🎬 [StreamReady] File size: {file_size / 1024 / 1024:.2f} MB (streamed to disk)")
         _free_memory()
 
         logger.info(f"🎬 [StreamReady] Video saved to temp: {video_path}")
@@ -1937,6 +1938,49 @@ async def stream_analyze(
             except Exception:
                 pass
         _free_memory()
+
+
+@app.post("/api/stream/subscribe")
+async def _sr_subscribe(request: Request):
+    """
+    Stream Ready email subscribe endpoint.
+    Logs to stdout (Render logs) for now. Supabase persistence later.
+    """
+    import re
+
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON body")
+
+    email = body.get("email", "").strip()
+    lang = body.get("lang", "es").strip().lower()
+    if lang not in ("es", "en"):
+        lang = "es"
+
+    if not email:
+        msg = "El email es obligatorio." if lang == "es" else "Email is required."
+        raise HTTPException(status_code=400, detail=msg)
+
+    # Basic email format validation
+    if not re.match(r'^[^@\s]+@[^@\s]+\.[^@\s]+$', email):
+        msg = "El formato del email no es válido." if lang == "es" else "Invalid email format."
+        raise HTTPException(status_code=400, detail=msg)
+
+    # Log to stdout (visible in Render logs)
+    logger.info(f"📩 [StreamReady] New subscriber: {email} (lang={lang})")
+    print(f"[StreamReady Subscribe] email={email} lang={lang}")
+
+    if lang == "es":
+        return {
+            "success": True,
+            "message": "Te avisaremos cuando Stream Ready esté disponible.",
+        }
+    else:
+        return {
+            "success": True,
+            "message": "We'll let you know when Stream Ready is available.",
+        }
 
 
 # ============== RUN ==============
