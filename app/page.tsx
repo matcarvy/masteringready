@@ -2881,8 +2881,8 @@ by Matías Carvajal
               {
                 q_es: '¿Qué hace Mastering Ready?',
                 q_en: 'What does Mastering Ready do?',
-                a_es: 'Analiza tu mezcla y te dice si está lista para mastering. Mide headroom, LUFS, true peak, balance estéreo y distribución de frecuencias. Te da una puntuación de 0 a 100 con recomendaciones específicas. No masteriza tu audio, te ayuda a identificar qué corregir antes de enviarlo a mastering.',
-                a_en: 'It analyzes your mix and tells you if it is ready for mastering. It measures headroom, LUFS, true peak, stereo balance, and frequency distribution. You get a 0 to 100 score with specific recommendations. It does not master your audio. It helps you identify what to fix before sending it to mastering.'
+                a_es: 'Analiza tu mezcla y te dice si está lista para mastering. Mide headroom, true peak, relación pico-volumen (PLR), correlación estéreo y balance de frecuencias. También mide LUFS como métrica informativa. Te da una puntuación de 0 a 100 con recomendaciones específicas. No masteriza tu audio, te ayuda a identificar qué corregir antes de enviarlo a mastering.',
+                a_en: 'It analyzes your mix and tells you if it is ready for mastering. It measures headroom, true peak, peak to loudness ratio (PLR), stereo correlation, and frequency balance. It also measures LUFS as an informational metric. You get a 0 to 100 score with specific recommendations. It does not master your audio. It helps you identify what to fix before sending it to mastering.'
               },
               {
                 q_es: '¿Mi audio se almacena después del análisis?',
@@ -2893,7 +2893,7 @@ by Matías Carvajal
               {
                 q_es: '¿Cuánto headroom debe tener mi mezcla antes de mastering?',
                 q_en: 'How much headroom should my mix have before mastering?',
-                a_es: 'Una mezcla bien preparada debería tener entre -6 dBFS y -3 dBFS de headroom (nivel de pico). Esto le da al ingeniero de mastering suficiente espacio para trabajar con EQ, compresión y limiting sin clipeo.',
+                a_es: 'Una mezcla bien preparada debería tener entre -6 dBFS y -3 dBFS de headroom (nivel de pico). Esto le da al ingeniero de mastering suficiente espacio para trabajar con EQ, compresión y limitación sin saturación digital.',
                 a_en: 'A well-prepared mix should have between -6 dBFS and -3 dBFS of headroom (peak level). This gives the mastering engineer enough room to work with EQ, compression, and limiting without clipping.'
               },
               {
