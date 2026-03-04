@@ -2899,8 +2899,8 @@ by Matías Carvajal
               {
                 q_es: '¿A cuántos LUFS debería estar mi mezcla antes de mastering?',
                 q_en: 'What LUFS should my mix be before mastering?',
-                a_es: 'Antes de mastering, tu mezcla debería estar entre -24 y -16 LUFS integrados, con -18 LUFS como punto central cómodo. Este no es el nivel final de volumen, eso depende de la plataforma de streaming. El volumen de tu mezcla no es la prioridad en esta etapa. Mastering Ready mide tus LUFS y te avisa si el nivel necesita atención antes de enviar a mastering.',
-                a_en: 'Before mastering, your mix should typically sit between -24 and -16 LUFS integrated, with -18 LUFS being a comfortable center point. This is not the final loudness target, which depends on the streaming platform. The loudness of your mix is not the priority at this stage. Mastering Ready measures your integrated LUFS and lets you know if your level needs attention before sending to mastering.'
+                a_es: 'Antes de mastering, tu mezcla debería estar entre -24 y -16 LUFS integrados, con -18 LUFS como punto central cómodo. Este no es el nivel final de volumen, eso depende de la plataforma de streaming. Mastering Ready mide tus LUFS como referencia, pero no incide en la puntuación. El volumen final se define en mastering.',
+                a_en: 'Before mastering, your mix should typically sit between -24 and -16 LUFS integrated, with -18 LUFS being a comfortable center point. This is not the final loudness target, which depends on the streaming platform. Mastering Ready measures your LUFS as a reference, but it does not affect the score. Final loudness is set during mastering.'
               },
               {
                 q_es: '¿Es gratis?',
