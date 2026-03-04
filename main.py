@@ -245,7 +245,7 @@ app.add_middleware(
         "https://stream.masteringready.com",
         "http://localhost:3001",
     ],
-    allow_origin_regex=r"https://masteringready.*\.vercel\.app",
+    allow_origin_regex=r"https://(masteringready|streamready).*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -630,10 +630,11 @@ async def analyze_mix_endpoint(
                 "energy_analysis": result.get("energy_analysis", {}),
                 "categorical_flags": result.get("categorical_flags", {}),
                 "user_genre": genre,
+                "score_penalties": result.get("score_penalties", {}),
                 "privacy_note": "🔒 Audio analizado en memoria y eliminado inmediatamente.",
                 "methodology": "Basado en la metodología 'Mastering Ready' de Matías Carvajal"
             }
-            
+
         except Exception as e:
             logger.error(f"❌ Analysis error: {str(e)}")
             category = classify_analysis_error(str(e))
@@ -1085,6 +1086,7 @@ async def start_analysis(
                         "energy_analysis": result.get("energy_analysis", {}),
                         "categorical_flags": result.get("categorical_flags", {}),
                         "user_genre": genre,
+                        "score_penalties": result.get("score_penalties", {}),
                         "privacy_note": "🔒 Audio analizado en memoria y eliminado inmediatamente.",
                         "methodology": "Basado en la metodología 'Mastering Ready' de Matías Carvajal"
                     }
