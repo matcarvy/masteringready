@@ -32,7 +32,10 @@ import {
   X,
   Download,
   Info,
-  HardDrive
+  HardDrive,
+  GraduationCap,
+  Stethoscope,
+  Wrench
 } from 'lucide-react'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { clearNotification } from '@/components/NotificationBadge'
@@ -543,6 +546,7 @@ function DashboardContent() {
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
   const [showContactModal, setShowContactModal] = useState(false)
   const [ctaAction, setCtaAction] = useState('')
+  const [ctaSource, setCtaSource] = useState<string | null>(null)
   const [isMobile, setIsMobile] = useState(false)
   const [fileInfoExpanded, setFileInfoExpanded] = useState(false)
   const [showWelcomeBanner, setShowWelcomeBanner] = useState(false)
@@ -567,6 +571,18 @@ function DashboardContent() {
   const canBuyAddon = data?.canBuyAddon ?? false
 
   const { geo } = useGeo()
+
+  // Contact request logging (fire-and-forget)
+  const logContactRequest = (contactMethod: string) => {
+    supabase.from('contact_requests').insert({
+      analysis_id: selectedAnalysis?.id || null,
+      user_id: user?.id || null,
+      cta_source: ctaSource || ctaAction || null,
+      contact_method: contactMethod,
+      client_country: geo?.countryCode || null
+    }).then(() => {})
+  }
+
   const t = translations[lang]
   const isPro = subscription?.plan?.type === 'pro' || subscription?.plan?.type === 'studio'
   // Free users get Completo + PDF for their first 2 analyses (by creation date). Pro/admin get all.
@@ -2099,6 +2115,224 @@ function DashboardContent() {
                   </div>
                 )
               })()}
+
+              {/* 3-path CTA — also in page.tsx and history/page.tsx (search "3-path CTA") */}
+              <div style={{ marginTop: '1.5rem' }}>
+                <h3 style={{
+                  fontSize: '1rem',
+                  fontWeight: '600',
+                  color: 'var(--mr-text-primary)',
+                  marginBottom: '1rem',
+                  textAlign: 'center'
+                }}>
+                  {lang === 'es' ? '¿Qué quieres hacer ahora?' : 'What do you want to do next?'}
+                </h3>
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
+                  gap: '1rem'
+                }}>
+                  {/* Card 1: Learn to fix it */}
+                  <div
+                    style={{
+                      background: 'var(--mr-bg-card)',
+                      border: 'var(--mr-card-border)',
+                      borderRadius: '1rem',
+                      padding: '1.5rem',
+                      boxShadow: 'var(--mr-shadow)',
+                      cursor: 'pointer',
+                      transition: 'transform 0.2s, box-shadow 0.2s',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: '0.75rem'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'translateY(-3px)'
+                      e.currentTarget.style.boxShadow = 'var(--mr-shadow-lg)'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'translateY(0)'
+                      e.currentTarget.style.boxShadow = 'var(--mr-shadow)'
+                    }}
+                    onClick={() => {
+                      setCtaSource('three_path_learn')
+                      setShowContactModal(true)
+                    }}
+                  >
+                    <div style={{
+                      width: '40px',
+                      height: '40px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}>
+                      <GraduationCap size={40} style={{ color: 'var(--mr-primary)' }} />
+                    </div>
+                    <h4 style={{
+                      fontSize: '1rem',
+                      fontWeight: '600',
+                      color: 'var(--mr-text-primary)',
+                      margin: 0
+                    }}>
+                      {lang === 'es' ? 'Aprende a corregirlo' : 'Learn to fix it yourself'}
+                    </h4>
+                    <p style={{
+                      fontSize: '0.8125rem',
+                      color: 'var(--mr-text-secondary)',
+                      margin: 0,
+                      lineHeight: '1.5'
+                    }}>
+                      {lang === 'es'
+                        ? 'Workshop + sesiones intensivas de mezcla y mastering'
+                        : 'Workshop + intensive mixing and mastering sessions'}
+                    </p>
+                    <span style={{
+                      fontSize: '0.8125rem',
+                      fontWeight: '600',
+                      color: 'var(--mr-primary)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.25rem'
+                    }}>
+                      {lang === 'es' ? 'Ver opciones' : 'See options'} →
+                    </span>
+                  </div>
+
+                  {/* Card 2: Get told what to fix */}
+                  <div
+                    style={{
+                      background: 'var(--mr-bg-card)',
+                      border: 'var(--mr-card-border)',
+                      borderRadius: '1rem',
+                      padding: '1.5rem',
+                      boxShadow: 'var(--mr-shadow)',
+                      cursor: 'pointer',
+                      transition: 'transform 0.2s, box-shadow 0.2s',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: '0.75rem'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'translateY(-3px)'
+                      e.currentTarget.style.boxShadow = 'var(--mr-shadow-lg)'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'translateY(0)'
+                      e.currentTarget.style.boxShadow = 'var(--mr-shadow)'
+                    }}
+                    onClick={() => {
+                      setCtaSource('three_path_audit')
+                      setShowContactModal(true)
+                    }}
+                  >
+                    <div style={{
+                      width: '40px',
+                      height: '40px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}>
+                      <Stethoscope size={40} style={{ color: 'var(--mr-amber)' }} />
+                    </div>
+                    <h4 style={{
+                      fontSize: '1rem',
+                      fontWeight: '600',
+                      color: 'var(--mr-text-primary)',
+                      margin: 0
+                    }}>
+                      {lang === 'es' ? 'Que te digan qué corregir' : 'Get told what to fix'}
+                    </h4>
+                    <p style={{
+                      fontSize: '0.8125rem',
+                      color: 'var(--mr-text-secondary)',
+                      margin: 0,
+                      lineHeight: '1.5'
+                    }}>
+                      {lang === 'es'
+                        ? 'Auditoría profesional, $97 USD'
+                        : 'Professional audit, $97 USD'}
+                    </p>
+                    <span style={{
+                      fontSize: '0.8125rem',
+                      fontWeight: '600',
+                      color: 'var(--mr-primary)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.25rem'
+                    }}>
+                      {lang === 'es' ? 'Solicitar auditoría' : 'Request audit'} →
+                    </span>
+                  </div>
+
+                  {/* Card 3: Get it fixed for you */}
+                  <div
+                    style={{
+                      background: 'var(--mr-bg-card)',
+                      border: 'var(--mr-card-border)',
+                      borderRadius: '1rem',
+                      padding: '1.5rem',
+                      boxShadow: 'var(--mr-shadow)',
+                      cursor: 'pointer',
+                      transition: 'transform 0.2s, box-shadow 0.2s',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: '0.75rem'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'translateY(-3px)'
+                      e.currentTarget.style.boxShadow = 'var(--mr-shadow-lg)'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'translateY(0)'
+                      e.currentTarget.style.boxShadow = 'var(--mr-shadow)'
+                    }}
+                    onClick={() => {
+                      window.location.href = `/?lang=${lang}#services`
+                    }}
+                  >
+                    <div style={{
+                      width: '40px',
+                      height: '40px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}>
+                      <Wrench size={40} style={{ color: 'var(--mr-green)' }} />
+                    </div>
+                    <h4 style={{
+                      fontSize: '1rem',
+                      fontWeight: '600',
+                      color: 'var(--mr-text-primary)',
+                      margin: 0
+                    }}>
+                      {lang === 'es' ? 'Que lo corrijan por ti' : 'Get it fixed for you'}
+                    </h4>
+                    <p style={{
+                      fontSize: '0.8125rem',
+                      color: 'var(--mr-text-secondary)',
+                      margin: 0,
+                      lineHeight: '1.5'
+                    }}>
+                      {lang === 'es'
+                        ? 'Mix Review + Master profesional'
+                        : 'Mix Review + Professional Master'}
+                    </p>
+                    <span style={{
+                      fontSize: '0.8125rem',
+                      fontWeight: '600',
+                      color: 'var(--mr-primary)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.25rem'
+                    }}>
+                      {lang === 'es' ? 'Ver servicios' : 'See services'} →
+                    </span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -2300,7 +2534,7 @@ function DashboardContent() {
       {/* Contact Modal */}
       {showContactModal && (
         <div
-          onClick={() => setShowContactModal(false)}
+          onClick={() => { setShowContactModal(false); setCtaSource(null) }}
           style={{
             position: 'fixed',
             top: 0, left: 0, right: 0, bottom: 0,
@@ -2330,7 +2564,7 @@ function DashboardContent() {
             }}
           >
             <button
-              onClick={() => setShowContactModal(false)}
+              onClick={() => { setShowContactModal(false); setCtaSource(null) }}
               style={{
                 position: 'absolute', top: '1rem', right: '1rem',
                 background: 'none', border: 'none', cursor: 'pointer',
@@ -2356,11 +2590,12 @@ function DashboardContent() {
               <a
                 href={`https://wa.me/573155576115?text=${encodeURIComponent(
                   lang === 'es'
-                    ? `Hola Matías, acabo de analizar "${selectedAnalysis?.filename || 'mi mezcla'}" en Mastering Ready (${selectedAnalysis?.score || 'N/A'}/100). ${ctaAction === 'mastering' ? 'Me interesa el mastering de este track.' : ctaAction === 'preparation' ? 'Me gustaría preparar mi mezcla antes del mastering.' : 'Me gustaría revisar mi mezcla con ayuda profesional.'}`
-                    : `Hi Matías, I just analyzed "${selectedAnalysis?.filename || 'my mix'}" on Mastering Ready (${selectedAnalysis?.score || 'N/A'}/100). ${ctaAction === 'mastering' ? 'I\'m interested in mastering this track.' : ctaAction === 'preparation' ? 'I\'d like to prepare my mix before mastering.' : 'I\'d like to review my mix with professional help.'}`
+                    ? `Hola Matías, acabo de analizar "${selectedAnalysis?.filename || 'mi mezcla'}" en Mastering Ready (${selectedAnalysis?.score || 'N/A'}/100). ${ctaSource === 'three_path_learn' ? 'Me interesa el workshop de mezcla y mastering.' : ctaSource === 'three_path_audit' ? 'Me interesa la auditoría profesional ($97 USD).' : ctaSource === 'three_path_service' ? 'Me interesan los servicios profesionales de mezcla y mastering.' : ctaAction === 'mastering' ? 'Me interesa el mastering de este track.' : ctaAction === 'preparation' ? 'Me gustaría preparar mi mezcla antes del mastering.' : 'Me gustaría revisar mi mezcla con ayuda profesional.'}`
+                    : `Hi Matías, I just analyzed "${selectedAnalysis?.filename || 'my mix'}" on Mastering Ready (${selectedAnalysis?.score || 'N/A'}/100). ${ctaSource === 'three_path_learn' ? 'I\'m interested in the mixing and mastering workshop.' : ctaSource === 'three_path_audit' ? 'I\'m interested in the professional audit ($97 USD).' : ctaSource === 'three_path_service' ? 'I\'m interested in professional mixing and mastering services.' : ctaAction === 'mastering' ? 'I\'m interested in mastering this track.' : ctaAction === 'preparation' ? 'I\'d like to prepare my mix before mastering.' : 'I\'d like to review my mix with professional help.'}`
                 )}`}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={() => logContactRequest('whatsapp')}
                 style={{
                   display: 'flex', alignItems: 'center', gap: '1rem',
                   padding: '1rem 1.5rem', background: 'var(--mr-green-bg)',
@@ -2381,13 +2616,14 @@ function DashboardContent() {
               <a
                 href={`mailto:mat@matcarvy.com?subject=${encodeURIComponent(
                   lang === 'es'
-                    ? `${ctaAction === 'mastering' ? 'Mastering' : ctaAction === 'preparation' ? 'Preparación de mezcla' : 'Revisión de mezcla'}: ${selectedAnalysis?.filename || 'Mi track'}`
-                    : `${ctaAction === 'mastering' ? 'Mastering' : ctaAction === 'preparation' ? 'Mix preparation' : 'Mix review'}: ${selectedAnalysis?.filename || 'My track'}`
+                    ? `${ctaSource === 'three_path_learn' ? 'Workshop de mezcla y mastering' : ctaSource === 'three_path_audit' ? 'Auditoría profesional' : ctaSource === 'three_path_service' ? 'Servicios profesionales' : ctaAction === 'mastering' ? 'Mastering' : ctaAction === 'preparation' ? 'Preparación de mezcla' : 'Revisión de mezcla'}: ${selectedAnalysis?.filename || 'Mi track'}`
+                    : `${ctaSource === 'three_path_learn' ? 'Mixing and mastering workshop' : ctaSource === 'three_path_audit' ? 'Professional audit' : ctaSource === 'three_path_service' ? 'Professional services' : ctaAction === 'mastering' ? 'Mastering' : ctaAction === 'preparation' ? 'Mix preparation' : 'Mix review'}: ${selectedAnalysis?.filename || 'My track'}`
                 )}&body=${encodeURIComponent(
                   lang === 'es'
-                    ? `Hola Matías,\n\nAnalicé "${selectedAnalysis?.filename || 'mi mezcla'}" en Mastering Ready.\nPuntuación: ${selectedAnalysis?.score || 'N/A'}/100\n\n${ctaAction === 'mastering' ? 'Me interesa el mastering de este track.' : ctaAction === 'preparation' ? 'Me gustaría preparar mi mezcla antes del mastering.' : 'Me gustaría revisar mi mezcla con ayuda profesional.'}\n\nGracias.`
-                    : `Hi Matías,\n\nI analyzed "${selectedAnalysis?.filename || 'my mix'}" on Mastering Ready.\nScore: ${selectedAnalysis?.score || 'N/A'}/100\n\n${ctaAction === 'mastering' ? 'I\'m interested in mastering this track.' : ctaAction === 'preparation' ? 'I\'d like to prepare my mix before mastering.' : 'I\'d like to review my mix with professional help.'}\n\nThanks.`
+                    ? `Hola Matías,\n\nAnalicé "${selectedAnalysis?.filename || 'mi mezcla'}" en Mastering Ready.\nPuntuación: ${selectedAnalysis?.score || 'N/A'}/100\n\n${ctaSource === 'three_path_learn' ? 'Me interesa el workshop de mezcla y mastering.' : ctaSource === 'three_path_audit' ? 'Me interesa la auditoría profesional ($97 USD).' : ctaSource === 'three_path_service' ? 'Me interesan los servicios profesionales de mezcla y mastering.' : ctaAction === 'mastering' ? 'Me interesa el mastering de este track.' : ctaAction === 'preparation' ? 'Me gustaría preparar mi mezcla antes del mastering.' : 'Me gustaría revisar mi mezcla con ayuda profesional.'}\n\nGracias.`
+                    : `Hi Matías,\n\nI analyzed "${selectedAnalysis?.filename || 'my mix'}" on Mastering Ready.\nScore: ${selectedAnalysis?.score || 'N/A'}/100\n\n${ctaSource === 'three_path_learn' ? 'I\'m interested in the mixing and mastering workshop.' : ctaSource === 'three_path_audit' ? 'I\'m interested in the professional audit ($97 USD).' : ctaSource === 'three_path_service' ? 'I\'m interested in professional mixing and mastering services.' : ctaAction === 'mastering' ? 'I\'m interested in mastering this track.' : ctaAction === 'preparation' ? 'I\'d like to prepare my mix before mastering.' : 'I\'d like to review my mix with professional help.'}\n\nThanks.`
                 )}`}
+                onClick={() => logContactRequest('email')}
                 style={{
                   display: 'flex', alignItems: 'center', gap: '1rem',
                   padding: '1rem 1.5rem', background: 'var(--mr-blue-bg)',
@@ -2407,6 +2643,7 @@ function DashboardContent() {
                 href="https://instagram.com/matcarvy"
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={() => logContactRequest('instagram')}
                 style={{
                   display: 'flex', alignItems: 'center', gap: '1rem',
                   padding: '1rem 1.5rem', background: 'var(--mr-red-bg)',

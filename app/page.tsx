@@ -1576,6 +1576,7 @@ ${new Date().toLocaleDateString()}
             user_genre: (result as any).user_genre || null,
           },
           interpretations: result.interpretations || null,
+          score_penalties: (result as any).score_penalties || null,
           strict_mode: result.strict || strict || false,
           report_visual: result.report_visual || null,
           report_short: result.report_short || result.report || null,
@@ -4565,7 +4566,7 @@ by Matías Carvajal
                 </div>
               )}
 
-              {/* Three-Path CTA — visible for all users after analysis */}
+              {/* 3-path CTA — also in dashboard/page.tsx and history/page.tsx (search "3-path CTA") */}
               {result && (
                 <div style={{
                   maxWidth: '780px',
