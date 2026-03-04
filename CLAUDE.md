@@ -4232,3 +4232,95 @@ Verified PDFs from Tiempo Live (100/100) and Amazing (28/100) against the 13-bug
 #### Remaining PDF Review
 - Still need to verify: Paraíso Fractal, Calor, Mis Pueblos, Ejemplo
 - Frontend Crest Factor + L/R fix needs verification after Vercel deploy
+
+### Session 2026-03-03 Part 5 — Full Localization Sweep + FAQ Alignment
+
+#### English Stragglers Eliminated (commit `c847555`)
+16 English strings found in Spanish output paths via 2 parallel agents (backend + frontend).
+
+**analyzer.py (12 fixes):**
+- "M/S Ratio" → "Relación M/S" (5 ES locations: Detallado, Completo, stereo messages)
+- "L/R Balance" → "Balance L/R" (2 ES Detallado labels)
+- "clientes/labels" → "clientes/sellos discográficos"
+- "DC offset removal" → "corrección de DC offset"
+- "riesgo de clipping" → anchored with "(saturación digital)"
+- "Unknown" filename fallback → "Desconocido" for ES PDFs
+- "N/A" fallbacks → "N/D" (No Disponible) for ES PDFs (×3)
+- "Loudness (LUFS)" ES bar label → "Nivel (LUFS)"
+- "Crest Factor" ES Detallado section → "Factor de Cresta"
+
+**interpretative_texts.py (2 fixes):**
+- "M/S ratio bajo" → "relación M/S baja"
+- "(corr:" → "(correlación:"
+
+**page.tsx (2 fixes):**
+- FAQ: "nivel final de loudness" → "nivel final de volumen"
+- FAQ: "relación pico-loudness" → "relación pico-volumen"
+
+#### FAQ Alignment (commit `e7346bf`)
+Cross-referenced all 8 FAQs against analyzer state. 5 mismatches found and fixed:
+- FAQ 1: Listed LUFS (weight 0) as scored, omitted PLR (weight 0.15) → fixed
+- FAQ 1: "balance estéreo" → "correlación estéreo", "distribución de frecuencias" → "balance de frecuencias"
+- FAQ 1 EN: Same alignment
+- FAQ 3 ES: "limiting" → "limitación", "clipeo" → "saturación digital"
+- FAQ 1 vs FAQ 7 internal contradiction resolved (now same metric names)
+
+#### LUFS Informational Note in Detallado (commit `e72a5f9`)
+The warning/error branches already said "LUFS es informativo" but the excellent/good branches (most common case) did not. Added one sentence to each optimal branch:
+- ES: "LUFS se incluye como referencia. No incide en la puntuación. El volumen final se define en mastering."
+- EN: "LUFS is included as a reference. It does not affect the score. Final loudness is set during mastering."
+
+#### FAQ 4 LUFS Alignment (commit `8f1eea3`)
+Old FAQ 4 implied LUFS was actionable ("te avisa si el nivel necesita atención"). Aligned with Detallado:
+- ES: "Mastering Ready mide tus LUFS como referencia, pero no incide en la puntuación."
+- EN: "Mastering Ready measures your LUFS as a reference, but it does not affect the score."
+
+#### LUFS Consistency Across All Touchpoints (verified)
+| Surface | Message |
+|---------|---------|
+| FAQ 1 | "También mide LUFS como métrica informativa" |
+| FAQ 4 | "no incide en la puntuación" |
+| Detallado excellent/good | "No incide en la puntuación" |
+| Detallado warning/error | "LUFS es informativo" |
+| Metrics table | Weight 0.0, always ✓ |
+
+#### Commits to main (Session 2026-03-03 Part 5)
+1. `767e3cb` — fix: translate remaining English strings in PDF and improve strict mode accuracy
+2. `c847555` — fix: eliminate remaining English strings from Spanish output paths
+3. `e7346bf` — fix: align FAQs with current analyzer metrics and Spanish lexicon
+4. `e72a5f9` — fix: add "LUFS is informational" note to excellent/good Detallado text
+5. `8f1eea3` — fix: align FAQ 4 LUFS text with Detallado — informational, no score impact
+
+**Git state**: main on `8f1eea3`, pushed. Build clean.
+
+---
+
+## UPCOMING: Primary Limiting Factor + Score Drivers
+
+### What
+Two new report features that help users understand *where to start* after seeing their score.
+
+### Primary Limiting Factor
+- After score is computed in `score_report()`, calculate which metric contributed the most penalty: `penalty = weight * (1 - metric_score)` for each of the 5 scored metrics
+- Find the max penalty. If top two penalties are within 0.03 of each other, show both.
+- If score ≥ 90, don't show (nothing is meaningfully limiting)
+- Add as `primary_limiting_factor` to the report output
+- Display in Rápido and Detallado, right after the score
+- Voice guide rules: observation only, no commands
+- ES: "Factor principal: margen insuficiente." EN: "Primary limiting factor: insufficient headroom."
+
+### Score Drivers
+- Same penalty calculation, rank all 5 metrics by `weight * (1 - metric_score)`
+- Map to influence labels: high (penalty > 0.10), medium (0.03-0.10), low (0.01-0.03)
+- Only include metrics with penalty > 0.01 — don't pad the list
+- Add as `score_drivers` to report output
+- Display in Detallado and Completo only, not Rápido
+- ES labels: alta, media, baja. EN labels: high, medium, low
+- Voice guide: no commands, no praise, factual influence ranking
+
+### Implementation Notes
+- Both features share the same penalty calculation — implement as a single helper function
+- Both are presentation/copy features layered on top of existing scoring (no algorithm changes)
+- Must check `mr-voice-guide.md` before writing any user-facing copy
+- Must exist in both ES and EN
+- Score anchor line (subtitle under score) — **deferred** unless user feedback shows confusion about what the score measures

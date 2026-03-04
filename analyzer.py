@@ -3521,6 +3521,98 @@ def score_report(metrics: List[Dict[str, Any]], hard_fail: bool, strict: bool = 
     return score, verdict
 
 
+def calculate_score_penalties(metrics: List[Dict[str, Any]], score: int, lang: str = 'en') -> Dict[str, Any]:
+    """
+    Calculate penalty contribution of each scored metric.
+    Returns primary_limiting_factor and score_drivers for report display.
+    Uses the same weights and status multipliers as score_report().
+    """
+    lang = _pick_lang(lang)
+    mult = {"perfect": 1.0, "pass": 0.9, "warning": 0.7, "poor": 0.4, "critical": 0.0, "catastrophic": 0.0, "info": 1.0}
+
+    # PLF label mapping: internal_key -> (ES observation, EN observation)
+    plf_labels = {
+        "Headroom": ("margen insuficiente", "insufficient headroom"),
+        "True Peak": ("true peak elevado", "elevated true peak"),
+        "PLR": ("rango dinámico reducido", "reduced dynamic range"),
+        "Stereo Width": ("campo estéreo comprometido", "compromised stereo field"),
+        "Frequency Balance": ("balance tonal desigual", "uneven tonal balance"),
+    }
+
+    penalties = []
+    has_plr = any(
+        m.get("internal_key", m["name"]) == "PLR"
+        and m.get("value") != "N/A"
+        for m in metrics
+    )
+
+    for m in metrics:
+        internal_key = m.get("internal_key", m["name"])
+        w = WEIGHTS.get(internal_key, 0.0)
+        if w <= 0:
+            continue
+        if internal_key == "Crest Factor":
+            if has_plr:
+                continue
+            w = 0.15
+        metric_score = mult.get(m["status"], 0.0)
+        penalty = w * (1.0 - metric_score)
+        if penalty < 0.001:
+            continue
+        # Get display name
+        metric_names = METRIC_NAMES.get(lang, METRIC_NAMES["en"])
+        display_name = metric_names.get(internal_key, internal_key)
+        labels = plf_labels.get(internal_key, (internal_key.lower(), internal_key.lower()))
+        penalties.append({
+            "metric": display_name,
+            "internal_key": internal_key,
+            "penalty": round(penalty, 4),
+            "weight": w,
+            "label_es": labels[0],
+            "label_en": labels[1],
+        })
+
+    penalties.sort(key=lambda x: x["penalty"], reverse=True)
+
+    # Primary Limiting Factor — skip if score >= 90
+    plf = None
+    if score < 90 and penalties:
+        top = penalties[0]
+        # If top two within 0.03, show both
+        if len(penalties) >= 2 and (penalties[0]["penalty"] - penalties[1]["penalty"]) < 0.03:
+            if lang == 'es':
+                plf = f"Factores principales: {penalties[0]['label_es']} y {penalties[1]['label_es']}."
+            else:
+                plf = f"Primary limiting factors: {penalties[0]['label_en']} and {penalties[1]['label_en']}."
+        else:
+            if lang == 'es':
+                plf = f"Factor principal: {top['label_es']}."
+            else:
+                plf = f"Primary limiting factor: {top['label_en']}."
+
+    # Score Drivers — classify by influence
+    drivers = []
+    for p in penalties:
+        if p["penalty"] > 0.10:
+            influence = "alta" if lang == 'es' else "high"
+        elif p["penalty"] >= 0.03:
+            influence = "media" if lang == 'es' else "medium"
+        elif p["penalty"] >= 0.01:
+            influence = "baja" if lang == 'es' else "low"
+        else:
+            continue
+        drivers.append({
+            "metric": p["metric"],
+            "influence": influence,
+            "penalty": p["penalty"],
+        })
+
+    return {
+        "primary_limiting_factor": plf,
+        "score_drivers": drivers,
+    }
+
+
 def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, strict: bool = False, lang: str = "en", original_metadata: Optional[Dict] = None) -> Dict[str, Any]:
     """Analyze a full audio file."""
     start_time = time.time()  # Start timing
@@ -3908,7 +4000,8 @@ def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, s
     # Clipping detection
     hard_fail = bool(clipping) or bool(tp_hard)
     score, verdict = score_report(metrics, hard_fail, strict, lang)  # ← FIXED: Added strict and lang
-    
+    score_penalties = calculate_score_penalties(metrics, score, lang)
+
  # Generate CTA for frontend
     cta_data = generate_cta(score, strict, lang, mode="write")
     
@@ -4012,6 +4105,7 @@ def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, s
         "is_mastered": is_mastered,
         "cta": cta_data,  # Add CTA data for frontend
         "interpretations": interpretations,  # NEW: Add interpretations
+        "score_penalties": score_penalties,  # PLF + Score Drivers
         "chunked": False,
         "num_chunks": 1,  # v7.3.36: Added for parity with chunked mode
         "notes": {
@@ -5942,9 +6036,10 @@ def analyze_file_chunked(
     hard_fail = tp_hard  # Use the hard fail from status_true_peak
     
     # Import and use the actual score_report function
-    from analyzer import score_report
+    from analyzer import score_report, calculate_score_penalties
     score, verdict = score_report(metrics, hard_fail, strict, lang)
-    
+    score_penalties = calculate_score_penalties(metrics, score, lang)
+
     # Generate CTA for frontend
     cta_data = generate_cta(score, strict, lang, mode="write")
     
@@ -6074,6 +6169,7 @@ def analyze_file_chunked(
         "is_mastered": is_mastered,
         "cta": cta_data,  # Add CTA data for frontend
         "interpretations": interpretations,  # NEW: Add interpretations
+        "score_penalties": score_penalties,  # PLF + Score Drivers
         "chunked": True,
         "num_chunks": num_chunks,
         "notes": {
@@ -6108,7 +6204,9 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
     verdict = report.get("verdict", "")
     metrics = report.get("metrics", [])
     notes = report.get("notes", {})
-    
+    score_penalties = report.get("score_penalties", {})
+    score_drivers = score_penalties.get("score_drivers", [])
+
     # ============= MASTERED TRACK DETECTION =============
     # Detect if this is already a finished master (not suitable for mastering)
     lufs_metric = next((m for m in metrics if "LUFS" in m.get("internal_key", "")), None)
@@ -7056,12 +7154,20 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
         # Add filename reference at the beginning (natural narrative style)
         filename_ref = f"🎵 Sobre \"{filename}\"\n\n"
         
+        # Score Drivers section (only if there are drivers)
+        drivers_section = ""
+        if score_drivers:
+            drivers_lines = []
+            for d in score_drivers:
+                drivers_lines.append(f"   • {d['metric']}: {d['influence']} influencia")
+            drivers_section = "\n\n📊 Influencia en la puntuación:\n" + "\n".join(drivers_lines)
+
         # Generate CTA based on score
         cta_data = generate_cta(score, strict, lang, mode="write")
         cta_message = f"\n\n{cta_data['message']}" if cta_data['message'] else ""
-        
-        return f"{filename_ref}{intro}\n\n{tech_sentence}{issues_sentence}{stereo_detail}{tech_details}{recommendation}{mode_note}{cta_message}"
-    
+
+        return f"{filename_ref}{intro}\n\n{tech_sentence}{issues_sentence}{stereo_detail}{drivers_section}{tech_details}{recommendation}{mode_note}{cta_message}"
+
     else:
         # English narrative
         if score >= 95:
@@ -7293,11 +7399,19 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
         # Add filename reference at the beginning (natural narrative style)
         filename_ref = f"🎵 Regarding \"{filename}\"\n\n"
         
+        # Score Drivers section (only if there are drivers)
+        drivers_section = ""
+        if score_drivers:
+            drivers_lines = []
+            for d in score_drivers:
+                drivers_lines.append(f"   • {d['metric']}: {d['influence']} influence")
+            drivers_section = "\n\n📊 Score influence breakdown:\n" + "\n".join(drivers_lines)
+
         # Generate CTA based on score
         cta_data = generate_cta(score, strict, lang, mode="write")
         cta_message = f"\n\n{cta_data['message']}" if cta_data['message'] else ""
-        
-        return f"{filename_ref}{intro}\n\n{tech_sentence}{issues_sentence}{stereo_detail}{tech_details}{recommendation}{mode_note}{cta_message}"
+
+        return f"{filename_ref}{intro}\n\n{tech_sentence}{issues_sentence}{stereo_detail}{drivers_section}{tech_details}{recommendation}{mode_note}{cta_message}"
 
 
 def iter_audio_files(p: Path) -> List[Path]:
@@ -7327,35 +7441,40 @@ def generate_short_mode_report(report: Dict[str, Any], strict: bool = False, lan
     score = report.get("score", 0)
     verdict = report.get("verdict", "")
     metrics = report.get("metrics", [])
-    
+    score_penalties = report.get("score_penalties", {})
+    plf = score_penalties.get("primary_limiting_factor")
+
     # Build positive aspects list
     positive_aspects = []
     areas_to_improve = []
-    
+
     for metric in metrics:
         status = metric.get("status", "")
         name = metric.get("name", "")
         message = metric.get("message", "")
-        
+
         # Skip informational metrics
         if status == "info":
             continue
-            
+
         # Add to appropriate list
         if status in ["perfect", "pass", "good"]:
             positive_aspects.append(f"• {name}: {message}")
         elif status in ["warning", "critical", "catastrophic"]:
             areas_to_improve.append(f"• {name}: {message}")
-    
+
     # Build report
     if lang == 'es':
         header = ""
         if filename:
             header = f"🎵 Sobre \"{filename}\"\n\n"
-        
+
         header += f"Puntuación MR: {score}/100\n"
-        header += f"Veredicto: {verdict}\n\n"
-        
+        header += f"Veredicto: {verdict}\n"
+        if plf:
+            header += f"🎯 {plf}\n"
+        header += "\n"
+
         body = ""
         
         if positive_aspects:
@@ -7390,10 +7509,13 @@ def generate_short_mode_report(report: Dict[str, Any], strict: bool = False, lan
             header = f"🎵 Regarding \"{filename}\"\n\n"
         
         header += f"MR Score: {score}/100\n"
-        header += f"Verdict: {verdict}\n\n"
-        
+        header += f"Verdict: {verdict}\n"
+        if plf:
+            header += f"🎯 {plf}\n"
+        header += "\n"
+
         body = ""
-        
+
         if positive_aspects:
             body += "✅ Positive Aspects:\n"
             body += "\n".join(positive_aspects[:5])
@@ -8027,7 +8149,77 @@ def generate_complete_pdf(
                 ))
             
             story.append(Spacer(1, 0.3*inch))
-        
+
+        # ========== PLF + SCORE DRIVERS ==========
+        sp = report.get('score_penalties', {})
+        plf_text = sp.get('primary_limiting_factor')
+        drivers_list = sp.get('score_drivers', [])
+
+        if plf_text or drivers_list:
+            story.append(Paragraph(
+                "FACTORES DE PUNTUACIÓN" if lang == 'es' else "SCORE FACTORS",
+                section_style
+            ))
+            story.append(Spacer(1, 0.05*inch))
+
+            if plf_text:
+                story.append(Paragraph(
+                    clean_text_for_pdf(f"🎯 {plf_text}"),
+                    ParagraphStyle('PLF', parent=body_style, fontSize=10, textColor=colors.HexColor('#374151'))
+                ))
+                story.append(Spacer(1, 0.1*inch))
+
+            if drivers_list:
+                influence_colors = {
+                    'alta': '#ef4444', 'high': '#ef4444',
+                    'media': '#f59e0b', 'medium': '#f59e0b',
+                    'baja': '#3b82f6', 'low': '#3b82f6',
+                }
+                drivers_header = [
+                    "Métrica" if lang == 'es' else "Metric",
+                    "Influencia" if lang == 'es' else "Influence",
+                ]
+                drivers_data = [drivers_header]
+                driver_row_colors = []
+                for d in drivers_list:
+                    inf_label = d['influence']
+                    drivers_data.append([d['metric'], inf_label.capitalize()])
+                    driver_row_colors.append(influence_colors.get(inf_label, '#6b7280'))
+
+                drivers_table = Table(drivers_data, colWidths=[3.5*inch, 2.5*inch])
+                d_style = [
+                    ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#667eea')),
+                    ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                    ('FONTNAME', (0, 0), (-1, 0), bold_font),
+                    ('FONTNAME', (0, 1), (-1, -1), base_font),
+                    ('FONTSIZE', (0, 0), (-1, -1), 9),
+                    ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                    ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                    ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#d1d5db')),
+                    ('LEFTPADDING', (0, 0), (-1, -1), 8),
+                    ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+                    ('TOPPADDING', (0, 0), (-1, -1), 5),
+                    ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+                    ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f9fafb')]),
+                ]
+                for i, c in enumerate(driver_row_colors):
+                    d_style.append(('TEXTCOLOR', (1, i+1), (1, i+1), colors.HexColor(c)))
+                drivers_table.setStyle(TableStyle(d_style))
+                story.append(drivers_table)
+
+                # Drivers legend
+                story.append(Spacer(1, 0.05*inch))
+                if lang == 'es':
+                    d_legend = '<font color="#ef4444">●</font> Alta  <font color="#f59e0b">●</font> Media  <font color="#3b82f6">●</font> Baja'
+                else:
+                    d_legend = '<font color="#ef4444">●</font> High  <font color="#f59e0b">●</font> Medium  <font color="#3b82f6">●</font> Low'
+                story.append(Paragraph(
+                    d_legend,
+                    ParagraphStyle('DriversLegend', parent=body_style, fontSize=8, textColor=colors.HexColor('#6b7280'))
+                ))
+
+            story.append(Spacer(1, 0.3*inch))
+
         # ========== NEW: ANÁLISIS TÉCNICO DETALLADO (from interpretations) ==========
         if report.get('interpretations'):
             story.append(PageBreak())
