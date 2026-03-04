@@ -3296,7 +3296,7 @@ by Matías Carvajal
                         style={{ width: '1rem', height: '1rem', borderRadius: '0.25rem' }}
                       />
                       <span style={{ fontSize: '0.875rem', fontWeight: '500' }}>
-                        {lang === 'es' ? 'Modo Strict' : 'Strict Mode'}
+                        {lang === 'es' ? 'Modo Estricto' : 'Strict Mode'}
                       </span>
                     </label>
                     <p style={{ fontSize: '0.75rem', color: 'var(--mr-text-secondary)', marginTop: '0.25rem', marginLeft: '1.5rem' }}>

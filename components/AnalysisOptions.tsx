@@ -96,7 +96,7 @@ export default function AnalysisOptions({
             className="w-4 h-4 rounded"
           />
           <span className="text-sm font-medium">
-            {lang === 'es' ? 'Modo Strict' : 'Strict Mode'}
+            {lang === 'es' ? 'Modo Estricto' : 'Strict Mode'}
           </span>
         </label>
         <p className="text-xs text-gray-500 mt-1 ml-6">
