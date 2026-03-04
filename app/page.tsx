@@ -265,13 +265,13 @@ function InterpretativeSection({ title, interpretation, recommendation, metrics,
             } else if (key === 'balance_l_r' || key === 'balance_lr') {
               formattedKey = 'Balance L/R'
             } else if (key === 'ms_ratio') {
-              formattedKey = 'M/S Ratio'
+              formattedKey = lang === 'es' ? 'Relación M/S' : 'M/S Ratio'
             } else if (key === 'correlation') {
-              formattedKey = 'Correlation'
+              formattedKey = lang === 'es' ? 'Correlación' : 'Correlation'
             } else if (key === 'lufs') {
               formattedKey = 'LUFS'
             } else if (key === 'crest_factor_db') {
-              formattedKey = 'Crest Factor'
+              formattedKey = lang === 'es' ? 'Factor de Cresta' : 'Crest Factor'
             } else {
               // Generic formatting for other keys
               formattedKey = key
@@ -1426,13 +1426,13 @@ ${'─'.repeat(50)}
             } else if (key === 'balance_l_r' || key === 'balance_lr') {
               formattedKey = 'Balance L/R'
             } else if (key === 'ms_ratio') {
-              formattedKey = 'M/S Ratio'
+              formattedKey = lang === 'es' ? 'Relación M/S' : 'M/S Ratio'
             } else if (key === 'correlation') {
-              formattedKey = 'Correlation'
+              formattedKey = lang === 'es' ? 'Correlación' : 'Correlation'
             } else if (key === 'lufs') {
               formattedKey = 'LUFS'
             } else if (key === 'crest_factor_db') {
-              formattedKey = 'Crest Factor'
+              formattedKey = lang === 'es' ? 'Factor de Cresta' : 'Crest Factor'
             } else {
               // Generic formatting for other keys
               formattedKey = key
@@ -4187,7 +4187,7 @@ by Matías Carvajal
                         {/* Crest Factor */}
                         {result.interpretations.crest_factor && (
                           <InterpretativeSection
-                            title="Crest Factor"
+                            title={lang === 'es' ? 'Factor de Cresta' : 'Crest Factor'}
                             interpretation={result.interpretations.crest_factor.interpretation}
                             recommendation={result.interpretations.crest_factor.recommendation}
                             metrics={result.interpretations.crest_factor.metrics}

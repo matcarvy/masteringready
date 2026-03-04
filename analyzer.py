@@ -6440,7 +6440,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                         has_temporal = True
                         region_word = "región" if num_regions == 1 else "regiones"
                         attention_word = "a revisar"
-                        temporal_message += f"📐 M/S Ratio ({num_regions} {region_word} {attention_word}):\n"
+                        temporal_message += f"📐 Relación M/S ({num_regions} {region_word} {attention_word}):\n"
                         
                         # v7.3.51: Variaciones de mensajes para M/S bajo (eBook philosophy)
                         variaciones_ms_bajo_es = [
@@ -8323,7 +8323,7 @@ def generate_complete_pdf(
                             # Create table with gray background
                             data = [
                                 [f"Balance L/R: {bal_val:+.1f} dB"],
-                                [f"M/S Ratio: {ms_val:.2f}"],
+                                [f"{'Relación M/S' if lang == 'es' else 'M/S Ratio'}: {ms_val:.2f}"],
                                 [f"{'Correlación' if lang == 'es' else 'Correlation'}: {corr_val:.2f}"]
                             ]
 
@@ -8342,7 +8342,7 @@ def generate_complete_pdf(
                         elif section_key == 'crest_factor':
                             cf_val = metrics_info.get('crest_factor_db', 0)
 
-                            data = [[f"Crest Factor: {cf_val:.1f} dB"]]
+                            data = [[f"{'Factor de Cresta' if lang == 'es' else 'Crest Factor'}: {cf_val:.1f} dB"]]
 
                             table = Table(data, colWidths=[5*inch])
                             table.setStyle(TableStyle([
