@@ -384,7 +384,9 @@ def _generate_level_text_es(lufs: float, status: str, compression_suspected: boo
                 "de la plataforma de destino sin comprometer la dinámica."
             ),
             "recommendation": (
-                "El nivel actual no requiere ajustes de niveles de ganancia."
+                "El nivel actual no requiere ajustes de niveles de ganancia. "
+                "LUFS se incluye como referencia. No incide en la puntuación. "
+                "El volumen final se define en mastering."
             )
         }
 
@@ -396,7 +398,9 @@ def _generate_level_text_es(lufs: float, status: str, compression_suspected: boo
                 "objetivos de las plataformas de streaming sin forzar el procesamiento."
             ),
             "recommendation": (
-                "El nivel es adecuado. El volumen final se define en mastering."
+                "El nivel es adecuado. "
+                "LUFS se incluye como referencia. No incide en la puntuación. "
+                "El volumen final se define en mastering."
             )
         }
 
@@ -765,7 +769,9 @@ def _generate_level_text_en(lufs: float, status: str, compression_suspected: boo
                 "without compromising dynamics."
             ),
             "recommendation": (
-                "Current level requires no gain staging adjustments."
+                "Current level requires no gain staging adjustments. "
+                "LUFS is included as a reference. It does not affect the score. "
+                "Final loudness is set during mastering."
             )
         }
 
@@ -777,7 +783,9 @@ def _generate_level_text_en(lufs: float, status: str, compression_suspected: boo
                 "work to achieve streaming platform targets."
             ),
             "recommendation": (
-                "Level is adequate. Final loudness is set during mastering."
+                "Level is adequate. "
+                "LUFS is included as a reference. It does not affect the score. "
+                "Final loudness is set during mastering."
             )
         }
 
