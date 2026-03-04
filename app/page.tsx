@@ -96,7 +96,7 @@ const TESTIMONIALS: {
     name: 'Pedro Rovetto',
     role: 'Producer, Mix Engineer & Musician',
     role_es: 'Productor, Ingeniero de Mezcla y Músico',
-    quote_es: 'Subí un mix que estoy por cerrar, súper rápido y efectiva la info. Me ayudó para revisar algo del stereo bus, porque estaban altos mis true peaks.',
+    quote_es: 'Subí un mix que estoy por cerrar, súper rápido y efectiva la información. Me ayudó para revisar algo del bus estéreo, porque estaban altos los true peaks.',
     quote_en: 'I uploaded a mix I was about to finalize, super fast and the info was spot on. It helped me catch something on the stereo bus, because my true peaks were too high.',
   },
   {

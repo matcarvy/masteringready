@@ -439,7 +439,7 @@ METRIC_NAMES = {
         "DC Offset": "DC Offset",
         "LUFS (Integrated)": "LUFS (Integrated)",
         "PLR": "PLR",
-        "Crest Factor": "Crest Factor",
+        "Crest Factor": "Factor de Cresta",
         "Stereo Width": "Ancho Estéreo",
         "Frequency Balance": "Balance de Frecuencias",
     },
@@ -4279,8 +4279,13 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
         if headroom_metric:
             peak_val = headroom_metric.get("peak_db", "")
             details += f"🎚️ HEADROOM: {peak_val}\n"
-            details += "   → Los picos dejan suficiente espacio para procesamiento\n"
-            details += "     sin riesgo de clipping durante el mastering.\n"
+            hr_status = headroom_metric.get("status", "pass")
+            if hr_status in ("perfect", "pass"):
+                details += "   → Los picos dejan suficiente espacio para procesamiento\n"
+                details += "     sin riesgo de clipping durante el mastering.\n"
+            else:
+                details += "   → Los picos están cerca del límite. Se recomienda dejar más\n"
+                details += "     margen para que el mastering tenga espacio de trabajo.\n"
             
             # Add temporal info if exists
             if "temporal_analysis" in headroom_metric:
@@ -4589,8 +4594,13 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
         if headroom_metric:
             peak_val = headroom_metric.get("peak_db", "")
             details += f"🎚️ HEADROOM: {peak_val}\n"
-            details += "   → Peaks leave sufficient space for processing\n"
-            details += "     without risk of clipping during mastering.\n"
+            hr_status = headroom_metric.get("status", "pass")
+            if hr_status in ("perfect", "pass"):
+                details += "   → Peaks leave sufficient space for processing\n"
+                details += "     without risk of clipping during mastering.\n"
+            else:
+                details += "   → Peaks are close to the limit. Consider leaving more\n"
+                details += "     headroom to give mastering enough processing room.\n"
             
             if "temporal_analysis" in headroom_metric:
                 temporal = format_temporal_message(
@@ -5795,7 +5805,7 @@ def analyze_file_chunked(
         mono_msg_es = "Archivo mono detectado. El análisis estéreo no aplica."
         mono_msg_en = "Mono file detected. Stereo analysis does not apply."
         stereo_metric = {
-            "name": "Stereo Width",
+            "name": METRIC_NAMES[_pick_lang(lang)]["Stereo Width"],
             "internal_key": "Stereo Width",
             "value": "Mono" if lang != "es" else "Mono",
             "correlation": 1.0,
@@ -5807,7 +5817,7 @@ def analyze_file_chunked(
         }
     else:
         stereo_metric = {
-            "name": "Stereo Width",
+            "name": METRIC_NAMES[_pick_lang(lang)]["Stereo Width"],
             "internal_key": "Stereo Width",
             "value": f"{final_correlation*100:.0f}% corr | M/S: {final_ms_ratio:.2f} | L/R: {_fmt_lr(final_lr_balance)} dB",
             "correlation": final_correlation,
@@ -6893,9 +6903,10 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                     if "Headroom" in internal_key:
                         # metric_value already includes unit (e.g., "-2.5 dBFS")
                         peak_val = str(metric_value) if not isinstance(metric_value, (int, float)) else f"{metric_value:.1f} dBFS"
+                        target_range_es = "-6 y -5 dBFS" if strict else "-6 y -4 dBFS"
                         issues_details.append(
                             f"• Headroom general: los picos están alrededor de {peak_val}. "
-                            f"Para un margen óptimo en mastering, ideal entre -6 y -4 dBFS."
+                            f"Para un margen óptimo en mastering, ideal entre {target_range_es}."
                         )
                     
                     # True Peak warning
@@ -7038,7 +7049,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
         
         # Mode note
         if strict:
-            mode_note = "\n\n📊 Análisis realizado con estándares comerciales estrictos (modo strict)."
+            mode_note = "\n\n📊 Análisis realizado con estándares comerciales estrictos (modo estricto)."
         else:
             mode_note = ""
         
@@ -7777,8 +7788,8 @@ def generate_complete_pdf(
             ["Archivo" if lang == 'es' else "File", clean_filename],
             ["Fecha" if lang == 'es' else "Date", _format_analysis_date(report)],
             ["Duración" if lang == 'es' else "Duration", duration_str],
-            ["Sample Rate" if lang == 'es' else "Sample Rate", sample_rate_str],
-            ["Bit Depth" if lang == 'es' else "Bit Depth", bit_depth_str],
+            ["Frecuencia de Muestreo" if lang == 'es' else "Sample Rate", sample_rate_str],
+            ["Profundidad de Bits" if lang == 'es' else "Bit Depth", bit_depth_str],
             [mode_label, mode_value],
             ["Puntuación MR" if lang == 'es' else "MR Score", f"{report.get('score', 0)}/100"],
             ["Veredicto" if lang == 'es' else "Verdict", verdict_text]
