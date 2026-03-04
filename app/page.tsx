@@ -2899,7 +2899,7 @@ by Matías Carvajal
               {
                 q_es: '¿A cuántos LUFS debería estar mi mezcla antes de mastering?',
                 q_en: 'What LUFS should my mix be before mastering?',
-                a_es: 'Antes de mastering, tu mezcla debería estar entre -24 y -16 LUFS integrados, con -18 LUFS como punto central cómodo. Este no es el nivel final de loudness, eso depende de la plataforma de streaming. El volumen de tu mezcla no es la prioridad en esta etapa. Mastering Ready mide tus LUFS y te avisa si el nivel necesita atención antes de enviar a mastering.',
+                a_es: 'Antes de mastering, tu mezcla debería estar entre -24 y -16 LUFS integrados, con -18 LUFS como punto central cómodo. Este no es el nivel final de volumen, eso depende de la plataforma de streaming. El volumen de tu mezcla no es la prioridad en esta etapa. Mastering Ready mide tus LUFS y te avisa si el nivel necesita atención antes de enviar a mastering.',
                 a_en: 'Before mastering, your mix should typically sit between -24 and -16 LUFS integrated, with -18 LUFS being a comfortable center point. This is not the final loudness target, which depends on the streaming platform. The loudness of your mix is not the priority at this stage. Mastering Ready measures your integrated LUFS and lets you know if your level needs attention before sending to mastering.'
               },
               {
@@ -2917,7 +2917,7 @@ by Matías Carvajal
               {
                 q_es: '¿Cómo se calcula la puntuación de 0 a 100?',
                 q_en: 'How is the 0 to 100 score calculated?',
-                a_es: 'La puntuación se basa en el análisis ponderado de cinco métricas técnicas: headroom, true peak, relación pico-loudness (PLR), correlación estéreo y balance de frecuencias. Cada métrica se evalúa contra estándares profesionales de mastering. 85 o más significa que tu mezcla está técnicamente lista.',
+                a_es: 'La puntuación se basa en el análisis ponderado de cinco métricas técnicas: headroom, true peak, relación pico-volumen (PLR), correlación estéreo y balance de frecuencias. Cada métrica se evalúa contra estándares profesionales de mastering. 85 o más significa que tu mezcla está técnicamente lista.',
                 a_en: 'The score is based on weighted analysis of five technical metrics: headroom, true peak, peak to loudness ratio (PLR), stereo correlation, and frequency balance. Each metric is evaluated against professional mastering standards. 85 or above means your mix is technically ready.'
               },
               {

@@ -2551,7 +2551,7 @@ def evaluate_stereo_field_comprehensive(corr: float, ms_ratio: float, lr_balance
         if strict:
             if lang == 'es':
                 enhanced_message = (base_message + 
-                    f" M/S Ratio: {ms_ratio:.2f} (rango comercial: 0.3-0.7), "
+                    f" Relación M/S: {ms_ratio:.2f} (rango comercial: 0.3-0.7), "
                     f"Balance L/R: {_fmt_lr(lr_balance)} dB (tolerancia profesional: ±3 dB).")
             else:
                 enhanced_message = (base_message + 
@@ -2559,7 +2559,7 @@ def evaluate_stereo_field_comprehensive(corr: float, ms_ratio: float, lr_balance
                     f"L/R Balance: {_fmt_lr(lr_balance)} dB (professional tolerance: ±3 dB).")
         else:
             if lang == 'es':
-                enhanced_message = base_message + f" M/S Ratio: {ms_ratio:.2f} (balanceado), Balance L/R: {_fmt_lr(lr_balance)} dB (centrado)."
+                enhanced_message = base_message + f" Relación M/S: {ms_ratio:.2f} (balanceado), Balance L/R: {_fmt_lr(lr_balance)} dB (centrado)."
             else:
                 enhanced_message = base_message + f" M/S Ratio: {ms_ratio:.2f} (balanced), L/R Balance: {_fmt_lr(lr_balance)} dB (centered)."
     
@@ -3136,7 +3136,7 @@ def _status_headroom_es(peak_db: float, strict: bool = False) -> Tuple[str, str,
             "normal": f"El margen de {abs(peak_db):.1f} dB deja espacio suficiente para trabajar EQ, compresión y limitación sin comprometer la calidad.",
         },
         "pass": {
-            "strict": "Margen aceptable, pero -6 a -4 dBFS es ideal para clientes/labels.",
+            "strict": "Margen aceptable, pero -6 a -4 dBFS es ideal para clientes/sellos discográficos.",
             "normal": "Margen adecuado para mastering.",
         },
         "conservative": "Nivel muy conservador. No es un problema, pero podrías subir 1 a 3 dB si lo deseas.",
@@ -3350,7 +3350,7 @@ def _status_dc_offset_es(dc_data: Dict[str, Any]) -> Tuple[str, str, float]:
     
     max_offset = dc_data["max_offset"]
     if max_offset > 0.05:
-        return "warning", f"DC offset significativo ({max_offset:.3f}). Aplica DC offset removal antes de exportar.", 0.3
+        return "warning", f"DC offset significativo ({max_offset:.3f}). Aplica corrección de DC offset antes de exportar.", 0.3
     return "pass", f"DC offset menor detectado ({max_offset:.3f}). Considerar limpiar.", 0.6
 
 
@@ -4352,9 +4352,9 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
             details += "🎧 CAMPO ESTÉREO:\n"
             details += f"   • Correlación: {corr_val}\n"
             if ms_ratio:
-                details += f"   • M/S Ratio: {ms_ratio:.2f}\n"
+                details += f"   • Relación M/S: {ms_ratio:.2f}\n"
             if lr_balance is not None:
-                details += f"   • L/R Balance: {_fmt_lr(lr_balance)} dB\n"
+                details += f"   • Balance L/R: {_fmt_lr(lr_balance)} dB\n"
             details += "\n"
             
             # Check for temporal analysis (from chunked mode)
@@ -4459,7 +4459,7 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
                     if num_regions > 0:
                         region_word = "región" if num_regions == 1 else "regiones"
                         attention_word = "a revisar"
-                        details += f"📐 M/S Ratio ({num_regions} {region_word} {attention_word}):\n"
+                        details += f"📐 Relación M/S ({num_regions} {region_word} {attention_word}):\n"
                         
                         # v7.3.51: Variaciones de mensajes para M/S bajo (eBook philosophy)
                         variaciones_ms_bajo_es = [
@@ -6850,7 +6850,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
         elif headroom_metric and headroom_metric.get("status") == "warning":
             tech_parts.append("Headroom un poco ajustado")
         elif headroom_metric and headroom_metric.get("status") == "critical":
-            tech_parts.append("Headroom insuficiente (riesgo de clipping)")
+            tech_parts.append("Headroom insuficiente (riesgo de clipping (saturación digital))")
         
         # PLR / Dynamics
         plr_metric = next((m for m in metrics if "PLR" in m.get("internal_key", "")), None)
@@ -6992,7 +6992,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
             elif ms_ratio > 1.5:
                 has_stereo_issue = True
                 stereo_issues.append(
-                    f"⚠️ La información estéreo es muy amplia (M/S Ratio: {ms_ratio:.2f}).\n\n"
+                    f"⚠️ La información estéreo es muy amplia (Relación M/S: {ms_ratio:.2f}).\n\n"
                     "   Esto puede sonar impresionante en auriculares pero débil en parlantes\n"
                     "   o sistemas mono (Bluetooth, teléfonos, algunos clubes).\n\n"
                     "   🔍 Causas comunes:\n"
@@ -7754,7 +7754,8 @@ def generate_complete_pdf(
         verdict_text = clean_text_for_pdf(verdict_text).strip()
         
         # Clean filename - handle Unicode characters like "Paraíso"
-        clean_filename = clean_text_for_pdf(filename or report.get('filename', 'Unknown')).strip()
+        fallback_name = 'Desconocido' if lang == 'es' else 'Unknown'
+        clean_filename = clean_text_for_pdf(filename or report.get('filename', fallback_name)).strip()
         # Strip _compressed suffix (added by browser-side compression, not user's original name)
         clean_filename = clean_filename.replace('_compressed', '')
         
@@ -7773,13 +7774,14 @@ def generate_complete_pdf(
         sys.stderr.flush()
         
         # Format duration as MM:SS
-        duration_str = f"{int(duration // 60)}:{int(duration % 60):02d}" if duration > 0 else "N/A"
-        
+        na_str = "N/D" if lang == 'es' else "N/A"
+        duration_str = f"{int(duration // 60)}:{int(duration % 60):02d}" if duration > 0 else na_str
+
         # Format sample rate as kHz
-        sample_rate_str = f"{sample_rate / 1000:.1f} kHz" if sample_rate > 0 else "N/A"
-        
+        sample_rate_str = f"{sample_rate / 1000:.1f} kHz" if sample_rate > 0 else na_str
+
         # Format bit depth
-        bit_depth_str = f"{bit_depth}-bit" if bit_depth > 0 else "N/A"
+        bit_depth_str = f"{bit_depth}-bit" if bit_depth > 0 else na_str
         
         mode_label = "Modo" if lang == 'es' else "Mode"
         mode_value = "Estricto" if lang == 'es' and strict else ("Strict" if strict else ("Normal" if lang != 'es' else "Normal"))
@@ -7939,7 +7941,7 @@ def generate_complete_pdf(
                 'true_peak': ('True Peak', 'True Peak'),
                 'dynamic_range': ('Rango Dinámico', 'Dynamic Range'),
                 'plr': ('PLR', 'PLR'),
-                'loudness': ('Loudness (LUFS)', 'Loudness (LUFS)'),
+                'loudness': ('Nivel (LUFS)', 'Loudness (LUFS)'),
                 'lufs': ('LUFS', 'LUFS'),
                 'lufs_(integrated)': ('LUFS', 'LUFS'),
                 'stereo_width': ('Imagen Estéreo', 'Stereo Width'),
@@ -8043,7 +8045,7 @@ def generate_complete_pdf(
                 ('dynamic_range', 'Rango Dinámico (PLR)', 'Dynamic Range (PLR)'),
                 ('overall_level', 'Nivel General (LUFS)', 'Overall Level (LUFS)'),
                 ('stereo_balance', 'Balance Estéreo', 'Stereo Balance'),
-                ('crest_factor', 'Crest Factor', 'Crest Factor')
+                ('crest_factor', 'Factor de Cresta', 'Crest Factor')
             ]
             
             for section_key, title_es, title_en in sections:

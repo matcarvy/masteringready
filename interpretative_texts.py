@@ -522,7 +522,7 @@ def _generate_stereo_text_es(balance: float, correlation: float, ms_ratio: float
             return {
                 "interpretation": (
                     "Tu mezcla presenta alta coherencia entre canales (excelente compatibilidad mono). "
-                    f"Correlación muy alta ({correlation:.2f}) con M/S ratio bajo ({ms_ratio:.2f}). "
+                    f"Correlación muy alta ({correlation:.2f}) con relación M/S baja ({ms_ratio:.2f}). "
                     "Esto puede ser intencional o indicar que se exportó en mono."
                 ),
                 "recommendation": (
@@ -573,7 +573,7 @@ def _generate_stereo_text_es(balance: float, correlation: float, ms_ratio: float
         elif correlation > 0.97:  # Almost mono
             return {
                 "interpretation": (
-                    f"La imagen estéreo de tu mezcla está muy centrada (corr: {correlation:.2f}). "
+                    f"La imagen estéreo de tu mezcla está muy centrada (correlación: {correlation:.2f}). "
                     "El contenido estéreo es muy reducido. "
                     "Esto puede ser intencional según el género."
                 ),
