@@ -1412,7 +1412,7 @@ def calculate_tonal_balance_percentage(bass_pct: float, mids_pct: float, highs_p
         severity += excess * 3  # Harsh (more critical)
         issues.append(f"harsh_highs ({highs_pct:.0f}%)")
         issues_es.append(f"agudos excesivos ({highs_pct:.0f}%)")
-    elif highs_pct < 3:
+    elif round(highs_pct) < 3:
         deficit = 3 - highs_pct
         severity += deficit * 2  # Very dull
         issues.append(f"dull_highs ({highs_pct:.0f}%)")
@@ -4542,21 +4542,24 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
             bass = freq_metric.get("low_percent", 0)  # FIXED: was "bass_pct"
             mid = freq_metric.get("mid_percent", 0)    # FIXED: was "mid_pct"
             high = freq_metric.get("high_percent", 0)  # FIXED: was "high_pct"
-            
+
+            # Apply largest-remainder rounding so percentages sum to 100%
+            bass_r, mid_r, high_r = round_band_percentages(bass, mid, high)
+
             details += "🎼 BALANCE DE FRECUENCIAS:\n"
             if bass:
-                details += f"   • Graves (20-250 Hz): {bass:.0f}%\n"
+                details += f"   • Graves (20-250 Hz): {bass_r}%\n"
             if mid:
-                details += f"   • Medios (250 Hz-4 kHz): {mid:.0f}%\n"
+                details += f"   • Medios (250 Hz-4 kHz): {mid_r}%\n"
             if high:
-                details += f"   • Agudos (4 kHz-20 kHz): {high:.0f}%\n"
+                details += f"   • Agudos (4 kHz-20 kHz): {high_r}%\n"
             details += "\n"
-            
+
             # NEW v7.3.50: Genre detection message
             detected_genre = freq_metric.get("detected_genre", "")
             tonal_percentage = freq_metric.get("tonal_percentage", 100)
             tonal_issues = freq_metric.get("tonal_issues", [])
-            
+
             if detected_genre:
                 if tonal_percentage >= 90:
                     status_word = "saludable"
@@ -4841,16 +4844,19 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
             bass = freq_metric.get("low_percent", 0)  # FIXED: was "bass_pct"
             mid = freq_metric.get("mid_percent", 0)    # FIXED: was "mid_pct"
             high = freq_metric.get("high_percent", 0)  # FIXED: was "high_pct"
-            
+
+            # Apply largest-remainder rounding so percentages sum to 100%
+            bass_r, mid_r, high_r = round_band_percentages(bass, mid, high)
+
             details += "🎼 FREQUENCY BALANCE:\n"
             if bass:
-                details += f"   • Lows (20-250 Hz): {bass:.0f}%\n"
+                details += f"   • Lows (20-250 Hz): {bass_r}%\n"
             if mid:
-                details += f"   • Mids (250 Hz-4 kHz): {mid:.0f}%\n"
+                details += f"   • Mids (250 Hz-4 kHz): {mid_r}%\n"
             if high:
-                details += f"   • Highs (4 kHz-20 kHz): {high:.0f}%\n"
+                details += f"   • Highs (4 kHz-20 kHz): {high_r}%\n"
             details += "\n"
-            
+
             # NEW v7.3.50: Genre detection message
             detected_genre = freq_metric.get("detected_genre", "")
             tonal_percentage = freq_metric.get("tonal_percentage", 100)

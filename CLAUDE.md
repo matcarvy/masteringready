@@ -4202,6 +4202,33 @@ Continued from Part 1 (PDF inconsistency audit). Round 1 (previous sessions) fix
 - Both files pass `py_compile` clean
 - All 13 original PDF bugs now addressed
 
-#### Status: IMPLEMENTED, NOT YET COMMITTED
-- Needs testing with real audio files (same 6 tracks: Paraíso Fractal, Calor, Mis Pueblos, Tiempo Live, Amazing, Ejemplo)
-- Generate new PDFs and compare against bug checklist
+#### Status: COMMITTED & PUSHED (`d25efc8`)
+
+### Session 2026-03-03 Part 4 — PDF + Frontend Verification & Fixes
+
+#### Context
+Verified PDFs from Tiempo Live (100/100) and Amazing (28/100) against the 13-bug checklist. Found 2 remaining issues from PDF review, plus 2 frontend issues.
+
+#### Round 3 Fixes (commit `99f14c4`)
+1. **Crest Factor not rendering in PDF Detallado**: Added `crest_factor` to `sections` list in `analyzer.py` line 8024, added rendering block for its metrics table, added to `format_for_api_response()` in `interpretative_texts.py`, updated separator logic.
+2. **Headroom dB advice inconsistent in Detallado**: `interpretative_texts.py` hardcoded "5-6 dB" / "3-4 dB". Changed `_generate_headroom_text_es()` and `_generate_headroom_text_en()` to use dynamic calculation (`target = -6 if strict else -4`, matching shared `calculate_headroom_recommendation()`). Threaded `strict` parameter through.
+
+#### Round 4 Fixes — Frontend (commit `4f9e956`)
+1. **Crest Factor missing from frontend Detallado**: Added `InterpretativeSection` for `crest_factor` in `app/page.tsx` between Stereo Balance and closing div.
+2. **Balance L/R showing `0.10` instead of `+0.1 dB`**: Added formatting logic in metric value renderer — `balance_l_r`/`balance_lr` now shows `+/-` sign + 1 decimal + `dB` unit. Applied to both UI render and text export copy function.
+3. **`crest_factor_db` key formatting**: Added to both key-formatting blocks (UI + text export).
+
+#### Verification
+- Tiempo Live PDF: Crest Factor section visible (20.0 dB), all sections consistent
+- Amazing PDF: Crest Factor visible (13.8 dB), headroom now "4-5 dB" (was "5-6 dB"), matches Resumen "4 dB" and Completo "4 dB"
+- `next build` clean, `py_compile` clean on both Python files
+
+#### All 13 original bugs: RESOLVED
+- Round 1 (earlier sessions): Bugs 1, 3, 6, 8, 9
+- Round 2 (`d25efc8`): Bugs 2/11, 5, 7, 10, 12 + mode indicator + % rounding
+- Round 3 (`99f14c4`): Crest Factor PDF rendering + headroom dB alignment
+- Round 4 (`4f9e956`): Frontend Crest Factor + L/R balance formatting
+
+#### Remaining PDF Review
+- Still need to verify: Paraíso Fractal, Calor, Mis Pueblos, Ejemplo
+- Frontend Crest Factor + L/R fix needs verification after Vercel deploy
