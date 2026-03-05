@@ -1495,10 +1495,10 @@ SR_ALLOWED_EXTENSIONS = {'.mp4', '.mov', '.webm'}
 
 # Platform compliance targets (video/social platforms only)
 SR_PLATFORMS = [
-    {"id": "youtube",         "name": "YouTube",         "icon": "\U0001f534", "lufs_target": -14.0, "tp_limit": -1.0},
+    {"id": "youtube",         "name": "YouTube",         "icon": "\U0001f534", "lufs_target": -14.0, "tp_limit": -1.5},
     {"id": "tiktok",          "name": "TikTok",          "icon": "\U0001f3b5", "lufs_target": -14.0, "tp_limit": -1.0},
     {"id": "instagram_reels", "name": "Instagram Reels", "icon": "\U0001f4f7", "lufs_target": -14.0, "tp_limit": -1.0},
-    {"id": "facebook",        "name": "Facebook",        "icon": "\U0001f535", "lufs_target": -14.0, "tp_limit": -1.0},
+    {"id": "facebook",        "name": "Facebook",        "icon": "\U0001f535", "lufs_target": -13.0, "tp_limit": -1.5},
 ]
 
 # Bilingual Stream Ready error messages
@@ -1637,8 +1637,16 @@ def _sr_calculate_platform_compliance(lufs: float, true_peak: float) -> list:
     return platforms_result
 
 
+def _sr_round_db(delta: float) -> float:
+    """Round dB delta to nearest 0.5 for readability in creator-facing messages."""
+    return round(abs(delta) * 2) / 2
+
+
 def _sr_platform_message(platform: str, lufs_delta: float, tp_pass: bool, tp_close: bool) -> tuple:
-    """Generate bilingual plain-language message for a platform. No technical jargon."""
+    """Generate bilingual plain-language message for a platform. No technical jargon.
+    Includes specific dB adjustment amounts so creators understand the magnitude."""
+
+    db = _sr_round_db(lufs_delta)
 
     # True Peak failure takes priority (distortion is audible)
     if not tp_pass and not tp_close:
@@ -1647,18 +1655,18 @@ def _sr_platform_message(platform: str, lufs_delta: float, tp_pass: bool, tp_clo
             f"The loudest parts of your audio may distort on {platform}."
         )
 
-    # LUFS-based messages
+    # LUFS-based messages with specific dB amounts
     if lufs_delta > 2.0:
         # Way too loud
         return (
-            f"{platform} va a reducir el volumen de tu audio. Los pasajes suaves se van a perder.",
-            f"{platform} will reduce your audio volume. Quiet passages will be lost."
+            f"{platform} va a reducir tu volumen aproximadamente {db} dB. Las secciones suaves pueden perderse.",
+            f"{platform} will reduce your volume by about {db} dB. Quiet sections may become harder to hear."
         )
     elif lufs_delta > 0.5:
         # Slightly too loud
         return (
-            f"{platform} va a reducir ligeramente tu audio.",
-            f"{platform} will slightly reduce your audio."
+            f"{platform} va a reducir tu audio ligeramente, aproximadamente {db} dB.",
+            f"{platform} will reduce your audio slightly, about {db} dB."
         )
     elif lufs_delta >= -2.0:
         # Good range (0.5 to -2.0)
@@ -1669,14 +1677,14 @@ def _sr_platform_message(platform: str, lufs_delta: float, tp_pass: bool, tp_clo
     elif lufs_delta >= -6.0:
         # Below target — platform may boost (quality loss)
         return (
-            f"{platform} puede subir tu audio, lo cual puede afectar la calidad.",
-            f"{platform} may boost your audio, which can affect quality."
+            f"{platform} puede subir tu audio aproximadamente {db} dB, lo cual puede afectar la calidad.",
+            f"{platform} may boost your audio by about {db} dB, which can affect quality."
         )
     else:
         # Way below target
         return (
-            f"Tu audio está muy bajo para {platform}. Va a sonar débil o con artefactos.",
-            f"Your audio is too quiet for {platform}. It will sound weak or have artifacts."
+            f"Tu audio está muy bajo para {platform}, aproximadamente {db} dB. Va a sonar débil o distorsionado.",
+            f"Your audio is too quiet for {platform} by about {db} dB. It will sound weak or distorted."
         )
 
 
@@ -1713,6 +1721,12 @@ def _sr_energy_message(energy_data: dict) -> tuple:
     else:
         dynamic_range = 0.0
 
+    # Check distribution evenness (what the user sees as Start/Middle/End %)
+    low = dist.get("low", 33.3)
+    mid = dist.get("mid", 33.3)
+    high = dist.get("high", 33.3)
+    dist_spread = max(low, mid, high) - min(low, mid, high)
+
     # Very flat energy (little variation)
     if dynamic_range < 0.2:
         return (
@@ -1721,10 +1735,17 @@ def _sr_energy_message(energy_data: dict) -> tuple:
         )
 
     # High dynamic range — some parts much louder than others
-    if dynamic_range > 0.6:
+    if dynamic_range > 0.7:
         return (
-            "Tu audio tiene secciones con volumen muy diferente. Las partes suaves se van a perder.",
-            "Your audio has sections with very different volume levels. Quiet passages will be lost."
+            "Tu audio tiene secciones con volumen muy diferente. Las partes suaves pueden perderse.",
+            "Your audio has sections with very different volume levels. Quiet parts may be lost."
+        )
+
+    # Moderate curve variation but uneven distribution across sections
+    if dist_spread > 15:
+        return (
+            "El volumen varía entre secciones de tu video. Algunas partes suenan más fuerte que otras.",
+            "Volume varies between sections of your video. Some parts sound louder than others."
         )
 
     # Moderate variation — normal for most content
