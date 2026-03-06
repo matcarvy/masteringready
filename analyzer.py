@@ -2964,8 +2964,8 @@ def _status_plr_en(plr: Optional[float], has_real_lufs: bool, strict: bool = Fal
     
     messages = {
         "perfect": {
-            "strict": "Excellent PLR: optimal dynamics for commercial delivery.",
-            "normal": f"Dynamics are very well preserved (PLR: {plr:.1f} dB). You haven't over-limited on the master bus, which gives me plenty of room to work the final loudness without sacrificing musicality.",
+            "strict": "Optimal PLR: dynamics adequate for commercial delivery.",
+            "normal": f"Dynamics are well preserved (PLR: {plr:.1f} dB). No over-limiting on the master bus, which leaves ample room to work the final loudness without sacrificing musicality.",
         },
         "pass": {
             "strict": "Good PLR for commercial, but ≥14 dB is ideal for maximum flexibility.",
@@ -3004,7 +3004,7 @@ def _status_stereo_en(corr: float, strict: bool = False) -> Tuple[str, str, floa
     elif status == "catastrophic":
         message = f"SEVERE: Phase cancellation detected ({corr:.0%}). The mix will lose significant content in mono. Check for: inverted channels, phase-inverted plugins, or M/S processing errors."
     elif status == "perfect":
-        message = "Excellent stereo correlation (mono compatible). The mix will translate well on all playback systems."
+        message = "Healthy stereo correlation (mono compatible). The mix will translate well on all playback systems."
     else:  # pass
         message = "Good stereo correlation. The mix maintains a healthy stereo image with good mono compatibility."
 
@@ -3080,7 +3080,7 @@ def _status_freq_en(fb: Dict[str, float], genre: Optional[str] = None, strict: b
 def _status_crest_factor_en(crest: float) -> Tuple[str, str, float]:
     """Evaluate crest factor when LUFS is not available."""
     if crest >= 18.0:
-        return "perfect", "Excellent dynamics preserved (high crest factor).", 1.0
+        return "perfect", "Dynamics well preserved (high crest factor).", 1.0
     if crest >= 14.0:
         return "pass", "Good dynamics for mastering.", 0.7
     if crest >= 10.0:
@@ -4749,7 +4749,7 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
                 try:
                     plr_num = float(plr_val.split()[0])
                     if plr_num >= 12:
-                        details += "   → Excellent dynamic preservation. Mix breathes well.\n"
+                        details += "   → Good dynamic preservation. Mix breathes well.\n"
                         details += "   → Ideal for expressive mastering with natural punch.\n"
                     elif plr_num >= 8:
                         details += "   → Good dynamic range, appropriate for mastering.\n"
@@ -6310,7 +6310,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                 stereo_value = stereo_metric.get("value")
                 if stereo_status in ["perfect", "pass"]:
                     if isinstance(stereo_value, (int, float)):
-                        positive_aspects.append(f"• Balance estéreo: excelente correlación ({stereo_value:.2f})")
+                        positive_aspects.append(f"• Balance estéreo: correlación saludable ({stereo_value:.2f})")
                     else:
                         positive_aspects.append("• Balance estéreo: buena compatibilidad mono")
             
@@ -6645,7 +6645,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                 stereo_value = stereo_metric.get("value")
                 if stereo_status in ["perfect", "pass"]:
                     if isinstance(stereo_value, (int, float)):
-                        positive_aspects.append(f"• Stereo balance: excellent correlation ({stereo_value:.2f})")
+                        positive_aspects.append(f"• Stereo balance: healthy correlation ({stereo_value:.2f})")
                     else:
                         positive_aspects.append("• Stereo balance: good mono compatibility")
             
@@ -6958,7 +6958,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
     if lang == 'es':
         # Spanish narrative
         if score >= 95:
-            intro = "Tu mezcla está en un estado excelente para mastering."
+            intro = "Tu mezcla presenta condiciones óptimas para mastering."
         elif score >= 85:
             intro = "Tu mezcla está en muy buen punto para mastering."
         elif score >= 75:
@@ -7212,7 +7212,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
     else:
         # English narrative
         if score >= 95:
-            intro = "Your mix is in excellent shape for mastering."
+            intro = "Your mix presents optimal conditions for mastering."
         elif score >= 85:
             intro = "Your mix is in very good shape for mastering."
         elif score >= 75:
@@ -7240,7 +7240,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
         plr_metric = next((m for m in metrics if "PLR" in m.get("internal_key", "")), None)
         if plr_metric and plr_metric.get("value") != "N/A":
             if plr_metric.get("status") == "perfect":
-                tech_parts.append("excellent dynamic range")
+                tech_parts.append("optimal dynamic range")
             elif plr_metric.get("status") == "pass":
                 tech_parts.append("good dynamic range")
             elif plr_metric.get("status") == "warning":
