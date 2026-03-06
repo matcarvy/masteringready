@@ -3819,7 +3819,7 @@ def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, s
     if has_real_lufs:
         # When PLR is available, Crest Factor is informational only
         cf_status = "info"
-        cf_message = "Informativo (usa PLR como métrica principal de dinámica)." if lang_picked == 'es' else "Informational (use PLR as the primary dynamics metric)."
+        cf_message = "Informativo. PLR es la métrica principal de dinámica." if lang_picked == 'es' else "Informational. PLR is the primary dynamics metric."
     else:
         # When no PLR, use Crest Factor scoring
         cf_status = st_cf
@@ -4144,7 +4144,7 @@ def generate_recommendations(metrics: List[Dict[str, Any]], score: int, genre: O
         internal_key = m.get("internal_key", m.get("name", ""))
         if internal_key == "Crest Factor" and "Informativo" in m.get("message", ""):
             continue
-        if internal_key == "Crest Factor" and "use PLR" in m.get("message", ""):
+        if internal_key == "Crest Factor" and "PLR is the primary" in m.get("message", ""):
             continue
         
         if m["status"] in ["critical", "warning"]:
@@ -5808,11 +5808,11 @@ def analyze_file_chunked(
     
     # Always use "info" status when PLR is available (chunked mode always has PLR)
     metrics.append({
-        "name": "Crest Factor",
+        "name": METRIC_NAMES[lang_picked]["Crest Factor"],
         "internal_key": "Crest Factor",
         "value": f"{crest:.1f} dB",
         "status": "info",  # Always info when PLR exists
-        "message": "Informativo (usa PLR como métrica principal de dinámica)." if lang == "es" else "Informational (use PLR as the primary dynamics metric)."
+        "message": "Informativo. PLR es la métrica principal de dinámica." if lang == "es" else "Informational. PLR is the primary dynamics metric."
     })
     
     # 7. Stereo Field (comprehensive evaluation)

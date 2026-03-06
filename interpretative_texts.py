@@ -1020,12 +1020,12 @@ def _generate_crest_factor_text_es(crest: float) -> Dict[str, str]:
     """Generate Spanish informational text for Crest Factor."""
     return {
         "interpretation": (
-            f"El Crest Factor de tu mezcla es {crest:.1f} dB. "
+            f"El Factor de Cresta de tu mezcla es {crest:.1f} dB. "
             "Este valor indica la diferencia entre los picos y el nivel RMS promedio."
         ),
         "recommendation": (
             "Valores entre 10 y 20 dB son habituales en música con buen rango dinámico. "
-            "Este dato es informativo. Usa PLR como métrica principal de dinámica."
+            "Este dato es informativo. PLR es la métrica principal de dinámica."
         )
     }
 
@@ -1039,7 +1039,7 @@ def _generate_crest_factor_text_en(crest: float) -> Dict[str, str]:
         ),
         "recommendation": (
             "Values between 10 and 20 dB are typical in music with good dynamic range. "
-            "This is informational. Use PLR as the primary dynamics metric."
+            "This is informational. PLR is the primary dynamics metric."
         )
     }
 
