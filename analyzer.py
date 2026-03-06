@@ -481,17 +481,17 @@ class ScoringThresholds:
     HEADROOM = {
         "strict": {
             "critical": lambda peak: peak >= -1.0,
-            "warning": lambda peak: (-4.0 <= peak < -1.0),  # Más amplio: incluye -4 a -2
-            "perfect": lambda peak: -6.0 <= peak <= -5.0,   # Más estrecho
-            "pass": lambda peak: (-9.0 <= peak < -6.0) or (-5.0 < peak < -4.0),  # Solo perfecto y bajo
-            "conservative": lambda peak: -12.0 <= peak < -9.0,
+            "warning": lambda peak: (-4.0 <= peak < -1.0),
+            "perfect": lambda peak: peak <= -5.0,
+            "pass": lambda peak: -5.0 < peak < -4.0,
+            "conservative": lambda peak: False,  # Unreachable: more headroom is never penalized
         },
         "normal": {
             "critical": lambda peak: peak >= -1.0,
             "warning": lambda peak: -2.0 < peak < -1.0,
-            "perfect": lambda peak: -6.0 <= peak <= -3.0,
-            "pass": lambda peak: (-9.0 <= peak < -3.0) or (-3.0 < peak <= -2.0),
-            "conservative": lambda peak: -12.0 <= peak < -9.0,
+            "perfect": lambda peak: peak <= -3.0,
+            "pass": lambda peak: -3.0 < peak <= -2.0,
+            "conservative": lambda peak: False,  # Unreachable: more headroom is never penalized
         }
     }
     
@@ -577,7 +577,8 @@ def calculate_headroom_score(peak_db: float, strict: bool) -> Tuple[str, float]:
     elif thresholds["conservative"](peak_db):
         return "conservative", ScoringThresholds.SCORES["conservative"]
     else:
-        return "pass", ScoringThresholds.SCORES["conservative"]
+        # Safety fallback — should be unreachable after threshold fix
+        return "perfect", ScoringThresholds.SCORES["perfect"]
 
 
 def calculate_true_peak_score(tp_db: float, strict: bool) -> Tuple[str, float, bool]:
@@ -3441,7 +3442,7 @@ def score_report(metrics: List[Dict[str, Any]], hard_fail: bool, strict: bool = 
         return 5, "❌ Requires review - your file needs work before mastering"
 
     # v7.4.0: Added "poor" status for correlation 0.1-0.3
-    mult = {"perfect": 1.0, "pass": 0.9, "warning": 0.7, "poor": 0.4, "critical": 0.0, "catastrophic": 0.0, "info": 1.0}
+    mult = {"perfect": 1.0, "pass": 0.9, "warning": 0.7, "poor": 0.4, "critical": 0.0, "catastrophic": 0.0, "info": 1.0, "conservative": 1.0}
     total = 0.0
     wsum = 0.0
     
@@ -3528,7 +3529,7 @@ def calculate_score_penalties(metrics: List[Dict[str, Any]], score: int, lang: s
     Uses the same weights and status multipliers as score_report().
     """
     lang = _pick_lang(lang)
-    mult = {"perfect": 1.0, "pass": 0.9, "warning": 0.7, "poor": 0.4, "critical": 0.0, "catastrophic": 0.0, "info": 1.0}
+    mult = {"perfect": 1.0, "pass": 0.9, "warning": 0.7, "poor": 0.4, "critical": 0.0, "catastrophic": 0.0, "info": 1.0, "conservative": 1.0}
 
     # PLF label mapping: internal_key -> (ES observation, EN observation)
     plf_labels = {
@@ -3590,8 +3591,13 @@ def calculate_score_penalties(metrics: List[Dict[str, Any]], score: int, lang: s
             else:
                 plf = f"Primary limiting factor: {top['label_en']}."
 
-    # Score Drivers — classify by influence
+    # Score Drivers — classify by influence (skip for near-perfect mixes)
     drivers = []
+    if score >= 90:
+        return {
+            "primary_limiting_factor": plf,
+            "score_drivers": drivers,
+        }
     for p in penalties:
         if p["penalty"] > 0.10:
             influence = "alta" if lang == 'es' else "high"
