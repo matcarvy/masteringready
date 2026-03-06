@@ -35,6 +35,7 @@ import {
   Wrench
 } from 'lucide-react'
 import Select from '@/components/Select'
+import InterpretativeSection from '@/components/InterpretativeSection'
 import useGeo from '@/lib/useGeo'
 
 // ============================================================================
@@ -1320,15 +1321,86 @@ export default function HistoryPage() {
                 </div>
               )}
               {reportTab === 'complete' && hasFullAccess && (
-                <div style={{
-                  whiteSpace: 'pre-wrap',
-                  wordBreak: 'break-word',
-                  fontSize: '0.875rem',
-                  lineHeight: '1.8',
-                  fontFamily: 'Inter, system-ui, sans-serif',
-                  color: 'var(--mr-text-primary)'
-                }}>
-                  {cleanReportText(selectedAnalysis.report_write || '') || (lang === 'es' ? 'No hay datos de análisis completo disponibles.' : 'No complete analysis data available.')}
+                <div>
+                  {/* InterpretativeSection cards */}
+                  {selectedAnalysis.interpretations && (
+                    <div style={{ marginBottom: '1.5rem' }}>
+                      <h3 style={{
+                        fontWeight: '700',
+                        fontSize: '1.25rem',
+                        marginBottom: '0.5rem',
+                        color: 'var(--mr-text-primary)'
+                      }}>
+                        {lang === 'es' ? 'Analisis Tecnico Detallado' : 'Detailed Technical Analysis'}
+                      </h3>
+                      <p style={{
+                        fontSize: '0.9375rem',
+                        color: 'var(--mr-text-secondary)',
+                        marginBottom: '1.5rem',
+                        fontStyle: 'italic'
+                      }}>
+                        {lang === 'es' ? 'Sobre' : 'About'} "{selectedAnalysis.filename || 'archivo'}"
+                      </p>
+
+                      {selectedAnalysis.interpretations.headroom && (
+                        <InterpretativeSection
+                          title={lang === 'es' ? 'Headroom & True Peak' : 'Headroom & True Peak'}
+                          interpretation={selectedAnalysis.interpretations.headroom.interpretation}
+                          recommendation={selectedAnalysis.interpretations.headroom.recommendation}
+                          metrics={selectedAnalysis.interpretations.headroom.metrics}
+                          lang={lang}
+                        />
+                      )}
+                      {selectedAnalysis.interpretations.dynamic_range && (
+                        <InterpretativeSection
+                          title={lang === 'es' ? 'Rango Dinamico' : 'Dynamic Range'}
+                          interpretation={selectedAnalysis.interpretations.dynamic_range.interpretation}
+                          recommendation={selectedAnalysis.interpretations.dynamic_range.recommendation}
+                          metrics={selectedAnalysis.interpretations.dynamic_range.metrics}
+                          lang={lang}
+                        />
+                      )}
+                      {selectedAnalysis.interpretations.overall_level && (
+                        <InterpretativeSection
+                          title={lang === 'es' ? 'Nivel General' : 'Overall Level'}
+                          interpretation={selectedAnalysis.interpretations.overall_level.interpretation}
+                          recommendation={selectedAnalysis.interpretations.overall_level.recommendation}
+                          metrics={selectedAnalysis.interpretations.overall_level.metrics}
+                          lang={lang}
+                        />
+                      )}
+                      {selectedAnalysis.interpretations.stereo_balance && (
+                        <InterpretativeSection
+                          title={lang === 'es' ? 'Balance Estereo' : 'Stereo Balance'}
+                          interpretation={selectedAnalysis.interpretations.stereo_balance.interpretation}
+                          recommendation={selectedAnalysis.interpretations.stereo_balance.recommendation}
+                          metrics={selectedAnalysis.interpretations.stereo_balance.metrics}
+                          lang={lang}
+                        />
+                      )}
+                      {selectedAnalysis.interpretations.crest_factor && (
+                        <InterpretativeSection
+                          title={lang === 'es' ? 'Factor de Cresta' : 'Crest Factor'}
+                          interpretation={selectedAnalysis.interpretations.crest_factor.interpretation}
+                          recommendation={selectedAnalysis.interpretations.crest_factor.recommendation}
+                          metrics={selectedAnalysis.interpretations.crest_factor.metrics}
+                          lang={lang}
+                        />
+                      )}
+                    </div>
+                  )}
+
+                  {/* Existing report text */}
+                  <div style={{
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-word',
+                    fontSize: '0.875rem',
+                    lineHeight: '1.8',
+                    fontFamily: 'Inter, system-ui, sans-serif',
+                    color: 'var(--mr-text-primary)'
+                  }}>
+                    {cleanReportText(selectedAnalysis.report_write || '') || (lang === 'es' ? 'No hay datos de análisis completo disponibles.' : 'No complete analysis data available.')}
+                  </div>
                 </div>
               )}
 
