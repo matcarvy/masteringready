@@ -73,9 +73,9 @@ export default function InterpretativeSection({ title, interpretation, recommend
             } else if (key === 'balance_l_r' || key === 'balance_lr') {
               formattedKey = 'Balance L/R'
             } else if (key === 'ms_ratio') {
-              formattedKey = lang === 'es' ? 'Relacion M/S' : 'M/S Ratio'
+              formattedKey = lang === 'es' ? 'Relación M/S' : 'M/S Ratio'
             } else if (key === 'correlation') {
-              formattedKey = lang === 'es' ? 'Correlacion' : 'Correlation'
+              formattedKey = lang === 'es' ? 'Correlación' : 'Correlation'
             } else if (key === 'lufs') {
               formattedKey = 'LUFS'
             } else if (key === 'crest_factor_db') {
@@ -134,7 +134,7 @@ export default function InterpretativeSection({ title, interpretation, recommend
           margin: 0,
           lineHeight: '1.6'
         }}>
-          <strong>{lang === 'es' ? 'Recomendacion' : 'Recommendation'}:</strong> {recommendation}
+          <strong>{lang === 'es' ? 'Recomendación' : 'Recommendation'}:</strong> {recommendation}
         </p>
       </div>
     </div>

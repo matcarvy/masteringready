@@ -1830,7 +1830,7 @@ function DashboardContent() {
                         marginBottom: '0.5rem',
                         color: 'var(--mr-text-primary)'
                       }}>
-                        {lang === 'es' ? 'Analisis Tecnico Detallado' : 'Detailed Technical Analysis'}
+                        {lang === 'es' ? 'Análisis Técnico Detallado' : 'Detailed Technical Analysis'}
                       </h3>
                       <p style={{
                         fontSize: '0.9375rem',
@@ -1852,7 +1852,7 @@ function DashboardContent() {
                       )}
                       {selectedAnalysis.interpretations.dynamic_range && (
                         <InterpretativeSection
-                          title={lang === 'es' ? 'Rango Dinamico' : 'Dynamic Range'}
+                          title={lang === 'es' ? 'Rango Dinámico' : 'Dynamic Range'}
                           interpretation={selectedAnalysis.interpretations.dynamic_range.interpretation}
                           recommendation={selectedAnalysis.interpretations.dynamic_range.recommendation}
                           metrics={selectedAnalysis.interpretations.dynamic_range.metrics}
@@ -1870,7 +1870,7 @@ function DashboardContent() {
                       )}
                       {selectedAnalysis.interpretations.stereo_balance && (
                         <InterpretativeSection
-                          title={lang === 'es' ? 'Balance Estereo' : 'Stereo Balance'}
+                          title={lang === 'es' ? 'Balance Estéreo' : 'Stereo Balance'}
                           interpretation={selectedAnalysis.interpretations.stereo_balance.interpretation}
                           recommendation={selectedAnalysis.interpretations.stereo_balance.recommendation}
                           metrics={selectedAnalysis.interpretations.stereo_balance.metrics}
