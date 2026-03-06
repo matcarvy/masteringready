@@ -299,7 +299,7 @@ def _generate_headroom_text_es(headroom: float, true_peak: float, status: str, s
             "recommendation": (
                 f"Es necesario reducir el nivel del bus principal entre {reduction}-{reduction+1} dB antes de exportar. "
                 f"Esto creará el espacio necesario (aproximadamente {abs(headroom) + reduction + 0.5:.1f} dBFS) "
-                f"para que el ingeniero de mastering pueda trabajar correctamente."
+                f"para que el ingeniero de mastering disponga del espacio necesario para procesar."
             )
         }
 
@@ -310,14 +310,14 @@ def _generate_dr_text_es(dr_value: float, status: str) -> Dict[str, str]:
     if status == "excellent":
         return {
             "interpretation": (
-                "Tu mezcla mantiene un rango dinámico excelente. "
+                "Tu mezcla mantiene un rango dinámico saludable. "
                 "Hay buen contraste entre las secciones suaves y fuertes de la canción, "
                 "lo que permite que el mastering pueda darle más impacto y energía sin "
                 "sacrificar la musicalidad ni la expresividad de la interpretación."
             ),
             "recommendation": (
-                "No comprimas más la mezcla - este nivel de dinámica es perfecto para "
-                "el proceso de mastering. Mantén los compresores de bus con ajustes conservadores."
+                "La compresión de bus actual no presenta conflictos técnicos. "
+                "Este nivel de dinámica es adecuado para el proceso de mastering."
             )
         }
     
@@ -481,7 +481,7 @@ def _generate_level_text_es(lufs: float, status: str, compression_suspected: boo
                 ),
                 "recommendation": (
                     "Un ingeniero de mastering puede trabajar con cualquier nivel "
-                    "siempre que la mezcla tenga buena estructura de ganancia interna."
+                    "mientras la mezcla tenga buena estructura de ganancia interna."
                 )
             }
 
@@ -516,7 +516,7 @@ def _generate_stereo_text_es(balance: float, correlation: float, ms_ratio: float
             ),
             "recommendation": (
                 "Revisa plugins de ensanchamiento estéreo, reverbs con mucha información Side, "
-                "y la fase de instrumentos grabados en estéreo. Prueba siempre en mono."
+                "y la fase de instrumentos grabados en estéreo. Conviene verificar en mono."
             )
         }
     
@@ -525,24 +525,24 @@ def _generate_stereo_text_es(balance: float, correlation: float, ms_ratio: float
         if correlation > 0.97 and ms_ratio < 0.05:
             return {
                 "interpretation": (
-                    "Tu mezcla presenta alta coherencia entre canales (excelente compatibilidad mono). "
+                    "Tu mezcla presenta alta coherencia entre canales (buena compatibilidad mono). "
                     f"Correlación muy alta ({correlation:.2f}) con relación M/S baja ({ms_ratio:.2f}). "
                     "Esto puede ser intencional o indicar que se exportó en mono."
                 ),
                 "recommendation": (
                     "Si buscas más amplitud estéreo, revisa la exportación y panoramas. "
-                    "Si la mezcla centrada es intencional, está perfecta así."
+                    "Si la mezcla centrada es intencional, es adecuada así."
                 )
             }
         else:
             return {
                 "interpretation": (
-                    "La imagen estéreo de tu mezcla está perfectamente balanceada y centrada. "
-                    "Los elementos centrales (voz, bajo, kick) mantienen su posición correctamente, "
+                    "La imagen estéreo de tu mezcla está bien balanceada y centrada. "
+                    "Los elementos centrales (voz, bajo, kick) mantienen su posición de forma estable, "
                     "mientras que el campo estéreo presenta buen ancho sin perder enfoque ni coherencia mono."
                 ),
                 "recommendation": (
-                    "El balance estéreo es correcto. No se requieren ajustes de panoramas."
+                    "La imagen estéreo no presenta conflictos técnicos. Los ajustes de panoramas son opcionales."
                 )
             }
     
@@ -595,7 +595,7 @@ def _generate_stereo_text_es(balance: float, correlation: float, ms_ratio: float
                 ),
                 "recommendation": (
                     f"Revisa los panoramas y niveles de los elementos principales. El balance L/R "
-                    f"actual ({balance:.2f}) debería estar más cerca de 0.5 para una imagen centrada."
+                    f"actual ({balance:.2f}) puede estar lejos del centro (0.5). Conviene verificar si responde a una decisión creativa."
                 )
             }
         else:
@@ -622,7 +622,7 @@ def _generate_stereo_text_es(balance: float, correlation: float, ms_ratio: float
             ),
             "recommendation": (
                 "Es necesario revisar toda la imagen estéreo: panoramas de elementos centrales, "
-                "fase de instrumentos estéreo, y efectos de ensanchamiento. Verifica siempre en mono "
+                "fase de instrumentos estéreo, y efectos de ensanchamiento. Conviene verificar en mono "
                 "para detectar cancelaciones de fase."
             )
         }
@@ -699,13 +699,13 @@ def _generate_dr_text_en(dr_value: float, status: str) -> Dict[str, str]:
     if status == "excellent":
         return {
             "interpretation": (
-                "Your mix maintains excellent dynamic range. "
+                "Your mix maintains a healthy dynamic range. "
                 "Good contrast between soft and loud sections allows mastering to add "
                 "impact and energy without sacrificing musicality or performance expression."
             ),
             "recommendation": (
-                "Don't compress further - this dynamic level is perfect for mastering. "
-                "Keep bus compressors with conservative settings."
+                "Current bus compression presents no technical conflicts. "
+                "This dynamic level is adequate for mastering."
             )
         }
     
@@ -911,24 +911,24 @@ def _generate_stereo_text_en(balance: float, correlation: float, ms_ratio: float
         if correlation > 0.97 and ms_ratio < 0.05:
             return {
                 "interpretation": (
-                    "Your mix shows high channel coherence (excellent mono compatibility). "
+                    "Your mix shows high channel coherence (good mono compatibility). "
                     f"Very high correlation ({correlation:.2f}) with low M/S ratio ({ms_ratio:.2f}). "
                     "This may be intentional or indicate a mono export."
                 ),
                 "recommendation": (
                     "If you want more stereo width, review export settings and panning. "
-                    "If the centered mix is intentional, it's perfect as is."
+                    "If the centered mix is intentional, it's adequate as is."
                 )
             }
         else:
             return {
                 "interpretation": (
-                    "Your mix's stereo image is perfectly balanced and centered. "
-                    "Center elements (vocal, bass, kick) maintain correct position, "
+                    "Your mix's stereo image is well balanced and centered. "
+                    "Center elements (vocal, bass, kick) maintain stable position, "
                     "while stereo field presents good width without losing focus or mono coherence."
                 ),
                 "recommendation": (
-                    "Stereo balance is correct. No pan adjustments needed."
+                    "Stereo image presents no technical conflicts. Pan adjustments are optional."
                 )
             }
     

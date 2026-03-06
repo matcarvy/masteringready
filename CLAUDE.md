@@ -4466,3 +4466,59 @@ Continued from previous session. InterpretativeSection recommendation cards were
 18. **Signed token system** — HMAC-signed tokens for Render API protection.
 19. **Priority Queue System** — Trigger: OOM errors or queue depth >5.
 20. **Stream Ready deploy** — Backend ready in `main.py`.
+
+### Session 2026-03-06 Part 2 — Compression Timeout Fix (Brave Browser)
+
+#### Bug Report
+Customer uploaded "MIX Final, Vaciao v1.wav" (65.97 MB, 48kHz, 32-bit stereo) — UI stuck at "Comprimiendo... 25%" forever. File never reached backend. Customer tried twice (Universal + Rock genre). Backend logs showed only health checks — zero trace of the file.
+
+#### Root Cause
+**Brave browser**. Brave's privacy shields block/limit Web Audio APIs (`AudioContext`, `OfflineAudioContext`) used for client-side compression to prevent audio fingerprinting. `decodeAudioData()` silently hangs on certain WAV files. Customer switched to Chrome — same file worked immediately.
+
+#### Fix (`f28d3cf`)
+Added 30-second timeout to compression via `Promise.race`:
+- `compressAudioFile(file, 20)` races against a 30s timer
+- If timeout wins: skip compression, upload original file (66MB is well under 200MB backend limit)
+- If compression succeeds normally: no change in behavior
+- If compression fails for other reasons: existing corrupt file error still thrown
+
+**Verified by 2 parallel agents**: 13/13 checks pass — Promise.race typing, fallback path, cleanup, state reset, metadata flow, all downstream flows (small files, successful compression, non-timeout errors, upload after timeout, large file banner, metadata) confirmed safe.
+
+#### Key Insight
+Brave's audio fingerprinting protection is the root cause, but the timeout fix is a universal safety net — catches any browser that can't decode a file (Brave shields, Safari quirks, unusual WAV formats like BWF/WAVE_FORMAT_EXTENSIBLE) and gracefully falls back to uploading uncompressed.
+
+#### Commits to main
+1. `f28d3cf` - fix: 30s compression timeout — skip and upload original if browser hangs on unusual WAV formats
+
+**Git state**: main on `f28d3cf`, pushed. Build clean.
+
+### Session 2026-03-06 Part 3 — Short Last Chunk Absorption
+
+#### Problem
+Chunked analysis errored on tracks where duration left a tiny remainder after dividing by 30s. Example: 180.2s file → 7 chunks, last chunk 0.2s → `❌ Error in chunk 7: Audio must have length greater than the block size.` The error was caught (fallback values used), so the score was correct, but it was unnecessary noise.
+
+#### Fix (`0f4e6a0`)
+Two changes in `analyzer.py`:
+
+1. **Guard after `num_chunks` calculation** (line 5061-5065): If `remainder < 1.0` and `num_chunks > 1`, reduce `num_chunks` by 1.
+2. **Last chunk uncapped** (line 5116-5120): Last chunk uses `actual_chunk_duration = duration - start_time` (absorbs remainder) instead of `min(chunk_duration, duration - start_time)`.
+
+**Example — Vaciao (180.2s):**
+- Before: 7 chunks, chunk 7 = 0.2s → error
+- After: 6 chunks, chunk 6 = 30.2s → clean
+
+**Example — Calor (182.3s):**
+- Before: 7 chunks, chunk 7 = 2.3s → fine
+- After: 7 chunks, chunk 7 = 2.3s → no change (remainder ≥ 1s)
+
+#### Verification (agent audit, 6 checkpoints)
+- All downstream `num_chunks` references safe (loop, progress, freq balance, API response)
+- No code assumes `actual_chunk_duration <= chunk_duration`
+- Progress bar: no overshoot (uses reduced num_chunks as divisor)
+- Edge cases: 30s file (1 chunk, guard prevents reduction to 0), 30.5s file (2→1 chunk, works)
+- `py_compile` clean
+
+#### Commits to main
+1. `0f4e6a0` - fix: absorb short last chunks (< 1s) into previous chunk to avoid block size errors
+
+**Git state**: main on `0f4e6a0`, pushed. Build clean.

@@ -3221,14 +3221,14 @@ def _status_plr_es(plr: Optional[float], has_real_lufs: bool, strict: bool = Fal
     
     messages = {
         "perfect": {
-            "strict": "Excelente PLR: dinámica óptima para entrega comercial.",
-            "normal": f"La dinámica está muy bien preservada (PLR: {plr:.1f} dB). No hay sobre-limitación en el bus principal, lo que deja amplio espacio para trabajar el volumen final sin sacrificar la musicalidad.",
+            "strict": "PLR óptimo: dinámica adecuada para entrega comercial.",
+            "normal": f"La dinámica está bien preservada (PLR: {plr:.1f} dB). No hay sobre-limitación en el bus principal, lo que deja amplio espacio para trabajar el volumen final sin sacrificar la musicalidad.",
         },
         "pass": {
             "strict": "PLR bueno para comercial, pero ≥14 dB es ideal para máxima flexibilidad.",
             "normal": "PLR adecuado para mastering.",
         },
-        "warning": f"La mezcla ya puede estar bastante limitada (PLR: {plr:.1f} dB). Revisa limitadores/compresores en el bus principal. Si te gusta su color, manténlos pero ajústalos para que no reduzcan ganancia (sube el umbral y el techo). Así conservas el carácter mientras recuperas dinámica.",
+        "warning": f"La mezcla ya puede estar bastante limitada (PLR: {plr:.1f} dB). Conviene revisar limitadores y compresores en el bus principal. Si su color es intencional, pueden conservarse ajustando el umbral y el techo para que no reduzcan ganancia. Así se preserva el carácter mientras se recupera dinámica.",
         "critical": f"PLR muy bajo ({plr:.1f} dB): sobre-comprimida/limitada. Quita limitadores o ajústalos para que el audio solo PASE sin reducción de ganancia (solo para color). Alternativamente, usa menos compresión en buses de grupos.",
     }
     
@@ -3261,7 +3261,7 @@ def _status_stereo_es(corr: float, strict: bool = False) -> Tuple[str, str, floa
     elif status == "catastrophic":
         message = f"SEVERO: Cancelación de fase detectada ({corr:.0%}). La mezcla perderá contenido significativo en mono. Verifica: canales invertidos, plugins con fase invertida, o errores en procesamiento M/S."
     elif status == "perfect":
-        message = "Excelente correlación estéreo (mono compatible). La mezcla se traducirá bien en todos los sistemas de reproducción."
+        message = "Correlación estéreo saludable (mono compatible). La mezcla se traducirá bien en todos los sistemas de reproducción."
     else:  # pass
         message = "Buena correlación estéreo. La mezcla mantiene una imagen estéreo saludable con buena compatibilidad en mono."
 
@@ -3337,7 +3337,7 @@ def _status_freq_es(fb: Dict[str, float], genre: Optional[str] = None, strict: b
 def _status_crest_factor_es(crest: float) -> Tuple[str, str, float]:
     """Evalúa crest factor cuando LUFS no está disponible."""
     if crest >= 18.0:
-        return "perfect", "Excelente dinámica preservada (crest factor alto).", 1.0
+        return "perfect", "Dinámica bien preservada (crest factor alto).", 1.0
     if crest >= 14.0:
         return "pass", "Buena dinámica para mastering.", 0.7
     if crest >= 10.0:
@@ -4382,7 +4382,7 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
             hr_status = headroom_metric.get("status", "pass")
             if hr_status in ("perfect", "pass"):
                 details += "   → Los picos dejan suficiente espacio para procesamiento\n"
-                details += "     sin riesgo de clipping durante el mastering.\n"
+                details += "     sin riesgo de clipping (saturación digital) durante el mastering.\n"
             else:
                 details += "   → Los picos están cerca del límite. Se recomienda dejar más\n"
                 details += "     margen para que el mastering tenga espacio de trabajo.\n"
@@ -4432,7 +4432,7 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
                 try:
                     plr_num = float(plr_val.split()[0])
                     if plr_num >= 12:
-                        details += "   → Excelente preservación de dinámica. La mezcla respira bien.\n"
+                        details += "   → Buena preservación de dinámica. La mezcla respira bien.\n"
                         details += "   → Ideal para mastering expresivo con punch natural.\n"
                     elif plr_num >= 8:
                         details += "   → Buen rango dinámico, apropiado para mastering.\n"
@@ -4460,16 +4460,17 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
             # Check for temporal analysis (from chunked mode)
             if "temporal_analysis" in stereo_metric:
                 temporal = stereo_metric["temporal_analysis"]
-                
+                has_flagged_timestamps = False
+
                 details += "▶ ANÁLISIS TEMPORAL:\n\n"
-                
+
                 # v7.3.51: Feedback positivo sobre coherencia mono
                 global_corr = stereo_metric.get("correlation", 0)
                 if global_corr and global_corr >= 0.7:
                     details += "✅ Alta coherencia mono detectada\n"
                     details += "La mezcla mantiene buena correlación entre canales.\n"
                     details += "Favorece el proceso de mastering y la compatibilidad en sistemas mono.\n\n"
-                
+
                 # Correlation temporal - solo regiones que necesitan atención
                 if 'correlation' in temporal:
                     corr_data = temporal['correlation']
@@ -4477,16 +4478,17 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
                     regions = corr_data.get('regions', [])
                     
                     if num_regions > 0:
+                        has_flagged_timestamps = True
                         region_word = "región" if num_regions == 1 else "regiones"
                         details += f"⚠️ Correlación ({num_regions} {region_word} para prestar atención):\n"
-                        
+
                         # v7.3.36.4: Variaciones de mensajes de mono para evitar repetición
                         variaciones_mono_es = [
                             "verifica comportamiento en mono",
                             "posible pérdida de cuerpo en mono",
                             "puede perder impacto en mono"
                         ]
-                        
+
                         max_regions_to_show = 25
                         for region_idx, region in enumerate(regions[:max_regions_to_show]):
                             start_min = int(region['start'] // 60)
@@ -4497,9 +4499,9 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
                             corr = region['avg_correlation']
                             issue = region['issue']
                             band_corr = region.get('band_correlation')
-                            
+
                             details += f"   • {start_min}:{start_sec:02d} → {end_min}:{end_sec:02d} ({dur}s): "
-                            
+
                             # v7.3.51: Only report issues that need attention (< 0.5)
                             # Removed 'high' issue type - high correlation is not a problem
                             if issue == 'medium_low':
@@ -4555,19 +4557,20 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
                     ms_data = temporal['ms_ratio']
                     num_regions = ms_data.get('num_regions', 0)
                     regions = ms_data.get('regions', [])
-                    
+
                     if num_regions > 0:
+                        has_flagged_timestamps = True
                         region_word = "región" if num_regions == 1 else "regiones"
                         attention_word = "a revisar"
                         details += f"📐 Relación M/S ({num_regions} {region_word} {attention_word}):\n"
-                        
+
                         # v7.3.51: Variaciones de mensajes para M/S bajo (eBook philosophy)
                         variaciones_ms_bajo_es = [
                             "Contenido estéreo reducido en este tramo.\n         Puede ser intencional según el arreglo.",
                             "Contenido estéreo reducido.\n         Común en secciones centradas (intros, versos, breaks).",
                             "Contenido estéreo reducido.\n         Verifica si el ancho estéreo coincide con la intención musical."
                         ]
-                        
+
                         max_regions_to_show = 25
                         for region_idx, region in enumerate(regions[:max_regions_to_show]):
                             start_min = int(region['start'] // 60)
@@ -4602,12 +4605,13 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
                     lr_data = temporal['lr_balance']
                     num_regions = lr_data.get('num_regions', 0)
                     regions = lr_data.get('regions', [])
-                    
+
                     if num_regions > 0:
+                        has_flagged_timestamps = True
                         region_word = "región" if num_regions == 1 else "regiones"
                         attention_word = "a revisar"
                         details += f"⚖️ Balance L/R ({num_regions} {region_word} {attention_word}):\n"
-                        
+
                         max_regions_to_show = 25
                         for region in regions[:max_regions_to_show]:
                             start_min = int(region['start'] // 60)
@@ -4617,24 +4621,25 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
                             dur = int(region['duration'])
                             balance = region['avg_balance_db']
                             side = region['side']
-                            
+
                             details += f"   • {start_min}:{start_sec:02d} → {end_min}:{end_sec:02d} ({dur}s): "
                             if side == 'left':
                                 details += f"Desbalance L: +{abs(balance):.1f} dB\n"
                             else:
                                 details += f"Desbalance R: {balance:.1f} dB\n"
-                            
+
                             # Add spacing between regions for readability
                             details += "\n"
-                        
+
                         # Show remaining count if more than max_regions_to_show
                         if num_regions > max_regions_to_show:
                             remaining = num_regions - max_regions_to_show
                             details += f"   ... y {remaining} región{'es' if remaining > 1 else ''} adicional{'es' if remaining > 1 else ''}\n"
-                        
+
                         details += "\n"
-                
-                details += "💡 Revisa los tiempos indicados arriba en tu DAW para evaluar si lo detectado en el Análisis Temporal responde a una decisión artística o si requiere un ajuste técnico antes del mastering.\n\n"
+
+                if has_flagged_timestamps:
+                    details += "💡 Revisa los tiempos indicados arriba en tu DAW para evaluar si lo detectado en el Análisis Temporal responde a una decisión artística o si requiere un ajuste técnico antes del mastering.\n\n"
             
             else:
                 # No temporal analysis available
@@ -6328,8 +6333,9 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
             
             # SECTION 2.5: Temporal Analysis (if available from chunked mode)
             has_temporal = False
+            has_flagged_timestamps = False
             temporal_message = ""
-            
+
             # Check for True Peak temporal analysis
             if tp_metric and "temporal_analysis" in tp_metric:
                 tp_temporal_data = tp_metric["temporal_analysis"]
@@ -6338,10 +6344,11 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                 regions = tp_temporal_data.get('regions', [])
                 info_only = tp_temporal_data.get('info_only', False)
                 info_message = tp_temporal_data.get('info_message', '')
-                
+
                 # Show temporal analysis if there are regions OR if it's info-only
                 if num_regions > 0:
                     has_temporal = True
+                    has_flagged_timestamps = True
                     temporal_message += f"🔊 True Peak: Presente durante {percentage:.0f}% del tiempo.\n"
                     temporal_message += f"   Regiones afectadas ({num_regions}):\n"
                     for region in regions[:10]:  # Max 10 regions
@@ -6358,11 +6365,11 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                     temporal_message += f"🔊 True Peak:\n"
                     temporal_message += f"   {info_message}\n\n"
                     temporal_message += "💡 El track está procesado a nivel de master con limitación agresiva.\n\n"
-            
+
             # Check for Stereo temporal analysis
             if stereo_metric and "temporal_analysis" in stereo_metric:
                 temporal = stereo_metric["temporal_analysis"]
-                
+
                 # v7.3.51: Feedback positivo sobre coherencia mono
                 global_corr = stereo_metric.get("correlation", 0)
                 if global_corr and global_corr >= 0.7:
@@ -6379,16 +6386,17 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                     
                     if num_regions > 0:
                         has_temporal = True
+                        has_flagged_timestamps = True
                         region_word = "región" if num_regions == 1 else "regiones"
                         temporal_message += f"⚠️ Correlación ({num_regions} {region_word} para prestar atención):\n"
-                        
+
                         # v7.3.36.4: Variaciones de mensajes de mono para evitar repetición
                         variaciones_mono_es = [
                             "verifica comportamiento en mono",
                             "posible pérdida de cuerpo en mono",
                             "puede perder impacto en mono"
                         ]
-                        
+
                         for region_idx, region in enumerate(regions[:10]):
                             start_min = int(region['start'] // 60)
                             start_sec = int(region['start'] % 60)
@@ -6453,17 +6461,18 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                     
                     if num_regions > 0:
                         has_temporal = True
+                        has_flagged_timestamps = True
                         region_word = "región" if num_regions == 1 else "regiones"
                         attention_word = "a revisar"
                         temporal_message += f"📐 Relación M/S ({num_regions} {region_word} {attention_word}):\n"
-                        
+
                         # v7.3.51: Variaciones de mensajes para M/S bajo (eBook philosophy)
                         variaciones_ms_bajo_es = [
                             "Contenido estéreo reducido en este tramo.\n         Puede ser intencional según el arreglo.",
                             "Contenido estéreo reducido.\n         Común en secciones centradas (intros, versos, breaks).",
                             "Contenido estéreo reducido.\n         Verifica si el ancho estéreo coincide con la intención musical."
                         ]
-                        
+
                         for region_idx, region in enumerate(regions[:10]):
                             start_min = int(region['start'] // 60)
                             start_sec = int(region['start'] % 60)
@@ -6494,6 +6503,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                     
                     if num_regions > 0:
                         has_temporal = True
+                        has_flagged_timestamps = True
                         region_word = "región" if num_regions == 1 else "regiones"
                         attention_word = "a revisar"
                         temporal_message += f"⚖️ Balance L/R ({num_regions} {region_word} {attention_word}):\n"
@@ -6520,8 +6530,9 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
             if has_temporal:
                 message += "▶ ANÁLISIS TEMPORAL:\n\n"
                 message += temporal_message
-                message += "💡 Revisa los tiempos indicados arriba en tu DAW para evaluar si lo detectado en el Análisis Temporal responde a una decisión artística o si requiere un ajuste técnico antes del mastering.\n\n"
-            
+                if has_flagged_timestamps:
+                    message += "💡 Revisa los tiempos indicados arriba en tu DAW para evaluar si lo detectado en el Análisis Temporal responde a una decisión artística o si requiere un ajuste técnico antes del mastering.\n\n"
+
             # SECTION 3: Technical Observations
             observations = []
             
@@ -6597,7 +6608,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                     "Los algoritmos de normalización modernos lo toleran bien.\n\n"
                     "💡 Tu decisión:\n"
                     "Si tu master traduce bien en diferentes sistemas y suena como buscas, el archivo es "
-                    "funcional para distribución. El riesgo de clipping intersample es bajo en codecs modernos.\n\n"
+                    "funcional para distribución. El riesgo de clipping (saturación digital) intersample es bajo en codecs modernos.\n\n"
                     "Si prefieres máxima seguridad técnica: reduce 1 a 2 dB con un plugin de ganancia al final de la cadena "
                     "y re-exporta.\n\n"
                     "🎧 Al final del día, tus oídos tienen la última palabra. Si el master suena balanceado, "
@@ -6657,8 +6668,9 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
             
             # SECTION 2.5: Temporal Analysis (if available from chunked mode)
             has_temporal = False
+            has_flagged_timestamps = False
             temporal_message = ""
-            
+
             # Check for True Peak temporal analysis
             if tp_metric and "temporal_analysis" in tp_metric:
                 tp_temporal_data = tp_metric["temporal_analysis"]
@@ -6667,10 +6679,11 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                 regions = tp_temporal_data.get('regions', [])
                 info_only = tp_temporal_data.get('info_only', False)
                 info_message = tp_temporal_data.get('info_message', '')
-                
+
                 # Show temporal analysis if there are regions OR if it's info-only
                 if num_regions > 0:
                     has_temporal = True
+                    has_flagged_timestamps = True
                     temporal_message += f"🔊 True Peak: Present for {percentage:.0f}% of the time.\n"
                     temporal_message += f"   Affected regions ({num_regions}):\n"
                     for region in regions[:10]:  # Max 10 regions
@@ -6687,11 +6700,11 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                     temporal_message += f"🔊 True Peak:\n"
                     temporal_message += f"   {info_message}\n\n"
                     temporal_message += "💡 The track is processed at master level with aggressive limiting.\n\n"
-            
+
             # Check for Stereo temporal analysis
             if stereo_metric and "temporal_analysis" in stereo_metric:
                 temporal = stereo_metric["temporal_analysis"]
-                
+
                 # v7.3.51: Positive feedback about mono coherence
                 global_corr = stereo_metric.get("correlation", 0)
                 if global_corr and global_corr >= 0.7:
@@ -6708,8 +6721,9 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                     
                     if num_regions > 0:
                         has_temporal = True
+                        has_flagged_timestamps = True
                         temporal_message += f"⚠️ Correlation ({num_regions} region{'s' if num_regions > 1 else ''} to pay attention to):\n"
-                        
+
                         # v7.3.36.4: Variations to avoid mechanical repetition
                         variaciones_mono_en = [
                             "verify mono behavior",
@@ -6781,8 +6795,9 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                     
                     if num_regions > 0:
                         has_temporal = True
+                        has_flagged_timestamps = True
                         temporal_message += f"📐 M/S Ratio ({num_regions} region{'s' if num_regions > 1 else ''} to review):\n"
-                        
+
                         # v7.3.51: Message variations for low M/S (eBook philosophy)
                         variaciones_ms_bajo_en = [
                             "Reduced stereo content in this section.\n         May be intentional based on the arrangement.",
@@ -6820,6 +6835,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                     
                     if num_regions > 0:
                         has_temporal = True
+                        has_flagged_timestamps = True
                         temporal_message += f"⚖️ L/R Balance ({num_regions} region{'s' if num_regions > 1 else ''} to review):\n"
                         for region in regions[:10]:
                             start_min = int(region['start'] // 60)
@@ -6844,8 +6860,9 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
             if has_temporal:
                 message += "▶ TEMPORAL ANALYSIS:\n\n"
                 message += temporal_message
-                message += "💡 Review the timestamps above in your DAW to evaluate if what's detected in the Temporal Analysis is an artistic decision or if it requires a technical adjustment before mastering.\n\n"
-            
+                if has_flagged_timestamps:
+                    message += "💡 Review the timestamps above in your DAW to evaluate if what's detected in the Temporal Analysis is an artistic decision or if it requires a technical adjustment before mastering.\n\n"
+
             # SECTION 3: Technical Observations
             observations = []
             
@@ -6963,13 +6980,13 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
         elif headroom_metric and headroom_metric.get("status") == "warning":
             tech_parts.append("Headroom un poco ajustado")
         elif headroom_metric and headroom_metric.get("status") == "critical":
-            tech_parts.append("Headroom insuficiente (riesgo de clipping (saturación digital))")
+            tech_parts.append("Headroom insuficiente (riesgo de saturación digital)")
         
         # PLR / Dynamics
         plr_metric = next((m for m in metrics if "PLR" in m.get("internal_key", "")), None)
         if plr_metric and plr_metric.get("value") != "N/A":
             if plr_metric.get("status") == "perfect":
-                tech_parts.append("Excelente rango dinámico")
+                tech_parts.append("Rango dinámico óptimo")
             elif plr_metric.get("status") == "pass":
                 tech_parts.append("Buen rango dinámico")
             elif plr_metric.get("status") == "warning":
@@ -7094,7 +7111,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                         "⚠️ La mezcla no tiene información estéreo (prácticamente mono).\n\n"
                         "   🤔 ¿Es esto intencional?\n\n"
                         "   Si SÍ es intencional:\n"
-                        "   • Perfecto - algunas producciones vintage o artísticas usan mono\n"
+                        "   • Adecuado. Algunas producciones vintage o artísticas usan mono\n"
                         "   • Solo confirma que sea la decisión correcta\n\n"
                         "   Si NO es intencional, verifica:\n"
                         "   • ¿Exportaste en mono por error? Revisa configuración de exportación\n"
@@ -7161,7 +7178,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
             if strict:
                 recommendation = "\n\n💡 Recomendación: Esta mezcla cumple con los estándares profesionales para entrega comercial. Puedes enviarla a mastering con confianza."
             else:
-                recommendation = "\n\n💡 Recomendación: Envíala a mastering tal como está."
+                recommendation = "\n\n💡 Recomendación: La mezcla cumple con los márgenes técnicos para pasar a mastering."
         elif score >= 75:
             tech_details = ""
             recommendation = "\n\n💡 Recomendación: Revisa los puntos mencionados si buscas la máxima calidad, pero la mezcla es aceptable para mastering."
@@ -7522,7 +7539,7 @@ def generate_short_mode_report(report: Dict[str, Any], strict: bool = False, lan
         
         # Recommendation based on score
         if score >= 85:
-            recommendation = "💡 Recomendación: Envíala a mastering tal como está."
+            recommendation = "💡 Recomendación: La mezcla cumple con los márgenes técnicos para pasar a mastering."
         elif score >= 70:
             recommendation = "💡 Recomendación: Con algunos ajustes menores, estará lista para mastering."
         elif score >= 50:
@@ -7611,7 +7628,7 @@ def generate_visual_report(report: Dict[str, Any], strict: bool = False, lang: s
                 positive_aspects.append("True Peak seguro para mastering" if lang == "es" else "Safe True Peak for mastering")
             elif "PLR" in name or "dinám" in message.lower() or "dynamic" in message.lower():
                 if status == "perfect":
-                    positive_aspects.append("Excelente rango dinámico" if lang == "es" else "Excellent dynamic range")
+                    positive_aspects.append("Rango dinámico óptimo" if lang == "es" else "Optimal dynamic range")
                 else:
                     positive_aspects.append("Buen rango dinámico" if lang == "es" else "Good dynamic range")
             elif "Stereo" in name or "stéreo" in name.lower():
@@ -7628,7 +7645,7 @@ def generate_visual_report(report: Dict[str, Any], strict: bool = False, lang: s
             if "Headroom" in name:
                 areas_to_review.append("Revisar headroom - Considerar dejar más espacio en los picos" if lang == "es" else "Review headroom - Consider leaving more headroom in peaks")
             elif "True Peak" in name:
-                areas_to_review.append("Revisar True Peak - Ajustar limitadores para evitar clipping" if lang == "es" else "Review True Peak - Adjust limiters to avoid clipping")
+                areas_to_review.append("Revisar True Peak - Ajustar limitadores para evitar saturación digital" if lang == "es" else "Review True Peak - Adjust limiters to avoid clipping")
             elif "PLR" in name:
                 areas_to_review.append("Revisar dinámica - Considerar reducir compresión/limitación" if lang == "es" else "Review dynamics - Consider reducing compression/limiting")
             elif "Stereo" in name or "stéreo" in name.lower():
