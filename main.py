@@ -1648,12 +1648,28 @@ def _sr_platform_message(platform: str, lufs_delta: float, tp_pass: bool, tp_clo
 
     db = _sr_round_db(lufs_delta)
 
-    # True Peak failure takes priority (distortion is audible)
+    # True Peak failure — combine distortion warning with LUFS context
     if not tp_pass and not tp_close:
-        return (
-            f"Las partes más fuertes de tu audio pueden distorsionar en {platform}.",
-            f"The loudest parts of your audio may distort on {platform}."
-        )
+        tp_es = f"Las partes más fuertes de tu audio pueden distorsionar en {platform}."
+        tp_en = f"The loudest parts of your audio may distort on {platform}."
+        if lufs_delta > 0.5:
+            # Too loud + peaks distort
+            return (
+                f"{tp_es} La plataforma también va a reducir tu volumen aproximadamente {db} dB.",
+                f"{tp_en} The platform will also reduce your volume by about {db} dB."
+            )
+        elif lufs_delta >= -2.0:
+            # Good loudness range, just peaks are too hot
+            return (
+                f"{tp_es} Reduce los picos para evitar la distorsión.",
+                f"{tp_en} Reduce the peaks to avoid distortion."
+            )
+        else:
+            # Too quiet + peaks distort
+            return (
+                f"{tp_es} Tu audio también está aproximadamente {db} dB por debajo del nivel objetivo.",
+                f"{tp_en} Your audio is also about {db} dB below the target level."
+            )
 
     # LUFS-based messages with specific dB amounts
     if lufs_delta > 2.0:
