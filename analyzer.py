@@ -5058,6 +5058,11 @@ def analyze_file_chunked(
     
     # Calculate number of chunks
     num_chunks = int(np.ceil(duration / chunk_duration))
+    # If the last chunk would be < 1s, absorb it into the previous chunk
+    # Avoids "Audio must have length greater than the block size" errors
+    remainder = duration - (num_chunks - 1) * chunk_duration
+    if num_chunks > 1 and remainder < 1.0:
+        num_chunks -= 1
     print(f"📦 Processing in {num_chunks} chunks")
 
     # v7.4.1 FIX: Detect mono file BEFORE processing
@@ -5108,7 +5113,11 @@ def analyze_file_chunked(
     # 3. Process each chunk
     for i in range(num_chunks):
         start_time = i * chunk_duration
-        actual_chunk_duration = min(chunk_duration, duration - start_time)
+        if i == num_chunks - 1:
+            # Last chunk takes everything remaining (may exceed chunk_duration by < 1s)
+            actual_chunk_duration = duration - start_time
+        else:
+            actual_chunk_duration = min(chunk_duration, duration - start_time)
         
         print(f"📦 Chunk {i+1}/{num_chunks} (offset: {start_time:.1f}s, duration: {actual_chunk_duration:.1f}s)")
         
