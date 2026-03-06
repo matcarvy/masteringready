@@ -7704,19 +7704,20 @@ def generate_visual_report(report: Dict[str, Any], strict: bool = False, lang: s
 
 
 def _format_analysis_date(report: Dict[str, Any]) -> str:
-    """Format analysis date from created_at (DB) or fall back to server time."""
-    from datetime import datetime
+    """Format analysis date from created_at (DB) or fall back to server time.
+    Converts UTC to COT (UTC-5) for display."""
+    from datetime import datetime, timedelta, timezone
+    COT = timezone(timedelta(hours=-5))
     created_at = report.get('created_at')
     if created_at:
         try:
             # Parse ISO 8601 from Supabase (e.g. "2026-02-12T00:29:15.123456+00:00")
-            # Strip fractional seconds and timezone for simple parsing
             date_str = created_at.replace('T', ' ')[:16]  # "2026-02-12 00:29"
-            dt = datetime.strptime(date_str, '%Y-%m-%d %H:%M')
-            return dt.strftime('%d/%m/%Y %H:%M')
+            dt = datetime.strptime(date_str, '%Y-%m-%d %H:%M').replace(tzinfo=timezone.utc)
+            return dt.astimezone(COT).strftime('%d/%m/%Y %H:%M')
         except Exception:
             pass
-    return datetime.now().strftime('%d/%m/%Y %H:%M')
+    return datetime.now(COT).strftime('%d/%m/%Y %H:%M')
 
 
 def generate_complete_pdf(
