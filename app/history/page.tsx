@@ -1562,6 +1562,7 @@ export default function HistoryPage() {
                           report_visual: selectedAnalysis.report_visual,
                           report_short: selectedAnalysis.report_short,
                           report_write: selectedAnalysis.report_write,
+                          user_timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
                         }))
                         const envUrl = process.env.NEXT_PUBLIC_API_URL
                         const backendUrl = (envUrl && !envUrl.includes('your-backend')) ? envUrl : 'https://masteringready.onrender.com'

@@ -7705,19 +7705,25 @@ def generate_visual_report(report: Dict[str, Any], strict: bool = False, lang: s
 
 def _format_analysis_date(report: Dict[str, Any]) -> str:
     """Format analysis date from created_at (DB) or fall back to server time.
-    Converts UTC to COT (UTC-5) for display."""
+    Converts UTC to user's local timezone (falls back to UTC-5 / COT)."""
     from datetime import datetime, timedelta, timezone
-    COT = timezone(timedelta(hours=-5))
+    from zoneinfo import ZoneInfo
+    # User timezone from frontend, fall back to COT
+    tz_name = report.get('user_timezone')
+    try:
+        tz = ZoneInfo(tz_name) if tz_name else timezone(timedelta(hours=-5))
+    except (KeyError, TypeError):
+        tz = timezone(timedelta(hours=-5))
     created_at = report.get('created_at')
     if created_at:
         try:
             # Parse ISO 8601 from Supabase (e.g. "2026-02-12T00:29:15.123456+00:00")
             date_str = created_at.replace('T', ' ')[:16]  # "2026-02-12 00:29"
             dt = datetime.strptime(date_str, '%Y-%m-%d %H:%M').replace(tzinfo=timezone.utc)
-            return dt.astimezone(COT).strftime('%d/%m/%Y %H:%M')
+            return dt.astimezone(tz).strftime('%d/%m/%Y %H:%M')
         except Exception:
             pass
-    return datetime.now(COT).strftime('%d/%m/%Y %H:%M')
+    return datetime.now(tz).strftime('%d/%m/%Y %H:%M')
 
 
 def generate_complete_pdf(

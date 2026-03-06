@@ -1455,6 +1455,7 @@ ${new Date().toLocaleDateString()}
           report_visual: result.report_visual || null,
           report_short: result.report_short || result.report || null,
           report_write: result.report_write || result.report || null,
+          user_timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         }))
 
         const envUrl = process.env.NEXT_PUBLIC_API_URL

@@ -1278,6 +1278,7 @@ async def download_pdf(
                 "report_short": data.get("report_short"),
                 "report_write": data.get("report_write"),
                 "created_at": data.get("created_at"),
+                "user_timezone": data.get("user_timezone"),
             }
             strict = data.get("strict_mode", False)
             logger.info(f"📄 Reconstructed report from analysis_data: score={result['score']}, verdict={result['verdict']}")
