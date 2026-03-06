@@ -879,8 +879,15 @@ const handleAnalyze = async () => {
       }, 100)
 
       try {
+        // Race compression against a 30s timeout — if the browser's decodeAudioData()
+        // hangs on unusual WAV formats (BWF, WAVE_FORMAT_EXTENSIBLE, etc.), skip compression
+        // and upload the original file (well under the 200MB backend limit).
+        const compressionTimeout = new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('COMPRESSION_TIMEOUT')), 30000)
+        )
+
         const { file: compressedFile, compressed, originalSize, newSize, originalMetadata: metadata } =
-          await compressAudioFile(file, 20)
+          await Promise.race([compressAudioFile(file, 20), compressionTimeout])
 
         clearInterval(compressionInterval)
         setCompressionProgress(100)
@@ -906,11 +913,19 @@ const handleAnalyze = async () => {
         setProgressAnimDuration(postCompressEst)
         setProgressKey(k => k + 1) // Restart CSS animation from 0%
         progressStartRef.current = { time: Date.now(), duration: postCompressEst }
-      } catch (compressionError) {
+      } catch (compressionError: any) {
         clearInterval(compressionInterval)
         setCompressing(false)
         setCompressionProgress(0)
-        throw new Error(ERROR_MESSAGES.corrupt_file[lang])
+
+        if (compressionError?.message === 'COMPRESSION_TIMEOUT') {
+          // Compression timed out (browser couldn't decode this WAV format).
+          // Skip compression and upload the original file — it's under 200MB backend limit.
+          console.error('[Compression] Timed out after 30s, uploading original file')
+          fileToAnalyze = file
+        } else {
+          throw new Error(ERROR_MESSAGES.corrupt_file[lang])
+        }
       }
     }
 
