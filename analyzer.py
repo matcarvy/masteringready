@@ -6984,8 +6984,11 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
         
         # Issues summary with EXPLICIT list of ALL problems
         if critical_issues:
-            issues_list = "\n".join([f"   • {issue}" for issue in critical_issues])
-            issues_sentence = f"\n\n⚠️ Se detectaron {len(critical_issues)} problema(s) crítico(s) que requieren atención inmediata:\n{issues_list}"
+            if len(critical_issues) == 1:
+                issues_sentence = f"\n\n⚠️ Se detectó un problema crítico que requiere atención inmediata:\n   • {critical_issues[0]}"
+            else:
+                issues_list = "\n".join([f"   • {issue}" for issue in critical_issues])
+                issues_sentence = f"\n\n⚠️ Se detectaron {len(critical_issues)} problemas críticos que requieren atención inmediata:\n{issues_list}"
         elif warnings:
             # FIXED: Listar explícitamente los warnings con contexto
             issues_details = []
@@ -7040,11 +7043,17 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                         )
             
             if issues_details:
-                issues_list_formatted = "\n".join(issues_details)
                 scope_note = "\n\n📍 Alcance: Estos puntos afectan a todo el track, no a secciones específicas." if strict else ""
-                issues_sentence = f"\n\n📋 Puntos a revisar (no críticos):\n{issues_list_formatted}{scope_note}"
+                if len(issues_details) == 1:
+                    # Single item: inline sentence instead of header + bullet list
+                    single_item = issues_details[0].lstrip("• ").rstrip(".")
+                    issues_sentence = f"\n\n📋 Un punto a revisar (no crítico): {single_item}.{scope_note}"
+                else:
+                    issues_list_formatted = "\n".join(issues_details)
+                    issues_sentence = f"\n\n📋 Puntos a revisar (no críticos):\n{issues_list_formatted}{scope_note}"
             else:
-                issues_sentence = f"\n\n📋 Hay {len(warnings)} punto(s) que podrías revisar, aunque no son críticos para el mastering."
+                w_count = len(warnings)
+                issues_sentence = f"\n\n📋 Hay {w_count} {'punto' if w_count == 1 else 'puntos'} que podrías revisar, aunque no {'es crítico' if w_count == 1 else 'son críticos'} para el mastering."
         else:
             issues_sentence = "\n\n✅ No se detectaron problemas técnicos críticos."
         
@@ -7229,8 +7238,11 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
         
         # Issues summary with EXPLICIT list of ALL problems
         if critical_issues:
-            issues_list = "\n".join([f"   • {issue}" for issue in critical_issues])
-            issues_sentence = f"\n\n⚠️ {len(critical_issues)} critical issue(s) detected that require immediate attention:\n{issues_list}"
+            if len(critical_issues) == 1:
+                issues_sentence = f"\n\n⚠️ One critical issue detected that requires immediate attention:\n   • {critical_issues[0]}"
+            else:
+                issues_list = "\n".join([f"   • {issue}" for issue in critical_issues])
+                issues_sentence = f"\n\n⚠️ {len(critical_issues)} critical issues detected that require immediate attention:\n{issues_list}"
         elif warnings:
             # FIXED: List warnings explicitly with context
             issues_details = []
@@ -7285,11 +7297,17 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                         )
             
             if issues_details:
-                issues_list_formatted = "\n".join(issues_details)
                 scope_note = "\n\n📍 Scope: These points apply to the entire track, not specific sections." if strict else ""
-                issues_sentence = f"\n\n📋 Points to review (non-critical):\n{issues_list_formatted}{scope_note}"
+                if len(issues_details) == 1:
+                    # Single item: inline sentence instead of header + bullet list
+                    single_item = issues_details[0].lstrip("• ").rstrip(".")
+                    issues_sentence = f"\n\n📋 One point to review (non-critical): {single_item}.{scope_note}"
+                else:
+                    issues_list_formatted = "\n".join(issues_details)
+                    issues_sentence = f"\n\n📋 Points to review (non-critical):\n{issues_list_formatted}{scope_note}"
             else:
-                issues_sentence = f"\n\n📋 There are {len(warnings)} point(s) you could review, though they're not critical for mastering."
+                w_count = len(warnings)
+                issues_sentence = f"\n\n📋 There {'is' if w_count == 1 else 'are'} {w_count} {'point' if w_count == 1 else 'points'} you could review, though {'it\'s' if w_count == 1 else 'they\'re'} not critical for mastering."
         else:
             issues_sentence = "\n\n✅ No critical technical issues detected."
         
@@ -8631,10 +8649,11 @@ def main() -> None:
             else:
                 out["summary"] = "✅ No issues detected. This mix is ready for mastering delivery."
         else:
+            n_issues = len(out['issues'])
             if lang == 'es':
-                out["summary"] = f"⚠️ {len(out['issues'])} problema(s) a revisar antes de la entrega a mastering."
+                out["summary"] = f"⚠️ {n_issues} {'problema' if n_issues == 1 else 'problemas'} a revisar antes de la entrega a mastering."
             else:
-                out["summary"] = f"⚠️ {len(out['issues'])} issue(s) to review before mastering delivery."
+                out["summary"] = f"⚠️ {n_issues} {'issue' if n_issues == 1 else 'issues'} to review before mastering delivery."
         return out
 
 

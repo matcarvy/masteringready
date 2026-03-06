@@ -4293,6 +4293,79 @@ Old FAQ 4 implied LUFS was actionable ("te avisa si el nivel necesita atención"
 
 **Git state**: main on `8f1eea3`, pushed. Build clean.
 
+### Session 2026-03-04 — Score Factors Table Missing from PDF (Root Cause Fix)
+
+#### Problem
+FACTORES DE PUNTUACIÓN / SCORE FACTORS table never appeared in any PDF, despite:
+- `calculate_score_penalties()` working correctly (Completo text showed Score Drivers)
+- Frontend fix (`0625990`) sending `score_penalties` in `analysis_data` JSON
+- Backend PDF reconstruction (`main.py:1273`) reading `data.get("score_penalties")`
+- PDF generation code (`analyzer.py:8153-8221`) correctly reading `report.get('score_penalties', {})`
+
+#### Root Cause
+**Both API response paths in `main.py` omitted `score_penalties` from the response dict.** The analyzer's `result` dict contained `score_penalties` (set at `analyzer.py:4108`), but when `main.py` constructed the API response, it cherry-picked specific fields and `score_penalties` was not among them.
+
+- **Polling endpoint** (line 1055-1090): `jobs[job_id]['result']` — manually constructed dict, missing `score_penalties`
+- **Sync endpoint** (line 610-635): return dict — same omission
+
+This meant:
+1. Frontend's `(result as any).score_penalties` → always `undefined` → `null`
+2. `analysis_data` JSON sent to PDF endpoint had `score_penalties: null`
+3. PDF endpoint's `data.get("score_penalties")` → `None` → fallback `metrics_obj.get(...)` → `{}` (empty)
+4. `generate_complete_pdf()` → `plf_text` falsy → table never rendered
+
+#### Fix (included in commit `a04829f`)
+Added `"score_penalties": result.get("score_penalties", {}),` to both:
+- Polling endpoint job result dict (line 1089)
+- Sync endpoint response dict (line 633)
+
+Purely additive — no existing behavior changed. Safe `.get()` with `{}` fallback.
+
+#### Data Flow (now complete)
+```
+analyzer.py:4108 (score_penalties in result)
+  → main.py:633/1089 (included in API response) ← WAS MISSING
+    → frontend result.score_penalties (received by page.tsx)
+      → analysis_data JSON (sent to PDF endpoint)
+        → main.py:1273 (reconstructed in result dict)
+          → analyzer.py:8154 (read by generate_complete_pdf)
+            → Score Factors table rendered in PDF
+```
+
+#### Verification
+- Agent verified all 8 checkpoints in the data flow — ALL PASS
+- `py_compile` clean
+- Fix is 100% additive, zero regressions
+
+**Git state**: main on `a04829f`, pushed. Build clean.
+
+### Session 2026-03-04 Part 2 — Stream Ready Platform Specs + Message Clarity
+
+#### Changes (uncommitted on main)
+1. **Platform spec corrections** (SR_PLATFORMS config):
+   - YouTube `tp_limit`: -1.0 → -1.5 dBTP (accounts for multiple transcoding passes)
+   - Facebook `lufs_target`: -14.0 → -13.0 LUFS (matches industry sources, though Meta publishes no official number)
+   - Facebook `tp_limit`: -1.0 → -1.5 dBTP
+   - TikTok + Instagram Reels unchanged (-14.0 / -1.0)
+
+2. **New `_sr_round_db()` helper** — rounds dB delta to nearest 0.5 for readability.
+
+3. **`_sr_platform_message()` — specific dB amounts** — messages now include "approximately X dB" so creators understand magnitude, not just direction. Uses `abs()` so value is always positive with directional verb.
+
+4. **`_sr_energy_message()` refinements**:
+   - `dynamic_range` threshold raised from 0.6 → 0.7 (less aggressive trigger for video content)
+   - New `dist_spread > 15` check — catches moderate curve but uneven Start/Middle/End distribution
+
+5. **Copy alignment with voice guide** — "se van a perder" / "will be lost" (absolute) → "pueden perderse" / "may become harder to hear" (conditional). Consistent with MR voice guide rules.
+
+#### Verification
+- Agent verified rounding math, control flow, no unreachable code, no missing returns
+- Agent verified platform specs against industry sources (YouTube -1.5 TP defensible, Facebook -13 LUFS plausible)
+- All copy changes consistent with `mr-voice-guide.md`
+- `CLAUDE.md` changes are documentation only
+
+**Git state**: uncommitted on main. Ready to commit after user approval.
+
 ---
 
 ## UPCOMING: Primary Limiting Factor + Score Drivers
@@ -4319,8 +4392,77 @@ Two new report features that help users understand *where to start* after seeing
 - Voice guide: no commands, no praise, factual influence ranking
 
 ### Implementation Notes
-- Both features share the same penalty calculation — implement as a single helper function
+- Both features share the same penalty calculation — implement as a single helper function (`calculate_score_penalties()` at analyzer.py:3524 — ALREADY DONE)
 - Both are presentation/copy features layered on top of existing scoring (no algorithm changes)
 - Must check `mr-voice-guide.md` before writing any user-facing copy
 - Must exist in both ES and EN
 - Score anchor line (subtitle under score) — **deferred** unless user feedback shows confusion about what the score measures
+- **Status**: Backend computation + PDF rendering DONE. Data flow fixed (Session 2026-03-04). Verify Score Factors table appears in PDFs after Render redeploy.
+
+---
+
+### Session 2026-03-06 — InterpretativeSection Audit + Single-Item List Polish
+
+#### Context
+Continued from previous session. InterpretativeSection recommendation cards were added to dashboard + history Completo tabs. User verified Calor PDF report against all established rules (voice guide, LUFS framing, PLR scoring, L/R balance, Crest Factor, Score Drivers, headroom consistency, no em dashes) — confirmed it reads "like a professional diagnostic." One minor polish item flagged: "Puntos a revisar (no críticos):" followed by a single bullet should be a sentence.
+
+#### 3-Agent Audit — ALL PASS
+
+| Audit | Result |
+|-------|--------|
+| **InterpretativeSection consistency** | IDENTICAL across all 3 pages — same 5 cards, same order, same emojis, same guards, correct Spanish accents |
+| **Interpretations data flow** | Complete: backend → API → frontend → DB → dashboard/history retrieval. Zero gaps. |
+| **Single-item list patterns** | Found 8 locations with `(s)` pluralization or single-item list headers |
+
+#### Fixes Applied
+
+**Single-item list polish** (Completo report, both languages):
+- 1 warning → inline sentence: "📋 Un punto a revisar (no crítico): [item]." / "📋 One point to review (non-critical): [item]."
+- 1 critical → proper singular: "⚠️ Se detectó un problema crítico..." / "⚠️ One critical issue detected..."
+- 2+ items → list format unchanged
+
+**Eliminated all `(s)` pluralization patterns** (4 locations):
+- `punto(s)` → `punto` / `puntos` conditional (ES fallback)
+- `point(s)` → `point` / `points` conditional (EN fallback)
+- `problema(s)` → `problema` / `problemas` conditional (TXT summary ES)
+- `issue(s)` → `issue` / `issues` conditional (TXT summary EN)
+
+#### Files Changed
+- `analyzer.py` — 8 edits (singular/plural handling in Completo report + TXT summary)
+
+#### Commits to main
+1. `TBD` — fix: single-item list polish + eliminate (s) pluralization in report text
+
+**Git state**: main, build clean.
+
+---
+
+## NEXT STEPS (Priority Order) — Updated 2026-03-06
+
+### IMMEDIATE (this week)
+1. **Regression test on Render** — Run 5-10 real mixes through production. Read Spanish reports aloud for naturalness. Verify single-item list polish + Score Factors table in PDFs.
+2. **Verify Score Factors table in PDFs** — Generate PDFs for 3 test tracks (100, 84, 28 scores) and confirm FACTORES DE PUNTUACIÓN section appears.
+
+### SHORT-TERM (next 1-2 weeks)
+3. **Workshop landing page** (`/workshop`) — Priority 4 from roadmap. Full page with Stripe checkout, replacing Carrd. Copy in week-1 pack §1.
+4. **Founding member DMs** — DM warm leads from IG/WhatsApp with founding offer ($4.99/mo locked).
+5. **Lead prospector outreach** — Reply to top YouTube/HN leads from `/prospecting`.
+6. **Testimonials: get to 6** — Need 3 more for clean 2-row grid.
+7. **Welcome email (manual)** — Gmail to every new signup.
+8. **Email service (Resend)** — $0 for 3K emails/mo. Automate 4-email sequence.
+
+### MONTH 2 (data-driven)
+9. **Before/After transformation capture** — Auto-save score cards as PNG, admin page to pair + export for social.
+10. **Revenue tracking admin tab** — Stripe data by tier per week vs. plan targets.
+11. **Audit intake page** (`/audit`) — Stripe checkout + file upload for $97 standalone audit.
+12. **LATAM payments (PSE/Nequi)** — Trigger: Colombian signups hitting paywall without intl card.
+13. **More SEO learn pages** — Based on Search Console data.
+14. **eBook migration from Payhip** — Stripe product at $15 USD.
+15. **Genre profile calibration** — Analyze ~102 reference tracks across 10 genres.
+
+### MONTH 3+ (scale what works)
+16. **Product Hunt** — After 6+ testimonials + proven conversion.
+17. **DLocal integration** — If LATAM signups high but paid conversion <3%.
+18. **Signed token system** — HMAC-signed tokens for Render API protection.
+19. **Priority Queue System** — Trigger: OOM errors or queue depth >5.
+20. **Stream Ready deploy** — Backend ready in `main.py`.
