@@ -1830,7 +1830,7 @@ function DashboardContent() {
                         marginBottom: '0.5rem',
                         color: 'var(--mr-text-primary)'
                       }}>
-                        {lang === 'es' ? 'Análisis Técnico Detallado' : 'Detailed Technical Analysis'}
+                        {lang === 'es' ? '📊 Análisis Técnico Detallado' : '📊 Detailed Technical Analysis'}
                       </h3>
                       <p style={{
                         fontSize: '0.9375rem',
@@ -1838,12 +1838,12 @@ function DashboardContent() {
                         marginBottom: '1.5rem',
                         fontStyle: 'italic'
                       }}>
-                        {lang === 'es' ? 'Sobre' : 'About'} "{selectedAnalysis.filename || 'archivo'}"
+                        {lang === 'es' ? '🎵 Sobre' : '🎵 About'} "{selectedAnalysis.filename || 'archivo'}"
                       </p>
 
                       {selectedAnalysis.interpretations.headroom && (
                         <InterpretativeSection
-                          title={lang === 'es' ? 'Headroom & True Peak' : 'Headroom & True Peak'}
+                          title={lang === 'es' ? '🎚️ Headroom & True Peak' : '🎚️ Headroom & True Peak'}
                           interpretation={selectedAnalysis.interpretations.headroom.interpretation}
                           recommendation={selectedAnalysis.interpretations.headroom.recommendation}
                           metrics={selectedAnalysis.interpretations.headroom.metrics}
@@ -1852,7 +1852,7 @@ function DashboardContent() {
                       )}
                       {selectedAnalysis.interpretations.dynamic_range && (
                         <InterpretativeSection
-                          title={lang === 'es' ? 'Rango Dinámico' : 'Dynamic Range'}
+                          title={lang === 'es' ? '📈 Rango Dinámico' : '📈 Dynamic Range'}
                           interpretation={selectedAnalysis.interpretations.dynamic_range.interpretation}
                           recommendation={selectedAnalysis.interpretations.dynamic_range.recommendation}
                           metrics={selectedAnalysis.interpretations.dynamic_range.metrics}
@@ -1861,7 +1861,7 @@ function DashboardContent() {
                       )}
                       {selectedAnalysis.interpretations.overall_level && (
                         <InterpretativeSection
-                          title={lang === 'es' ? 'Nivel General' : 'Overall Level'}
+                          title={lang === 'es' ? '🔊 Nivel General' : '🔊 Overall Level'}
                           interpretation={selectedAnalysis.interpretations.overall_level.interpretation}
                           recommendation={selectedAnalysis.interpretations.overall_level.recommendation}
                           metrics={selectedAnalysis.interpretations.overall_level.metrics}
@@ -1870,7 +1870,7 @@ function DashboardContent() {
                       )}
                       {selectedAnalysis.interpretations.stereo_balance && (
                         <InterpretativeSection
-                          title={lang === 'es' ? 'Balance Estéreo' : 'Stereo Balance'}
+                          title={lang === 'es' ? '🎚️ Balance Estéreo' : '🎚️ Stereo Balance'}
                           interpretation={selectedAnalysis.interpretations.stereo_balance.interpretation}
                           recommendation={selectedAnalysis.interpretations.stereo_balance.recommendation}
                           metrics={selectedAnalysis.interpretations.stereo_balance.metrics}

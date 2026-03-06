@@ -6,17 +6,20 @@ interface InterpretativeSectionProps {
   recommendation: string
   metrics: {
     [key: string]: any
-    status: 'excellent' | 'good' | 'warning' | 'error'
+    status: 'excellent' | 'good' | 'warning' | 'error' | 'critical' | 'catastrophic' | 'info'
   }
   lang: 'es' | 'en'
 }
 
 export default function InterpretativeSection({ title, interpretation, recommendation, metrics, lang }: InterpretativeSectionProps) {
-  const statusColors = {
+  const statusColors: Record<string, { border: string; bg: string; text: string }> = {
     excellent: { border: 'var(--mr-green)', bg: 'var(--mr-green-bg)', text: 'var(--mr-green-text)' },
     good: { border: 'var(--mr-blue)', bg: 'var(--mr-blue-bg)', text: 'var(--mr-blue-text)' },
+    info: { border: 'var(--mr-blue)', bg: 'var(--mr-blue-bg)', text: 'var(--mr-blue-text)' },
     warning: { border: 'var(--mr-amber)', bg: 'var(--mr-amber-bg)', text: 'var(--mr-amber-text)' },
-    error: { border: 'var(--mr-red)', bg: 'var(--mr-red-bg)', text: 'var(--mr-red-text)' }
+    error: { border: 'var(--mr-red)', bg: 'var(--mr-red-bg)', text: 'var(--mr-red-text)' },
+    critical: { border: 'var(--mr-red)', bg: 'var(--mr-red-bg)', text: 'var(--mr-red-text)' },
+    catastrophic: { border: 'var(--mr-red)', bg: 'var(--mr-red-bg)', text: 'var(--mr-red-text)' }
   }
 
   const colors = statusColors[metrics.status] || statusColors.good
@@ -94,6 +97,14 @@ export default function InterpretativeSection({ title, interpretation, recommend
             if (typeof value === 'number') {
               if (key === 'balance_l_r' || key === 'balance_lr') {
                 formattedValue = `${value >= 0 ? '+' : ''}${value.toFixed(1)} dB`
+              } else if (key === 'headroom_dbfs') {
+                formattedValue = `${value.toFixed(1)} dBFS`
+              } else if (key === 'true_peak_dbtp') {
+                formattedValue = `${value.toFixed(1)} dBTP`
+              } else if (key === 'plr' || key === 'dr_lu' || key === 'crest_factor_db') {
+                formattedValue = `${value.toFixed(1)} dB`
+              } else if (key === 'lufs') {
+                formattedValue = `${value.toFixed(1)} LUFS`
               } else {
                 formattedValue = value.toFixed(2)
               }
