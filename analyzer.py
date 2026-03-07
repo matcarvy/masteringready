@@ -4242,7 +4242,7 @@ def generate_cta(score: int, strict: bool, lang: str, mode: str = "write") -> Di
             return {
                 "message": (
                     "🔧 Tu mezcla está cerca.\n"
-                    "Hay aspectos técnicos que vale la pena revisar antes del mastering. Corregirlos ahora mejora significativamente el resultado final. Si necesitas orientación, escríbenos."
+                    "Hay aspectos técnicos que conviene revisar antes del mastering. Corregirlos ahora mejora significativamente el resultado final. Si necesitas orientación, escríbenos."
                 ),
                 "button": "Preparar mi mezcla",
                 "action": "preparation"
@@ -4252,7 +4252,7 @@ def generate_cta(score: int, strict: bool, lang: str, mode: str = "write") -> Di
             return {
                 "message": (
                     "🔧 Tu mezcla necesita ajustes antes del mastering.\n"
-                    "Hay decisiones técnicas en tu mezcla que pueden afectar el resultado del mastering. No significa que esté mal. Significa que hay ajustes que vale la pena hacer antes. Si quieres que te ayudemos a identificarlos, escríbenos."
+                    "Hay decisiones técnicas en tu mezcla que pueden afectar el resultado del mastering. No significa que esté mal. Significa que hay ajustes que conviene hacer antes. Si quieres que te ayudemos a identificarlos, escríbenos."
                 ),
                 "button": "Revisar mi mezcla",
                 "action": "preparation"
@@ -6609,8 +6609,8 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                     "💡 Tu decisión:\n"
                     "Si tu master traduce bien en diferentes sistemas y suena como buscas, el archivo es "
                     "funcional para distribución. El riesgo de clipping (saturación digital) intersample es bajo en codecs modernos.\n\n"
-                    "Si prefieres máxima seguridad técnica: reduce 1 a 2 dB con un plugin de ganancia al final de la cadena "
-                    "y re-exporta.\n\n"
+                    "Si prefieres máxima seguridad técnica: reducir 1 a 2 dB con un plugin de ganancia al final de la cadena "
+                    "y re-exportar.\n\n"
                     "🎧 Al final del día, tus oídos tienen la última palabra. Si el master suena balanceado, "
                     "impactante y se traduce bien en múltiples sistemas, confía en tu decisión."
                 )
