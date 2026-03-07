@@ -1549,8 +1549,8 @@ def calculate_metrics_bars_percentages(metrics: List[Dict[str, Any]], strict: bo
                     bar_status = "critical"
                     if lufs_val <= -14:
                         headroom_tooltip_override = {
-                            "es": "Headroom comprometido, pero nivel general adecuado. Baja el nivel antes de exportar para dar margen al máster.",
-                            "en": "Compromised headroom, but overall level is adequate. Lower the level before export to give margin for mastering."
+                            "es": "Headroom comprometido, pero nivel general adecuado. Se recomienda bajar el nivel antes de exportar para dar margen al master.",
+                            "en": "Compromised headroom, but overall level is adequate. Consider lowering the level before export to give margin for mastering."
                         }
             else:
                 # 🟢 Verde: ≤ -3 dBFS (Perfecto)
@@ -1572,8 +1572,8 @@ def calculate_metrics_bars_percentages(metrics: List[Dict[str, Any]], strict: bo
                     bar_status = "critical"
                     if lufs_val <= -14:
                         headroom_tooltip_override = {
-                            "es": "Headroom comprometido, pero nivel general adecuado. Baja el nivel antes de exportar para dar margen al máster.",
-                            "en": "Compromised headroom, but overall level is adequate. Lower the level before export to give margin for mastering."
+                            "es": "Headroom comprometido, pero nivel general adecuado. Se recomienda bajar el nivel antes de exportar para dar margen al master.",
+                            "en": "Compromised headroom, but overall level is adequate. Consider lowering the level before export to give margin for mastering."
                         }
             
             # Apply headroom-specific tooltip if available
@@ -1915,7 +1915,7 @@ def format_temporal_message(temporal_data: Dict[str, Any], parameter_name: str, 
     
     if severity == "widespread":
         if lang == 'es':
-            return f"\n\n▶ Temporal: Presente durante la mayor parte del track ({affected_pct:.0f}% del tiempo)."
+            return f"\n\n▶ Temporal: Presente durante la mayor parte de la pista ({affected_pct:.0f}% del tiempo)."
         else:
             return f"\n\n▶ Temporal: Present throughout most of the track ({affected_pct:.0f}% of the time)."
     
@@ -2515,7 +2515,7 @@ def evaluate_stereo_field_comprehensive(corr: float, ms_ratio: float, lr_balance
         # CORRELACIÓN: +1.0 = mono puro, 0.97-1.0 = casi mono, 0.7-0.95 = estéreo saludable
         if corr > 0.97:  # Solo si correlación es MUY alta (>97%) = verdaderamente mono
             if lang == 'es':
-                context_parts.append("⚠️ La mezcla no tiene información estéreo (prácticamente mono). ¿Es intencional? Verifica si exportaste en mono por error.")
+                context_parts.append("⚠️ La mezcla no tiene información estéreo (prácticamente mono). ¿Es intencional? Conviene verificar si se exportó en mono por error.")
             else:
                 context_parts.append("⚠️ Mix has no stereo information (practically mono). Is this intentional? Check if you exported in mono by mistake.")
         elif corr > 0.90:
@@ -2532,7 +2532,7 @@ def evaluate_stereo_field_comprehensive(corr: float, ms_ratio: float, lr_balance
                 context_parts.append(f"ℹ️ Centered stereo image (corr: {corr:.2f}, M/S: {ms_ratio:.2f}). Good mono compatibility with stereo information present.")
     elif ms_ratio > 1.5:
         if lang == 'es':
-            context_parts.append(f"⚠️ Estéreo muy ancho (M/S: {ms_ratio:.2f}). Puede sonar débil en parlantes o mono. Considera reducir el ensanchamiento estéreo.")
+            context_parts.append(f"⚠️ Estéreo muy ancho (M/S: {ms_ratio:.2f}). Puede sonar débil en parlantes o mono. Conviene reducir el ensanchamiento estéreo.")
         else:
             context_parts.append(f"⚠️ Very wide stereo (M/S: {ms_ratio:.2f}). May sound weak on speakers or mono. Consider reducing stereo widening.")
     
@@ -2540,7 +2540,7 @@ def evaluate_stereo_field_comprehensive(corr: float, ms_ratio: float, lr_balance
     if abs(lr_balance) > 3.0:
         side = "izquierdo" if lr_balance > 0 else "derecho" if lang == 'es' else "left" if lr_balance > 0 else "right"
         if lang == 'es':
-            context_parts.append(f"⚠️ Desbalance L/R: {abs(lr_balance):.1f} dB más energía en canal {side}. Verifica paneo y volumen de canales.")
+            context_parts.append(f"⚠️ Desbalance L/R: {abs(lr_balance):.1f} dB más energía en canal {side}. Conviene verificar paneo y volumen de canales.")
         else:
             context_parts.append(f"⚠️ L/R imbalance: {abs(lr_balance):.1f} dB more energy in {side} channel. Check panning and channel volumes.")
     
@@ -3127,10 +3127,10 @@ def _status_headroom_es(peak_db: float, strict: bool = False) -> Tuple[str, str,
     mode = "strict" if strict else "normal"
 
     messages = {
-        "critical": f"Muy poco headroom (margen antes del máximo digital), con riesgo de clipping (saturación digital). Añade un plugin de ganancia al final del bus principal y reduce aproximadamente {reduction_db} dB antes de exportar nuevamente. Esto preserva el balance de tu mezcla y el sonido de tus plugins.",
+        "critical": f"Muy poco headroom (margen antes del máximo digital), con riesgo de clipping (saturación digital). Conviene añadir un plugin de ganancia al final del bus principal y reducir aproximadamente {reduction_db} dB antes de exportar nuevamente. Esto preserva el balance de la mezcla y el sonido de los plugins.",
         "warning": {
-            "strict": f"Margen insuficiente para entrega comercial. Reduce aproximadamente {reduction_db} dB para llegar a la zona ideal.",
-            "normal": f"La mezcla está algo caliente. Baja aproximadamente {reduction_db} dB para dejar margen.",
+            "strict": f"Margen insuficiente para entrega comercial. Conviene reducir aproximadamente {reduction_db} dB para llegar a la zona ideal.",
+            "normal": f"La mezcla está algo caliente. Conviene bajar aproximadamente {reduction_db} dB para dejar margen.",
         },
         "perfect": {
             "strict": "Margen óptimo para entrega comercial profesional.",
@@ -3164,9 +3164,9 @@ def _status_true_peak_es(tp_db: float, strict: bool = False) -> Tuple[str, str, 
     mode = "strict" if strict else "normal"
     
     messages = {
-        "critical": "True peak demasiado alto. Baja el nivel y re-exporta para que el mastering pueda trabajar con margen.",
+        "critical": "True peak muy elevado. Conviene bajar el nivel y re-exportar para que el mastering pueda trabajar con margen.",
         "warning": {
-            "strict": "True peak debe ser ≤ -3.0 dBTP para entrega comercial profesional.",
+            "strict": "True peak conviene que sea ≤ -3.0 dBTP para entrega comercial profesional.",
             "normal": "True peak muy cerca del límite. Apunta a ≤ -1.0 dBTP para dar flexibilidad al mastering.",
         },
         "perfect": "True peak seguro para mastering. Deja margen suficiente para procesar sin comprometer la calidad.",
@@ -3198,7 +3198,7 @@ def _status_lufs_es(lufs: Optional[float], method: str, is_reliable: bool) -> Tu
     # LUFS real: en mezclas es informativo, no prescriptivo
     # Rango -15 a -35 LUFS es completamente normal para mezclas pre-mastering
     if lufs > -10.0:
-        return "warning", "Mezcla muy fuerte. Probable over-limitación en el bus. Verifica PLR.", 0.3
+        return "warning", "Mezcla muy fuerte. Probable over-limitación en el bus. Conviene revisar PLR.", 0.3
     if lufs < -40.0:
         return "info", "Nivel muy bajo; revisa si hay silencio excesivo o exportación incorrecta.", 0.5
     
@@ -3252,14 +3252,14 @@ def _status_stereo_es(corr: float, strict: bool = False) -> Tuple[str, str, floa
     # v7.4.0: Agregado estado "poor" para correlación 0.1-0.3
     if status == "poor":
         # Correlación baja - posibles problemas de fase
-        message = f"Correlación estéreo baja ({corr:.0%}). Posibles problemas de fase detectados. Escúchalo en mono para verificar pérdida de volumen. Revisa ensanchadores, chorus o plugins estéreo."
+        message = f"Correlación estéreo baja ({corr:.0%}). Posibles problemas de fase detectados. Conviene escuchar en mono para verificar pérdida de volumen y revisar ensanchadores, chorus o plugins estéreo."
     elif status == "warning":
         # Correlación reducida - vale la pena revisar
-        message = f"Correlación estéreo reducida ({corr:.0%}). Revisa compatibilidad mono. Verifica plugins de ensanchamiento estéreo o procesamiento M/S."
+        message = f"Correlación estéreo reducida ({corr:.0%}). Conviene revisar compatibilidad mono y plugins de ensanchamiento estéreo o procesamiento M/S."
     elif status == "critical":
-        message = f"Correlación estéreo muy baja ({corr:.0%}). Problemas significativos de compatibilidad mono esperados. Verifica plugins estéreo, polaridad de canales o relaciones de fase."
+        message = f"Correlación estéreo muy baja ({corr:.0%}). Problemas significativos de compatibilidad mono esperados. Conviene verificar plugins estéreo, polaridad de canales o relaciones de fase."
     elif status == "catastrophic":
-        message = f"SEVERO: Cancelación de fase detectada ({corr:.0%}). La mezcla perderá contenido significativo en mono. Verifica: canales invertidos, plugins con fase invertida, o errores en procesamiento M/S."
+        message = f"SEVERO: Cancelación de fase detectada ({corr:.0%}). La mezcla perderá contenido significativo en mono. Conviene verificar: canales invertidos, plugins con fase invertida, o errores en procesamiento M/S."
     elif status == "perfect":
         message = "Correlación estéreo saludable (mono compatible). La mezcla se traducirá bien en todos los sistemas de reproducción."
     else:  # pass
@@ -3341,8 +3341,8 @@ def _status_crest_factor_es(crest: float) -> Tuple[str, str, float]:
     if crest >= 14.0:
         return "pass", "Buena dinámica para mastering.", 0.7
     if crest >= 10.0:
-        return "warning", "Dinámica algo comprimida. Revisa compresión en el bus.", 0.4
-    return "critical", "Dinámica muy comprimida/limitada. Reduce procesamiento en bus principal.", -0.5
+        return "warning", "Dinámica algo comprimida. Conviene revisar compresión en el bus.", 0.4
+    return "critical", "Dinámica muy comprimida/limitada. Conviene reducir procesamiento en bus principal.", -0.5
 
 def _status_dc_offset_es(dc_data: Dict[str, Any]) -> Tuple[str, str, float]:
     """Evalúa DC offset."""
@@ -4262,7 +4262,7 @@ def generate_cta(score: int, strict: bool, lang: str, mode: str = "write") -> Di
             return {
                 "message": (
                     "🔧 Tu mezcla necesita trabajo en áreas clave.\n"
-                    "Enviarlo en este estado limita el margen de maniobra del mastering. Hay aspectos técnicos que resolver antes para que el proceso funcione como debería. Si quieres, escríbenos y revisamos juntos los puntos críticos."
+                    "Enviarlo en este estado limita el margen de maniobra del mastering. Hay aspectos técnicos que resolver antes para que el proceso funcione bien. Si quieres, escríbenos y revisamos juntos los puntos críticos."
                 ),
                 "button": "Trabajar mi mezcla",
                 "action": "review"
@@ -4418,7 +4418,7 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
                 if temporal:
                     details += "  " + temporal.strip() + "\n"
             else:
-                details += "   → Márgenes de seguridad cumplidos en todo el track.\n"
+                details += "   → Márgenes de seguridad cumplidos en toda la pista.\n"
             details += "\n"
         
         # PLR (Dynamic Range)
@@ -4506,7 +4506,7 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
                             # Removed 'high' issue type - high correlation is not a problem
                             if issue == 'medium_low':
                                 details += f"Correlación moderada ({corr*100:.0f}%)\n"
-                                details += "      → Revisa efectos estéreo y reverbs\n"
+                                details += "      → Revisar efectos estéreo y reverbs\n"
                             elif issue == 'very_low':
                                 details += f"Correlación muy baja ({corr*100:.0f}%)\n"
                                 # Rotate variation based on region index
@@ -4568,7 +4568,7 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
                         variaciones_ms_bajo_es = [
                             "Contenido estéreo reducido en este tramo.\n         Puede ser intencional según el arreglo.",
                             "Contenido estéreo reducido.\n         Común en secciones centradas (intros, versos, breaks).",
-                            "Contenido estéreo reducido.\n         Verifica si el ancho estéreo coincide con la intención musical."
+                            "Contenido estéreo reducido.\n         Conviene verificar si el ancho estéreo coincide con la intención musical."
                         ]
 
                         max_regions_to_show = 25
@@ -4639,7 +4639,7 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
                         details += "\n"
 
                 if has_flagged_timestamps:
-                    details += "💡 Revisa los tiempos indicados arriba en tu DAW para evaluar si lo detectado en el Análisis Temporal responde a una decisión artística o si requiere un ajuste técnico antes del mastering.\n\n"
+                    details += "💡 Conviene revisar los tiempos indicados arriba en el DAW para evaluar si lo detectado en el Análisis Temporal responde a una decisión artística o si requiere un ajuste técnico antes del mastering.\n\n"
             
             else:
                 # No temporal analysis available
@@ -6358,13 +6358,13 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                         end_sec = int(region['end'] % 60)
                         temporal_message += f"   • {start_min}:{start_sec:02d} → {end_min}:{end_sec:02d}\n"
                     temporal_message += "\n"
-                    temporal_message += "💡 El track está procesado a nivel de master con limitación agresiva.\n\n"
+                    temporal_message += "💡 La pista está procesada a nivel de master con limitación intensa.\n\n"
                 elif info_only and info_message:
                     # Show info message for brief peaks
                     has_temporal = True
                     temporal_message += f"🔊 True Peak:\n"
                     temporal_message += f"   {info_message}\n\n"
-                    temporal_message += "💡 El track está procesado a nivel de master con limitación agresiva.\n\n"
+                    temporal_message += "💡 La pista está procesada a nivel de master con limitación intensa.\n\n"
 
             # Check for Stereo temporal analysis
             if stereo_metric and "temporal_analysis" in stereo_metric:
@@ -6413,7 +6413,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                             # Removed 'high' issue type - high correlation is not a problem
                             if issue == 'medium_low':
                                 temporal_message += f"Correlación moderada ({corr*100:.0f}%)\n"
-                                temporal_message += "      → Revisa efectos estéreo y reverbs\n"
+                                temporal_message += "      → Revisar efectos estéreo y reverbs\n"
                             elif issue == 'very_low':
                                 temporal_message += f"Correlación muy baja ({corr*100:.0f}%)\n"
                                 # Rotate variation based on region index
@@ -6470,7 +6470,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                         variaciones_ms_bajo_es = [
                             "Contenido estéreo reducido en este tramo.\n         Puede ser intencional según el arreglo.",
                             "Contenido estéreo reducido.\n         Común en secciones centradas (intros, versos, breaks).",
-                            "Contenido estéreo reducido.\n         Verifica si el ancho estéreo coincide con la intención musical."
+                            "Contenido estéreo reducido.\n         Conviene verificar si el ancho estéreo coincide con la intención musical."
                         ]
 
                         for region_idx, region in enumerate(regions[:10]):
@@ -6531,7 +6531,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                 message += "▶ ANÁLISIS TEMPORAL:\n\n"
                 message += temporal_message
                 if has_flagged_timestamps:
-                    message += "💡 Revisa los tiempos indicados arriba en tu DAW para evaluar si lo detectado en el Análisis Temporal responde a una decisión artística o si requiere un ajuste técnico antes del mastering.\n\n"
+                    message += "💡 Conviene revisar los tiempos indicados arriba en el DAW para evaluar si lo detectado en el Análisis Temporal responde a una decisión artística o si requiere un ajuste técnico antes del mastering.\n\n"
 
             # SECTION 3: Technical Observations
             observations = []
@@ -6541,7 +6541,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                 plr_value = plr_metric.get("value")
                 if isinstance(plr_value, (int, float)) and plr_value < 7:
                     observations.append(
-                        f"• PLR: {plr_value:.1f} dB - dinámicas muy reducidas por limiting agresivo.\n"
+                        f"• PLR: {plr_value:.1f} dB - dinámicas muy reducidas por limitación intensa.\n"
                         "  Normal en masters comerciales loud, pero reduce micro-dinámica."
                     )
             
@@ -6562,7 +6562,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                 if isinstance(stereo_value, (int, float)) and stereo_value < 0.60:
                     observations.append(
                         f"• Ancho estéreo muy amplio (correlación {stereo_value:.2f}).\n"
-                        "  Verifica compatibilidad en reproducción mono y sistemas Bluetooth."
+                        "  Conviene verificar compatibilidad en reproducción mono y sistemas Bluetooth."
                     )
             
             if observations:
@@ -6582,13 +6582,13 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                 "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
                 "⚠️ SI ESTE ARCHIVO CORRESPONDE A UNA MEZCLA:\n"
                 "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
-                "Si tu intención es enviarla a mastering, vuelve a la sesión original sin limitación "
-                "en el bus principal y ajusta el nivel antes de exportar:\n\n"
-                "1. Vuelve a tu sesión de mezcla\n"
-                "2. Inserta un plugin de ganancia al final del bus principal (DESPUÉS de toda tu cadena)\n"
-                f"3. Reduce el nivel aproximadamente {reduction_rounded} dB\n"
-                "4. Verifica que los picos queden alrededor de -6 dBFS\n"
-                "5. Re-exporta\n\n"
+                "Si la intención es enviarla a mastering, conviene volver a la sesión original sin limitación "
+                "en el bus principal y ajustar el nivel antes de exportar:\n\n"
+                "1. Volver a la sesión de mezcla\n"
+                "2. Insertar un plugin de ganancia al final del bus principal (después de toda la cadena)\n"
+                f"3. Reducir el nivel aproximadamente {reduction_rounded} dB\n"
+                "4. Verificar que los picos queden alrededor de -6 dBFS\n"
+                "5. Re-exportar\n\n"
                 "Esto le devuelve al mastering el espacio necesario para trabajar sin distorsión.\n\n"
             )
             
@@ -7075,7 +7075,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                         )
             
             if issues_details:
-                scope_note = "\n\n📍 Alcance: Estos puntos afectan a todo el track, no a secciones específicas." if strict else ""
+                scope_note = "\n\n📍 Alcance: Estos puntos afectan a toda la pista, no a secciones específicas." if strict else ""
                 if len(issues_details) == 1:
                     # Single item: inline sentence instead of header + bullet list
                     single_item = issues_details[0].lstrip("• ").rstrip(".")
@@ -7112,14 +7112,14 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                         "   🤔 ¿Es esto intencional?\n\n"
                         "   Si SÍ es intencional:\n"
                         "   • Adecuado. Algunas producciones vintage o artísticas usan mono\n"
-                        "   • Solo confirma que sea la decisión correcta\n\n"
-                        "   Si NO es intencional, verifica:\n"
-                        "   • ¿Exportaste en mono por error? Revisa configuración de exportación\n"
-                        "   • ¿Tienes routing mal configurado en el DAW?\n"
+                        "   • Basta con confirmar que sea la decisión correcta\n\n"
+                        "   Si NO es intencional, conviene verificar:\n"
+                        "   • ¿Se exportó en mono por error? Revisar configuración de exportación\n"
+                        "   • ¿Hay routing mal configurado en el DAW?\n"
                         "   • ¿Todos los elementos están centrados sin paneo?\n\n"
                         "   💡 Para mastering:\n"
-                        "   Si fue error, re-exporta en estéreo para aprovechar el paneo\n"
-                        "   y espacialización que diseñaste en la mezcla."
+                        "   Si fue error, conviene re-exportar en estéreo para aprovechar el paneo\n"
+                        "   y espacialización de la mezcla."
                     )
                 elif corr > 0.85:
                     # M/S bajo pero correlación moderada-alta = imagen muy centrada (no mono)
@@ -7135,14 +7135,14 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                     "   Esto puede sonar impresionante en auriculares pero débil en parlantes\n"
                     "   o sistemas mono (Bluetooth, teléfonos, algunos clubes).\n\n"
                     "   🔍 Causas comunes:\n"
-                    "   • Demasiados plugins de ensanchamiento estéreo\n"
+                    "   • Exceso de plugins de ensanchamiento estéreo\n"
                     "   • Exceso de reverb/delay en los sides\n"
-                    "   • Efectos estéreo muy agresivos\n\n"
+                    "   • Efectos estéreo intensos\n\n"
                     "   💡 Cómo corregirlo:\n"
-                    "   1. Reduce o quita plugins de ensanchamiento estéreo\n"
-                    "   2. Baja el nivel de reverbs y delays panoramizados\n"
-                    "   3. Trae elementos importantes más al centro\n"
-                    "   4. Prueba la mezcla en MONO - si pierde mucho cuerpo, está muy ancha"
+                    "   1. Reducir o quitar plugins de ensanchamiento estéreo\n"
+                    "   2. Bajar el nivel de reverbs y delays panoramizados\n"
+                    "   3. Traer elementos importantes más al centro\n"
+                    "   4. Probar la mezcla en MONO. Si pierde mucho cuerpo, está muy ancha"
                 )
             
             # Check L/R Balance issues
@@ -7157,12 +7157,12 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                     "   • Algunos productores usan paneo asimétrico intencionalmente\n"
                     "   • Si es tu visión creativa, adelante\n\n"
                     "   Si NO es intencional:\n"
-                    "   • Revisa el paneo general - puede haber demasiados elementos en un lado\n"
-                    "   • Verifica que no haya un canal con volumen incorrecto\n"
-                    "   • Chequea plugins que puedan estar afectando el balance\n"
-                    "   • Usa un medidor de fase/balance en el master para monitorear\n\n"
+                    "   • Revisar el paneo general. Puede haber muchos elementos en un lado\n"
+                    "   • Verificar que no haya un canal con volumen incorrecto\n"
+                    "   • Revisar plugins que puedan estar afectando el balance\n"
+                    "   • Usar un medidor de fase/balance en el bus principal para monitorear\n\n"
                     "   💡 Recomendación:\n"
-                    "   Prueba la mezcla en diferentes sistemas (auriculares, parlantes, mono)\n"
+                    "   Conviene probar la mezcla en diferentes sistemas (auriculares, parlantes, mono)\n"
                     "   para confirmar que el desbalance funciona musicalmente."
                 )
             
@@ -7181,10 +7181,10 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                 recommendation = "\n\n💡 Recomendación: La mezcla cumple con los márgenes técnicos para pasar a mastering."
         elif score >= 75:
             tech_details = ""
-            recommendation = "\n\n💡 Recomendación: Revisa los puntos mencionados si buscas la máxima calidad, pero la mezcla es aceptable para mastering."
+            recommendation = "\n\n💡 Recomendación: Conviene revisar los puntos mencionados para máxima calidad, pero la mezcla es aceptable para mastering."
         else:
             tech_details = ""
-            recommendation = "\n\n💡 Recomendación: Atiende los problemas identificados antes de enviar a mastering para obtener los mejores resultados."
+            recommendation = "\n\n💡 Recomendación: Conviene atender los problemas identificados antes de enviar a mastering para obtener los mejores resultados."
         
         # Mode note
         if strict:
@@ -7623,7 +7623,7 @@ def generate_visual_report(report: Dict[str, Any], strict: bool = False, lang: s
         if status in ["perfect", "pass", "good"]:
             # Extract the positive aspect concisely
             if "Headroom" in name:
-                positive_aspects.append("Headroom apropiado para mastering" if lang == "es" else "Appropriate headroom for mastering")
+                positive_aspects.append("Headroom (margen) apropiado para mastering" if lang == "es" else "Appropriate headroom for mastering")
             elif "True Peak" in name:
                 positive_aspects.append("True Peak seguro para mastering" if lang == "es" else "Safe True Peak for mastering")
             elif "PLR" in name or "dinám" in message.lower() or "dynamic" in message.lower():
@@ -7643,17 +7643,17 @@ def generate_visual_report(report: Dict[str, Any], strict: bool = False, lang: s
         elif status in ["warning", "critical", "catastrophic"]:
             # Frame as "areas to review" with educational tone
             if "Headroom" in name:
-                areas_to_review.append("Revisar headroom - Considerar dejar más espacio en los picos" if lang == "es" else "Review headroom - Consider leaving more headroom in peaks")
+                areas_to_review.append("Revisar headroom (margen). Considerar dejar más espacio en los picos" if lang == "es" else "Review headroom. Consider leaving more headroom in peaks")
             elif "True Peak" in name:
-                areas_to_review.append("Revisar True Peak - Ajustar limitadores para evitar saturación digital" if lang == "es" else "Review True Peak - Adjust limiters to avoid clipping")
+                areas_to_review.append("Revisar True Peak. Ajustar limitadores para evitar saturación digital" if lang == "es" else "Review True Peak. Adjust limiters to avoid clipping")
             elif "PLR" in name:
-                areas_to_review.append("Revisar dinámica - Considerar reducir compresión/limitación" if lang == "es" else "Review dynamics - Consider reducing compression/limiting")
+                areas_to_review.append("Revisar dinámica. Considerar reducir compresión/limitación" if lang == "es" else "Review dynamics. Consider reducing compression/limiting")
             elif "Stereo" in name or "stéreo" in name.lower():
-                areas_to_review.append("Revisar imagen estéreo - Verificar balance y correlación" if lang == "es" else "Review stereo image - Check balance and correlation")
+                areas_to_review.append("Revisar imagen estéreo. Verificar balance y correlación" if lang == "es" else "Review stereo image. Check balance and correlation")
             elif "Frequency" in name or "Frecuen" in name:
-                areas_to_review.append("Revisar balance de frecuencias - Ajustar EQ si es necesario" if lang == "es" else "Review frequency balance - Adjust EQ if needed")
+                areas_to_review.append("Revisar balance de frecuencias. Ajustar EQ si es necesario" if lang == "es" else "Review frequency balance. Adjust EQ if needed")
             elif "LUFS" in name:
-                areas_to_review.append("Revisar nivel general - Ajustar niveles de ganancia" if lang == "es" else "Review overall level - Adjust gain staging")
+                areas_to_review.append("Revisar nivel general. Ajustar niveles de ganancia" if lang == "es" else "Review overall level. Adjust gain staging")
     
     # Remove duplicates while preserving order
     positive_aspects = list(dict.fromkeys(positive_aspects))

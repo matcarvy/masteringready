@@ -292,12 +292,12 @@ def _generate_headroom_text_es(headroom: float, true_peak: float, status: str, s
         return {
             "interpretation": (
                 "El margen de tu mezcla es insuficiente para el proceso de mastering. "
-                "Los picos están demasiado cerca o tocando 0 dBFS, lo que no deja espacio "
+                "Los picos están muy cerca o tocando 0 dBFS, lo que no deja espacio "
                 "para aplicar procesamiento sin introducir distorsión digital o limitar "
                 "las posibilidades creativas del mastering."
             ),
             "recommendation": (
-                f"Es necesario reducir el nivel del bus principal entre {reduction}-{reduction+1} dB antes de exportar. "
+                f"Conviene reducir el nivel del bus principal entre {reduction}-{reduction+1} dB antes de exportar. "
                 f"Esto creará el espacio necesario (aproximadamente {abs(headroom) + reduction + 0.5:.1f} dBFS) "
                 f"para que el ingeniero de mastering disponga del espacio necesario para procesar."
             )
@@ -331,7 +331,7 @@ def _generate_dr_text_es(dr_value: float, status: str) -> Dict[str, str]:
             ),
             "recommendation": (
                 "El rango dinámico actual es apropiado. Si estás usando compresión en el bus, "
-                "verifica que no esté trabajando de forma agresiva en las secciones más densas."
+                "conviene verificar que no esté trabajando de forma intensa en las secciones más densas."
             )
         }
     
@@ -415,7 +415,7 @@ def _generate_level_text_es(lufs: float, status: str, compression_suspected: boo
                         "Si no estás usando limitador en el bus principal, este dato es solo informativo."
                     ),
                     "recommendation": (
-                        "Verifica si hay limitación o compresión agresiva en el bus principal. "
+                        "Conviene verificar si hay limitación o compresión intensa en el bus principal. "
                         "Si el nivel alto responde a una decisión creativa, no es necesario cambiarlo. "
                         "El volumen final se define en mastering."
                     )
@@ -451,12 +451,12 @@ def _generate_level_text_es(lufs: float, status: str, compression_suspected: boo
                     "interpretation": (
                         f"El nivel general de tu mezcla ({lufs:.1f} LUFS) es muy elevado. "
                         "Junto con un rango dinámico muy reducido, esto sugiere sobrecompresión "
-                        "o limitación agresiva en la cadena del bus principal, lo que puede reducir "
+                        "o limitación intensa en la cadena del bus principal, lo que puede reducir "
                         "el margen disponible para el mastering."
                     ),
                     "recommendation": (
-                        "Revisa la cadena de procesamiento del bus principal. "
-                        "Si hay limitadores o compresores, verifica que estén cumpliendo una función "
+                        "Conviene revisar la cadena de procesamiento del bus principal. "
+                        "Si hay limitadores o compresores, conviene verificar que estén cumpliendo una función "
                         "creativa y no solo subiendo el nivel. El volumen final se define en mastering."
                     )
                 }
@@ -501,8 +501,8 @@ def _generate_stereo_text_es(balance: float, correlation: float, ms_ratio: float
                 "que hará que tu música suene mal o desaparezca en muchos sistemas."
             ),
             "recommendation": (
-                "Revisa urgentemente: plugins con fase invertida, errores en procesamiento M/S, "
-                "o canales accidentalmente invertidos. Verifica la fase de todos los buses estéreo."
+                "Conviene revisar urgentemente: plugins con fase invertida, errores en procesamiento M/S, "
+                "o canales accidentalmente invertidos. Conviene verificar la fase de todos los buses estéreo."
             )
         }
     
@@ -515,7 +515,7 @@ def _generate_stereo_text_es(balance: float, correlation: float, ms_ratio: float
                 "(parlantes Bluetooth, teléfonos, clubes)."
             ),
             "recommendation": (
-                "Revisa plugins de ensanchamiento estéreo, reverbs con mucha información Side, "
+                "Conviene revisar plugins de ensanchamiento estéreo, reverbs con mucha información Side, "
                 "y la fase de instrumentos grabados en estéreo. Conviene verificar en mono."
             )
         }
@@ -594,7 +594,7 @@ def _generate_stereo_text_es(balance: float, correlation: float, ms_ratio: float
                     "o que el nivel general entre canales no está equilibrado."
                 ),
                 "recommendation": (
-                    f"Revisa los panoramas y niveles de los elementos principales. El balance L/R "
+                    f"Conviene revisar los panoramas y niveles de los elementos principales. El balance L/R "
                     f"actual ({balance:.2f}) puede estar lejos del centro (0.5). Conviene verificar si responde a una decisión creativa."
                 )
             }
@@ -604,11 +604,11 @@ def _generate_stereo_text_es(balance: float, correlation: float, ms_ratio: float
                 "interpretation": (
                     "La imagen estéreo de tu mezcla presenta correlación moderada entre canales. "
                     "Esto puede deberse a efectos estéreo amplios o elementos muy panoramizados. "
-                    "Verifica el comportamiento en mono para asegurar compatibilidad."
+                    "Conviene verificar el comportamiento en mono para asegurar compatibilidad."
                 ),
                 "recommendation": (
-                    "Revisa los plugins de ensanchamiento estéreo y verifica la fase en instrumentos "
-                    "grabados en estéreo. Considera ajustar el width en algunos elementos si es necesario."
+                    "Conviene revisar los plugins de ensanchamiento estéreo y verificar la fase en instrumentos "
+                    "grabados en estéreo. Se puede considerar ajustar el ancho en algunos elementos si es necesario."
                 )
             }
     
