@@ -4484,7 +4484,7 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
 
                         # v7.3.36.4: Variaciones de mensajes de mono para evitar repetición
                         variaciones_mono_es = [
-                            "verifica comportamiento en mono",
+                            "conviene verificar comportamiento en mono",
                             "posible pérdida de cuerpo en mono",
                             "puede perder impacto en mono"
                         ]
@@ -4588,7 +4588,7 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
                                 details += f"      → {ms_msg}\n"
                             else:
                                 details += f"Ratio alto ({ms:.2f})\n"
-                                details += "      → Estéreo muy amplio - verifica comportamiento en mono\n"
+                                details += "      → Estéreo muy amplio - conviene verificar comportamiento en mono\n"
                             
                             # Add spacing between regions for readability
                             details += "\n"
@@ -6392,7 +6392,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
 
                         # v7.3.36.4: Variaciones de mensajes de mono para evitar repetición
                         variaciones_mono_es = [
-                            "verifica comportamiento en mono",
+                            "conviene verificar comportamiento en mono",
                             "posible pérdida de cuerpo en mono",
                             "puede perder impacto en mono"
                         ]
@@ -6489,7 +6489,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                                 temporal_message += f"      → {ms_msg}\n"
                             else:
                                 temporal_message += f"Ratio alto ({ms:.2f})\n"
-                                temporal_message += "      → Estéreo muy amplio - verifica comportamiento en mono\n"
+                                temporal_message += "      → Estéreo muy amplio - conviene verificar comportamiento en mono\n"
                             
                             # Add spacing between regions for readability
                             temporal_message += "\n"
@@ -7087,7 +7087,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                 w_count = len(warnings)
                 issues_sentence = f"\n\n📋 Hay {w_count} {'punto' if w_count == 1 else 'puntos'} que podrías revisar, aunque no {'es crítico' if w_count == 1 else 'son críticos'} para el mastering."
         else:
-            issues_sentence = "\n\n✅ No se detectaron problemas técnicos críticos."
+            issues_sentence = "\n\n✅ No se detectaron problemas técnicos significativos."
         
         # Stereo Field Detailed Section (ONLY if issues detected)
         stereo_detail = ""
