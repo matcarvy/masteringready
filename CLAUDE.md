@@ -4641,4 +4641,84 @@ Continued from previous session that ran out of context. Implementing a comprehe
 | `components/InterpretativeSection.tsx` | Crest Factor label (done by background agent) |
 | `mr-terminology-es.md` | Crest Factor added to Tier 1 |
 
-**Git state**: main, uncommitted. Build clean.
+**Git state**: main, committed and pushed (`a0082c1`). Build clean.
+
+---
+
+### Session 2026-03-08 — Verification & Push
+
+#### What happened
+- Verified all changes from previous session (PDF reorder + terminology + Crest Factor)
+- Python syntax check: `analyzer.py`, `interpretative_texts.py`, `main.py` — all OK
+- Next.js build: clean, all routes compiled, zero errors
+- Agent deep-reviewed PDF page flow + metric ordering in both normal and chunked paths — no inconsistencies
+- Committed and pushed to main as `a0082c1`
+
+### Session 2026-03-08 Part 2 — LUFS Accuracy Fix + Full Measurement Audit
+
+#### LUFS Accuracy Improvement (implemented in previous session, verified here)
+- **Problem**: Chunked LUFS values ~0.3-0.6 off from true integrated loudness (e.g., -8.4 showing as -9.0). Per-chunk EBU R128 gating applied independently instead of globally.
+- **Fix**: New `ffmpeg_integrated_lufs()` function measures LUFS globally via ffmpeg's `loudnorm` filter before chunking — streaming C process, zero Python memory overhead, proper global EBU R128 gating. Falls back to per-chunk energy-weighted average if ffmpeg fails.
+- **Display precision**: All LUFS formatting bumped from `.1f` to `.2f` across 19 locations (analyzer.py, interpretative_texts.py, InterpretativeSection.tsx) for RX-level precision.
+- **Files changed**: `analyzer.py` (new function + chunked path integration), `main.py` (both call sites pass `FFMPEG_EXE`), `interpretative_texts.py` (12 format strings), `InterpretativeSection.tsx` (`toFixed(2)`)
+- **Non-chunked path unchanged** — pyloudnorm on full file already accurate (verified 0.1 LUFS vs RX 11)
+
+#### Full Measurement Accuracy Audit (10 parallel agents)
+Comprehensive audit of ALL metrics across calculation accuracy, both analysis paths, edge cases, display formatting, and cross-system consistency (scoring vs bars vs interpretive text).
+
+| Metric | Calculation | Normal/Chunked | Edge Cases | Formatting | Thresholds (3 systems) | Verdict |
+|--------|------------|----------------|------------|------------|----------------------|---------|
+| **LUFS** | ffmpeg EBU R128 (global) + pyloudnorm fallback | Consistent | Silent, short, mono — safe | `.2f` everywhere | Weight 0, informational | **PASS** |
+| **True Peak** | 4x oversampling via `resample_poly` (EBU R128) | Same function both paths | Mono, silent, clipping — safe | `.1f dBTP` | Scoring/bars/text aligned | **PASS** |
+| **PLR** | `True Peak - LUFS` (global values, not per-chunk) | Both use global TP + integrated LUFS | Short → None, negative → critical | `.1f dB` | All 3 systems aligned | **PASS** |
+| **Headroom** | `20*log10(max(abs(samples)))` sample peak | Chunked uses `max(chunk_peaks)` | Silent → -120 dBFS, clipping → 0+ | `.1f dBFS` | All 3 aligned, mode-aware | **PASS** |
+| **Stereo Correlation** | Pearson correlation L/R | Duration-weighted average | Mono → 1.0, silent → 0.0 | `%.0f%%` | All 3 aligned | **PASS** |
+| **M/S Ratio** | `side_rms / mid_rms` (energy-based) | Duration-weighted average | Mono → 0.0 | `.2f` | Aligned | **PASS** |
+| **L/R Balance** | `20*log10(L_rms/R_rms)` | Duration-weighted average | Silent → 0.0 dB | `±.1f dB` | Aligned | **PASS** |
+| **Crest Factor** | `peak_dB - RMS_dB` | Same formula both paths | Silent → -120 dB | `.1f dB` | Fallback when PLR unavailable | **PASS** |
+| **DC Offset** | `np.mean(y)` per channel | Non-chunked only (by design) | Mono safe | Threshold 0.01 | Weight 0, soft flag | **PASS** |
+| **Freq Balance** | K-weighted 3-band STFT + percentile | Per-chunk averaged, re-normalized | Silent → zeros, mono safe | Sums to 100% (largest-remainder) | Genre-aware, mode-independent | **PASS** |
+
+#### Cross-System Consistency — ALL ALIGNED
+- **Zero threshold mismatches** across all 5 scored metrics
+- **No gap values** that fall through to wrong category
+- **Strict mode consistent** — all boundaries shift by correct amounts, no inversions
+- **Intentional design choices confirmed**: True Peak bars mode-independent (safe zone visual), LUFS weight=0, Crest Factor fallback when PLR unavailable
+
+#### DC Offset Cleanup Debt Identified
+- DC Offset has weight=0 in scoring but interpretive text includes score deltas (1.0/0.5-0.8/0.0) that are never used
+- **No user impact** — score unaffected. Cleanup task: remove unused score deltas from text functions
+- **Status**: PENDING — user will test on Render first, then clean up
+
+#### Next Steps
+
+| Priority | Task | Status |
+|----------|------|--------|
+| 0 | **DC Offset cleanup** — Remove unused score deltas from interpretive text (weight=0) | DONE (`ebb305a`) |
+| 1 | **Workshop landing page** (`/workshop`) — Stripe checkout, replacing Carrd. Copy in week-1 pack §1. | TODO |
+| 2 | **Before/After transformation capture** — Auto-save score cards as PNG, admin page to pair + export for social. | TODO |
+| 3 | **Revenue tracking admin tab** — Stripe data by tier per week vs. plan targets. | TODO |
+| 4 | **Audit intake page** (`/audit`) — Stripe checkout + file upload for $97 standalone audit. | TODO |
+| 5 | Email templates via Resend | TODO |
+| 6 | Community engagement tracker (admin) | TODO |
+| 7 | Social proof page (`/results`) | TODO |
+
+### Session 2026-03-08 Part 3 — DC Offset Cleanup + LUFS Verification
+
+#### DC Offset Cleanup (commit `ebb305a`)
+- **Score deltas neutralized**: Both `_status_dc_offset_en()` and `_status_dc_offset_es()` now return `1.0` for all branches (was 0.3/0.6). Since DC Offset weight=0, the score delta was always mathematically inert (`0.0 * any_value = 0.0`), but having non-1.0 deltas was architectural debt.
+- **Critical bug fixed**: EN warning message at line 3136 accidentally contained Spanish text (`"Conviene aplicar corrección de DC offset antes de exportar."`) — changed to `"Consider applying DC offset correction before export."`
+- **Voice guide compliance**: ES messages updated — `"Aplica corrección"` → `"Conviene aplicar corrección"`, `"Considerar limpiar"` → `"Conviene revisar antes de exportar"`
+- **Docstrings updated**: Both functions now document `Weight=0 — score delta is always 1.0 (inert)`
+- **Verification**: 2 parallel agents confirmed scoring pipeline completely unaffected (weight=0 skip in `score_report()` and `calculate_score_penalties()`). Both call sites discard delta with `_`. `ast.parse` clean.
+
+#### Old Analyses + New PDF Layout
+Dashboard/history PDF downloads from old analyses will get a **mix** of old and new:
+- **New layout** (from current code): Rápido on page 1, PageBreaks, Tier 2 anchoring labels, metric name labels
+- **Old data** (from DB): stored metrics array order (DC Offset in old position), stored report text (old terminology, old voice guide copy), `score_penalties: null` (Score Factors table won't appear)
+- Only new analyses get everything fully aligned
+
+#### Commits to main
+1. `ebb305a` - fix: DC Offset cleanup — neutralize score deltas (weight=0), fix EN Spanish text leak, voice guide compliance
+
+**Git state**: main on `ebb305a`, pushed. Build clean.
