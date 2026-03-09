@@ -1565,13 +1565,14 @@ def _sr_get_ffprobe_duration(video_path: str) -> float:
 
 def _sr_extract_audio(video_path: str) -> str:
     """Extract audio from video to WAV via ffmpeg. Returns path to WAV temp file.
-    Uses stereo 44.1kHz 16-bit for accurate LUFS measurement (EBU R128 requires stereo).
-    Mono downmix caused ~3.5 dB LUFS underreading due to (L+R)/2 summing loss.
+    Uses mono 44.1kHz 16-bit to minimize memory on 512MB Render instance.
+    LUFS is measured separately on the stereo video via ffmpeg_integrated_lufs()
+    (streaming C process, zero Python memory) to avoid the ~3.5 dB mono summing loss.
     """
     wav_temp = tempfile.NamedTemporaryFile(delete=False, suffix='.wav')
     wav_temp.close()
     result = subprocess.run(
-        [FFMPEG_EXE, '-i', video_path, '-vn', '-ac', '2', '-acodec', 'pcm_s16le', '-ar', '44100', wav_temp.name, '-y'],
+        [FFMPEG_EXE, '-i', video_path, '-vn', '-ac', '1', '-acodec', 'pcm_s16le', '-ar', '44100', wav_temp.name, '-y'],
         capture_output=True, text=True, timeout=120
     )
     if result.returncode != 0:
@@ -1860,14 +1861,26 @@ async def stream_analyze(
             # Could not determine duration — try to proceed (ffmpeg will fail if truly broken)
             logger.warning(f"⚠️ [StreamReady] Could not determine duration, proceeding with extraction")
 
-        # Step 3: Extract audio to WAV
+        # Step 3: Measure stereo LUFS from video via ffmpeg (streaming, zero Python memory)
+        # Must happen BEFORE video deletion. Mono extraction loses ~3.5 dB due to (L+R)/2 summing.
+        stereo_lufs = None
+        try:
+            from analyzer import ffmpeg_integrated_lufs
+            stereo_lufs_val, _method, _reliable = ffmpeg_integrated_lufs(video_path, FFMPEG_EXE, duration)
+            if stereo_lufs_val is not None:
+                stereo_lufs = stereo_lufs_val
+                logger.info(f"📏 [StreamReady] Stereo LUFS from video: {stereo_lufs:.2f} LUFS")
+        except Exception as e:
+            logger.warning(f"⚠️ [StreamReady] Stereo LUFS measurement failed, will use mono: {e}")
+
+        # Step 4: Extract audio to mono WAV (low memory for analysis)
         try:
             wav_path = _sr_extract_audio(video_path)
         except RuntimeError as e:
             logger.error(f"❌ [StreamReady] Audio extraction failed: {e}")
             raise HTTPException(status_code=400, detail=_sr_bilingual_error('no_audio', lang))
 
-        # Step 4: Delete video immediately (privacy-first)
+        # Step 5: Delete video immediately (privacy-first)
         try:
             _os.unlink(video_path)
             logger.info(f"🗑️ [StreamReady] Video deleted: {video_path}")
@@ -1877,7 +1890,7 @@ async def stream_analyze(
 
         _free_memory()
 
-        # Step 5: Run analysis (shares MR semaphore — mutually exclusive)
+        # Step 6: Run analysis on mono WAV (shares MR semaphore — mutually exclusive)
         async with analysis_semaphore:
             logger.info(f"🔍 [StreamReady] Starting analysis...")
 
@@ -1910,7 +1923,7 @@ async def stream_analyze(
 
         logger.info(f"✅ [StreamReady] Analysis complete")
 
-        # Step 6: Delete WAV
+        # Step 7: Delete WAV
         try:
             _os.unlink(wav_path)
             logger.info(f"🗑️ [StreamReady] WAV deleted: {wav_path}")
@@ -1920,22 +1933,27 @@ async def stream_analyze(
 
         _free_memory()
 
-        # Step 7: Extract technical values from analysis result
+        # Step 8: Extract technical values — override LUFS with stereo measurement
         technical = result.get("technical", {})
         lufs = technical.get("lufs")
         true_peak = technical.get("true_peak_dbtp")
+
+        # Use stereo LUFS (accurate) instead of mono LUFS (~3.5 dB too low)
+        if stereo_lufs is not None:
+            logger.info(f"📏 [StreamReady] LUFS override: mono={lufs}, stereo={stereo_lufs:.2f}")
+            lufs = stereo_lufs
 
         if lufs is None or true_peak is None:
             logger.error(f"❌ [StreamReady] Missing LUFS or True Peak in analysis result")
             raise HTTPException(status_code=500, detail=_sr_bilingual_error('sr_server_error', lang))
 
-        # Step 8: Calculate platform compliance
+        # Step 9: Calculate platform compliance
         platforms = _sr_calculate_platform_compliance(lufs, true_peak)
 
-        # Step 9: Overall verdict
+        # Step 10: Overall verdict
         verdict_es, verdict_en = _sr_overall_verdict(platforms)
 
-        # Step 10: Energy analysis with plain-language message
+        # Step 11: Energy analysis with plain-language message
         energy_data = result.get("energy_analysis", {})
         energy_msg_es, energy_msg_en = _sr_energy_message(energy_data)
 
