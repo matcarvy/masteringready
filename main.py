@@ -1497,10 +1497,10 @@ SR_ALLOWED_EXTENSIONS = {'.mp4', '.mov', '.webm'}
 
 # Platform compliance targets (video/social platforms only)
 SR_PLATFORMS = [
-    {"id": "youtube",         "name": "YouTube",         "icon": "\U0001f534", "lufs_target": -14.0, "tp_limit": -1.5},
+    {"id": "youtube",         "name": "YouTube",         "icon": "\U0001f534", "lufs_target": -14.0, "tp_limit": -1.0},
     {"id": "tiktok",          "name": "TikTok",          "icon": "\U0001f3b5", "lufs_target": -14.0, "tp_limit": -1.0},
     {"id": "instagram_reels", "name": "Instagram Reels", "icon": "\U0001f4f7", "lufs_target": -14.0, "tp_limit": -1.0},
-    {"id": "facebook",        "name": "Facebook",        "icon": "\U0001f535", "lufs_target": -13.0, "tp_limit": -1.5},
+    {"id": "facebook",        "name": "Facebook",        "icon": "\U0001f535", "lufs_target": -14.0, "tp_limit": -1.0},
 ]
 
 # Bilingual Stream Ready error messages
