@@ -205,7 +205,7 @@ const HOMEPAGE_JSONLD = [
     description: 'Analyze your audio mix in 60 seconds. Detect headroom, LUFS, true peak and stereo balance issues before sending to mastering.',
     url: 'https://masteringready.com',
     screenshot: 'https://masteringready.com/og-image.png',
-    featureList: ['Headroom Analysis', 'LUFS Measurement', 'True Peak Detection', 'Stereo Balance', 'Frequency Analysis', 'Downloadable PDF Report'],
+    featureList: ['Headroom Analysis', 'LUFS Measurement', 'True Peak Detection', 'Stereo Image', 'Frequency Analysis', 'Downloadable PDF Report'],
   },
   {
     '@context': 'https://schema.org',
@@ -1218,7 +1218,7 @@ ${lang === 'es' ? 'MÉTRICAS PRINCIPALES' : 'MAIN METRICS'}
 ${'─'.repeat(50)}
 Headroom:              ${result.metrics?.find((m: any) => m.name === 'Headroom')?.value || 'N/A'}
 True Peak:             ${result.metrics?.find((m: any) => m.name === 'True Peak')?.value || 'N/A'}
-${lang === 'es' ? 'Balance Estéreo' : 'Stereo Balance'}:       ${result.metrics?.find((m: any) => m.name === 'Stereo Balance' || m.name === 'Balance Estéreo')?.value || 'N/A'}
+${lang === 'es' ? 'Imagen Estéreo' : 'Stereo Image'}:       ${result.metrics?.find((m: any) => m.name === 'Stereo Image' || m.name === 'Imagen Estéreo')?.value || 'N/A'}
 LUFS:                  ${result.metrics?.find((m: any) => m.name === 'LUFS')?.value || 'N/A'}
 PLR:                   ${result.metrics?.find((m: any) => m.name === 'PLR')?.value || 'N/A'}
 ${lang === 'es' ? 'Correlación' : 'Correlation'}:           ${result.metrics?.find((m: any) => m.name === 'Correlation' || m.name === 'Correlación')?.value || 'N/A'}
@@ -1306,7 +1306,7 @@ ${'─'.repeat(50)}
             } else if (key === 'lufs') {
               formattedKey = 'LUFS'
             } else if (key === 'crest_factor_db') {
-              formattedKey = lang === 'es' ? 'Factor de Cresta' : 'Crest Factor'
+              formattedKey = lang === 'es' ? 'Crest Factor' : 'Crest Factor'
             } else {
               // Generic formatting for other keys
               formattedKey = key
@@ -2084,7 +2084,7 @@ by Matías Carvajal
                   {[
                     { label: 'Headroom', value: '-6.2 dBFS' },
                     { label: 'True Peak', value: '-3.1 dBTP' },
-                    { label: lang === 'es' ? 'Balance Estéreo' : 'Stereo Balance', value: '0.75' }
+                    { label: lang === 'es' ? 'Imagen Estéreo' : 'Stereo Image', value: '0.75' }
                   ].map((item, i) => (
                     <div key={i} style={{
                       display: 'flex',
@@ -3749,7 +3749,7 @@ by Matías Carvajal
                               loudness: { es: 'Loudness (LUFS)', en: 'Loudness (LUFS)' },
                               lufs: { es: 'LUFS', en: 'LUFS' },
                               "lufs_(integrated)": { es: 'LUFS', en: 'LUFS' },
-                              stereo_width: { es: 'Imagen Estéreo', en: 'Stereo Width' },
+                              stereo_width: { es: 'Imagen Estéreo', en: 'Stereo Image' },
                               stereo_correlation: { es: 'Correlación', en: 'Correlation' },
                               frequency_balance: { es: 'Balance Frecuencias', en: 'Freq. Balance' },
                               tonal_balance: { es: 'Balance Frecuencias', en: 'Freq. Balance' }
@@ -4049,10 +4049,10 @@ by Matías Carvajal
                           />
                         )}
 
-                        {/* Stereo Balance */}
+                        {/* Stereo Image */}
                         {result.interpretations.stereo_balance && (
                           <InterpretativeSection
-                            title={lang === 'es' ? '🎚️ Balance Estéreo' : '🎚️ Stereo Balance'}
+                            title={lang === 'es' ? '🎚️ Imagen Estéreo' : '🎚️ Stereo Image'}
                             interpretation={result.interpretations.stereo_balance.interpretation}
                             recommendation={result.interpretations.stereo_balance.recommendation}
                             metrics={result.interpretations.stereo_balance.metrics}
@@ -4063,7 +4063,7 @@ by Matías Carvajal
                         {/* Crest Factor */}
                         {result.interpretations.crest_factor && (
                           <InterpretativeSection
-                            title={lang === 'es' ? 'Factor de Cresta' : 'Crest Factor'}
+                            title={lang === 'es' ? 'Crest Factor' : 'Crest Factor'}
                             interpretation={result.interpretations.crest_factor.interpretation}
                             recommendation={result.interpretations.crest_factor.recommendation}
                             metrics={result.interpretations.crest_factor.metrics}

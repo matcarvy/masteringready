@@ -1639,7 +1639,7 @@ function DashboardContent() {
                             loudness: { es: 'Loudness (LUFS)', en: 'Loudness (LUFS)' },
                             lufs: { es: 'LUFS', en: 'LUFS' },
                             "lufs_(integrated)": { es: 'LUFS', en: 'LUFS' },
-                            stereo_width: { es: 'Imagen Estéreo', en: 'Stereo Width' },
+                            stereo_width: { es: 'Imagen Estéreo', en: 'Stereo Image' },
                             stereo_correlation: { es: 'Correlación', en: 'Correlation' },
                             frequency_balance: { es: 'Balance Frecuencias', en: 'Freq. Balance' },
                             tonal_balance: { es: 'Balance Frecuencias', en: 'Freq. Balance' }
@@ -1870,7 +1870,7 @@ function DashboardContent() {
                       )}
                       {selectedAnalysis.interpretations.stereo_balance && (
                         <InterpretativeSection
-                          title={lang === 'es' ? '🎚️ Balance Estéreo' : '🎚️ Stereo Balance'}
+                          title={lang === 'es' ? '🎚️ Imagen Estéreo' : '🎚️ Stereo Image'}
                           interpretation={selectedAnalysis.interpretations.stereo_balance.interpretation}
                           recommendation={selectedAnalysis.interpretations.stereo_balance.recommendation}
                           metrics={selectedAnalysis.interpretations.stereo_balance.metrics}
@@ -1879,7 +1879,7 @@ function DashboardContent() {
                       )}
                       {selectedAnalysis.interpretations.crest_factor && (
                         <InterpretativeSection
-                          title={lang === 'es' ? 'Factor de Cresta' : 'Crest Factor'}
+                          title={lang === 'es' ? 'Crest Factor' : 'Crest Factor'}
                           interpretation={selectedAnalysis.interpretations.crest_factor.interpretation}
                           recommendation={selectedAnalysis.interpretations.crest_factor.recommendation}
                           metrics={selectedAnalysis.interpretations.crest_factor.metrics}

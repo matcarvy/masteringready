@@ -82,7 +82,7 @@ export default function InterpretativeSection({ title, interpretation, recommend
             } else if (key === 'lufs') {
               formattedKey = 'LUFS'
             } else if (key === 'crest_factor_db') {
-              formattedKey = lang === 'es' ? 'Factor de Cresta' : 'Crest Factor'
+              formattedKey = lang === 'es' ? 'Crest Factor' : 'Crest Factor'
             } else {
               // Generic formatting for other keys
               formattedKey = key
@@ -104,7 +104,7 @@ export default function InterpretativeSection({ title, interpretation, recommend
               } else if (key === 'plr' || key === 'dr_lu' || key === 'crest_factor_db') {
                 formattedValue = `${value.toFixed(1)} dB`
               } else if (key === 'lufs') {
-                formattedValue = `${value.toFixed(1)} LUFS`
+                formattedValue = `${value.toFixed(2)} LUFS`
               } else {
                 formattedValue = value.toFixed(2)
               }

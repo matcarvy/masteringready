@@ -958,7 +958,8 @@ async def start_analysis(
                         strict=strict,
                         chunk_duration=30.0,  # 30s optimal for 512MB Render (larger chunks are superlinearly slower)
                         progress_callback=update_progress,  # ← Pass callback
-                        original_metadata=original_metadata  # ← Pass original metadata
+                        original_metadata=original_metadata,  # ← Pass original metadata
+                        ffmpeg_exe=FFMPEG_EXE  # ← For accurate global LUFS measurement
                     )
                 else:
                     logger.info(f"📊 [{job_id}] Using NORMAL analysis (estimated {estimated_duration_min:.1f} min, {file_size_mb:.1f} MB)")
@@ -1895,6 +1896,7 @@ async def stream_analyze(
                     lang=lang,
                     strict=False,
                     chunk_duration=30.0,
+                    ffmpeg_exe=FFMPEG_EXE,
                 )
             else:
                 analyze_func = functools.partial(

@@ -268,6 +268,8 @@ import argparse
 import gc
 import json
 import math
+import re
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -430,7 +432,7 @@ METRIC_NAMES = {
         "LUFS (Integrated)": "LUFS (Integrated)",
         "PLR": "PLR",
         "Crest Factor": "Crest Factor",
-        "Stereo Width": "Stereo Width",
+        "Stereo Width": "Stereo Image",
         "Frequency Balance": "Frequency Balance",
     },
     "es": {
@@ -439,8 +441,8 @@ METRIC_NAMES = {
         "DC Offset": "DC Offset",
         "LUFS (Integrated)": "LUFS (Integrated)",
         "PLR": "PLR",
-        "Crest Factor": "Factor de Cresta",
-        "Stereo Width": "Ancho Estéreo",
+        "Crest Factor": "Crest Factor",
+        "Stereo Width": "Imagen Estéreo",
         "Frequency Balance": "Balance de Frecuencias",
     },
 }
@@ -925,6 +927,43 @@ def integrated_lufs(y: np.ndarray, sr: int, duration: float) -> Tuple[Optional[f
         return 20.0 * math.log10(rms), "approx_rms_dbfs", is_reliable
     except (ValueError, ZeroDivisionError):
         return -120.0, "approx_rms_dbfs", is_reliable
+
+
+def ffmpeg_integrated_lufs(filepath: str, ffmpeg_exe: str = "ffmpeg", duration: float = 0.0) -> Tuple[Optional[float], str, bool]:
+    """
+    Measure integrated LUFS using ffmpeg's loudnorm filter (EBU R128).
+    Streaming mode — processes audio in C, zero Python memory overhead.
+    More accurate than per-chunk pyloudnorm averaging because EBU R128
+    gating is applied globally instead of per-chunk.
+
+    Returns (lufs, method, is_reliable).
+    """
+    is_reliable = duration >= MIN_DURATION_FOR_LUFS
+    try:
+        result = subprocess.run(
+            [ffmpeg_exe, '-i', str(filepath), '-af', 'loudnorm=print_format=json', '-f', 'null', '-'],
+            capture_output=True, text=True, timeout=120
+        )
+
+        # loudnorm outputs JSON in stderr
+        stderr = result.stderr
+        # Find the JSON block containing input_i (integrated LUFS)
+        json_match = re.search(r'\{[^{}]*"input_i"[^{}]*\}', stderr, re.DOTALL)
+        if json_match:
+            data = json.loads(json_match.group())
+            lufs = float(data['input_i'])
+            if not math.isfinite(lufs) or lufs < -120:
+                return None, "ffmpeg/EBU-R128", is_reliable
+            return lufs, "ffmpeg/EBU-R128", is_reliable
+
+        print("⚠️  ffmpeg loudnorm: no JSON output found in stderr", file=sys.stderr)
+        return None, "ffmpeg/error", False
+    except subprocess.TimeoutExpired:
+        print("⚠️  ffmpeg LUFS measurement timed out (120s)", file=sys.stderr)
+        return None, "ffmpeg/timeout", False
+    except Exception as e:
+        print(f"⚠️  ffmpeg LUFS measurement failed: {e}", file=sys.stderr)
+        return None, "ffmpeg/error", False
 
 
 def stereo_correlation(y: np.ndarray) -> float:
@@ -3765,23 +3804,7 @@ def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, s
     
     metrics.append(tp_metric)
 
-    # 3. DC Offset
-    dc_data = detect_dc_offset(y)
-    st_dc, msg_dc, _ = status_dc_offset(dc_data, lang)
-    
-    lang_picked = _pick_lang(lang)
-    dc_value = f"{dc_data['max_offset']:.4f}" if dc_data["detected"] else ("No detectado" if lang_picked == 'es' else "Not detected")
-    
-    metrics.append({
-        "name": METRIC_NAMES[lang_picked]["DC Offset"],
-        "internal_key": "DC Offset",  # For WEIGHTS lookup
-        "value": dc_value,
-        "status": st_dc,
-        "message": msg_dc,
-        "details": dc_data
-    })
-
-    # 4. LUFS
+    # 3. LUFS
     lufs, lufs_method, lufs_reliable = integrated_lufs(y, sr, duration)
     lufs_label = "LUFS" if HAS_PYLOUDNORM else "RMS(dBFS) approx"
     st_l, msg_l, _ = status_lufs(lufs, lufs_method, lufs_reliable, lang)
@@ -3789,14 +3812,14 @@ def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, s
     metrics.append({
         "name": METRIC_NAMES[_pick_lang(lang)]["LUFS (Integrated)"],
         "internal_key": "LUFS (Integrated)",  # For WEIGHTS lookup
-        "value": f"{lufs:.1f} {lufs_label}" if lufs is not None else "N/A",
+        "value": f"{lufs:.2f} {lufs_label}" if lufs is not None else "N/A",
         "status": st_l,
         "message": msg_l,
         "method": lufs_method,
         "reliable": lufs_reliable
     })
 
-    # 5. PLR
+    # 4. PLR
     plr = None
     has_real_lufs = HAS_PYLOUDNORM and lufs_method.startswith("pyloudnorm")
     if has_real_lufs and lufs is not None and tp is not None:
@@ -3811,7 +3834,7 @@ def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, s
         "message": msg_p
     })
 
-    # 6. Crest Factor (alternativa a PLR cuando no hay LUFS real)
+    # 5. Crest Factor (alternativa a PLR cuando no hay LUFS real)
     crest = calculate_crest_factor(y)
     st_cf, msg_cf, _ = status_crest_factor(crest, lang)
     
@@ -3831,6 +3854,22 @@ def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, s
         "value": f"{crest:.1f} dB",
         "status": cf_status,
         "message": cf_message
+    })
+
+    # 6. DC Offset
+    dc_data = detect_dc_offset(y)
+    st_dc, msg_dc, _ = status_dc_offset(dc_data, lang)
+
+    lang_picked = _pick_lang(lang)
+    dc_value = f"{dc_data['max_offset']:.4f}" if dc_data["detected"] else ("No detectado" if lang_picked == 'es' else "Not detected")
+
+    metrics.append({
+        "name": METRIC_NAMES[lang_picked]["DC Offset"],
+        "internal_key": "DC Offset",  # For WEIGHTS lookup
+        "value": dc_value,
+        "status": st_dc,
+        "message": msg_dc,
+        "details": dc_data
     })
 
     # 7. Stereo Field Analysis (Correlation + M/S + L/R Balance) with Temporal Analysis
@@ -4449,8 +4488,9 @@ def build_technical_details(metrics: List[Dict], lang: str = 'es') -> str:
             ms_ratio = stereo_metric.get("ms_ratio", 0)
             lr_balance = stereo_metric.get("lr_balance_db", 0)
             
-            details += "🎧 CAMPO ESTÉREO:\n"
-            details += f"   • Correlación: {corr_val}\n"
+            details += "🎧 IMAGEN ESTÉREO:\n"
+            corr_raw = stereo_metric.get("correlation", 0)
+            details += f"   • Correlación: {corr_raw:.2f}\n"
             if ms_ratio:
                 details += f"   • Relación M/S: {ms_ratio:.2f}\n"
             if lr_balance is not None:
@@ -5005,7 +5045,8 @@ def analyze_file_chunked(
     lang: str = "en",
     chunk_duration: float = 30.0,
     progress_callback = None,
-    original_metadata: Optional[Dict] = None
+    original_metadata: Optional[Dict] = None,
+    ffmpeg_exe: Optional[str] = None
 ) -> Dict[str, Any]:
     """
     Memory-optimized analysis for large files using chunked processing.
@@ -5100,6 +5141,21 @@ def analyze_file_chunked(
             is_true_mono = True
             print(f"ℹ️  Pseudo-stereo (identical channels) detected at {check_offset:.1f}s-{check_offset+check_duration:.1f}s - treating as mono")
     del y_check  # Free memory
+
+    # 1b. Measure global LUFS via ffmpeg (streaming, zero Python memory)
+    # More accurate than per-chunk pyloudnorm averaging because EBU R128
+    # gating is applied globally across the entire file.
+    ffmpeg_lufs = None
+    ffmpeg_lufs_method = None
+    ffmpeg_lufs_reliable = None
+    if ffmpeg_exe:
+        ffmpeg_lufs, ffmpeg_lufs_method, ffmpeg_lufs_reliable = ffmpeg_integrated_lufs(
+            str(path), ffmpeg_exe, duration
+        )
+        if ffmpeg_lufs is not None:
+            print(f"✅ Global LUFS (ffmpeg): {ffmpeg_lufs:.2f}")
+        else:
+            print("⚠️  ffmpeg LUFS failed — will use per-chunk energy average as fallback")
 
     # 2. Initialize accumulators
     results = {
@@ -5399,7 +5455,7 @@ def analyze_file_chunked(
                         'severity': 'critical' if abs(window_lr) > 3.0 else 'warning'
                     })
             
-            print(f"   ✅ Peak: {chunk_peak_db:.1f} dBFS, TP: {chunk_tp_db:.1f} dBTP, LUFS: {chunk_lufs:.1f}")
+            print(f"   ✅ Peak: {chunk_peak_db:.1f} dBFS, TP: {chunk_tp_db:.1f} dBTP, LUFS: {chunk_lufs:.2f}")
             
             # Update progress callback if provided
             # Progress: 10% (file loaded) + 60% (chunks processing) = 10-70%
@@ -5434,13 +5490,19 @@ def analyze_file_chunked(
     final_peak = max(results['peaks']) if results['peaks'] else -60.0
     final_tp = max(results['tps']) if results['tps'] else -60.0
     
-    # LUFS: weighted average using ENERGY (not dB arithmetic)
-    # EBU R128 specifies loudness is summed in linear domain, not dB
-    # Formula: LUFS_total = 10 * log10(sum(10^(LUFS_i/10) * duration_i) / total_duration)
-    # v7.4.0 FIX: Handle edge case where ALL chunks are below -70dB
+    # LUFS: Use global ffmpeg measurement if available (accurate EBU R128 gating),
+    # otherwise fall back to per-chunk energy-weighted average.
     lufs_reliable = True
-    if total_duration > 0 and results['lufs_values']:
-        # Filter valid LUFS values (not None and above -70dB threshold)
+    lufs_method_used = "chunked"
+    if ffmpeg_lufs is not None:
+        # ffmpeg measured LUFS on the full file with proper global gating
+        weighted_lufs = ffmpeg_lufs
+        lufs_reliable = ffmpeg_lufs_reliable if ffmpeg_lufs_reliable is not None else (duration >= MIN_DURATION_FOR_LUFS)
+        lufs_method_used = ffmpeg_lufs_method or "ffmpeg/EBU-R128"
+        print(f"✅ Using ffmpeg global LUFS: {weighted_lufs:.2f} (vs per-chunk avg would be different due to gating)")
+    elif total_duration > 0 and results['lufs_values']:
+        # Fallback: per-chunk energy-weighted average
+        # Formula: LUFS_total = 10 * log10(sum(10^(LUFS_i/10) * duration_i) / total_duration)
         valid_lufs_data = [
             (lufs, dur)
             for lufs, dur in zip(results['lufs_values'], results['chunk_durations'])
@@ -5455,7 +5517,6 @@ def analyze_file_chunked(
                 weighted_lufs = -70.0
                 lufs_reliable = False
         else:
-            # v7.4.0: All chunks below -70dB - file is essentially silent
             weighted_lufs = -70.0
             lufs_reliable = False
             print("⚠️  All chunks below -70 LUFS - file is very quiet or silent", file=sys.stderr)
@@ -5489,7 +5550,7 @@ def analyze_file_chunked(
     
     print(f"✅ Peak: {final_peak:.2f} dBFS")
     print(f"✅ True Peak: {final_tp:.2f} dBTP")
-    print(f"✅ LUFS: {weighted_lufs:.2f}" + (" (unreliable)" if not lufs_reliable else ""))
+    print(f"✅ LUFS: {weighted_lufs:.2f} ({lufs_method_used})" + (" (unreliable)" if not lufs_reliable else ""))
     print(f"✅ PLR: {final_plr:.2f} dB" if plr_reliable else "⚠️  PLR: N/A (LUFS unreliable)")
     print(f"✅ Correlation: {final_correlation:.3f}")
     print(f"✅ L/R Balance: {final_lr_balance:+.2f} dB")
@@ -5733,35 +5794,22 @@ def analyze_file_chunked(
         tp_metric["temporal_analysis"] = tp_temporal
     
     metrics.append(tp_metric)
-    
-    # 3. DC Offset (assume not detected in chunked analysis)
-    dc_data = {"detected": False, "max_offset": 0.0}
-    st_dc, msg_dc, _ = status_dc_offset(dc_data, lang)
-    
-    metrics.append({
-        "name": "DC Offset",
-        "internal_key": "DC Offset",
-        "value": "No detectado" if lang == "es" else "Not detected",
-        "status": st_dc,
-        "message": msg_dc,
-        "details": dc_data
-    })
-    
-    # 4. LUFS
-    lufs_reliable = duration >= MIN_DURATION_FOR_LUFS
-    st_l, msg_l, _ = status_lufs(weighted_lufs, "chunked", lufs_reliable, lang)
-    
+
+    # 3. LUFS
+    # lufs_reliable already set during aggregation (step 4 above)
+    st_l, msg_l, _ = status_lufs(weighted_lufs, lufs_method_used, lufs_reliable, lang)
+
     metrics.append({
         "name": "LUFS (Integrated)",
         "internal_key": "LUFS (Integrated)",
-        "value": f"{weighted_lufs:.1f} LUFS",
+        "value": f"{weighted_lufs:.2f} LUFS",
         "status": st_l,
         "message": msg_l,
-        "method": "chunked",
+        "method": lufs_method_used,
         "reliable": lufs_reliable
     })
     
-    # 5. PLR
+    # 4. PLR
     # v7.4.0 FIX: Only include PLR if LUFS is reliable
     if plr_reliable and final_plr is not None:
         st_p, msg_p, _ = status_plr(final_plr, True, strict, lang)
@@ -5785,7 +5833,7 @@ def analyze_file_chunked(
             "reliable": False
         })
     
-    # 6. Crest Factor (proper calculation with RMS)
+    # 5. Crest Factor (proper calculation with RMS)
     # v7.4.0 FIX: RMS values are in dB - must convert to linear, average, then back to dB
     # Arithmetic averaging of dB values is mathematically incorrect
     if results['rms_values'] and results['chunk_durations']:
@@ -5814,7 +5862,20 @@ def analyze_file_chunked(
         "status": "info",  # Always info when PLR exists
         "message": "Informativo. PLR es la métrica principal de dinámica." if lang == "es" else "Informational. PLR is the primary dynamics metric."
     })
-    
+
+    # 6. DC Offset (assume not detected in chunked analysis)
+    dc_data = {"detected": False, "max_offset": 0.0}
+    st_dc, msg_dc, _ = status_dc_offset(dc_data, lang)
+
+    metrics.append({
+        "name": "DC Offset",
+        "internal_key": "DC Offset",
+        "value": "No detectado" if lang == "es" else "Not detected",
+        "status": st_dc,
+        "message": msg_dc,
+        "details": dc_data
+    })
+
     # 7. Stereo Field (comprehensive evaluation)
     st_s, msg_s = evaluate_stereo_field_comprehensive(
         final_correlation, 
@@ -6287,7 +6348,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
         if lang == 'es':
             headroom_str = f"{abs(peak_value):.1f} dB" if peak_value is not None else "0 dB"
             tp_str = f"{tp_value:.1f} dBTP" if tp_value is not None else "0.0 dBTP"
-            lufs_str = f"{lufs_value:.1f} LUFS" if lufs_value is not None else "nivel comercial"
+            lufs_str = f"{lufs_value:.2f} LUFS" if lufs_value is not None else "nivel comercial"
             
             # SECTION 1: Header + Detection Reason
             filename_ref = f"🎵 Sobre \"{filename}\"\n\n"
@@ -6622,7 +6683,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
         else:  # English
             headroom_str = f"{abs(peak_value):.1f} dB" if peak_value is not None else "0 dB"
             tp_str = f"{tp_value:.1f} dBTP" if tp_value is not None else "0.0 dBTP"
-            lufs_str = f"{lufs_value:.1f} LUFS" if lufs_value is not None else "commercial level"
+            lufs_str = f"{lufs_value:.2f} LUFS" if lufs_value is not None else "commercial level"
             
             # SECTION 1: Header + Detection Reason
             filename_ref = f"🎵 Regarding \"{filename}\"\n\n"
@@ -7063,7 +7124,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                     elif "Stereo" in internal_key or "Ancho" in internal_key:
                         corr_val = f"{metric_value:.2f}" if isinstance(metric_value, (int, float)) else str(metric_value)
                         issues_details.append(
-                            f"• Campo Estéreo: correlación {corr_val}. "
+                            f"• Imagen Estéreo: correlación {corr_val}. "
                             f"Revisar compatibilidad mono y balance L/R."
                         )
                     
@@ -7168,7 +7229,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
             
             # Add stereo detail section if issues found
             if has_stereo_issue:
-                stereo_detail = "\n\n📊 CAMPO ESTÉREO - Análisis Detallado:\n" + "\n\n".join(stereo_issues)
+                stereo_detail = "\n\n📊 IMAGEN ESTÉREO - Análisis Detallado:\n" + "\n\n".join(stereo_issues)
         
         # Recommendation
         if score >= 85:
@@ -8002,7 +8063,36 @@ def generate_complete_pdf(
         ))
         
         story.append(Spacer(1, 0.3*inch))
-        
+
+        # Análisis Rápido (on page 1, right after score — no PageBreak)
+        if report.get('report_visual'):
+            story.append(Paragraph(
+                "ANÁLISIS RÁPIDO" if lang == 'es' else "QUICK ANALYSIS",
+                section_style
+            ))
+
+            text = report['report_visual']
+            text = text.replace('_compressed', '')
+            text = clean_text_for_pdf(text)
+
+            while '\n\n\n' in text:
+                text = text.replace('\n\n\n', '\n\n')
+            text = text.strip()
+
+            for line in text.split('\n'):
+                line_stripped = line.strip()
+                if line_stripped:
+                    try:
+                        story.append(Paragraph(line_stripped, body_style))
+                    except Exception:
+                        clean_line = line_stripped.encode('ascii', 'ignore').decode('ascii')
+                        if clean_line.strip():
+                            story.append(Paragraph(clean_line, body_style))
+
+            story.append(Spacer(1, 0.2*inch))
+
+        story.append(PageBreak())
+
         # Metrics Table
         if report.get('metrics'):
             story.append(Paragraph(
@@ -8293,8 +8383,8 @@ def generate_complete_pdf(
                 ('headroom', 'Headroom', 'Headroom'),
                 ('dynamic_range', 'Rango Dinámico (PLR)', 'Dynamic Range (PLR)'),
                 ('overall_level', 'Nivel General (LUFS)', 'Overall Level (LUFS)'),
-                ('stereo_balance', 'Balance Estéreo', 'Stereo Balance'),
-                ('crest_factor', 'Factor de Cresta', 'Crest Factor')
+                ('stereo_balance', 'Imagen Estéreo', 'Stereo Image'),
+                ('crest_factor', 'Crest Factor', 'Crest Factor')
             ]
             
             for section_key, title_es, title_en in sections:
@@ -8317,9 +8407,10 @@ def generate_complete_pdf(
                             tp_val = metrics_info.get('true_peak_dbtp', 0)
                             
                             # Create table with gray background for metrics
+                            tp_label = "True Peak (pico real entre muestras) dBTP" if lang == 'es' else "True Peak dBTP"
                             data = [
                                 [f"Headroom dBFS: {hr_val:.2f}"],
-                                [f"True Peak dBTP: {tp_val:.2f}"]
+                                [f"{tp_label}: {tp_val:.2f}"]
                             ]
                             
                             table = Table(data, colWidths=[5*inch])
@@ -8339,7 +8430,8 @@ def generate_complete_pdf(
                             plr_val = metrics_info.get('plr', metrics_info.get('dr_lu', 0))
                             
                             # Create table with gray background
-                            data = [[f"PLR: {plr_val:.1f} dB"]]
+                            plr_label = "PLR (relación pico a sonoridad)" if lang == 'es' else "PLR"
+                            data = [[f"{plr_label}: {plr_val:.1f} dB"]]
                             
                             table = Table(data, colWidths=[5*inch])
                             table.setStyle(TableStyle([
@@ -8357,7 +8449,8 @@ def generate_complete_pdf(
                             lufs_val = metrics_info.get('lufs', 0)
                             
                             # Create table with gray background
-                            data = [[f"LUFS (Integrated): {lufs_val:.1f}"]]
+                            lufs_label = "LUFS (sonoridad integrada)" if lang == 'es' else "LUFS (Integrated)"
+                            data = [[f"{lufs_label}: {lufs_val:.2f}"]]
                             
                             table = Table(data, colWidths=[5*inch])
                             table.setStyle(TableStyle([
@@ -8399,7 +8492,7 @@ def generate_complete_pdf(
                         elif section_key == 'crest_factor':
                             cf_val = metrics_info.get('crest_factor_db', 0)
 
-                            data = [[f"{'Factor de Cresta' if lang == 'es' else 'Crest Factor'}: {cf_val:.1f} dB"]]
+                            data = [[f"Crest Factor: {cf_val:.1f} dB"]]
 
                             table = Table(data, colWidths=[5*inch])
                             table.setStyle(TableStyle([
@@ -8452,7 +8545,6 @@ def generate_complete_pdf(
         
         # Analysis Modes
         for mode_key, mode_title_es, mode_title_en in [
-            ('report_visual', 'ANÁLISIS RÁPIDO', 'QUICK ANALYSIS'),
             ('report_short', 'ANÁLISIS RESUMEN', 'SUMMARY ANALYSIS'),
             ('report_write', 'ANÁLISIS COMPLETO', 'COMPLETE ANALYSIS')
         ]:

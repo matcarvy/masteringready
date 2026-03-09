@@ -174,7 +174,7 @@ const structuredData = {
       'Headroom Analysis',
       'LUFS Measurement',
       'True Peak Detection',
-      'Stereo Balance',
+      'Stereo Image',
       'Frequency Analysis',
       'Downloadable PDF Report'
     ]

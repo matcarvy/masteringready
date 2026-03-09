@@ -95,7 +95,7 @@ export default function Results({ data, onReset, lang: parentLang }: ResultsProp
         unit: 'dBTP'
       },
       { 
-        label: currentLang === 'es' ? 'Balance Estéreo' : 'Stereo Balance', 
+        label: currentLang === 'es' ? 'Imagen Estéreo' : 'Stereo Image',
         value: data.metrics.correlation || 'N/A',
         unit: ''
       },

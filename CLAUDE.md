@@ -4522,3 +4522,123 @@ Two changes in `analyzer.py`:
 1. `0f4e6a0` - fix: absorb short last chunks (< 1s) into previous chunk to avoid block size errors
 
 **Git state**: main on `0f4e6a0`, pushed. Build clean.
+
+### Session 2026-03-06 Part 4 — Voice Guide Final Sweep + 8-PDF Audit
+
+#### Context
+Complete voice guide compliance sweep across all warning/critical code paths in `analyzer.py` and `interpretative_texts.py`. These paths only trigger for problematic mixes (scores below 75, critical metrics) and were missed by previous testing with high-scoring tracks.
+
+#### Voice Guide Sweep — 45 Edits (commit `49e6e5e`)
+Comprehensive pass through both Python files converting all remaining voice guide violations:
+
+**Pattern categories fixed:**
+- **Imperatives to infinitives/conviene**: "Reduce" -> "Conviene reducir", "Verifica" -> "Conviene verificar", "Baja" -> "Conviene bajar", "Revisa" -> "Conviene revisar", "Atiende" -> "Conviene atender", "Escuchalo" -> "Conviene escuchar"
+- **Alarmist to neutral**: "demasiado" -> "muy"/"exceso de", "agresivo/a" -> "intenso/a"
+- **English leaks**: "del track" -> "de la pista", "todo el track" -> "toda la pista"
+- **Tier 2 anchoring**: First mention of "headroom" per section gets "(margen antes del maximo digital)"
+- **Tier 3 localization**: "master bus" -> "bus principal", "Gain/Utility" -> "plugin de ganancia", "threshold/ceiling" -> "umbral/techo", "gain staging" -> "estructura/niveles de ganancia", "stereo widening" -> "ensanchamiento estereo"
+- **Checklist format**: 5-step checklist imperatives (Vuelve, Inserta, Reduce, Verifica, Re-exporta) -> infinitives (Volver, Insertar, Reducir, Verificar, Re-exportar)
+- **Rapido bullets**: hyphens ` - ` -> periods `. `
+
+#### Post-Sweep Fixes
+1. **"vale la pena" -> "conviene"** (commit `e7f2542`): 2 CTA messages in `generate_cta()` (score 75-84 and 60-74) + conditional imperatives "reduce...re-exporta" -> infinitives "reducir...re-exportar" in master final section
+2. **Stereo temporal "verifica"** (commit `fdb898a`): 4 locations in stereo temporal analysis where "verifica comportamiento en mono" survived the sweep -> "conviene verificar comportamiento en mono"
+3. **"problemas tecnicos criticos" -> "significativos"** (commit `fdb898a`): Completo section positive summary line
+
+#### 8-PDF Audit — ALL PASS
+
+| PDF | Score | Mode | Imperatives | Forbidden | English | Conviene | Score Factors | Verdict |
+|-----|-------|------|-------------|-----------|---------|----------|---------------|---------|
+| Amazing | 25 | Strict | PASS | PASS | PASS | PASS | PASS | **PASS** |
+| Calor | 74 | Strict | PASS | PASS | PASS | PASS | PASS | **PASS** |
+| Tiempo Live 1 | 89 | Strict | PASS | PASS | PASS | PASS | PASS | **PASS** |
+| Tiempo Live 2 | 100 | Normal | PASS | PASS | PASS | PASS | N/A | **PASS** |
+| Paraiso Fractal | 99 | Normal | PASS | PASS | PASS | PASS | N/A | **PASS** |
+| Mis Pueblos | 79 | Normal | PASS | PASS | PASS | PASS | PASS | **PASS** |
+| Ejemplo.flac | 92 | Normal | PASS | PASS | PASS | PASS | N/A | **PASS** |
+| Volver | 100 | Normal | PASS | PASS | PASS | PASS | N/A | **PASS** |
+
+**Score Factors table N/A for scores >= 90**: By design — `calculate_score_penalties()` returns empty `score_drivers` when no metric has meaningful penalty. Table correctly omitted.
+
+#### Score Range Analysis
+Analyzed whether all scores 20-100 are achievable. The 35-70 range IS well-covered by various metric combinations (1 critical + good elsewhere, both warnings + 1 minor critical, etc.). Small integer gaps exist due to discrete multipliers but have zero user impact — verdict tiers matter, not individual integers. **No scoring changes needed.**
+
+#### Commits to main
+1. `49e6e5e` - fix: voice guide compliance sweep — 45 edits across warning/critical code paths
+2. `e7f2542` - fix: voice guide — imperatives to infinitives in master section, "vale la pena" to "conviene" in CTA
+3. `fdb898a` - fix: voice guide — "verifica" to "conviene verificar" in stereo temporal, "criticos" to "significativos" in Completo
+
+**Git state**: main on `fdb898a`, pushed. Build clean.
+**Voice guide status**: COMPLETE — zero violations remaining across all code paths and all 8 test PDFs.
+
+### Session 2026-03-08 — PDF Implementation Brief (Terminology, Layout, Anchoring)
+
+#### Context
+Continued from previous session that ran out of context. Implementing a comprehensive PDF improvement brief covering terminology unification, layout changes, and Tier 2 anchoring.
+
+#### Changes Implemented (7 items from brief)
+
+##### A1: Crest Factor — keep English everywhere
+- `analyzer.py:442`: METRIC_NAMES ES `"Crest Factor": "Factor de Cresta"` → `"Crest Factor": "Crest Factor"`
+- `analyzer.py:~8297`: PDF Detallado section tuple `'Factor de Cresta'` → `'Crest Factor'`
+- `analyzer.py:~8402`: PDF crest factor rendering — removed language-conditional, always "Crest Factor"
+- `interpretative_texts.py:1023`: `"El Factor de Cresta"` → `"El Crest Factor"`
+- Frontend (5 occurrences across 4 .tsx files): all "Factor de Cresta" → "Crest Factor"
+
+##### A2: Stereo name unification — "Imagen Estéreo" (ES) / "Stereo Image" (EN)
+- `analyzer.py:433`: METRIC_NAMES EN `"Stereo Width": "Stereo Width"` → `"Stereo Width": "Stereo Image"`
+- `analyzer.py:443`: METRIC_NAMES ES `"Stereo Width": "Ancho Estéreo"` → `"Stereo Width": "Imagen Estéreo"`
+- `analyzer.py:~8297`: PDF Detallado `'Balance Estéreo'` → `'Imagen Estéreo'`
+- `analyzer.py:~4452`: Completo header `"CAMPO ESTÉREO"` → `"IMAGEN ESTÉREO"`
+- `analyzer.py:~7066`: Error message `"Campo Estéreo"` → `"Imagen Estéreo"`
+- `analyzer.py:~7171`: Detallado header `"CAMPO ESTÉREO"` → `"IMAGEN ESTÉREO"`
+- Frontend (8 files): all "Stereo Balance"/"Stereo Width"/"Balance Estéreo" → "Stereo Image"/"Imagen Estéreo"
+  - `Results.tsx`, `page.tsx` (4 locations), `dashboard/page.tsx`, `history/page.tsx`, `layout.tsx`
+
+##### B: Tier 2 anchoring — True Peak, PLR, LUFS in Detallado
+- True Peak label: `"True Peak (pico real entre muestras) dBTP"` (ES) / `"True Peak dBTP"` (EN)
+- PLR label: `"PLR (relación pico a sonoridad)"` (ES) / `"PLR"` (EN)
+- LUFS label: `"LUFS (sonoridad integrada)"` (ES) / `"LUFS (Integrated)"` (EN)
+- All three use language-conditional labels in PDF Detallado metric display tables
+
+##### C1: Move Rápido to page 1 (after verdict, no PageBreak)
+- Extracted `report_visual` rendering from the Resumen/Completo loop (`analyzer.py:~8487`)
+- Inserted dedicated rendering block after score note (`analyzer.py:~8007`) — no PageBreak between verdict and Rápido
+- Added PageBreak AFTER Rápido, before metrics table
+- Removed `report_visual` from loop — loop now only processes `report_short` and `report_write`
+- New PDF page flow: Page 1 = File info + Score + Rápido → [PageBreak] → Page 2 = Metrics table + Áreas
+
+##### C2: Reorder DC Offset in metrics table (position 3 → 6)
+- **Non-chunked path** (`analyzer.py:~3768-3834`): Moved DC Offset `metrics.append` block from after True Peak to after Crest Factor
+- **Chunked path** (`analyzer.py:~5738-5817`): Same reorder
+- Updated comment numbers in both paths: LUFS=#3, PLR=#4, Crest Factor=#5, DC Offset=#6, Stereo=#7
+- New table order: Headroom, True Peak, LUFS, PLR, Crest Factor, DC Offset, Imagen Estéreo, Balance de Frecuencias
+
+##### D1: Stereo redundancy fix in Completo
+- Changed `corr_val = stereo_metric.get("value", "")` (compound string "94% corr | M/S: 0.18 | L/R: -0.5 dB") to `corr_raw = stereo_metric.get("correlation", 0)` formatted as `{corr_raw:.2f}`
+- Eliminates duplicate M/S and L/R data that appeared as both header summary and individual bullets
+
+##### G: Memory file update
+- Added `Crest Factor` to Tier 1 in `mr-terminology-es.md` (LATAM engineers use English term natively)
+
+#### Verification
+- `python3 -c "import ast; ast.parse(open('analyzer.py').read())"` → OK
+- `python3 -c "import ast; ast.parse(open('interpretative_texts.py').read())"` → OK
+- `npx next build` → clean, all 30 routes compiled, zero errors
+- `grep "Stereo Balance|Stereo Width" *.tsx` → zero matches
+- `grep "Balance Estéreo|Ancho Estéreo|Campo Estéreo|Factor de Cresta" *.tsx` → zero matches
+
+#### Files Changed (10)
+| File | Changes |
+|------|---------|
+| `analyzer.py` | METRIC_NAMES (EN+ES), DC Offset reorder (both paths), Rápido moved to page 1, Completo stereo fix, Detallado headers |
+| `interpretative_texts.py` | Crest Factor ES text |
+| `app/page.tsx` | Stereo metric name (4 locations), text export metric lookup |
+| `app/dashboard/page.tsx` | Stereo EN label |
+| `app/history/page.tsx` | Stereo EN label |
+| `app/layout.tsx` | JSON-LD feature list |
+| `components/Results.tsx` | Stereo EN label |
+| `components/InterpretativeSection.tsx` | Crest Factor label (done by background agent) |
+| `mr-terminology-es.md` | Crest Factor added to Tier 1 |
+
+**Git state**: main, uncommitted. Build clean.

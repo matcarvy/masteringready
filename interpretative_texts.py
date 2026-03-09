@@ -409,7 +409,7 @@ def _generate_level_text_es(lufs: float, status: str, compression_suspected: boo
             if compression_suspected:
                 return {
                     "interpretation": (
-                        f"El nivel general de tu mezcla ({lufs:.1f} LUFS) es elevado. "
+                        f"El nivel general de tu mezcla ({lufs:.2f} LUFS) es elevado. "
                         "Combinado con un rango dinámico reducido (PLR bajo), esto puede indicar "
                         "que la mezcla ya está muy comprimida o limitada antes del mastering. "
                         "Si no estás usando limitador en el bus principal, este dato es solo informativo."
@@ -423,7 +423,7 @@ def _generate_level_text_es(lufs: float, status: str, compression_suspected: boo
             else:
                 return {
                     "interpretation": (
-                        f"El nivel general de tu mezcla ({lufs:.1f} LUFS) es elevado, "
+                        f"El nivel general de tu mezcla ({lufs:.2f} LUFS) es elevado, "
                         "pero la dinámica está preservada. Esto puede ser normal según el género "
                         "y el estilo de mezcla."
                     ),
@@ -434,7 +434,7 @@ def _generate_level_text_es(lufs: float, status: str, compression_suspected: boo
         else:
             return {
                 "interpretation": (
-                    f"El nivel general de tu mezcla ({lufs:.1f} LUFS) está por debajo del rango típico, "
+                    f"El nivel general de tu mezcla ({lufs:.2f} LUFS) está por debajo del rango típico, "
                     "pero esto es informativo. Para mezclas pre-mastering, un rango amplio es aceptable. "
                     "El loudness final se ajusta en mastering."
                 ),
@@ -449,7 +449,7 @@ def _generate_level_text_es(lufs: float, status: str, compression_suspected: boo
             if compression_suspected:
                 return {
                     "interpretation": (
-                        f"El nivel general de tu mezcla ({lufs:.1f} LUFS) es muy elevado. "
+                        f"El nivel general de tu mezcla ({lufs:.2f} LUFS) es muy elevado. "
                         "Junto con un rango dinámico muy reducido, esto sugiere sobrecompresión "
                         "o limitación intensa en la cadena del bus principal, lo que puede reducir "
                         "el margen disponible para el mastering."
@@ -463,7 +463,7 @@ def _generate_level_text_es(lufs: float, status: str, compression_suspected: boo
             else:
                 return {
                     "interpretation": (
-                        f"El nivel general de tu mezcla ({lufs:.1f} LUFS) es muy elevado, "
+                        f"El nivel general de tu mezcla ({lufs:.2f} LUFS) es muy elevado, "
                         "aunque la dinámica se mantiene. Esto puede ser intencional según el género."
                     ),
                     "recommendation": (
@@ -475,7 +475,7 @@ def _generate_level_text_es(lufs: float, status: str, compression_suspected: boo
         else:
             return {
                 "interpretation": (
-                    f"El nivel general de tu mezcla está en {lufs:.1f} LUFS. "
+                    f"El nivel general de tu mezcla está en {lufs:.2f} LUFS. "
                     "Este valor es más bajo que el rango habitual para mezclas pre-mastering. "
                     "El volumen final se ajusta durante el proceso de mastering."
                 ),
@@ -794,7 +794,7 @@ def _generate_level_text_en(lufs: float, status: str, compression_suspected: boo
             if compression_suspected:
                 return {
                     "interpretation": (
-                        f"Your mix's overall level ({lufs:.1f} LUFS) is elevated. "
+                        f"Your mix's overall level ({lufs:.2f} LUFS) is elevated. "
                         "Combined with a reduced dynamic range (low PLR), this may indicate "
                         "that the mix is already heavily compressed or limited before mastering. "
                         "If you're not using a limiter on the master bus, this is just informational."
@@ -808,7 +808,7 @@ def _generate_level_text_en(lufs: float, status: str, compression_suspected: boo
             else:
                 return {
                     "interpretation": (
-                        f"Your mix's overall level ({lufs:.1f} LUFS) is elevated, "
+                        f"Your mix's overall level ({lufs:.2f} LUFS) is elevated, "
                         "but dynamics are preserved. This can be normal depending on genre "
                         "and mixing style."
                     ),
@@ -819,7 +819,7 @@ def _generate_level_text_en(lufs: float, status: str, compression_suspected: boo
         else:
             return {
                 "interpretation": (
-                    f"Your mix's overall level ({lufs:.1f} LUFS) is below the typical range, "
+                    f"Your mix's overall level ({lufs:.2f} LUFS) is below the typical range, "
                     "but this is informational. For pre-mastering mixes, a wide range is acceptable. "
                     "Final loudness is adjusted during mastering."
                 ),
@@ -834,7 +834,7 @@ def _generate_level_text_en(lufs: float, status: str, compression_suspected: boo
             if compression_suspected:
                 return {
                     "interpretation": (
-                        f"Your mix's overall level ({lufs:.1f} LUFS) is very high. "
+                        f"Your mix's overall level ({lufs:.2f} LUFS) is very high. "
                         "Combined with very reduced dynamic range, this suggests over-compression "
                         "or aggressive limiting on the master bus chain, which may reduce "
                         "the margin available for mastering."
@@ -848,7 +848,7 @@ def _generate_level_text_en(lufs: float, status: str, compression_suspected: boo
             else:
                 return {
                     "interpretation": (
-                        f"Your mix's overall level ({lufs:.1f} LUFS) is very high, "
+                        f"Your mix's overall level ({lufs:.2f} LUFS) is very high, "
                         "though dynamics are maintained. This may be intentional depending on genre."
                     ),
                     "recommendation": (
@@ -860,7 +860,7 @@ def _generate_level_text_en(lufs: float, status: str, compression_suspected: boo
         else:
             return {
                 "interpretation": (
-                    f"Your mix's overall level ({lufs:.1f} LUFS) is very low. "
+                    f"Your mix's overall level ({lufs:.2f} LUFS) is very low. "
                     "While final loudness is adjusted in mastering, a very low level "
                     "may indicate gain staging issues in the mix."
                 ),
@@ -1020,7 +1020,7 @@ def _generate_crest_factor_text_es(crest: float) -> Dict[str, str]:
     """Generate Spanish informational text for Crest Factor."""
     return {
         "interpretation": (
-            f"El Factor de Cresta de tu mezcla es {crest:.1f} dB. "
+            f"El Crest Factor de tu mezcla es {crest:.1f} dB. "
             "Este valor indica la diferencia entre los picos y el nivel RMS promedio."
         ),
         "recommendation": (
