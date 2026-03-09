@@ -1565,13 +1565,13 @@ def _sr_get_ffprobe_duration(video_path: str) -> float:
 
 def _sr_extract_audio(video_path: str) -> str:
     """Extract audio from video to WAV via ffmpeg. Returns path to WAV temp file.
-    Uses mono 44.1kHz to minimize memory on shared 512MB Render instance.
-    Mono is appropriate for SR (platform compliance, not mastering-grade stereo analysis).
+    Uses stereo 44.1kHz 16-bit for accurate LUFS measurement (EBU R128 requires stereo).
+    Mono downmix caused ~3.5 dB LUFS underreading due to (L+R)/2 summing loss.
     """
     wav_temp = tempfile.NamedTemporaryFile(delete=False, suffix='.wav')
     wav_temp.close()
     result = subprocess.run(
-        [FFMPEG_EXE, '-i', video_path, '-vn', '-ac', '1', '-acodec', 'pcm_s16le', '-ar', '44100', wav_temp.name, '-y'],
+        [FFMPEG_EXE, '-i', video_path, '-vn', '-ac', '2', '-acodec', 'pcm_s16le', '-ar', '44100', wav_temp.name, '-y'],
         capture_output=True, text=True, timeout=120
     )
     if result.returncode != 0:
