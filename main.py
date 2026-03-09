@@ -1749,28 +1749,28 @@ def _sr_energy_message(energy_data: dict) -> tuple:
     # Very flat energy (little variation)
     if dynamic_range < 0.2:
         return (
-            "Tu audio tiene un volumen bastante uniforme de principio a fin.",
-            "Your audio has fairly consistent volume from start to finish."
+            "Tu audio tiene un volumen consistente. Se va a escuchar bien en cualquier dispositivo.",
+            "Your audio has consistent volume. It will sound clear on any device."
         )
 
     # High dynamic range — some parts much louder than others
     if dynamic_range > 0.7:
         return (
-            "Tu audio tiene secciones con volumen muy diferente. Las partes suaves pueden perderse.",
-            "Your audio has sections with very different volume levels. Quiet parts may be lost."
+            "Tu audio tiene partes fuertes y partes suaves. En parlantes de celular o en lugares ruidosos, las partes suaves pueden ser difíciles de escuchar.",
+            "Your audio has loud and quiet parts. On phone speakers or in noisy environments, the quiet parts may be hard to hear."
         )
 
     # Moderate curve variation but uneven distribution across sections
     if dist_spread > 15:
         return (
-            "El volumen varía entre secciones de tu video. Algunas partes suenan más fuerte que otras.",
-            "Volume varies between sections of your video. Some parts sound louder than others."
+            "El volumen cambia entre secciones de tu video. Algunos espectadores podrían necesitar ajustar el volumen.",
+            "Volume shifts between sections of your video. Some viewers may need to adjust their volume."
         )
 
     # Moderate variation — normal for most content
     return (
-        "Tu audio tiene buena variación de volumen entre secciones.",
-        "Your audio has good volume variation between sections."
+        "Tu audio tiene variación de volumen natural. Se va a escuchar bien en la mayoría de dispositivos.",
+        "Your audio has natural volume variation. It will sound fine on most devices."
     )
 
 
