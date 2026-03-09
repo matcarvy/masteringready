@@ -3127,14 +3127,14 @@ def _status_crest_factor_en(crest: float) -> Tuple[str, str, float]:
     return "critical", "Dynamics very compressed/limited. Reduce master bus processing.", -0.5
 
 def _status_dc_offset_en(dc_data: Dict[str, Any]) -> Tuple[str, str, float]:
-    """Evaluate DC offset."""
+    """Evaluate DC offset. Weight=0 — score delta is always 1.0 (inert)."""
     if not dc_data["detected"]:
         return "perfect", "No DC offset detected.", 1.0
-    
+
     max_offset = dc_data["max_offset"]
     if max_offset > 0.05:
-        return "warning", f"Significant DC offset ({max_offset:.3f}). Apply DC offset removal before exporting.", 0.3
-    return "pass", f"Minor DC offset detected ({max_offset:.3f}). Consider cleaning.", 0.6
+        return "warning", f"Significant DC offset ({max_offset:.3f}). Consider applying DC offset correction before export.", 1.0
+    return "pass", f"Minor DC offset detected ({max_offset:.3f}). Consider removing before export.", 1.0
 
 
 # ----------------------------
@@ -3384,14 +3384,14 @@ def _status_crest_factor_es(crest: float) -> Tuple[str, str, float]:
     return "critical", "Dinámica muy comprimida/limitada. Conviene reducir procesamiento en bus principal.", -0.5
 
 def _status_dc_offset_es(dc_data: Dict[str, Any]) -> Tuple[str, str, float]:
-    """Evalúa DC offset."""
+    """Evalúa DC offset. Weight=0 — score delta siempre 1.0 (inerte)."""
     if not dc_data["detected"]:
         return "perfect", "Sin DC offset detectado.", 1.0
-    
+
     max_offset = dc_data["max_offset"]
     if max_offset > 0.05:
-        return "warning", f"DC offset significativo ({max_offset:.3f}). Aplica corrección de DC offset antes de exportar.", 0.3
-    return "pass", f"DC offset menor detectado ({max_offset:.3f}). Considerar limpiar.", 0.6
+        return "warning", f"DC offset significativo ({max_offset:.3f}). Conviene aplicar corrección de DC offset antes de exportar.", 1.0
+    return "pass", f"DC offset menor detectado ({max_offset:.3f}). Conviene revisar antes de exportar.", 1.0
 
 
 # ----------------------------
