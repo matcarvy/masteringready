@@ -216,7 +216,7 @@ function CustomDot(props: any) {
     <circle
       cx={cx}
       cy={cy}
-      r={6}
+      r={4}
       fill={color}
       stroke="var(--mr-bg-card)"
       strokeWidth={2}
@@ -232,8 +232,8 @@ function CustomActiveDot(props: any) {
   const color = getScoreColor(payload.score)
   return (
     <g>
-      <circle cx={cx} cy={cy} r={12} fill={color} opacity={0.2} />
-      <circle cx={cx} cy={cy} r={7} fill={color} stroke="var(--mr-bg-card)" strokeWidth={2} />
+      <circle cx={cx} cy={cy} r={10} fill={color} opacity={0.2} />
+      <circle cx={cx} cy={cy} r={6} fill={color} stroke="var(--mr-bg-card)" strokeWidth={2} />
     </g>
   )
 }
@@ -571,6 +571,7 @@ export default function ProgressTimeline({ analyses, lang, isMobile }: ProgressT
 
                 <Tooltip
                   content={<CustomTooltip lang={lang} />}
+                  trigger="hover"
                   cursor={{
                     stroke: 'var(--mr-border)',
                     strokeDasharray: '4 4',
@@ -605,6 +606,7 @@ export default function ProgressTimeline({ analyses, lang, isMobile }: ProgressT
                 />
 
                 {/* Trend line (moving average) — only if 5+ data points */}
+                {/* tooltipType="none" + pointerEvents prevent trend line from stealing tooltip activation */}
                 {chartData.length >= 5 && chartData.some(d => d.trend !== null) && (
                   <Area
                     type="monotone"
@@ -617,6 +619,8 @@ export default function ProgressTimeline({ analyses, lang, isMobile }: ProgressT
                     activeDot={false}
                     isAnimationActive={false}
                     connectNulls
+                    tooltipType="none"
+                    style={{ pointerEvents: 'none' }}
                   />
                 )}
               </AreaChart>

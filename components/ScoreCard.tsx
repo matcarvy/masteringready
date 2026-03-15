@@ -186,9 +186,11 @@ export default function ScoreCard({ score, verdict, filename, metricsBars, genre
   const renderCardContent = (format: 'feed' | 'story') => {
     const isFeed = format === 'feed'
     // Sizing constants per format
-    const padding = isFeed ? '56px 64px' : '64px 64px 48px'
+    const padding = isFeed ? '56px 64px' : '48px 64px 36px'
     const ringSize = isFeed ? 200 : 240
-    const scoreFont = isFeed ? '72px' : '96px'
+    const scoreFont = isFeed
+      ? (score >= 100 ? '60px' : '72px')
+      : (score >= 100 ? '78px' : '96px')
     const denomFont = isFeed ? '24px' : '30px'
     const verdictFont = isFeed ? '18px' : '22px'
     const metricNameWidth = isFeed ? '120px' : '140px'
@@ -200,8 +202,8 @@ export default function ScoreCard({ score, verdict, filename, metricsBars, genre
     const wordmarkFont = isFeed ? '18px' : '20px'
     const footerUrlFont = isFeed ? '16px' : '18px'
     const footerCtaFont = isFeed ? '12px' : '13px'
-    const trackPadTop = isFeed ? '20px' : '20px'
-    const verdictMargin = isFeed ? '12px' : '12px'
+    const trackPadTop = isFeed ? '20px' : '14px'
+    const verdictMargin = isFeed ? '12px' : '8px'
 
     return (
       <div style={{
@@ -220,7 +222,6 @@ export default function ScoreCard({ score, verdict, filename, metricsBars, genre
         color: '#f5f5f7',
         // html2canvas collapses whitespace in flex/inline elements — force preservation
         whiteSpace: 'pre-wrap' as const,
-        wordSpacing: '0.25em',
       }}>
         {/* Top gradient line */}
         <div style={{
@@ -266,7 +267,7 @@ export default function ScoreCard({ score, verdict, filename, metricsBars, genre
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          marginTop: isFeed ? '0' : '8px',
+          marginTop: isFeed ? '0' : '0',
         }}>
           {/* Ring */}
           <div style={{
@@ -304,6 +305,8 @@ export default function ScoreCard({ score, verdict, filename, metricsBars, genre
               display: 'flex',
               alignItems: 'baseline',
               justifyContent: 'center',
+              width: '100%',
+              textAlign: 'center' as const,
             }}>
               <span style={{
                 fontWeight: 900,
@@ -333,7 +336,6 @@ export default function ScoreCard({ score, verdict, filename, metricsBars, genre
             color: '#a0a0b2',
             marginTop: verdictMargin,
             whiteSpace: 'pre-wrap' as const,
-            wordSpacing: '0.25em',
           }}>
             {verdict}
           </div>
@@ -360,7 +362,6 @@ export default function ScoreCard({ score, verdict, filename, metricsBars, genre
                 textAlign: 'right' as const,
                 flexShrink: 0,
                 whiteSpace: 'pre-wrap' as const,
-                wordSpacing: '0.2em',
               }}>
                 {lang === 'es' ? label.es : label.en}
               </span>
@@ -398,7 +399,7 @@ export default function ScoreCard({ score, verdict, filename, metricsBars, genre
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          gap: '8px',
+          gap: isFeed ? '8px' : '6px',
           borderTop: '1px solid #1E1E2A',
           paddingTop: trackPadTop,
         }}>
@@ -410,7 +411,6 @@ export default function ScoreCard({ score, verdict, filename, metricsBars, genre
             wordBreak: 'break-word' as const,
             maxWidth: '90%',
             whiteSpace: 'pre-wrap' as const,
-            wordSpacing: '0.2em',
           }}>
             {trackName || (lang === 'es' ? 'Sin nombre' : 'Untitled')}
           </span>
@@ -461,7 +461,6 @@ export default function ScoreCard({ score, verdict, filename, metricsBars, genre
             textAlign: 'center' as const,
             marginTop: '4px',
             whiteSpace: 'pre-wrap' as const,
-            wordSpacing: '0.2em',
           }}>
             {lang === 'es' ? 'Analiza tu mezcla gratis' : 'Analyze your mix free'}
           </span>
@@ -473,7 +472,7 @@ export default function ScoreCard({ score, verdict, filename, metricsBars, genre
               flexDirection: 'column',
               alignItems: 'center',
               gap: '6px',
-              marginTop: '24px',
+              marginTop: '16px',
               color: '#6b6b7e',
               fontSize: '13px',
               fontWeight: 500,
