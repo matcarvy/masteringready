@@ -19,7 +19,6 @@ import {
   Area,
   XAxis,
   YAxis,
-  Tooltip,
   ReferenceLine,
 } from 'recharts'
 import { TrendingUp, Activity } from 'lucide-react'
@@ -141,74 +140,13 @@ function truncateFilename(filename: string, maxLen: number): string {
 }
 
 // ============================================================================
-// CUSTOM TOOLTIP
+// CUSTOM DOT — tooltip only on direct dot hover (not X-axis proximity)
 // ============================================================================
 
-function CustomTooltip({ active, payload, lang }: any) {
-  if (!active || !payload || payload.length === 0) return null
+// Dot hover state setter is passed via a module-level ref so CustomDot
+// (which must be a stable component for Recharts) can access it.
+let _setHoveredDot: ((dot: { cx: number; cy: number; data: any } | null) => void) | null = null
 
-  const data = payload[0]?.payload
-  if (!data) return null
-
-  const labels = t[lang as 'es' | 'en']
-  const color = getScoreColor(data.score)
-
-  return (
-    <div style={{
-      background: 'var(--mr-bg-card)',
-      border: '1px solid var(--mr-border)',
-      borderRadius: '0.5rem',
-      padding: '0.75rem 1rem',
-      boxShadow: 'var(--mr-shadow-lg)',
-      maxWidth: '220px',
-    }}>
-      <div style={{
-        fontSize: '0.8125rem',
-        color: 'var(--mr-text-secondary)',
-        marginBottom: '0.25rem',
-      }}>
-        {data.fullDate}
-      </div>
-      <div style={{
-        fontSize: '0.875rem',
-        fontWeight: 600,
-        color: 'var(--mr-text-primary)',
-        marginBottom: '0.375rem',
-        whiteSpace: 'nowrap',
-        overflow: 'hidden',
-        textOverflow: 'ellipsis',
-      }}>
-        {data.displayName}
-      </div>
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '0.375rem',
-      }}>
-        <span style={{
-          fontSize: '1.125rem',
-          fontWeight: 700,
-          color,
-        }}>
-          {data.score}
-        </span>
-        <span style={{
-          fontSize: '0.75rem',
-          color: 'var(--mr-text-tertiary)',
-        }}>
-          / 100
-        </span>
-      </div>
-    </div>
-  )
-}
-
-// ============================================================================
-// CUSTOM DOT
-// ============================================================================
-
-// Recharts activates tooltips via X-axis proximity (internal calculation),
-// NOT via pointer events on dots. Keep dots simple — no <g> wrappers.
 function CustomDot(props: any) {
   const { cx, cy, payload } = props
   if (cx == null || cy == null || !payload) return null
@@ -222,20 +160,10 @@ function CustomDot(props: any) {
       fill={color}
       stroke="var(--mr-bg-card)"
       strokeWidth={2}
+      style={{ cursor: 'pointer' }}
+      onMouseEnter={() => _setHoveredDot?.({ cx, cy, data: payload })}
+      onMouseLeave={() => _setHoveredDot?.(null)}
     />
-  )
-}
-
-function CustomActiveDot(props: any) {
-  const { cx, cy, payload } = props
-  if (cx == null || cy == null || !payload) return null
-
-  const color = getScoreColor(payload.score)
-  return (
-    <g>
-      <circle cx={cx} cy={cy} r={12} fill={color} opacity={0.2} />
-      <circle cx={cx} cy={cy} r={7} fill={color} stroke="var(--mr-bg-card)" strokeWidth={2} />
-    </g>
   )
 }
 
@@ -371,6 +299,13 @@ function NarrativeLine({
 export default function ProgressTimeline({ analyses, lang, isMobile }: ProgressTimelineProps) {
   const labels = t[lang]
   const [selectedTrack, setSelectedTrack] = useState<string>('__all__')
+  const [hoveredDot, setHoveredDot] = useState<{ cx: number; cy: number; data: any } | null>(null)
+
+  // Expose state setter to CustomDot via module-level ref
+  useEffect(() => {
+    _setHoveredDot = setHoveredDot
+    return () => { _setHoveredDot = null }
+  }, [])
 
   // Group analyses by normalized filename — only include songs with 2+ analyses
   const trackOptions = useMemo(() => {
@@ -528,7 +463,7 @@ export default function ProgressTimeline({ analyses, lang, isMobile }: ProgressT
         </p>
       ) : (
         <>
-          <div style={{ width: '100%', height: chartHeight }}>
+          <div style={{ width: '100%', height: chartHeight, position: 'relative' }}>
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart
                 data={chartData}
@@ -570,16 +505,7 @@ export default function ProgressTimeline({ analyses, lang, isMobile }: ProgressT
                   ticks={[0, 25, 50, 75, 100]}
                 />
 
-                <Tooltip
-                  content={<CustomTooltip lang={lang} />}
-                  trigger="hover"
-                  cursor={{
-                    stroke: 'var(--mr-border)',
-                    strokeDasharray: '4 4',
-                  }}
-                  isAnimationActive={false}
-                  wrapperStyle={{ pointerEvents: 'none' }}
-                />
+                {/* No built-in Tooltip — custom dot-hover tooltip below */}
 
                 {/* Reference lines at score thresholds */}
                 <ReferenceLine
@@ -595,7 +521,7 @@ export default function ProgressTimeline({ analyses, lang, isMobile }: ProgressT
                   strokeOpacity={0.3}
                 />
 
-                {/* Main score area */}
+                {/* Main score area — tooltip triggers only on direct dot hover */}
                 <Area
                   type="monotone"
                   dataKey="score"
@@ -603,12 +529,11 @@ export default function ProgressTimeline({ analyses, lang, isMobile }: ProgressT
                   strokeWidth={2}
                   fill="url(#scoreGradient)"
                   dot={<CustomDot />}
-                  activeDot={<CustomActiveDot />}
+                  activeDot={false}
                   isAnimationActive={false}
                 />
 
                 {/* Trend line (moving average) — only if 5+ data points */}
-                {/* tooltipType="none" + pointerEvents prevent trend line from stealing tooltip activation */}
                 {chartData.length >= 5 && chartData.some(d => d.trend !== null) && (
                   <Area
                     type="monotone"
@@ -627,6 +552,55 @@ export default function ProgressTimeline({ analyses, lang, isMobile }: ProgressT
                 )}
               </AreaChart>
             </ResponsiveContainer>
+
+            {/* Custom tooltip — only appears on direct dot hover */}
+            {hoveredDot && (
+              <div style={{
+                position: 'absolute',
+                left: hoveredDot.cx,
+                top: hoveredDot.cy - 10,
+                transform: 'translate(-50%, -100%)',
+                background: 'var(--mr-bg-card)',
+                border: '1px solid var(--mr-border)',
+                borderRadius: '0.5rem',
+                padding: '0.75rem 1rem',
+                boxShadow: 'var(--mr-shadow-lg)',
+                maxWidth: '220px',
+                pointerEvents: 'none',
+                zIndex: 10,
+              }}>
+                <div style={{
+                  fontSize: '0.8125rem',
+                  color: 'var(--mr-text-secondary)',
+                  marginBottom: '0.25rem',
+                }}>
+                  {hoveredDot.data.fullDate}
+                </div>
+                <div style={{
+                  fontSize: '0.875rem',
+                  fontWeight: 600,
+                  color: 'var(--mr-text-primary)',
+                  marginBottom: '0.375rem',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                }}>
+                  {hoveredDot.data.displayName}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+                  <span style={{
+                    fontSize: '1.125rem',
+                    fontWeight: 700,
+                    color: getScoreColor(hoveredDot.data.score),
+                  }}>
+                    {hoveredDot.data.score}
+                  </span>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--mr-text-tertiary)' }}>
+                    / 100
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Legend — only show when trend line is visible */}

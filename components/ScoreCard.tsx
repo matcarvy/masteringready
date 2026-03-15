@@ -247,6 +247,8 @@ export default function ScoreCard({ score, verdict, filename, metricsBars, genre
         padding,
         fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
         color: '#f5f5f7',
+        // html2canvas collapses spaces — wordSpacing forces visible gaps between words
+        wordSpacing: '0.25em',
       }}>
         {/* Top gradient line */}
         <div style={{
@@ -287,8 +289,8 @@ export default function ScoreCard({ score, verdict, filename, metricsBars, genre
           </span>
         </div>
 
-        {/* Story: top spacer to push content toward center */}
-        {!isFeed && <div style={{ flex: 1 }} />}
+        {/* Story: fixed gap after header */}
+        {!isFeed && <div style={{ height: '40px' }} />}
 
         {/* Score Section */}
         <div style={{
@@ -465,15 +467,13 @@ export default function ScoreCard({ score, verdict, filename, metricsBars, genre
           </span>
         </div>
 
-        {/* Story: bottom spacer to balance layout */}
-        {!isFeed && <div style={{ flex: 1 }} />}
-
-        {/* Footer */}
+        {/* Footer — story: marginTop auto pushes footer to bottom */}
         <div style={{
           width: '100%',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
+          ...(isFeed ? {} : { marginTop: 'auto' }),
         }}>
           <span style={{
             fontWeight: 700,
