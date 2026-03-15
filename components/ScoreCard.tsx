@@ -232,16 +232,71 @@ export default function ScoreCard({ score, verdict, filename, metricsBars, genre
     const trackPadTop = isFeed ? '20px' : '14px'
     const verdictMargin = isFeed ? '12px' : '8px'
 
-    // Story: wrap score+metrics+track in a centered block to eliminate dead space
-    const middleContent = (
-      <>
+    return (
+      <div style={{
+        width: '1080px',
+        height: isFeed ? '1080px' : '1920px',
+        background: '#0D0D14',
+        borderRadius: '0px',
+        overflow: 'hidden',
+        position: 'relative',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: isFeed ? 'space-between' : 'flex-start',
+        padding,
+        fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+        color: '#f5f5f7',
+      }}>
+        {/* Top gradient line */}
+        <div style={{
+          position: 'absolute',
+          top: 0, left: 0, right: 0,
+          height: '3px',
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        }} />
+
+        {/* Header */}
+        <div style={{
+          width: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}>
+          <span style={{
+            fontWeight: 700,
+            fontSize: wordmarkFont,
+            letterSpacing: '-0.02em',
+            color: '#6b6b7e',
+            whiteSpace: 'pre' as const,
+          }}>
+            {nbsp('Mastering Ready')}
+          </span>
+          <span style={{
+            fontSize: '11px',
+            fontWeight: 600,
+            letterSpacing: '0.12em',
+            textTransform: 'uppercase' as const,
+            color: '#a0a0b2',
+            background: '#1E1E2A',
+            padding: '5px 12px',
+            borderRadius: '6px',
+            whiteSpace: 'pre' as const,
+          }}>
+            {nbsp(lang === 'es' ? 'Análisis de Mezcla' : 'Mix Analysis')}
+          </span>
+        </div>
+
+        {/* Story: top spacer to push content toward center */}
+        {!isFeed && <div style={{ flex: 1 }} />}
+
         {/* Score Section */}
         <div style={{
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
         }}>
-          {/* Ring */}
+          {/* Ring — uses SVG-native transform (not CSS) for html2canvas compatibility at scale 2 */}
           <div style={{
             position: 'relative',
             width: `${ringSize}px`,
@@ -254,7 +309,6 @@ export default function ScoreCard({ score, verdict, filename, metricsBars, genre
               width={ringSize}
               height={ringSize}
               viewBox="0 0 200 200"
-              style={{ transform: 'rotate(-90deg)' }}
             >
               <circle
                 cx="100" cy="100" r="88"
@@ -268,8 +322,9 @@ export default function ScoreCard({ score, verdict, filename, metricsBars, genre
                 stroke={scoreColor}
                 strokeWidth={isFeed ? 10 : 12}
                 strokeLinecap="round"
-                strokeDasharray={CIRCUMFERENCE}
+                strokeDasharray={`${CIRCUMFERENCE}`}
                 strokeDashoffset={dashOffset}
+                transform="rotate(-90 100 100)"
               />
             </svg>
             <div style={{
@@ -294,8 +349,9 @@ export default function ScoreCard({ score, verdict, filename, metricsBars, genre
                 fontSize: denomFont,
                 color: 'rgba(255,255,255,0.55)',
                 marginLeft: isFeed ? '4px' : '6px',
+                whiteSpace: 'pre' as const,
               }}>
-                {nbsp('/100')}
+                /100
               </span>
             </div>
           </div>
@@ -306,6 +362,7 @@ export default function ScoreCard({ score, verdict, filename, metricsBars, genre
             textAlign: 'center' as const,
             color: '#a0a0b2',
             marginTop: verdictMargin,
+            whiteSpace: 'pre' as const,
           }}>
             {nbsp(verdictText)}
           </div>
@@ -317,7 +374,7 @@ export default function ScoreCard({ score, verdict, filename, metricsBars, genre
           display: 'flex',
           flexDirection: 'column',
           gap: metricGap,
-          marginTop: isFeed ? '0' : '24px',
+          marginTop: isFeed ? '0' : '28px',
         }}>
           {displayedMetrics.map(({ key, label, bar }) => (
             <div key={key} style={{
@@ -332,6 +389,7 @@ export default function ScoreCard({ score, verdict, filename, metricsBars, genre
                 color: '#a0a0b2',
                 textAlign: 'right' as const,
                 flexShrink: 0,
+                whiteSpace: 'pre' as const,
               }}>
                 {nbsp(lang === 'es' ? label.es : label.en)}
               </span>
@@ -372,15 +430,15 @@ export default function ScoreCard({ score, verdict, filename, metricsBars, genre
           gap: isFeed ? '8px' : '6px',
           borderTop: '1px solid #1E1E2A',
           paddingTop: trackPadTop,
-          marginTop: isFeed ? '0' : '24px',
+          marginTop: isFeed ? '0' : '28px',
         }}>
           <span style={{
             fontWeight: 600,
             fontSize: trackFont,
             color: '#f5f5f7',
             textAlign: 'center' as const,
-            wordBreak: 'break-word' as const,
             maxWidth: '90%',
+            whiteSpace: 'pre-wrap' as const,
           }}>
             {nbsp(trackName || (lang === 'es' ? 'Sin nombre' : 'Untitled'))}
           </span>
@@ -393,6 +451,7 @@ export default function ScoreCard({ score, verdict, filename, metricsBars, genre
               padding: isFeed ? '4px 14px' : '6px 18px',
               borderRadius: '20px',
               letterSpacing: '0.02em',
+              whiteSpace: 'pre' as const,
             }}>
               {nbsp(genreDisplay)}
             </span>
@@ -400,82 +459,14 @@ export default function ScoreCard({ score, verdict, filename, metricsBars, genre
           <span style={{
             fontSize: '11px',
             color: '#6b6b7e',
+            whiteSpace: 'pre' as const,
           }}>
             {nbsp(dateStr)}
           </span>
         </div>
-      </>
-    )
 
-    return (
-      <div style={{
-        width: '1080px',
-        height: isFeed ? '1080px' : '1920px',
-        background: '#0D0D14',
-        borderRadius: '0px',
-        overflow: 'hidden',
-        position: 'relative',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding,
-        fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
-        color: '#f5f5f7',
-      }}>
-        {/* Top gradient line */}
-        <div style={{
-          position: 'absolute',
-          top: 0, left: 0, right: 0,
-          height: '3px',
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        }} />
-
-        {/* Header */}
-        <div style={{
-          width: '100%',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        }}>
-          <span style={{
-            fontWeight: 700,
-            fontSize: wordmarkFont,
-            letterSpacing: '-0.02em',
-            color: '#6b6b7e',
-          }}>
-            {nbsp('Mastering Ready')}
-          </span>
-          <span style={{
-            fontSize: '11px',
-            fontWeight: 600,
-            letterSpacing: '0.12em',
-            textTransform: 'uppercase' as const,
-            color: '#a0a0b2',
-            background: '#1E1E2A',
-            padding: '5px 12px',
-            borderRadius: '6px',
-          }}>
-            {nbsp(lang === 'es' ? 'Análisis de Mezcla' : 'Mix Analysis')}
-          </span>
-        </div>
-
-        {/* Feed: render sections directly with space-between */}
-        {/* Story: wrap in centered block to eliminate dead space */}
-        {isFeed ? (
-          middleContent
-        ) : (
-          <div style={{
-            flex: 1,
-            width: '100%',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}>
-            {middleContent}
-          </div>
-        )}
+        {/* Story: bottom spacer to balance layout */}
+        {!isFeed && <div style={{ flex: 1 }} />}
 
         {/* Footer */}
         <div style={{
@@ -500,6 +491,7 @@ export default function ScoreCard({ score, verdict, filename, metricsBars, genre
             color: '#6b6b7e',
             textAlign: 'center' as const,
             marginTop: '4px',
+            whiteSpace: 'pre' as const,
           }}>
             {nbsp(lang === 'es' ? 'Analiza tu mezcla gratis' : 'Analyze your mix free')}
           </span>
@@ -520,7 +512,7 @@ export default function ScoreCard({ score, verdict, filename, metricsBars, genre
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6b6b7e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="18 15 12 9 6 15" />
               </svg>
-              <span>{nbsp(lang === 'es' ? 'Link en bio' : 'Link in bio')}</span>
+              <span style={{ whiteSpace: 'pre' as const }}>{nbsp(lang === 'es' ? 'Link en bio' : 'Link in bio')}</span>
             </div>
           )}
         </div>
