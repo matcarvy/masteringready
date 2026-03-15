@@ -213,15 +213,26 @@ function CustomDot(props: any) {
 
   const color = getScoreColor(payload.score)
   return (
-    <circle
-      cx={cx}
-      cy={cy}
-      r={4}
-      fill={color}
-      stroke="var(--mr-bg-card)"
-      strokeWidth={2}
-      style={{ cursor: 'pointer', pointerEvents: 'all' }}
-    />
+    <g style={{ cursor: 'pointer' }}>
+      {/* Invisible larger hit area for easier hover/tap */}
+      <circle
+        cx={cx}
+        cy={cy}
+        r={14}
+        fill="transparent"
+        style={{ pointerEvents: 'all' }}
+      />
+      {/* Visible dot */}
+      <circle
+        cx={cx}
+        cy={cy}
+        r={5}
+        fill={color}
+        stroke="var(--mr-bg-card)"
+        strokeWidth={2}
+        style={{ pointerEvents: 'none' }}
+      />
+    </g>
   )
 }
 
@@ -232,8 +243,8 @@ function CustomActiveDot(props: any) {
   const color = getScoreColor(payload.score)
   return (
     <g>
-      <circle cx={cx} cy={cy} r={10} fill={color} opacity={0.2} />
-      <circle cx={cx} cy={cy} r={6} fill={color} stroke="var(--mr-bg-card)" strokeWidth={2} />
+      <circle cx={cx} cy={cy} r={12} fill={color} opacity={0.2} />
+      <circle cx={cx} cy={cy} r={7} fill={color} stroke="var(--mr-bg-card)" strokeWidth={2} />
     </g>
   )
 }

@@ -1446,6 +1446,7 @@ Comprehensive security penetration test covering 7 attack vectors with 6 paralle
 | `app/page.tsx` | Main analyzer page (~5000 lines) |
 | `app/dashboard/page.tsx` | Dashboard / Mis Analisis (~2200 lines) |
 | `app/admin/page.tsx` | Admin dashboard (~3100 lines, 6 tabs) |
+| `app/admin/comparison/page.tsx` | Frequency comparison tool (6-band A/B) |
 | `app/api/checkout/route.ts` | Stripe checkout session creation |
 | `app/api/customer-portal/route.ts` | Stripe Customer Portal |
 | `app/api/webhooks/stripe/route.ts` | Stripe webhook handler (5 events) |
@@ -4437,35 +4438,85 @@ Continued from previous session. InterpretativeSection recommendation cards were
 
 ---
 
-## NEXT STEPS (Priority Order) — Updated 2026-03-06
+## NEXT STEPS (Priority Order) — Updated 2026-03-13
 
-### IMMEDIATE (this week)
-1. **Regression test on Render** — Run 5-10 real mixes through production. Read Spanish reports aloud for naturalness. Verify single-item list polish + Score Factors table in PDFs.
-2. **Verify Score Factors table in PDFs** — Generate PDFs for 3 test tracks (100, 84, 28 scores) and confirm FACTORES DE PUNTUACIÓN section appears.
+### Source docs for strategy
+- `content/marketing-playbook.html` — Full strategy (70/20/10 rule, channels, Reddit, Meta Ads, viral growth, retargeting)
+- `content/week-1-execution.html` — Day-by-day copy-paste guide (all 7 days, scripts, captions, FB posts)
+- `content/week-1-content-pack.md` / `content/week-2-content-pack.md` — Original content packs
 
-### SHORT-TERM (next 1-2 weeks)
-3. **Workshop landing page** (`/workshop`) — Priority 4 from roadmap. Full page with Stripe checkout, replacing Carrd. Copy in week-1 pack §1.
-4. **Founding member DMs** — DM warm leads from IG/WhatsApp with founding offer ($4.99/mo locked).
-5. **Lead prospector outreach** — Reply to top YouTube/HN leads from `/prospecting`.
-6. **Testimonials: get to 6** — Need 3 more for clean 2-row grid.
-7. **Welcome email (manual)** — Gmail to every new signup.
-8. **Email service (Resend)** — $0 for 3K emails/mo. Automate 4-email sequence.
+---
 
-### MONTH 2 (data-driven)
-9. **Before/After transformation capture** — Auto-save score cards as PNG, admin page to pair + export for social.
-10. **Revenue tracking admin tab** — Stripe data by tier per week vs. plan targets.
-11. **Audit intake page** (`/audit`) — Stripe checkout + file upload for $97 standalone audit.
-12. **LATAM payments (PSE/Nequi)** — Trigger: Colombian signups hitting paywall without intl card.
-13. **More SEO learn pages** — Based on Search Console data.
-14. **eBook migration from Payhip** — Stripe product at $15 USD.
-15. **Genre profile calibration** — Analyze ~102 reference tracks across 10 genres.
+### WEBSITE CHANGES TO IMPLEMENT (from playbook + execution guide analysis)
 
-### MONTH 3+ (scale what works)
-16. **Product Hunt** — After 6+ testimonials + proven conversion.
-17. **DLocal integration** — If LATAM signups high but paid conversion <3%.
-18. **Signed token system** — HMAC-signed tokens for Render API protection.
-19. **Priority Queue System** — Trigger: OOM errors or queue depth >5.
-20. **Stream Ready deploy** — Backend ready in `main.py`.
+#### Tier 1 — High Impact, Directly Drives Growth
+
+| # | Feature | Status | Notes |
+|---|---------|--------|-------|
+| 1 | **Shareable Score Cards (PNG export)** | TODO | **Highest-leverage website feature.** After analysis, generate branded 1080x1080 (feed) + 1080x1920 (story) PNG: track name, score ring, 5 metric bars, MR logo + URL. One-tap "Share to IG" / "Download PNG". PLG viral loop: analyze → share → friend sees → uploads → shares → loop. HTML template exists at `content/assets/score-card-template.html`. Needs `html2canvas` or server-side rendering. Spotify Wrapped playbook. |
+| 2 | **Workshop Landing Page** (`/workshop`) | TODO | Week-1 pack §1 has full copy. `SERVICES_CONFIG.workshop` already wired with empty URL. Stripe checkout, date/time, bilingual. Unblocks workshop banner already coded (hidden until URL + date set). Priority 4 in must-build list. |
+| 3 | **Founding Member Coupon Flow** | TODO | `FOUNDING10` coupon (50% off Pro, recurring, 10 redemptions). Create in Stripe Dashboard. Optional: add coupon input field on subscription/checkout page so DM recipients can self-apply. Small code change, big conversion enabler for DM strategy. |
+
+#### Tier 2 — Medium Impact, Builds Trust & Conversion
+
+| # | Feature | Status | Notes |
+|---|---------|--------|-------|
+| 4 | **Before/After Transformation Capture** | TODO | Auto-detect when same user analyzes same track twice → show score delta. Admin page to pair before/after + export as branded comparison card. Top ad creative per playbook. Priority 5 in should-build. |
+| 5 | **Achievement Badges** | TODO | "First Analysis", "Score Over 90", "Improvement Champion" (score went up). Dashboard badges, each with shareable card. Drives sharing + return visits. |
+| 6 | **Meta Pixel Custom Events** | TODO | Pixel installed, but retargeting segments need specific events: `AnalysisStarted` (uploaded file), `AnalysisCompleted` (saw results), `SignedUp` (created account), `ProCheckout` (started checkout). Small `fbq('track', ...)` calls in `page.tsx`. Unlocks full retargeting funnel for ads. |
+
+#### Tier 3 — Later / Data-Driven
+
+| # | Feature | Status | Notes |
+|---|---------|--------|-------|
+| 7 | **Referral Program** | TODO | "Refer a friend → both get +1 extra analysis." Referral codes in score cards. Needs: referral tracking table, code generation, redemption logic. Month 2+. |
+| 8 | **Audit Intake Page** (`/audit`) | TODO | $97 standalone audit, Stripe checkout + file upload. `SERVICES_CONFIG.audit` already wired with empty URL. Priority 7 in should-build. |
+| 9 | **Revenue Tracking Admin Tab** | TODO | Stripe data by tier per week vs. plan targets. Build when paying customers exist. |
+| 10 | **Email Service (Resend)** | TODO | $0 for 3K emails/mo. 4-email sequence: welcome, score explained (24h), upgrade nudge (after 2 free), re-engagement (14d inactive). Templates drafted in Session 2026-02-21 Part 4. |
+
+---
+
+### CONTENT WORK (not code — Matías executes manually)
+
+**Content files:** `content/marketing-playbook.html`, `content/week-1-execution.html`, `content/week-1-content-pack.md`, `content/week-2-content-pack.md`
+
+**Hormozi Content Machine — 3 core ideas x 9 formats = 27 pieces/week:**
+- Idea A: "Your ears lie after 6 hours" (the problem)
+- Idea B: "6-point checklist" (the education)
+- Idea C: "I built a tool" (the reveal)
+
+**Assets Claude can build:**
+- [x] Carousel slides HTML — `content/assets/carousel-checklist.html`
+- [x] Score card template — `content/assets/score-card-template.html`
+- [ ] Infographic HTMLs (ears-lie, checklist, tool-reveal)
+- [ ] Hormozi matrix HTML (all 27 pieces written)
+- [ ] IG bio copy (both accounts)
+
+**Assets Matías must provide:**
+- [ ] Screen recordings (90+ and 30-40 score analyses)
+- [ ] Setup photos (laptop, headphones, interface, desk, REAPER)
+- [ ] Voiceovers for reels (scripts in `week-1-execution.html`)
+- [ ] Testimonial screenshot (WhatsApp/DM)
+
+**Social posting automation (future):**
+- [ ] `scripts/social-poster/` — X + LinkedIn + FB Page via API
+- IG/TikTok remain manual (no posting API) — use Buffer or Meta Business Suite
+
+**Weekly content rhythm:** Follow `week-1-execution.html` day-by-day. 70% life / 20% edu / 10% MR. Never post 2 MR reels back-to-back.
+
+---
+
+### OTHER PENDING
+
+| Priority | What | Status |
+|----------|------|--------|
+| - | **LATAM payments (PSE/Nequi)** | TODO — trigger: Colombian signups hitting paywall |
+| - | **Product Hunt** | TODO — after 6+ testimonials + proven conversion |
+| - | **DLocal integration** | TODO — if LATAM signups high but paid <3% |
+| - | **Genre profile calibration** | TODO — analyze ~102 reference tracks across 10 genres |
+| - | **Signed token system** | TODO — HMAC-signed tokens for Render API protection |
+| - | **Priority Queue System** | TODO — trigger: OOM errors or queue depth >5 |
+| - | **Stream Ready deploy** | TODO — backend ready in `main.py`, frontend at `~/streamready/` |
 
 ### Session 2026-03-06 Part 2 — Compression Timeout Fix (Brave Browser)
 
@@ -4722,3 +4773,64 @@ Dashboard/history PDF downloads from old analyses will get a **mix** of old and 
 1. `ebb305a` - fix: DC Offset cleanup — neutralize score deltas (weight=0), fix EN Spanish text leak, voice guide compliance
 
 **Git state**: main on `ebb305a`, pushed. Build clean.
+
+### Session 2026-03-09 — Frequency Comparison Tool (`/admin/comparison`)
+
+#### Context
+User (audio instructor) needed a quick way to check if students actually applied EQ adjustments to their mixes. Built as a lightweight A/B comparison tool, intended as a prototype for a future full mix-vs-reference or before/after feature.
+
+#### Feature: Frequency Comparator (`e55387a`)
+- **New page**: `app/admin/comparison/page.tsx` — admin-only, no backend changes
+- **Flow**: Upload File A (original) + File B (modified) → runs existing analysis API on each → compares 6-band spectral data
+- **6 bands compared**: Sub (20-60 Hz), Low (60-250), Low-Mid (250-500), Mid (500-2k), High-Mid (2k-6k), High (6k-20k)
+- **Visual**: Side-by-side bars per band (blue=A, purple=B), delta column color-coded (green=boost, red=cut, gray=<1% negligible)
+- **Summary banner**: "EQ changes detected (max delta: X%)" (green) or "No significant EQ changes" (amber, all bands <2%)
+- **Score comparison footer**: Score A → Score B with delta
+- **Admin auth**: `createFreshQueryClient` pattern (same as prospecting page)
+- **Polling**: Independent polling per slot, full cleanup on unmount/reset/completion
+- **Dark/light mode**: All `var(--mr-*)` CSS tokens, works in both themes
+- **Bilingual**: ES LATAM Neutro + US English
+- **No backend changes**: Reuses `startAnalysisPolling` + `getAnalysisStatus` from `lib/api.ts`
+- **Admin analyses**: Counted as `is_test_analysis`, excluded from stats, unlimited quota
+
+#### Verification
+- 4-point agent audit: function signatures, spectral keys, auth pattern, polling cleanup — ALL PASS
+- `npx next build` → clean, 31 routes compiled, zero errors
+- User tested with real student files: EQ changes correctly detected (Sub +2.8%, Mid -1.5%)
+
+#### Key Design Decision
+- Frequency balance weight is only 5% of overall score. Small EQ changes (1-3%) show as "EQ changes detected" in the comparison but won't move the overall score. This is correct — the tool shows *whether* EQ was touched, not whether it improved the score.
+
+#### Future Expansion
+- Full mix-vs-reference mode (compare student mix against commercial reference)
+- Before/after with all metrics (not just frequency)
+- Score card PNG export for social proof
+
+#### Commits to main
+1. `e55387a` - feat: frequency comparison tool at /admin/comparison
+
+**Git state**: main on `e55387a`, pushed. Build clean.
+
+### Session 2026-03-09 Part 2 — Favicon White Corners Fix
+
+#### Problem
+Chrome tab showed white corners on the favicon against the dark tab bar.
+
+#### Root Cause
+The SVG (`icon.svg`) was fixed in Session 2026-03-02 Part 2 (removed `rx="22"` rounded corners), but all PNG icons (`icon-512.png`, `icon-192.png`, `apple-touch-icon.png`) and `favicon.ico` were never regenerated. They still had rounded corners with white backgrounds from the original SVG. Chrome prefers `.ico` over `.svg` for tab favicons, so it displayed the old rounded-corner `.ico`.
+
+#### Fix (`a38c5e5`)
+Regenerated all 4 icon files from scratch using Python Pillow with 4x supersampling:
+- `favicon.ico` (16x16 + 32x32 + 48x48) — edge-to-edge gradient, no white corners
+- `icon-512.png` — PWA install icon
+- `icon-192.png` — manifest icon
+- `apple-touch-icon.png` (180x180) — iOS home screen
+
+All corners now show gradient color (`#667eea`), not white. Music note rendered with supersampled anti-aliasing for smooth edges.
+
+**Note**: Chrome caches favicons aggressively. After deploy, clear cache or use incognito to see the fix.
+
+#### Commits to main
+1. `a38c5e5` - fix: regenerate all icon PNGs + favicon.ico without rounded corners
+
+**Git state**: main on `a38c5e5`, pushed. Build clean.

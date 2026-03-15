@@ -60,6 +60,31 @@ function stripExtension(filename: string): string {
   return filename.replace(/\.(wav|mp3|aiff|aif|flac|aac|m4a|ogg)$/i, '')
 }
 
+// Replace spaces with non-breaking spaces — html2canvas collapses regular spaces
+function nbsp(s: string): string {
+  return s.replace(/ /g, '\u00A0')
+}
+
+// Score-based bilingual verdict for PNG cards (always matches current lang)
+function getCardVerdict(score: number, lang: 'es' | 'en'): string {
+  if (lang === 'es') {
+    if (score >= 95) return '✅ Margen óptimo para mastering'
+    if (score >= 85) return '✅ Lista para mastering'
+    if (score >= 75) return '⚠️ Margen suficiente'
+    if (score >= 60) return '⚠️ Margen reducido'
+    if (score >= 40) return '⚠️ Margen limitado'
+    if (score >= 20) return '⚠️ Margen comprometido'
+    return '❌ Requiere revisión'
+  }
+  if (score >= 95) return '✅ Optimal margin for mastering'
+  if (score >= 85) return '✅ Ready for mastering'
+  if (score >= 75) return '⚠️ Sufficient margin'
+  if (score >= 60) return '⚠️ Reduced margin'
+  if (score >= 40) return '⚠️ Limited margin'
+  if (score >= 20) return '⚠️ Compromised margin'
+  return '❌ Requires review'
+}
+
 // Genre display labels (bilingual)
 const genreLabels: Record<string, { es: string; en: string }> = {
   'Pop/Balada': { es: 'Pop / Balada', en: 'Pop / Ballad' },
@@ -123,6 +148,8 @@ export default function ScoreCard({ score, verdict, filename, metricsBars, genre
   const scoreColor = getScoreHex(score)
   const dashOffset = CIRCUMFERENCE * (1 - score / 100)
   const trackName = stripExtension(filename)
+  // Derive verdict from score + lang (always matches current language, not API response language)
+  const verdictText = getCardVerdict(score, lang)
   const genreDisplay = genre && genreLabels[genre]
     ? (lang === 'es' ? genreLabels[genre].es : genreLabels[genre].en)
     : genre || null
@@ -153,7 +180,7 @@ export default function ScoreCard({ score, verdict, filename, metricsBars, genre
       const canvas = await html2canvas(el, {
         width: format === 'feed' ? 1080 : 1080,
         height: format === 'feed' ? 1080 : 1920,
-        scale: 1,
+        scale: 2,
         backgroundColor: '#0D0D14',
         useCORS: true,
         logging: false,
@@ -205,69 +232,14 @@ export default function ScoreCard({ score, verdict, filename, metricsBars, genre
     const trackPadTop = isFeed ? '20px' : '14px'
     const verdictMargin = isFeed ? '12px' : '8px'
 
-    return (
-      <div style={{
-        width: '1080px',
-        height: isFeed ? '1080px' : '1920px',
-        background: '#0D0D14',
-        borderRadius: '0px',
-        overflow: 'hidden',
-        position: 'relative',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding,
-        fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
-        color: '#f5f5f7',
-        // html2canvas collapses whitespace in flex/inline elements — force preservation
-        whiteSpace: 'pre-wrap' as const,
-      }}>
-        {/* Top gradient line */}
-        <div style={{
-          position: 'absolute',
-          top: 0, left: 0, right: 0,
-          height: '3px',
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        }} />
-
-        {/* Header */}
-        <div style={{
-          width: '100%',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        }}>
-          <span style={{
-            fontWeight: 700,
-            fontSize: wordmarkFont,
-            letterSpacing: '-0.02em',
-            color: '#6b6b7e',
-            whiteSpace: 'nowrap' as const,
-          }}>
-            Mastering Ready
-          </span>
-          <span style={{
-            fontSize: '11px',
-            fontWeight: 600,
-            letterSpacing: '0.12em',
-            textTransform: 'uppercase' as const,
-            color: '#a0a0b2',
-            background: '#1E1E2A',
-            padding: '5px 12px',
-            borderRadius: '6px',
-            whiteSpace: 'nowrap' as const,
-          }}>
-            {lang === 'es' ? 'Análisis de Mezcla' : 'Mix Analysis'}
-          </span>
-        </div>
-
+    // Story: wrap score+metrics+track in a centered block to eliminate dead space
+    const middleContent = (
+      <>
         {/* Score Section */}
         <div style={{
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          marginTop: isFeed ? '0' : '0',
         }}>
           {/* Ring */}
           <div style={{
@@ -322,9 +294,8 @@ export default function ScoreCard({ score, verdict, filename, metricsBars, genre
                 fontSize: denomFont,
                 color: 'rgba(255,255,255,0.55)',
                 marginLeft: isFeed ? '4px' : '6px',
-                whiteSpace: 'nowrap' as const,
               }}>
-                /100
+                {nbsp('/100')}
               </span>
             </div>
           </div>
@@ -335,9 +306,8 @@ export default function ScoreCard({ score, verdict, filename, metricsBars, genre
             textAlign: 'center' as const,
             color: '#a0a0b2',
             marginTop: verdictMargin,
-            whiteSpace: 'pre-wrap' as const,
           }}>
-            {verdict}
+            {nbsp(verdictText)}
           </div>
         </div>
 
@@ -347,6 +317,7 @@ export default function ScoreCard({ score, verdict, filename, metricsBars, genre
           display: 'flex',
           flexDirection: 'column',
           gap: metricGap,
+          marginTop: isFeed ? '0' : '24px',
         }}>
           {displayedMetrics.map(({ key, label, bar }) => (
             <div key={key} style={{
@@ -361,9 +332,8 @@ export default function ScoreCard({ score, verdict, filename, metricsBars, genre
                 color: '#a0a0b2',
                 textAlign: 'right' as const,
                 flexShrink: 0,
-                whiteSpace: 'pre-wrap' as const,
               }}>
-                {lang === 'es' ? label.es : label.en}
+                {nbsp(lang === 'es' ? label.es : label.en)}
               </span>
               <div style={{
                 flex: 1,
@@ -402,6 +372,7 @@ export default function ScoreCard({ score, verdict, filename, metricsBars, genre
           gap: isFeed ? '8px' : '6px',
           borderTop: '1px solid #1E1E2A',
           paddingTop: trackPadTop,
+          marginTop: isFeed ? '0' : '24px',
         }}>
           <span style={{
             fontWeight: 600,
@@ -410,9 +381,8 @@ export default function ScoreCard({ score, verdict, filename, metricsBars, genre
             textAlign: 'center' as const,
             wordBreak: 'break-word' as const,
             maxWidth: '90%',
-            whiteSpace: 'pre-wrap' as const,
           }}>
-            {trackName || (lang === 'es' ? 'Sin nombre' : 'Untitled')}
+            {nbsp(trackName || (lang === 'es' ? 'Sin nombre' : 'Untitled'))}
           </span>
           {genreDisplay && (
             <span style={{
@@ -423,18 +393,89 @@ export default function ScoreCard({ score, verdict, filename, metricsBars, genre
               padding: isFeed ? '4px 14px' : '6px 18px',
               borderRadius: '20px',
               letterSpacing: '0.02em',
-              whiteSpace: 'nowrap' as const,
             }}>
-              {genreDisplay}
+              {nbsp(genreDisplay)}
             </span>
           )}
           <span style={{
             fontSize: '11px',
             color: '#6b6b7e',
           }}>
-            {dateStr}
+            {nbsp(dateStr)}
           </span>
         </div>
+      </>
+    )
+
+    return (
+      <div style={{
+        width: '1080px',
+        height: isFeed ? '1080px' : '1920px',
+        background: '#0D0D14',
+        borderRadius: '0px',
+        overflow: 'hidden',
+        position: 'relative',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding,
+        fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+        color: '#f5f5f7',
+      }}>
+        {/* Top gradient line */}
+        <div style={{
+          position: 'absolute',
+          top: 0, left: 0, right: 0,
+          height: '3px',
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        }} />
+
+        {/* Header */}
+        <div style={{
+          width: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}>
+          <span style={{
+            fontWeight: 700,
+            fontSize: wordmarkFont,
+            letterSpacing: '-0.02em',
+            color: '#6b6b7e',
+          }}>
+            {nbsp('Mastering Ready')}
+          </span>
+          <span style={{
+            fontSize: '11px',
+            fontWeight: 600,
+            letterSpacing: '0.12em',
+            textTransform: 'uppercase' as const,
+            color: '#a0a0b2',
+            background: '#1E1E2A',
+            padding: '5px 12px',
+            borderRadius: '6px',
+          }}>
+            {nbsp(lang === 'es' ? 'Análisis de Mezcla' : 'Mix Analysis')}
+          </span>
+        </div>
+
+        {/* Feed: render sections directly with space-between */}
+        {/* Story: wrap in centered block to eliminate dead space */}
+        {isFeed ? (
+          middleContent
+        ) : (
+          <div style={{
+            flex: 1,
+            width: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}>
+            {middleContent}
+          </div>
+        )}
 
         {/* Footer */}
         <div style={{
@@ -451,7 +492,6 @@ export default function ScoreCard({ score, verdict, filename, metricsBars, genre
             padding: '8px 28px',
             borderRadius: '24px',
             letterSpacing: '-0.01em',
-            whiteSpace: 'nowrap' as const,
           }}>
             masteringready.com
           </span>
@@ -460,9 +500,8 @@ export default function ScoreCard({ score, verdict, filename, metricsBars, genre
             color: '#6b6b7e',
             textAlign: 'center' as const,
             marginTop: '4px',
-            whiteSpace: 'pre-wrap' as const,
           }}>
-            {lang === 'es' ? 'Analiza tu mezcla gratis' : 'Analyze your mix free'}
+            {nbsp(lang === 'es' ? 'Analiza tu mezcla gratis' : 'Analyze your mix free')}
           </span>
 
           {/* Story-only: swipe hint */}
@@ -481,7 +520,7 @@ export default function ScoreCard({ score, verdict, filename, metricsBars, genre
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6b6b7e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="18 15 12 9 6 15" />
               </svg>
-              <span style={{ whiteSpace: 'nowrap' as const }}>Link in bio</span>
+              <span>{nbsp(lang === 'es' ? 'Link en bio' : 'Link in bio')}</span>
             </div>
           )}
         </div>
