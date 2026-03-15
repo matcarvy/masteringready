@@ -41,6 +41,7 @@ import InterpretativeSection from '@/components/InterpretativeSection'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { clearNotification } from '@/components/NotificationBadge'
 import { SkeletonBox, SkeletonText, SkeletonCircle } from '@/components/Skeleton'
+import ProgressTimeline from '@/components/ProgressTimeline'
 
 // ============================================================================
 // TRANSLATIONS / TRADUCCIONES
@@ -1173,6 +1174,15 @@ function DashboardContent() {
             </div>
           )
         })()}
+
+        {/* Progress Timeline */}
+        {analyses.length > 0 && (
+          <ProgressTimeline
+            analyses={analyses}
+            lang={lang}
+            isMobile={isMobile}
+          />
+        )}
 
         {/* Analyses List */}
         <div style={{

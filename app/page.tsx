@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Download, Check, Upload, Zap, Shield, TrendingUp, Play, Music, Crown, X, AlertTriangle, Globe, Headphones, Menu, GraduationCap, Stethoscope, Wrench, ChevronDown } from 'lucide-react'
 import { UserMenu, useAuth, AuthModal } from '@/components/auth'
 import { ThemeToggle } from '@/components/ThemeToggle'
+import ScoreCard from '@/components/ScoreCard'
 import { analyzeFile, checkIpLimit, IpCheckResult } from '@/lib/api'
 import { startAnalysisPolling, getAnalysisStatus } from '@/lib/api'
 import { compressAudioFile, parseFileHeader } from '@/lib/audio-compression'
@@ -4232,6 +4233,38 @@ by Matías Carvajal
                   </button>
                   )}
                 </div>
+
+                {/* Share Score Card — download branded PNG for social sharing */}
+                {result && (result as any).metrics_bars && (
+                  <div style={{ marginBottom: '1.5rem' }}>
+                    <p style={{
+                      fontSize: 'clamp(0.75rem, 2vw, 0.8125rem)',
+                      fontWeight: '600',
+                      color: 'var(--mr-text-secondary)',
+                      marginBottom: '0.5rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.375rem'
+                    }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="18" cy="5" r="3" />
+                        <circle cx="6" cy="12" r="3" />
+                        <circle cx="18" cy="19" r="3" />
+                        <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+                        <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+                      </svg>
+                      {lang === 'es' ? 'Compartir Score Card' : 'Share Score Card'}
+                    </p>
+                    <ScoreCard
+                      score={result.score}
+                      verdict={result.verdict}
+                      filename={result.filename || file?.name || 'Unknown'}
+                      metricsBars={(result as any).metrics_bars}
+                      genre={(result as any).user_genre || null}
+                      lang={lang}
+                    />
+                  </div>
+                )}
               </div>
 
               {/* CTA for Mastering Service — combined card for ≥85, backend-driven for lower scores */}
