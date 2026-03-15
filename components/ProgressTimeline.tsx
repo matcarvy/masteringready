@@ -207,32 +207,22 @@ function CustomTooltip({ active, payload, lang }: any) {
 // CUSTOM DOT
 // ============================================================================
 
+// Recharts activates tooltips via X-axis proximity (internal calculation),
+// NOT via pointer events on dots. Keep dots simple — no <g> wrappers.
 function CustomDot(props: any) {
   const { cx, cy, payload } = props
   if (cx == null || cy == null || !payload) return null
 
   const color = getScoreColor(payload.score)
   return (
-    <g style={{ cursor: 'pointer' }}>
-      {/* Invisible larger hit area for easier hover/tap */}
-      <circle
-        cx={cx}
-        cy={cy}
-        r={14}
-        fill="transparent"
-        style={{ pointerEvents: 'all' }}
-      />
-      {/* Visible dot */}
-      <circle
-        cx={cx}
-        cy={cy}
-        r={5}
-        fill={color}
-        stroke="var(--mr-bg-card)"
-        strokeWidth={2}
-        style={{ pointerEvents: 'none' }}
-      />
-    </g>
+    <circle
+      cx={cx}
+      cy={cy}
+      r={5}
+      fill={color}
+      stroke="var(--mr-bg-card)"
+      strokeWidth={2}
+    />
   )
 }
 
@@ -588,6 +578,7 @@ export default function ProgressTimeline({ analyses, lang, isMobile }: ProgressT
                     strokeDasharray: '4 4',
                   }}
                   isAnimationActive={false}
+                  wrapperStyle={{ pointerEvents: 'none' }}
                 />
 
                 {/* Reference lines at score thresholds */}
