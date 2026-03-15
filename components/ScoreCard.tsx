@@ -232,6 +232,73 @@ export default function ScoreCard({ score, verdict, filename, metricsBars, genre
     const trackPadTop = isFeed ? '20px' : '14px'
     const verdictMargin = isFeed ? '12px' : '8px'
 
+    const middleContent = (
+      <>
+        {/* Score Section */}
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+        }}>
+          {/* Ring */}
+          <div style={{
+            position: 'relative',
+            width: `${ringSize}px`,
+            height: `${ringSize}px`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}>
+            <svg width={ringSize} height={ringSize} viewBox="0 0 200 200">
+              <circle cx="100" cy="100" r="88" fill="none" stroke="#1E1E2A" strokeWidth={isFeed ? 10 : 12} />
+              <circle cx="100" cy="100" r="88" fill="none" stroke={scoreColor} strokeWidth={isFeed ? 10 : 12}
+                strokeLinecap="round" strokeDasharray={`${CIRCUMFERENCE}`} strokeDashoffset={dashOffset}
+                transform="rotate(-90 100 100)" />
+            </svg>
+            <div style={{ position: 'absolute', display: 'flex', alignItems: 'baseline', justifyContent: 'center', width: '100%', textAlign: 'center' as const }}>
+              <span style={{ fontWeight: 900, fontSize: scoreFont, lineHeight: 1, letterSpacing: '-0.04em', color: scoreColor }}>{score}</span>
+              <span style={{ fontWeight: 500, fontSize: denomFont, color: 'rgba(255,255,255,0.55)', marginLeft: isFeed ? '4px' : '6px', whiteSpace: 'pre' as const }}>/100</span>
+            </div>
+          </div>
+          <div style={{ fontWeight: 600, fontSize: verdictFont, textAlign: 'center' as const, color: '#a0a0b2', marginTop: verdictMargin, whiteSpace: 'pre' as const }}>
+            {nbsp(verdictText)}
+          </div>
+        </div>
+
+        {/* Metrics Bars */}
+        <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: metricGap, marginTop: isFeed ? '0' : '28px' }}>
+          {displayedMetrics.map(({ key, label, bar }) => (
+            <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <span style={{ width: metricNameWidth, fontSize: metricFont, fontWeight: 500, color: '#a0a0b2', textAlign: 'right' as const, flexShrink: 0, whiteSpace: 'pre' as const }}>
+                {nbsp(lang === 'es' ? label.es : label.en)}
+              </span>
+              <div style={{ flex: 1, height: barHeight, background: '#1E1E2A', borderRadius: `${parseInt(barHeight) / 2}px`, overflow: 'hidden' }}>
+                <div style={{ width: `${bar.percentage}%`, height: '100%', background: getBarColor(bar.status), borderRadius: `${parseInt(barHeight) / 2}px` }} />
+              </div>
+              <span style={{ width: valueWidth, fontSize: metricFont, fontWeight: 700, color: getStatusColor(bar.status), textAlign: 'left' as const, flexShrink: 0 }}>
+                {bar.percentage}%
+              </span>
+            </div>
+          ))}
+        </div>
+
+        {/* Track Info */}
+        <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: isFeed ? '8px' : '6px', borderTop: '1px solid #1E1E2A', paddingTop: trackPadTop, marginTop: isFeed ? '0' : '28px' }}>
+          <span style={{ fontWeight: 600, fontSize: trackFont, color: '#f5f5f7', textAlign: 'center' as const, maxWidth: '90%', whiteSpace: 'pre-wrap' as const }}>
+            {nbsp(trackName || (lang === 'es' ? 'Sin nombre' : 'Untitled'))}
+          </span>
+          {genreDisplay && (
+            <span style={{ fontSize: isFeed ? '12px' : '14px', fontWeight: 500, color: '#a0a0b2', background: '#1E1E2A', padding: isFeed ? '4px 14px' : '6px 18px', borderRadius: '20px', letterSpacing: '0.02em', whiteSpace: 'pre' as const }}>
+              {nbsp(genreDisplay)}
+            </span>
+          )}
+          <span style={{ fontSize: '11px', color: '#6b6b7e', whiteSpace: 'pre' as const }}>
+            {nbsp(dateStr)}
+          </span>
+        </div>
+      </>
+    )
+
     return (
       <div style={{
         width: '1080px',
@@ -243,7 +310,7 @@ export default function ScoreCard({ score, verdict, filename, metricsBars, genre
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        justifyContent: isFeed ? 'space-between' : 'flex-start',
+        justifyContent: 'space-between',
         padding,
         fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
         color: '#f5f5f7',
@@ -289,191 +356,21 @@ export default function ScoreCard({ score, verdict, filename, metricsBars, genre
           </span>
         </div>
 
-        {/* Story: fixed gap after header */}
-        {!isFeed && <div style={{ height: '40px' }} />}
-
-        {/* Score Section */}
-        <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-        }}>
-          {/* Ring — uses SVG-native transform (not CSS) for html2canvas compatibility at scale 2 */}
-          <div style={{
-            position: 'relative',
-            width: `${ringSize}px`,
-            height: `${ringSize}px`,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}>
-            <svg
-              width={ringSize}
-              height={ringSize}
-              viewBox="0 0 200 200"
-            >
-              <circle
-                cx="100" cy="100" r="88"
-                fill="none"
-                stroke="#1E1E2A"
-                strokeWidth={isFeed ? 10 : 12}
-              />
-              <circle
-                cx="100" cy="100" r="88"
-                fill="none"
-                stroke={scoreColor}
-                strokeWidth={isFeed ? 10 : 12}
-                strokeLinecap="round"
-                strokeDasharray={`${CIRCUMFERENCE}`}
-                strokeDashoffset={dashOffset}
-                transform="rotate(-90 100 100)"
-              />
-            </svg>
-            <div style={{
-              position: 'absolute',
-              display: 'flex',
-              alignItems: 'baseline',
-              justifyContent: 'center',
-              width: '100%',
-              textAlign: 'center' as const,
-            }}>
-              <span style={{
-                fontWeight: 900,
-                fontSize: scoreFont,
-                lineHeight: 1,
-                letterSpacing: '-0.04em',
-                color: scoreColor,
-              }}>
-                {score}
-              </span>
-              <span style={{
-                fontWeight: 500,
-                fontSize: denomFont,
-                color: 'rgba(255,255,255,0.55)',
-                marginLeft: isFeed ? '4px' : '6px',
-                whiteSpace: 'pre' as const,
-              }}>
-                /100
-              </span>
-            </div>
+        {/* Story: flex-1 wrapper centers content between header and footer */}
+        {!isFeed ? (
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
+            {middleContent}
           </div>
-          {/* Verdict */}
-          <div style={{
-            fontWeight: 600,
-            fontSize: verdictFont,
-            textAlign: 'center' as const,
-            color: '#a0a0b2',
-            marginTop: verdictMargin,
-            whiteSpace: 'pre' as const,
-          }}>
-            {nbsp(verdictText)}
-          </div>
-        </div>
+        ) : (
+          middleContent
+        )}
 
-        {/* Metrics Bars */}
-        <div style={{
-          width: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: metricGap,
-          marginTop: isFeed ? '0' : '28px',
-        }}>
-          {displayedMetrics.map(({ key, label, bar }) => (
-            <div key={key} style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-            }}>
-              <span style={{
-                width: metricNameWidth,
-                fontSize: metricFont,
-                fontWeight: 500,
-                color: '#a0a0b2',
-                textAlign: 'right' as const,
-                flexShrink: 0,
-                whiteSpace: 'pre' as const,
-              }}>
-                {nbsp(lang === 'es' ? label.es : label.en)}
-              </span>
-              <div style={{
-                flex: 1,
-                height: barHeight,
-                background: '#1E1E2A',
-                borderRadius: `${parseInt(barHeight) / 2}px`,
-                overflow: 'hidden',
-              }}>
-                <div style={{
-                  width: `${bar.percentage}%`,
-                  height: '100%',
-                  background: getBarColor(bar.status),
-                  borderRadius: `${parseInt(barHeight) / 2}px`,
-                }} />
-              </div>
-              <span style={{
-                width: valueWidth,
-                fontSize: metricFont,
-                fontWeight: 700,
-                color: getStatusColor(bar.status),
-                textAlign: 'left' as const,
-                flexShrink: 0,
-              }}>
-                {bar.percentage}%
-              </span>
-            </div>
-          ))}
-        </div>
-
-        {/* Track Info */}
+        {/* Footer */}
         <div style={{
           width: '100%',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          gap: isFeed ? '8px' : '6px',
-          borderTop: '1px solid #1E1E2A',
-          paddingTop: trackPadTop,
-          marginTop: isFeed ? '0' : '28px',
-        }}>
-          <span style={{
-            fontWeight: 600,
-            fontSize: trackFont,
-            color: '#f5f5f7',
-            textAlign: 'center' as const,
-            maxWidth: '90%',
-            whiteSpace: 'pre-wrap' as const,
-          }}>
-            {nbsp(trackName || (lang === 'es' ? 'Sin nombre' : 'Untitled'))}
-          </span>
-          {genreDisplay && (
-            <span style={{
-              fontSize: isFeed ? '12px' : '14px',
-              fontWeight: 500,
-              color: '#a0a0b2',
-              background: '#1E1E2A',
-              padding: isFeed ? '4px 14px' : '6px 18px',
-              borderRadius: '20px',
-              letterSpacing: '0.02em',
-              whiteSpace: 'pre' as const,
-            }}>
-              {nbsp(genreDisplay)}
-            </span>
-          )}
-          <span style={{
-            fontSize: '11px',
-            color: '#6b6b7e',
-            whiteSpace: 'pre' as const,
-          }}>
-            {nbsp(dateStr)}
-          </span>
-        </div>
-
-        {/* Footer — story: marginTop auto pushes footer to bottom */}
-        <div style={{
-          width: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          ...(isFeed ? {} : { marginTop: 'auto' }),
         }}>
           <span style={{
             fontWeight: 700,

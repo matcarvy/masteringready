@@ -463,7 +463,7 @@ export default function ProgressTimeline({ analyses, lang, isMobile }: ProgressT
         </p>
       ) : (
         <>
-          <div style={{ width: '100%', height: chartHeight, position: 'relative' }}>
+          <div style={{ width: '100%', height: chartHeight, position: 'relative', overflow: 'visible' }}>
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart
                 data={chartData}
@@ -553,11 +553,11 @@ export default function ProgressTimeline({ analyses, lang, isMobile }: ProgressT
               </AreaChart>
             </ResponsiveContainer>
 
-            {/* Custom tooltip — only appears on direct dot hover */}
+            {/* Custom tooltip — only appears on direct dot hover, clamped to chart bounds */}
             {hoveredDot && (
               <div style={{
                 position: 'absolute',
-                left: hoveredDot.cx,
+                left: `clamp(108px, ${hoveredDot.cx}px, calc(100% - 108px))`,
                 top: hoveredDot.cy - 10,
                 transform: 'translate(-50%, -100%)',
                 background: 'var(--mr-bg-card)',
@@ -565,7 +565,7 @@ export default function ProgressTimeline({ analyses, lang, isMobile }: ProgressT
                 borderRadius: '0.5rem',
                 padding: '0.75rem 1rem',
                 boxShadow: 'var(--mr-shadow-lg)',
-                maxWidth: '220px',
+                width: '200px',
                 pointerEvents: 'none',
                 zIndex: 10,
               }}>
