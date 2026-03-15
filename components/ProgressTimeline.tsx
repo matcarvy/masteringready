@@ -354,14 +354,21 @@ export default function ProgressTimeline({ analyses, lang, isMobile }: ProgressT
 
     const trendValues = sorted.length >= 5 ? movingAverage(sorted, 3) : null
 
-    return sorted.map((a, i) => ({
-      id: a.id,
-      score: a.score,
-      displayName: truncateFilename(a.filename, 25),
-      shortDate: formatShortDate(a.created_at, lang),
-      fullDate: formatFullDate(a.created_at, lang),
-      trend: trendValues ? trendValues[i] : null,
-    }))
+    // Deduplicate x-axis labels: only show date on first occurrence of each day
+    let lastDate = ''
+    return sorted.map((a, i) => {
+      const date = formatShortDate(a.created_at, lang)
+      const showDate = date !== lastDate
+      lastDate = date
+      return {
+        id: a.id,
+        score: a.score,
+        displayName: truncateFilename(a.filename, 25),
+        shortDate: showDate ? date : '',
+        fullDate: formatFullDate(a.created_at, lang),
+        trend: trendValues ? trendValues[i] : null,
+      }
+    })
   }, [filteredAnalyses, lang])
 
   // Single analysis — show friendly message
