@@ -217,7 +217,7 @@ export default function ScoreCard({ score, verdict, filename, metricsBars, genre
     const ringSize = isFeed ? 200 : 240
     const scoreFont = isFeed
       ? (score >= 100 ? '60px' : '72px')
-      : (score >= 100 ? '78px' : '96px')
+      : (score >= 100 ? '68px' : '96px')
     const denomFont = isFeed ? '24px' : '30px'
     const verdictFont = isFeed ? '18px' : '22px'
     const metricNameWidth = isFeed ? '120px' : '140px'
@@ -358,7 +358,7 @@ export default function ScoreCard({ score, verdict, filename, metricsBars, genre
 
         {/* Story: flex-1 wrapper centers content between header and footer */}
         {!isFeed ? (
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '100%', paddingBottom: '120px' }}>
             {middleContent}
           </div>
         ) : (
