@@ -531,7 +531,12 @@ export default function ComparisonPage() {
             </span>
           </div>
         </div>
-        <ThemeToggle />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <Link href="/admin/mastering-lab" style={{ fontSize: '0.8125rem', color: 'var(--mr-text-secondary)', textDecoration: 'underline' }}>
+            {lang === 'es' ? 'Mastering Lab' : 'Mastering Lab'}
+          </Link>
+          <ThemeToggle />
+        </div>
       </header>
 
       <main style={{ maxWidth: '1100px', margin: '0 auto', padding: '2rem 1.5rem' }}>
