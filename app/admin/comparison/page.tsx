@@ -15,7 +15,7 @@ import { detectLanguage } from '@/lib/language'
 import ThemeToggle from '@/components/ThemeToggle'
 import {
   ArrowLeft, Upload, BarChart3, RefreshCw,
-  Check, X, Minus, ArrowRight
+  Check, X, Minus, ArrowRight, Target
 } from 'lucide-react'
 
 // ============================================================================
@@ -265,9 +265,11 @@ export default function ComparisonPage() {
 
   const [slotA, setSlotA] = useState<SlotData>({ ...INITIAL_SLOT })
   const [slotB, setSlotB] = useState<SlotData>({ ...INITIAL_SLOT })
+  const [slotRef, setSlotRef] = useState<SlotData>({ ...INITIAL_SLOT })
 
   const pollRefA = useRef<ReturnType<typeof setInterval> | null>(null)
   const pollRefB = useRef<ReturnType<typeof setInterval> | null>(null)
+  const pollRefRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   // Detect language
   useEffect(() => {
@@ -306,6 +308,7 @@ export default function ComparisonPage() {
     return () => {
       if (pollRefA.current) clearInterval(pollRefA.current)
       if (pollRefB.current) clearInterval(pollRefB.current)
+      if (pollRefRef.current) clearInterval(pollRefRef.current)
     }
   }, [])
 
@@ -313,9 +316,9 @@ export default function ComparisonPage() {
   // Analysis handler
   // ──────────────────────────────────────────────────────────────────────────
 
-  const analyzeFile = useCallback(async (slot: 'A' | 'B', file: File) => {
-    const setSlot = slot === 'A' ? setSlotA : setSlotB
-    const pollRef = slot === 'A' ? pollRefA : pollRefB
+  const analyzeFile = useCallback(async (slot: 'A' | 'B' | 'Ref', file: File) => {
+    const setSlot = slot === 'A' ? setSlotA : slot === 'B' ? setSlotB : setSlotRef
+    const pollRef = slot === 'A' ? pollRefA : slot === 'B' ? pollRefB : pollRefRef
 
     // Clear any existing poll
     if (pollRef.current) {
@@ -387,9 +390,9 @@ export default function ComparisonPage() {
     }
   }, [lang])
 
-  const handleReset = useCallback((slot: 'A' | 'B') => {
-    const setSlot = slot === 'A' ? setSlotA : setSlotB
-    const pollRef = slot === 'A' ? pollRefA : pollRefB
+  const handleReset = useCallback((slot: 'A' | 'B' | 'Ref') => {
+    const setSlot = slot === 'A' ? setSlotA : slot === 'B' ? setSlotB : setSlotRef
+    const pollRef = slot === 'A' ? pollRefA : slot === 'B' ? pollRefB : pollRefRef
     if (pollRef.current) {
       clearInterval(pollRef.current)
       pollRef.current = null
@@ -452,7 +455,10 @@ export default function ComparisonPage() {
 
   const spectralA = getSpectral(slotA.result)
   const spectralB = getSpectral(slotB.result)
+  const spectralRef = getSpectral(slotRef.result)
   const bothDone = slotA.state === 'done' && slotB.state === 'done' && spectralA && spectralB
+  const refDone = slotRef.state === 'done' && spectralRef
+  const allThreeDone = bothDone && refDone
 
   const comparisonData = bothDone
     ? BANDS.map(band => {
@@ -461,6 +467,23 @@ export default function ComparisonPage() {
         return { ...band, valA, valB, delta: valB - valA }
       })
     : null
+
+  // Reference comparison: distance from each mix to reference per band
+  const refComparisonData = allThreeDone
+    ? BANDS.map(band => {
+        const valA = spectralA[band.key] ?? 0
+        const valB = spectralB[band.key] ?? 0
+        const valRef = spectralRef![band.key] ?? 0
+        const distA = Math.abs(valA - valRef)
+        const distB = Math.abs(valB - valRef)
+        const closer: 'A' | 'B' | 'same' = distA < distB - 0.5 ? 'A' : distB < distA - 0.5 ? 'B' : 'same'
+        return { ...band, valA, valB, valRef, distA, distB, closer }
+      })
+    : null
+
+  const refBandsCloserB = refComparisonData?.filter(b => b.closer === 'B').length ?? 0
+  const refBandsCloserA = refComparisonData?.filter(b => b.closer === 'A').length ?? 0
+  const refBandsSame = refComparisonData?.filter(b => b.closer === 'same').length ?? 0
 
   const hasSignificantChange = comparisonData?.some(b => Math.abs(b.delta) >= 2) ?? false
   const maxDelta = comparisonData
@@ -519,8 +542,8 @@ export default function ComparisonPage() {
           fontSize: '0.9375rem',
         }}>
           {lang === 'es'
-            ? 'Sube dos versiones del mismo archivo para comparar su balance de frecuencias (6 bandas).'
-            : 'Upload two versions of the same file to compare their frequency balance (6 bands).'}
+            ? 'Sube dos versiones del mismo archivo y opcionalmente una referencia para ver si los ajustes acercan la mezcla al objetivo.'
+            : 'Upload two versions of the same file and optionally a reference to see if the adjustments bring the mix closer to the target.'}
         </p>
 
         {/* Upload zones */}
@@ -543,6 +566,13 @@ export default function ComparisonPage() {
             lang={lang}
             onFileSelected={(f) => analyzeFile('B', f)}
             onReset={() => handleReset('B')}
+          />
+          <UploadSlot
+            label={lang === 'es' ? 'Referencia (Opcional)' : 'Reference (Optional)'}
+            slot={slotRef}
+            lang={lang}
+            onFileSelected={(f) => analyzeFile('Ref', f)}
+            onReset={() => handleReset('Ref')}
           />
         </div>
 
@@ -770,6 +800,273 @@ export default function ComparisonPage() {
               )}
             </div>
           </div>
+        )}
+
+        {/* ──────────────────────────────────────────────────────────── */}
+        {/* Reference comparison                                        */}
+        {/* ──────────────────────────────────────────────────────────── */}
+        {allThreeDone && refComparisonData && (
+          <div style={{
+            background: 'var(--mr-bg-card)',
+            borderRadius: 'var(--mr-radius)',
+            border: '1px solid var(--mr-border)',
+            padding: '1.5rem',
+            boxShadow: 'var(--mr-shadow)',
+            marginTop: '1.5rem',
+          }}>
+            {/* Section header */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              marginBottom: '1.25rem',
+            }}>
+              <Target size={20} style={{ color: 'var(--mr-purple)' }} />
+              <h3 style={{ fontWeight: 600, fontSize: '1rem', margin: 0 }}>
+                {lang === 'es' ? 'Distancia a la Referencia' : 'Distance to Reference'}
+              </h3>
+            </div>
+
+            {/* Verdict banner */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem',
+              padding: '1rem 1.25rem',
+              borderRadius: 'var(--mr-radius-sm)',
+              marginBottom: '1.5rem',
+              background: refBandsCloserB > refBandsCloserA ? 'var(--mr-green-bg)' : refBandsCloserA > refBandsCloserB ? 'var(--mr-amber-bg)' : 'var(--mr-blue-bg)',
+            }}>
+              {refBandsCloserB > refBandsCloserA ? (
+                <Check size={20} style={{ color: 'var(--mr-green)', flexShrink: 0 }} />
+              ) : refBandsCloserA > refBandsCloserB ? (
+                <Minus size={20} style={{ color: 'var(--mr-amber)', flexShrink: 0 }} />
+              ) : (
+                <Minus size={20} style={{ color: 'var(--mr-blue)', flexShrink: 0 }} />
+              )}
+              <span style={{
+                fontWeight: 600,
+                color: refBandsCloserB > refBandsCloserA ? 'var(--mr-green)' : refBandsCloserA > refBandsCloserB ? 'var(--mr-amber)' : 'var(--mr-blue)',
+                fontSize: '0.9375rem',
+              }}>
+                {refBandsCloserB > refBandsCloserA
+                  ? (lang === 'es'
+                    ? `B se acerca a la referencia en ${refBandsCloserB}/6 bandas`
+                    : `B is closer to the reference in ${refBandsCloserB}/6 bands`)
+                  : refBandsCloserA > refBandsCloserB
+                  ? (lang === 'es'
+                    ? `A estaba más cerca de la referencia en ${refBandsCloserA}/6 bandas`
+                    : `A was closer to the reference in ${refBandsCloserA}/6 bands`)
+                  : (lang === 'es'
+                    ? 'Ambas mezclas están a distancia similar de la referencia'
+                    : 'Both mixes are at similar distance from the reference')
+                }
+              </span>
+            </div>
+
+            {/* Legend */}
+            <div style={{
+              display: 'flex',
+              gap: '1.5rem',
+              marginBottom: '1rem',
+              fontSize: '0.8125rem',
+              color: 'var(--mr-text-secondary)',
+              flexWrap: 'wrap',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+                <div style={{
+                  width: '12px', height: '12px', borderRadius: '2px',
+                  background: 'var(--mr-primary)', opacity: 0.7,
+                }} />
+                <span>{lang === 'es' ? 'Distancia A' : 'Distance A'}</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+                <div style={{
+                  width: '12px', height: '12px', borderRadius: '2px',
+                  background: '#8b5cf6', opacity: 0.7,
+                }} />
+                <span>{lang === 'es' ? 'Distancia B' : 'Distance B'}</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+                <div style={{
+                  width: '12px', height: '12px', borderRadius: '2px',
+                  background: 'var(--mr-green)', opacity: 0.5,
+                }} />
+                <span>{lang === 'es' ? 'Más cerca' : 'Closer'}</span>
+              </div>
+            </div>
+
+            {/* Band distance rows */}
+            {refComparisonData.map((band, i) => {
+              const maxDist = Math.max(band.distA, band.distB, 1)
+              const distScale = 90 / maxDist
+              return (
+                <div
+                  key={band.key}
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: '120px 1fr 90px',
+                    gap: '0.75rem',
+                    padding: '0.75rem 0.5rem',
+                    alignItems: 'center',
+                    borderRadius: 'var(--mr-radius-sm)',
+                    background: i % 2 === 0 ? 'transparent' : 'var(--mr-bg-hover)',
+                  }}
+                >
+                  {/* Band label + ref value */}
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: '0.875rem' }}>
+                      {lang === 'es' ? band.es : band.en}
+                    </div>
+                    <div style={{ fontSize: '0.6875rem', color: 'var(--mr-text-tertiary)' }}>
+                      Ref: {band.valRef.toFixed(1)}%
+                    </div>
+                  </div>
+
+                  {/* Distance bars */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                    {/* Distance A */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <div style={{
+                        flex: 1, height: '14px',
+                        background: 'var(--mr-bg-hover)',
+                        borderRadius: '3px', overflow: 'hidden',
+                      }}>
+                        <div style={{
+                          width: `${Math.min(band.distA * distScale, 100)}%`,
+                          height: '100%',
+                          background: band.closer === 'A' ? 'var(--mr-green)' : 'var(--mr-primary)',
+                          borderRadius: '3px',
+                          opacity: 0.7,
+                          transition: 'width 0.4s ease',
+                        }} />
+                      </div>
+                      <span style={{
+                        fontSize: '0.75rem', fontWeight: 500,
+                        minWidth: '38px', textAlign: 'right',
+                        fontVariantNumeric: 'tabular-nums',
+                        color: 'var(--mr-text-secondary)',
+                      }}>
+                        {band.distA.toFixed(1)}
+                      </span>
+                    </div>
+                    {/* Distance B */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <div style={{
+                        flex: 1, height: '14px',
+                        background: 'var(--mr-bg-hover)',
+                        borderRadius: '3px', overflow: 'hidden',
+                      }}>
+                        <div style={{
+                          width: `${Math.min(band.distB * distScale, 100)}%`,
+                          height: '100%',
+                          background: band.closer === 'B' ? 'var(--mr-green)' : '#8b5cf6',
+                          borderRadius: '3px',
+                          opacity: 0.7,
+                          transition: 'width 0.4s ease',
+                        }} />
+                      </div>
+                      <span style={{
+                        fontSize: '0.75rem', fontWeight: 500,
+                        minWidth: '38px', textAlign: 'right',
+                        fontVariantNumeric: 'tabular-nums',
+                        color: 'var(--mr-text-secondary)',
+                      }}>
+                        {band.distB.toFixed(1)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Closer indicator */}
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{
+                      fontWeight: 600,
+                      fontSize: '0.8125rem',
+                      color: band.closer === 'same' ? 'var(--mr-text-tertiary)' : 'var(--mr-green)',
+                    }}>
+                      {band.closer === 'A'
+                        ? (lang === 'es' ? 'A más cerca' : 'A closer')
+                        : band.closer === 'B'
+                        ? (lang === 'es' ? 'B más cerca' : 'B closer')
+                        : (lang === 'es' ? 'Similar' : 'Similar')
+                      }
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+
+            {/* Score distance to reference */}
+            {slotA.result?.score != null && slotB.result?.score != null && slotRef.result?.score != null && (
+              <div style={{
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                gap: '2rem',
+                marginTop: '1.5rem',
+                paddingTop: '1.25rem',
+                borderTop: '1px solid var(--mr-border)',
+                flexWrap: 'wrap',
+              }}>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{
+                    fontSize: '0.75rem', color: 'var(--mr-text-tertiary)',
+                    marginBottom: '0.25rem',
+                  }}>
+                    {lang === 'es' ? 'Ref' : 'Ref'}
+                  </div>
+                  <div style={{
+                    fontSize: '1.5rem', fontWeight: 700,
+                    color: getScoreColor(slotRef.result?.score),
+                  }}>
+                    {slotRef.result?.score ?? '-'}
+                  </div>
+                </div>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{
+                    fontSize: '0.75rem', color: 'var(--mr-text-tertiary)',
+                    marginBottom: '0.25rem',
+                  }}>
+                    {lang === 'es' ? '|A - Ref|' : '|A - Ref|'}
+                  </div>
+                  <div style={{
+                    fontSize: '1.5rem', fontWeight: 700,
+                    color: 'var(--mr-text-secondary)',
+                  }}>
+                    {Math.abs(slotA.result.score - slotRef.result.score)}
+                  </div>
+                </div>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{
+                    fontSize: '0.75rem', color: 'var(--mr-text-tertiary)',
+                    marginBottom: '0.25rem',
+                  }}>
+                    {lang === 'es' ? '|B - Ref|' : '|B - Ref|'}
+                  </div>
+                  <div style={{
+                    fontSize: '1.5rem', fontWeight: 700,
+                    color: Math.abs(slotB.result.score - slotRef.result.score) < Math.abs(slotA.result.score - slotRef.result.score) ? 'var(--mr-green)' : 'var(--mr-text-secondary)',
+                  }}>
+                    {Math.abs(slotB.result.score - slotRef.result.score)}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Hint when A+B done but no reference */}
+        {bothDone && !refDone && slotRef.state === 'idle' && (
+          <p style={{
+            textAlign: 'center',
+            color: 'var(--mr-text-tertiary)',
+            fontSize: '0.8125rem',
+            marginTop: '1rem',
+          }}>
+            {lang === 'es'
+              ? 'Sube una referencia para ver si los ajustes acercan la mezcla al objetivo.'
+              : 'Upload a reference to see if the adjustments bring the mix closer to the target.'}
+          </p>
         )}
       </main>
     </div>
