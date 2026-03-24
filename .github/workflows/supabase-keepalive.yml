@@ -14,7 +14,7 @@ jobs:
           response=$(curl -s -o /dev/null -w "%{http_code}" \
             -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
             -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
-            "https://cetgbmrylzgaqnrlfamt.supabase.co/rest/v1/")
+            "https://cetgbmrylzgaqnrlfamt.supabase.co/rest/v1/profiles?select=id&limit=1")
           echo "Response code: $response"
           if [ "$response" != "200" ]; then
             echo "::error::Supabase ping failed with status $response"

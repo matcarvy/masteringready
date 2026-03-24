@@ -30,9 +30,9 @@ export async function GET() {
   }
 
   try {
-    // Direct REST ping to PostgREST — no table query, no RLS, no Supabase client
-    // Just proves the database is alive and accepting connections
-    const res = await fetch(`${url}/rest/v1/`, {
+    // Direct REST ping to PostgREST — queries profiles table to prove DB is alive
+    // RLS may filter results, but endpoint returns 200 regardless
+    const res = await fetch(`${url}/rest/v1/profiles?select=id&limit=1`, {
       headers: {
         apikey: key,
         Authorization: `Bearer ${key}`
