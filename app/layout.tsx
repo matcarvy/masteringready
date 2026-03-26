@@ -1,11 +1,10 @@
 import type { Metadata, Viewport } from 'next'
 import { AuthProvider } from '@/components/auth'
 import { QueryProvider } from '@/components/QueryProvider'
+import { ToastProvider } from '@/components/ui/Toast'
 import './globals.css'
 
-// =============================================================================
-// SEO METADATA - MasteringReady
-// =============================================================================
+// --- SEO Metadata ---
 
 const siteConfig = {
   name: 'Mastering Ready',
@@ -25,9 +24,7 @@ export const viewport: Viewport = {
 }
 
 export const metadata: Metadata = {
-  // ─────────────────────────────────────────────────────────────────────────────
-  // BASIC META
-  // ─────────────────────────────────────────────────────────────────────────────
+  // --- Basic Meta ---
   title: {
     default: 'Mastering Ready | Analiza tu mezcla antes de masterizar',
     template: '%s | Mastering Ready'
@@ -56,9 +53,7 @@ export const metadata: Metadata = {
   creator: siteConfig.author,
   publisher: siteConfig.name,
   
-  // ─────────────────────────────────────────────────────────────────────────────
-  // CANONICAL & ALTERNATES
-  // ─────────────────────────────────────────────────────────────────────────────
+  // --- Canonical and Alternates ---
   metadataBase: new URL(siteConfig.url),
   alternates: {
     languages: {
@@ -67,9 +62,7 @@ export const metadata: Metadata = {
     }
   },
 
-  // ─────────────────────────────────────────────────────────────────────────────
-  // OPEN GRAPH (Facebook, LinkedIn, WhatsApp)
-  // ─────────────────────────────────────────────────────────────────────────────
+  // --- Open Graph ---
   openGraph: {
     type: 'website',
     locale: siteConfig.locale.default,
@@ -89,9 +82,7 @@ export const metadata: Metadata = {
     ]
   },
 
-  // ─────────────────────────────────────────────────────────────────────────────
-  // TWITTER CARD
-  // ─────────────────────────────────────────────────────────────────────────────
+  // --- Twitter Card ---
   twitter: {
     card: 'summary_large_image',
     title: 'Is your mix ready for mastering? Find out in 60 seconds',
@@ -101,9 +92,7 @@ export const metadata: Metadata = {
     images: ['/og-image.png']
   },
 
-  // ─────────────────────────────────────────────────────────────────────────────
-  // ROBOTS & INDEXING
-  // ─────────────────────────────────────────────────────────────────────────────
+  // --- Robots and Indexing ---
   robots: {
     index: true,
     follow: true,
@@ -116,16 +105,12 @@ export const metadata: Metadata = {
     }
   },
 
-  // ─────────────────────────────────────────────────────────────────────────────
-  // VERIFICATION (agregar tus IDs cuando los tengas)
-  // ─────────────────────────────────────────────────────────────────────────────
+  // --- Verification ---
   verification: {
     google: '8PArBzTf2vdnQ0brJTy7sYNQU0ySC5qGPkDa4EMD-z4',
   },
 
-  // ─────────────────────────────────────────────────────────────────────────────
-  // APP & ICONS
-  // ─────────────────────────────────────────────────────────────────────────────
+  // --- App and Icons ---
   applicationName: siteConfig.name,
   appleWebApp: {
     capable: true,
@@ -136,15 +121,11 @@ export const metadata: Metadata = {
     telephone: false
   },
   
-  // ─────────────────────────────────────────────────────────────────────────────
-  // CATEGORY
-  // ─────────────────────────────────────────────────────────────────────────────
+  // --- Category ---
   category: 'technology'
 }
 
-// =============================================================================
-// STRUCTURED DATA (JSON-LD)
-// =============================================================================
+// --- Structured Data (JSON-LD) ---
 
 const structuredData = {
   // Software Application Schema
@@ -333,9 +314,7 @@ const structuredData = {
   }
 }
 
-// =============================================================================
-// ROOT LAYOUT
-// =============================================================================
+// --- Root Layout ---
 
 export default function RootLayout({
   children,
@@ -399,7 +378,9 @@ export default function RootLayout({
       <body>
         <AuthProvider>
           <QueryProvider>
-            {children}
+            <ToastProvider>
+              {children}
+            </ToastProvider>
           </QueryProvider>
         </AuthProvider>
       </body>

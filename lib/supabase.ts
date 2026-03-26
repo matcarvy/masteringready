@@ -13,9 +13,7 @@ import { createClient } from '@supabase/supabase-js'
 // Types are available in ./database.types for reference
 // Los tipos están disponibles en ./database.types como referencia
 
-// ============================================================================
-// ENVIRONMENT VARIABLES / VARIABLES DE ENTORNO
-// ============================================================================
+// --- Environment Variables ---
 
 // Use placeholder values at build time to prevent "supabaseUrl is required" error.
 // createClient only validates non-empty strings — it doesn't connect at creation time.
@@ -27,9 +25,7 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholde
 const getSupabaseUrl = () => process.env.NEXT_PUBLIC_SUPABASE_URL || supabaseUrl
 const getSupabaseAnonKey = () => process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || supabaseAnonKey
 
-// ============================================================================
-// AUTH STORAGE ADAPTER / ADAPTADOR DE ALMACENAMIENTO DE AUTH
-// ============================================================================
+// --- Auth Storage Adapter ---
 
 /**
  * Custom storage that delegates to localStorage or sessionStorage
@@ -99,9 +95,7 @@ export function getRememberDevice(): boolean {
   return localStorage.getItem(EPHEMERAL_FLAG) !== 'true'
 }
 
-// ============================================================================
-// CLIENT-SIDE SUPABASE CLIENT / CLIENTE SUPABASE PARA NAVEGADOR
-// ============================================================================
+// --- Client-Side Supabase Client ---
 
 /**
  * Supabase client for browser usage (React components)
@@ -126,7 +120,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
  *
  * Cached per access_token to prevent Multiple GoTrueClient instances.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase client type varies by generics; caching requires any
 let _cachedFreshClient: any = null
 let _cachedAccessToken: string | null = null
 
@@ -148,7 +142,7 @@ export async function createFreshQueryClient(sessionTokens?: { access_token: str
       persistSession: false,
       autoRefreshToken: false,
       storageKey: 'sb-fresh-query-token',
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- GoTrueClient lock shim requires any cast to bypass internal type mismatch
       lock: (async <R>(_name: string, _acquireTimeout: number, fn: () => Promise<R>): Promise<R> => fn()) as any,
     }
   })
@@ -158,9 +152,7 @@ export async function createFreshQueryClient(sessionTokens?: { access_token: str
   return fresh
 }
 
-// ============================================================================
-// SERVER-SIDE SUPABASE CLIENT / CLIENTE SUPABASE PARA SERVIDOR
-// ============================================================================
+// --- Server-Side Supabase Client ---
 
 /**
  * Create a Supabase client for server-side usage
@@ -185,9 +177,7 @@ export function createServerSupabaseClient() {
   })
 }
 
-// ============================================================================
-// ADMIN CLIENT (for backend operations) / CLIENTE ADMIN (para operaciones backend)
-// ============================================================================
+// --- Admin Client ---
 
 /**
  * Create an admin Supabase client with service role key
@@ -214,9 +204,7 @@ export function createAdminSupabaseClient() {
   })
 }
 
-// ============================================================================
-// AUTH HELPERS / AYUDANTES DE AUTENTICACIÓN
-// ============================================================================
+// --- Auth Helpers ---
 
 /**
  * Get current user session
@@ -225,10 +213,7 @@ export function createAdminSupabaseClient() {
 export async function getCurrentUser() {
   const { data: { user }, error } = await supabase.auth.getUser()
 
-  if (error) {
-    console.error('Error getting user / Error obteniendo usuario:', error)
-    return null
-  }
+  if (error) return null
 
   return user
 }
@@ -248,10 +233,7 @@ export async function getCurrentProfile() {
     .eq('id', user.id)
     .single()
 
-  if (error) {
-    console.error('Error getting profile / Error obteniendo perfil:', error)
-    return null
-  }
+  if (error) return null
 
   return profile
 }
@@ -275,10 +257,7 @@ export async function getCurrentSubscription() {
     .eq('status', 'active')
     .single()
 
-  if (error) {
-    console.error('Error getting subscription / Error obteniendo suscripción:', error)
-    return null
-  }
+  if (error) return null
 
   return subscription
 }
@@ -323,7 +302,6 @@ export async function checkCanAnalyze(attempt = 1, sessionTokens?: { access_toke
     })
 
     if (error) {
-      console.error('Error checking analysis limit:', error)
       return {
         can_analyze: false,
         reason: 'ERROR',
@@ -348,7 +326,6 @@ export async function checkCanAnalyze(attempt = 1, sessionTokens?: { access_toke
       await new Promise(r => setTimeout(r, 500))
       return checkCanAnalyze(attempt + 1)
     }
-    console.error('checkCanAnalyze threw unexpectedly:', err)
     return {
       can_analyze: false,
       reason: 'ERROR',
@@ -397,10 +374,7 @@ export async function getUserAnalysisStatus(): Promise<UserDashboardStatus | nul
     p_user_id: user.id
   })
 
-  if (error) {
-    console.error('Error getting user status:', error)
-    return null
-  }
+  if (error) return null
 
   // The function returns an array with one row
   const result = Array.isArray(data) ? data[0] : data
@@ -465,7 +439,6 @@ export async function checkCanBuyAddon(): Promise<{
   })
 
   if (error) {
-    console.error('Error checking addon eligibility:', error)
     return {
       can_buy: false,
       reason: 'ERROR',
@@ -483,9 +456,7 @@ export async function checkCanBuyAddon(): Promise<{
   }
 }
 
-// ============================================================================
-// ANALYSIS HELPERS / AYUDANTES DE ANÁLISIS
-// ============================================================================
+// --- Analysis Helpers ---
 
 /**
  * Save analysis to database
@@ -535,10 +506,7 @@ export async function saveAnalysis(analysisData: {
     .select()
     .single()
 
-  if (error) {
-    console.error('Error saving analysis / Error guardando análisis:', error)
-    throw error
-  }
+  if (error) throw error
 
   // Increment user's analysis count if logged in
   // Incrementar contador de análisis del usuario si está logueado
@@ -564,10 +532,7 @@ export async function useSinglePurchase(purchaseId: string): Promise<boolean> {
     p_purchase_id: purchaseId
   })
 
-  if (error) {
-    console.error('Error using single purchase:', error)
-    return false
-  }
+  if (error) return false
 
   return data ?? false
 }
@@ -589,17 +554,12 @@ export async function getAnalysisHistory(limit = 20) {
     .order('created_at', { ascending: false })
     .limit(limit)
 
-  if (error) {
-    console.error('Error getting history / Error obteniendo historial:', error)
-    return []
-  }
+  if (error) return []
 
   return data
 }
 
-// ============================================================================
-// FEEDBACK HELPERS / AYUDANTES DE RETROALIMENTACIÓN
-// ============================================================================
+// --- Feedback Helpers ---
 
 /**
  * Submit user feedback
@@ -636,10 +596,7 @@ export async function submitFeedback(feedbackData: {
     .select()
     .single()
 
-  if (error) {
-    console.error('Error submitting feedback / Error enviando retroalimentación:', error)
-    throw error
-  }
+  if (error) throw error
 
   return data
 }
@@ -654,10 +611,7 @@ export async function getPublicFeatureRequests(limit = 20) {
     .select('*')
     .limit(limit)
 
-  if (error) {
-    console.error('Error getting feature requests / Error obteniendo solicitudes:', error)
-    return []
-  }
+  if (error) return []
 
   return data
 }
@@ -686,17 +640,12 @@ export async function voteOnFeature(feedbackId: string, voteType: 'upvote' | 'do
     .select()
     .single()
 
-  if (error) {
-    console.error('Error voting / Error votando:', error)
-    throw error
-  }
+  if (error) throw error
 
   return data
 }
 
-// ============================================================================
-// PLANS HELPER / AYUDANTE DE PLANES
-// ============================================================================
+// --- Plans Helper ---
 
 /**
  * Get all active plans
@@ -709,10 +658,7 @@ export async function getPlans() {
     .eq('is_active', true)
     .order('display_order', { ascending: true })
 
-  if (error) {
-    console.error('Error getting plans / Error obteniendo planes:', error)
-    return []
-  }
+  if (error) return []
 
   return data
 }

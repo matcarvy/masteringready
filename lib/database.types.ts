@@ -872,9 +872,7 @@ export type FeedbackVote = Database['public']['Tables']['feedback_votes']['Row']
 export type FeedbackVoteInsert = Database['public']['Tables']['feedback_votes']['Insert']
 export type PublicFeatureRequest = Database['public']['Views']['public_feature_requests']['Row']
 
-// ============================================================================
-// BILINGUAL HELPERS / AYUDANTES BILINGÜES
-// ============================================================================
+// --- Bilingual Helpers ---
 
 /**
  * Get localized field from a plan
@@ -900,9 +898,7 @@ export function getLocalizedFeedbackResponse(
   return lang === 'es' ? feedback.response_es : feedback.response_en
 }
 
-// ============================================================================
-// CATEGORY & STATUS LABELS / ETIQUETAS DE CATEGORÍA Y ESTADO
-// ============================================================================
+// --- Category and Status Labels ---
 
 export const FEEDBACK_CATEGORY_LABELS: Record<FeedbackCategory, { es: string; en: string }> = {
   bug: { es: 'Error/Bug', en: 'Bug/Error' },

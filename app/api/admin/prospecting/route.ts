@@ -125,8 +125,7 @@ export async function GET(request: NextRequest) {
       }
     })
 
-  } catch (error) {
-    console.error('Prospecting GET error:', error instanceof Error ? error.message : (error as any)?.message || 'Unknown error')
+  } catch {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
@@ -169,7 +168,7 @@ export async function POST(request: NextRequest) {
         // Invalid hex — fall through to reject
       }
     } else if (legacySecret) {
-      // Legacy path: plain secret comparison (TODO: remove after scraper fully migrated)
+      // Legacy path: plain secret comparison
       try {
         const a = Buffer.from(legacySecret)
         const b = Buffer.from(secret)
@@ -204,7 +203,6 @@ export async function POST(request: NextRequest) {
       .select('id')
 
     if (error) {
-      console.error('Prospecting POST upsert error:', error instanceof Error ? error.message : (error as any)?.message || 'Unknown error')
       return NextResponse.json({ error: 'Failed to insert leads' }, { status: 500 })
     }
 
@@ -213,8 +211,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ inserted, skipped, total: leads.length })
 
-  } catch (error) {
-    console.error('Prospecting POST error:', error instanceof Error ? error.message : (error as any)?.message || 'Unknown error')
+  } catch {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
@@ -246,14 +243,12 @@ export async function PATCH(request: NextRequest) {
       .eq('id', id)
 
     if (error) {
-      console.error('Prospecting PATCH error:', error instanceof Error ? error.message : (error as any)?.message || 'Unknown error')
       return NextResponse.json({ error: 'Failed to update lead' }, { status: 500 })
     }
 
     return NextResponse.json({ updated: true })
 
-  } catch (error) {
-    console.error('Prospecting PATCH error:', error instanceof Error ? error.message : (error as any)?.message || 'Unknown error')
+  } catch {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

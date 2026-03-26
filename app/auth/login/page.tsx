@@ -14,9 +14,7 @@ import { detectLanguage, setLanguageCookie } from '@/lib/language'
 import { SocialLoginButtons } from '@/components/auth/SocialLoginButtons'
 import { Headphones, Mail, Lock, ArrowLeft, Eye, EyeOff, Music } from 'lucide-react'
 
-// ============================================================================
-// TRANSLATIONS / TRADUCCIONES
-// ============================================================================
+// --- Translations ---
 
 const translations = {
   es: {
@@ -57,9 +55,7 @@ const translations = {
   }
 }
 
-// ============================================================================
-// COMPONENT / COMPONENTE
-// ============================================================================
+// --- Component ---
 
 function LoginContent() {
   const router = useRouter()
@@ -135,8 +131,7 @@ function LoginContent() {
         }
         router.push(redirectTo)
       }
-    } catch (err) {
-      console.error('Login error:', err)
+    } catch {
       setError(t.error)
       setLoading(false)
     }
@@ -460,9 +455,7 @@ function LoginContent() {
   )
 }
 
-// ============================================================================
-// EXPORT WITH SUSPENSE WRAPPER
-// ============================================================================
+// --- Export with Suspense Wrapper ---
 
 export default function LoginPage() {
   return (

@@ -20,9 +20,7 @@ import {
   Music, Shield, Target, Mail, Lock, EyeOff, LogOut
 } from 'lucide-react'
 
-// ============================================================================
-// TYPES
-// ============================================================================
+// --- Types ---
 
 type AdminTab = 'overview' | 'users' | 'analytics' | 'revenue' | 'leads' | 'feedback'
 
@@ -180,9 +178,7 @@ interface LeadsKpi {
   totalAnalyses: number
 }
 
-// ============================================================================
-// TRANSLATIONS
-// ============================================================================
+// --- Translations ---
 
 const translations = {
   es: {
@@ -513,9 +509,7 @@ const translations = {
   }
 }
 
-// ============================================================================
-// HELPERS
-// ============================================================================
+// --- Helpers ---
 
 function formatDate(dateStr: string, lang: 'es' | 'en'): string {
   const date = new Date(dateStr)
@@ -558,9 +552,7 @@ function getCategoryColor(category: string): string {
   }
 }
 
-// ============================================================================
-// ADMIN LOGIN FORM (inline — stays on /admin after auth)
-// ============================================================================
+// --- Admin Login Form ---
 
 function AdminLoginForm({ lang }: { lang: 'es' | 'en' }) {
   const [email, setEmail] = useState('')
@@ -732,9 +724,9 @@ function AdminLoginForm({ lang }: { lang: 'es' | 'en' }) {
   )
 }
 
-// ============================================================================
-// COMPONENT
-// ============================================================================
+const SEARCH_DEBOUNCE_MS = 300
+
+// --- Component ---
 
 export default function AdminPage() {
   const { user, session, loading: authLoading, signOut } = useAuth()
@@ -859,7 +851,6 @@ export default function AdminPage() {
         setFetchError(t.fetchError)
       }
     } catch (err) {
-      console.error('Failed to fetch stats:', err)
       setFetchError(t.fetchError)
     }
     setStatsLoading(false)
@@ -918,7 +909,6 @@ export default function AdminPage() {
         })))
       }
     } catch (err) {
-      console.error('Failed to fetch users:', err)
       setFetchError(t.fetchError)
     }
     setUsersLoading(false)
@@ -941,7 +931,6 @@ export default function AdminPage() {
         .limit(20)
       setUserAnalyses(data || [])
     } catch (err) {
-      console.error('Failed to fetch user analyses:', err)
     }
     setUserAnalysesLoading(false)
   }, [session?.access_token])
@@ -978,7 +967,6 @@ export default function AdminPage() {
         }))
       }
     } catch (err) {
-      console.error('Failed to fetch payments:', err)
       setFetchError(t.fetchError)
     }
     setPaymentsLoading(false)
@@ -1038,7 +1026,6 @@ export default function AdminPage() {
         }))
       }
     } catch (err) {
-      console.error('Failed to fetch feedback:', err)
       setFetchError(t.fetchError)
     }
     setFeedbackLoading(false)
@@ -1056,7 +1043,6 @@ export default function AdminPage() {
         setLeadsKpi(data.kpi || null)
       }
     } catch (err) {
-      console.error('Failed to fetch leads:', err)
       setFetchError(t.fetchError)
     }
     setLeadsLoading(false)
@@ -1090,7 +1076,7 @@ export default function AdminPage() {
   // Refetch users when search/sort changes
   useEffect(() => {
     if (isAdmin && activeTab === 'users') {
-      const timer = setTimeout(() => fetchUsers(), 300)
+      const timer = setTimeout(() => fetchUsers(), SEARCH_DEBOUNCE_MS)
       return () => clearTimeout(timer)
     }
   }, [userSearch, userSort.field, userSort.asc, isAdmin, activeTab, fetchUsers])
@@ -1134,7 +1120,6 @@ export default function AdminPage() {
         setAdminNotes('')
       }
     } catch (err) {
-      console.error('Failed to update feedback:', err)
     }
   }
 
@@ -1221,9 +1206,7 @@ export default function AdminPage() {
     { key: 'feedback', icon: MessageSquare, label: t.tabs.feedback }
   ]
 
-  // ============================================================================
-  // RENDER: OVERVIEW TAB
-  // ============================================================================
+  // --- Render: Overview Tab ---
 
   const renderOverview = () => {
     const kpi = statsData?.kpi
@@ -1517,7 +1500,7 @@ export default function AdminPage() {
                       {statsData.anonymousFunnel.recentRecords.map((record) => (
                         <tr key={record.id} style={{ borderBottom: '1px solid var(--mr-border)' }}>
                           <td style={{ padding: '0.5rem 0.75rem', color: 'var(--mr-text-primary)', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {record.filename || '—'}
+                            {record.filename || '-'}
                           </td>
                           <td style={{ textAlign: 'center', padding: '0.5rem 0.75rem' }}>
                             {record.score != null ? (
@@ -1527,16 +1510,16 @@ export default function AdminPage() {
                               }}>
                                 {record.score}
                               </span>
-                            ) : '—'}
+                            ) : '-'}
                           </td>
                           <td style={{ textAlign: 'center', padding: '0.5rem 0.75rem', color: 'var(--mr-text-secondary)' }}>
-                            {record.format || '—'}
+                            {record.format || '-'}
                           </td>
                           <td style={{ textAlign: 'center', padding: '0.5rem 0.75rem', color: 'var(--mr-text-secondary)' }}>
-                            {record.client_country || '—'}
+                            {record.client_country || '-'}
                           </td>
                           <td style={{ textAlign: 'center', padding: '0.5rem 0.75rem', color: 'var(--mr-text-secondary)', fontSize: '0.75rem' }}>
-                            {record.device_type === 'mobile' ? '📱' : record.device_type === 'tablet' ? '📋' : record.device_type === 'desktop' ? '🖥️' : '—'}
+                            {record.device_type === 'mobile' ? '📱' : record.device_type === 'tablet' ? '📋' : record.device_type === 'desktop' ? '🖥️' : '-'}
                           </td>
                           <td style={{ textAlign: 'center', padding: '0.5rem 0.75rem' }}>
                             <span style={{
@@ -1614,9 +1597,7 @@ export default function AdminPage() {
     )
   }
 
-  // ============================================================================
-  // RENDER: BAR CHART HELPER
-  // ============================================================================
+  // --- Render: Bar Chart Helper ---
 
   const renderBarChart = (items: { label: string; value: number; color: string }[]) => {
     const maxValue = Math.max(...items.map(i => i.value), 1)
@@ -1690,9 +1671,7 @@ export default function AdminPage() {
     )
   }
 
-  // ============================================================================
-  // RENDER: USERS TAB
-  // ============================================================================
+  // --- Render: Users Tab ---
 
   const renderUsers = () => {
     const sortIcon = (field: string) => (
@@ -2069,9 +2048,7 @@ export default function AdminPage() {
     )
   }
 
-  // ============================================================================
-  // RENDER: ANALYTICS TAB
-  // ============================================================================
+  // --- Render: Analytics Tab ---
 
   const renderAnalytics = () => {
     if (!statsData) {
@@ -2588,9 +2565,7 @@ export default function AdminPage() {
     )
   }
 
-  // ============================================================================
-  // RENDER: REVENUE TAB
-  // ============================================================================
+  // --- Render: Revenue Tab ---
 
   const renderRevenue = () => {
     const rb = statsData?.revenueBreakdown
@@ -2773,9 +2748,7 @@ export default function AdminPage() {
     )
   }
 
-  // ============================================================================
-  // RENDER: LEADS TAB
-  // ============================================================================
+  // --- Render: Leads Tab ---
 
   const getMethodColor = (method: string): string => {
     switch (method) {
@@ -3025,7 +2998,7 @@ export default function AdminPage() {
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             {filteredLeads.map(lead => {
-              const userEmail = lead.profile?.email || lead.email || '—'
+              const userEmail = lead.profile?.email || lead.email || '-'
               const userName = lead.profile?.full_name || lead.name || null
 
               return (
@@ -3111,7 +3084,7 @@ export default function AdminPage() {
                       color: 'var(--mr-text-tertiary)',
                       fontStyle: 'italic'
                     }}>
-                      {t.leads.lastAnalysis}: —
+                      {t.leads.lastAnalysis}: -
                     </div>
                   )}
 
@@ -3157,9 +3130,7 @@ export default function AdminPage() {
     )
   }
 
-  // ============================================================================
-  // RENDER: FEEDBACK TAB
-  // ============================================================================
+  // --- Render: Feedback Tab ---
 
   const renderFeedback = () => {
     const statusFilters = ['all', 'new', 'read', 'in_progress', 'resolved'] as const
@@ -3578,9 +3549,7 @@ export default function AdminPage() {
     )
   }
 
-  // ============================================================================
-  // MAIN RENDER
-  // ============================================================================
+  // --- Main Render ---
 
   return (
     <div style={{
@@ -3707,7 +3676,6 @@ export default function AdminPage() {
                   setAdminChecked(false)
                   await signOut()
                 } catch (err) {
-                  console.error('Sign out error:', err)
                 }
               }}
               style={{

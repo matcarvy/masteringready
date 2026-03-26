@@ -40,6 +40,8 @@ const translations = {
   }
 }
 
+const BADGE_Z_INDEX = 100
+
 export default function PrivacyBadge({ lang = 'es', variant = 'full' }: PrivacyBadgeProps) {
   const [showTooltip, setShowTooltip] = useState(false)
   const t = translations[lang]
@@ -101,7 +103,7 @@ export default function PrivacyBadge({ lang = 'es', variant = 'full' }: PrivacyB
               boxShadow: '0 10px 40px rgba(0,0,0,0.15)',
               border: '1px solid #e5e7eb',
               width: 'min(280px, 90vw)',
-              zIndex: 100,
+              zIndex: BADGE_Z_INDEX,
               textAlign: 'left'
             }}
             onClick={(e) => e.stopPropagation()}

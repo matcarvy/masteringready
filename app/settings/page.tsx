@@ -32,9 +32,7 @@ import {
   Monitor
 } from 'lucide-react'
 
-// ============================================================================
-// TRANSLATIONS / TRADUCCIONES
-// ============================================================================
+// --- Translations ---
 
 const translations = {
   es: {
@@ -131,9 +129,7 @@ const translations = {
   }
 }
 
-// ============================================================================
-// COMPONENT
-// ============================================================================
+// --- Component ---
 
 export default function SettingsPage() {
   const router = useRouter()
@@ -224,8 +220,7 @@ export default function SettingsPage() {
         if (profileData?.preferred_language === 'en' || profileData?.preferred_language === 'es') {
           setLang(profileData.preferred_language as 'es' | 'en')
         }
-      } catch (error) {
-        console.error('Error fetching settings data:', error)
+      } catch {
       } finally {
         setLoading(false)
       }
@@ -234,7 +229,7 @@ export default function SettingsPage() {
     if (user && session?.access_token) {
       fetchData()
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- user.id is stable, full user object causes unnecessary re-renders
   }, [user?.id, session?.access_token])
 
   // Save profile name
@@ -262,8 +257,7 @@ export default function SettingsPage() {
 
       setProfileSaved(true)
       setTimeout(() => setProfileSaved(false), 2000)
-    } catch (error) {
-      console.error('Error saving profile:', error)
+    } catch {
     } finally {
       setProfileSaving(false)
     }
@@ -320,8 +314,7 @@ export default function SettingsPage() {
         setConfirmPasswordVal('')
         setShowPasswordForm(false)
       }
-    } catch (error) {
-      console.error('Password change error:', error)
+    } catch {
       setPasswordMessage({ type: 'error', text: 'Error' })
     } finally {
       setPasswordLoading(false)
@@ -378,8 +371,7 @@ export default function SettingsPage() {
       // Sign out
       await signOut()
       window.location.href = '/'
-    } catch (error) {
-      console.error('Delete account error:', error)
+    } catch {
       setDeleteLoading(false)
     }
   }

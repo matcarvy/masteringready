@@ -12,9 +12,7 @@ import { supabase, setRememberDevice, getRememberDevice } from '@/lib/supabase'
 import { SocialLoginButtons } from './SocialLoginButtons'
 import { X, Mail, Lock, User, Eye, EyeOff, Check, Headphones, Music } from 'lucide-react'
 
-// ============================================================================
-// TYPES / TIPOS
-// ============================================================================
+// --- Types / Tipos ---
 
 interface AuthModalProps {
   isOpen: boolean
@@ -25,9 +23,7 @@ interface AuthModalProps {
 
 type AuthMode = 'login' | 'signup'
 
-// ============================================================================
-// TRANSLATIONS / TRADUCCIONES
-// ============================================================================
+// --- Translations / Traducciones ---
 
 const translations = {
   es: {
@@ -112,9 +108,7 @@ const translations = {
   }
 }
 
-// ============================================================================
-// COMPONENT / COMPONENTE
-// ============================================================================
+// --- Component / Componente ---
 
 export function AuthModal({ isOpen, onClose, onSuccess, lang }: AuthModalProps) {
   const t = translations[lang]
@@ -191,8 +185,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, lang }: AuthModalProps) 
         setLoading(false)
         onSuccess()
       }
-    } catch (err) {
-      console.error('Login error:', err)
+    } catch {
       setError(t.error)
       setLoading(false)
     }
@@ -267,8 +260,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, lang }: AuthModalProps) 
         setLoading(false)
         onSuccess()
       }
-    } catch (err) {
-      console.error('Signup error:', err)
+    } catch {
       setError(t.error)
       setLoading(false)
     }

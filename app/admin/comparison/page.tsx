@@ -18,9 +18,7 @@ import {
   Check, X, Minus, ArrowRight, Target
 } from 'lucide-react'
 
-// ============================================================================
-// CONSTANTS
-// ============================================================================
+// --- Constants ---
 
 const BANDS = [
   { key: 'sub', en: 'Sub', es: 'Sub', range: '20–60 Hz' },
@@ -33,9 +31,7 @@ const BANDS = [
 
 const ACCEPTED_FORMATS = '.wav,.mp3,.aiff,.aif,.flac,.aac,.m4a,.ogg'
 
-// ============================================================================
-// TYPES
-// ============================================================================
+// --- Types ---
 
 type SlotState = 'idle' | 'uploading' | 'analyzing' | 'done' | 'error'
 
@@ -57,9 +53,7 @@ const INITIAL_SLOT: SlotData = {
   jobId: null,
 }
 
-// ============================================================================
-// HELPERS
-// ============================================================================
+// --- Helpers ---
 
 function truncateFilename(name: string, max: number): string {
   if (name.length <= max) return name
@@ -101,9 +95,7 @@ function getSpectral(result: any): Record<string, number> | null {
   return null
 }
 
-// ============================================================================
-// UPLOAD SLOT COMPONENT
-// ============================================================================
+// --- Upload Slot Component ---
 
 function UploadSlot({ label, slot, lang, onFileSelected, onReset }: {
   label: string
@@ -253,9 +245,7 @@ function UploadSlot({ label, slot, lang, onFileSelected, onReset }: {
   )
 }
 
-// ============================================================================
-// MAIN PAGE
-// ============================================================================
+// --- Main Page ---
 
 export default function ComparisonPage() {
   const { user, session } = useAuth()
@@ -381,11 +371,11 @@ export default function ComparisonPage() {
           // Transient poll errors — keep polling
         }
       }, 3000)
-    } catch (err: any) {
+    } catch (err) {
       setSlot(prev => ({
         ...prev,
         state: 'error',
-        error: err.message || (lang === 'es' ? 'Error al subir archivo' : 'Upload error'),
+        error: (err instanceof Error ? err.message : null) || (lang === 'es' ? 'Error al subir archivo' : 'Upload error'),
       }))
     }
   }, [lang])

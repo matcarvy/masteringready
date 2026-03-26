@@ -67,19 +67,18 @@ export async function analyzeFile(
     }
 
     return res.json()
-  } catch (error: any) {
+  } catch (err) {
     clearTimeout(timeoutId)
 
-    if (error instanceof AnalysisApiError) throw error
+    if (err instanceof AnalysisApiError) throw err
 
-    if (error.name === 'AbortError') {
+    if (err instanceof DOMException && err.name === 'AbortError') {
       throw new AnalysisApiError('timeout', 'timeout')
     }
-    // Network failure (offline, DNS, etc.)
-    if (error instanceof TypeError || error.message?.includes('fetch')) {
+    if (err instanceof TypeError || (err instanceof Error && err.message?.includes('fetch'))) {
       throw new AnalysisApiError('Network error', 'offline')
     }
-    throw error
+    throw err
   }
 }
 
@@ -128,9 +127,9 @@ export async function startAnalysisPolling(
       body: formData,
       signal: controller.signal,
     })
-  } catch (fetchError: any) {
+  } catch (err) {
     clearTimeout(timeoutId)
-    if (fetchError.name === 'AbortError') {
+    if (err instanceof DOMException && err.name === 'AbortError') {
       throw new AnalysisApiError('Upload timeout', 'timeout')
     }
     throw new AnalysisApiError('Network error', 'offline')
@@ -157,7 +156,7 @@ export async function getAnalysisStatus(jobId: string, lang: 'es' | 'en' = 'es')
     res = await fetch(`${API_URL}/api/analyze/status/${jobId}?lang=${lang}`, {
       method: 'GET',
     })
-  } catch (fetchError: any) {
+  } catch {
     throw new AnalysisApiError('Network error', 'offline')
   }
 
@@ -173,9 +172,7 @@ export async function getAnalysisStatus(jobId: string, lang: 'es' | 'en' = 'es')
   return res.json()
 }
 
-// ============================================================================
-// IP RATE LIMITING
-// ============================================================================
+// --- IP Rate Limiting ---
 
 export interface IpCheckResult {
   can_analyze: boolean
@@ -201,8 +198,6 @@ export async function checkIpLimit(isAuthenticated: boolean = false): Promise<Ip
     })
 
     if (!res.ok) {
-      // If endpoint not available, deny analysis (fail-closed)
-      console.warn('IP check endpoint not available, denying analysis')
       return {
         can_analyze: false,
         reason: 'IP_CHECK_UNAVAILABLE',
@@ -214,9 +209,7 @@ export async function checkIpLimit(isAuthenticated: boolean = false): Promise<Ip
     }
 
     return res.json()
-  } catch (error) {
-    // Network error or endpoint not available - deny analysis (fail-closed)
-    console.warn('IP check failed, denying analysis:', error)
+  } catch {
     return {
       can_analyze: false,
       reason: 'IP_CHECK_UNAVAILABLE',

@@ -32,8 +32,8 @@ export function useGeo(): UseGeoResult {
     try {
       const data = await detectCountry(forceRefresh)
       setGeo(data)
-    } catch (e) {
-      setError(e instanceof Error ? e : new Error('Failed to detect country'))
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error('Failed to detect country'))
       // Keep using current/default geo on error
     } finally {
       setLoading(false)

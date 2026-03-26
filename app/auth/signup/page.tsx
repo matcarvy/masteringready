@@ -14,9 +14,7 @@ import { detectLanguage, setLanguageCookie } from '@/lib/language'
 import { SocialLoginButtons } from '@/components/auth/SocialLoginButtons'
 import { Headphones, Mail, Lock, User, ArrowLeft, Eye, EyeOff, Check, Music } from 'lucide-react'
 
-// ============================================================================
-// TRANSLATIONS / TRADUCCIONES
-// ============================================================================
+// --- Translations ---
 
 const translations = {
   es: {
@@ -81,9 +79,7 @@ const translations = {
   }
 }
 
-// ============================================================================
-// COMPONENT / COMPONENTE
-// ============================================================================
+// --- Component ---
 
 function SignupContent() {
   const router = useRouter()
@@ -168,7 +164,6 @@ function SignupContent() {
       })
 
       if (signUpError) {
-        console.error('Signup error details:', JSON.stringify(signUpError, null, 2))
         if (signUpError.message.includes('already registered')) {
           setError(t.emailExists)
         } else {
@@ -185,8 +180,7 @@ function SignupContent() {
           router.push('/')
         }
       }
-    } catch (err) {
-      console.error('Signup error:', err)
+    } catch {
       setError(t.error)
       setLoading(false)
     }
@@ -694,9 +688,7 @@ function SignupContent() {
   )
 }
 
-// ============================================================================
-// EXPORT WITH SUSPENSE WRAPPER
-// ============================================================================
+// --- Export with Suspense Wrapper ---
 
 export default function SignupPage() {
   return (

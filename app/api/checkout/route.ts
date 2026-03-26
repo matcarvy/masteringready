@@ -165,7 +165,7 @@ export async function POST(request: NextRequest) {
       'https://masteringready.com',
       'https://www.masteringready.com',
       'https://masteringready-git-dev-matcarvys-projects.vercel.app',
-      'http://localhost:3000',
+      ...(process.env.NODE_ENV === 'development' ? ['http://localhost:3000'] : []),
     ]
     const requestOrigin = request.headers.get('origin')
     const origin = (requestOrigin && ALLOWED_ORIGINS.includes(requestOrigin))
@@ -221,8 +221,7 @@ export async function POST(request: NextRequest) {
       amount: priceInfo.amount
     })
 
-  } catch (error) {
-    console.error('Checkout error:', error instanceof Error ? error.message : (error as any)?.message || 'Unknown error')
+  } catch {
     return NextResponse.json(
       { error: 'Checkout failed' },
       { status: 500 }

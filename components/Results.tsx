@@ -2,6 +2,7 @@
 
 import { Download, FileText } from 'lucide-react'
 import { useState } from 'react'
+import { useToast } from '@/components/ui/Toast'
 
 interface ResultsProps {
   data: any
@@ -11,6 +12,7 @@ interface ResultsProps {
 
 export default function Results({ data, onReset, lang: parentLang }: ResultsProps) {
   const [activeTab, setActiveTab] = useState<'visual' | 'short' | 'write'>('visual')
+  const toast = useToast()
   const currentLang = parentLang || data.lang || 'es'
 
   const handleDownload = async (mode: 'visual' | 'short' | 'write' | 'complete' | 'pdf') => {
@@ -36,10 +38,9 @@ export default function Results({ data, onReset, lang: parentLang }: ResultsProp
         a.download = `masteringready-detallado-${data.filename || 'analisis'}.pdf`
         a.click()
         URL.revokeObjectURL(url)
-      } catch (error) {
-        console.error('PDF download error:', error)
-        alert(currentLang === 'es' 
-          ? 'Error al generar PDF. Por favor intenta de nuevo.' 
+      } catch {
+        toast.error(currentLang === 'es'
+          ? 'Error al generar PDF. Por favor intenta de nuevo.'
           : 'PDF generation error. Please try again.')
       }
       return

@@ -19,9 +19,7 @@ import {
   Check, X, Minus, Target, GitCompare, Zap, Music
 } from 'lucide-react'
 
-// ============================================================================
-// CONSTANTS
-// ============================================================================
+// --- Constants ---
 
 const BANDS = [
   { key: 'sub', en: 'Sub', es: 'Sub', range: '20–60 Hz' },
@@ -51,9 +49,7 @@ const COMPARISON_METRICS: Record<string, string[]> = {
   ref_vs_refmaster: ['lufs', 'truePeak', 'headroom', 'plr', 'stereoCorr', 'crestFactor'],
 }
 
-// ============================================================================
-// TYPES
-// ============================================================================
+// --- Types ---
 
 type SlotState = 'idle' | 'uploading' | 'analyzing' | 'done' | 'error'
 type SlotId = 'mix' | 'ref' | 'master' | 'refMaster'
@@ -84,9 +80,7 @@ const INITIAL_SLOT: SlotData = {
   state: 'idle', file: null, progress: 0, result: null, error: null, jobId: null,
 }
 
-// ============================================================================
-// HELPERS
-// ============================================================================
+// --- Helpers ---
 
 function truncateFilename(name: string, max: number): string {
   if (name.length <= max) return name
@@ -177,9 +171,7 @@ function matchIcon(level: 'close' | 'moderate' | 'far') {
   return { icon: '≠', color: 'var(--mr-red)' }
 }
 
-// ============================================================================
-// UPLOAD SLOT COMPONENT
-// ============================================================================
+// --- Upload Slot Component ---
 
 function UploadSlot({ label, slot, lang, onFileSelected, onReset, accentColor }: {
   label: string
@@ -278,9 +270,7 @@ function UploadSlot({ label, slot, lang, onFileSelected, onReset, accentColor }:
   )
 }
 
-// ============================================================================
-// SPECTRAL COMPARISON COMPONENT
-// ============================================================================
+// --- Spectral Comparison Component ---
 
 function SpectralComparison({ specA, specB, nameA, nameB, lang, colorA, colorB }: {
   specA: Record<string, number>
@@ -351,9 +341,7 @@ function SpectralComparison({ specA, specB, nameA, nameB, lang, colorA, colorB }
   )
 }
 
-// ============================================================================
-// METRIC DELTA TABLE COMPONENT
-// ============================================================================
+// --- Metric Delta Table Component ---
 
 function MetricDeltaTable({ metricsA, metricsB, metricKeys, lang }: {
   metricsA: ExtractedMetrics
@@ -412,9 +400,7 @@ function MetricDeltaTable({ metricsA, metricsB, metricKeys, lang }: {
   )
 }
 
-// ============================================================================
-// COMPARISON PANEL COMPONENT
-// ============================================================================
+// --- Comparison Panel Component ---
 
 function ComparisonPanel({ title, subtitle, icon, slotA, slotB, nameA, nameB, metricsA, metricsB, metricKeys, lang, colorA, colorB }: {
   title: string
@@ -465,9 +451,7 @@ function ComparisonPanel({ title, subtitle, icon, slotA, slotB, nameA, nameB, me
   )
 }
 
-// ============================================================================
-// CROSS-EXAM PANEL
-// ============================================================================
+// --- Cross-Exam Panel ---
 
 function CrossExamPanel({ mixM, masterM, refM, refMasterM, lang, mixSlot, masterSlot, refSlot, refMasterSlot }: {
   mixM: ExtractedMetrics
@@ -657,9 +641,7 @@ function CrossExamPanel({ mixM, masterM, refM, refMasterM, lang, mixSlot, master
   )
 }
 
-// ============================================================================
-// MAIN PAGE
-// ============================================================================
+// --- Main Page ---
 
 export default function MasteringLabPage() {
   const { user, session } = useAuth()
@@ -738,8 +720,8 @@ export default function MasteringLabPage() {
           }
         } catch { /* transient */ }
       }, 3000)
-    } catch (err: any) {
-      setSlot(prev => ({ ...prev, state: 'error', error: err.message || 'Upload error' }))
+    } catch (err) {
+      setSlot(prev => ({ ...prev, state: 'error', error: (err instanceof Error ? err.message : null) || 'Upload error' }))
     }
   }, [lang, getSlotParts])
 

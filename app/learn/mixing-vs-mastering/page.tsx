@@ -9,9 +9,7 @@
 import Link from 'next/link'
 import { useLearn, useLearnMeta } from '../LearnContext'
 
-// ============================================================================
-// TRANSLATIONS
-// ============================================================================
+// --- Translations ---
 
 const t = {
   es: {
@@ -195,9 +193,7 @@ You get 2 free full analyses, with a detailed report and downloadable PDF. 200 M
   },
 }
 
-// ============================================================================
-// STYLES
-// ============================================================================
+// --- Styles ---
 
 const h2Style: React.CSSProperties = {
   fontSize: 'clamp(1.25rem, 3vw, 1.5rem)',
@@ -207,9 +203,7 @@ const h2Style: React.CSSProperties = {
   marginBottom: '1rem',
 }
 
-// ============================================================================
-// COMPONENTS
-// ============================================================================
+// --- Components ---
 
 function Section({ title, body }: { title: string; body: string }) {
   return (
@@ -228,9 +222,7 @@ function Section({ title, body }: { title: string; body: string }) {
   )
 }
 
-// ============================================================================
-// PAGE
-// ============================================================================
+// --- Page ---
 
 export default function MixingVsMasteringPage() {
   const { lang } = useLearn()

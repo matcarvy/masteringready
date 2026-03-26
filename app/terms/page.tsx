@@ -10,9 +10,7 @@ import Link from 'next/link'
 import { detectLanguage, setLanguageCookie } from '@/lib/language'
 import { ArrowLeft, FileText } from 'lucide-react'
 
-// ============================================================================
-// TRANSLATIONS / TRADUCCIONES
-// ============================================================================
+// --- Translations ---
 
 const translations = {
   es: {
@@ -205,9 +203,7 @@ In no event shall we be liable for indirect, incidental, or consequential damage
   }
 }
 
-// ============================================================================
-// COMPONENT
-// ============================================================================
+// --- Component ---
 
 export default function TermsPage() {
   const [lang, setLang] = useState<'es' | 'en'>('es')

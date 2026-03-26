@@ -2,7 +2,7 @@
 
 /**
  * Theme System for MasteringReady
- * ================================
+ *
  * Supports 3-way preference: 'system' | 'light' | 'dark'
  * - 'system' follows OS prefers-color-scheme
  * - 'light' / 'dark' are manual overrides
@@ -12,9 +12,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 
-// ============================================================================
-// TYPES
-// ============================================================================
+// --- Types ---
 
 export type ThemePreference = 'system' | 'light' | 'dark'
 export type ResolvedTheme = 'light' | 'dark'
@@ -28,15 +26,11 @@ interface ThemeState {
   setTheme: (theme: ThemePreference) => void
 }
 
-// ============================================================================
-// CONSTANTS
-// ============================================================================
+// --- Constants ---
 
 const STORAGE_KEY = 'mr-theme'
 
-// ============================================================================
-// HELPERS
-// ============================================================================
+// --- Helpers ---
 
 function getSystemTheme(): ResolvedTheme {
   if (typeof window === 'undefined') return 'light'
@@ -60,9 +54,7 @@ function getSavedPreference(): ThemePreference {
   return 'system'
 }
 
-// ============================================================================
-// HOOK
-// ============================================================================
+// --- Hook ---
 
 export function useTheme(): ThemeState {
   const [theme, setThemeState] = useState<ThemePreference>('system')

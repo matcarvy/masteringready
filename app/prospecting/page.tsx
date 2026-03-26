@@ -17,9 +17,7 @@ import {
 } from 'lucide-react'
 import Select from '@/components/Select'
 
-// ============================================================================
-// TYPES
-// ============================================================================
+// --- Types ---
 
 interface ProspectingLead {
   id: string
@@ -49,9 +47,7 @@ interface KpiData {
   bySource: { source: string; count: number }[]
 }
 
-// ============================================================================
-// TRANSLATIONS
-// ============================================================================
+// --- Translations ---
 
 const t = {
   es: {
@@ -165,9 +161,7 @@ const t = {
   }
 }
 
-// ============================================================================
-// HELPERS
-// ============================================================================
+// --- Helpers ---
 
 const SOURCE_COLORS: Record<string, { bg: string; text: string }> = {
   reddit: { bg: 'var(--mr-amber-bg)', text: '#FF4500' },
@@ -203,9 +197,7 @@ function formatDate(dateStr: string): string {
   return d.toLocaleDateString()
 }
 
-// ============================================================================
-// COMPONENT
-// ============================================================================
+// --- Component ---
 
 export default function ProspectingPage() {
   const { user, session, loading: authLoading } = useAuth()
@@ -306,7 +298,6 @@ export default function ProspectingPage() {
       setTotalLeads(data.total || 0)
       setKpi(data.kpi || null)
     } catch (err) {
-      console.error('Fetch leads error:', err)
       setError(lang === 'es' ? 'Error al cargar leads' : 'Failed to load leads')
     } finally {
       setLoading(false)
@@ -340,7 +331,6 @@ export default function ProspectingPage() {
         l.id === id ? { ...l, ...updates, updated_at: new Date().toISOString() } : l
       ))
     } catch (err) {
-      console.error('Update lead error:', err)
     }
   }
 
@@ -407,7 +397,7 @@ export default function ProspectingPage() {
               { label: labels.totalLeads, value: kpi.total.toString() },
               { label: labels.newThisWeek, value: kpi.newThisWeek.toString() },
               { label: labels.avgRelevance, value: `${(kpi.avgScore * 100).toFixed(0)}%` },
-              { label: labels.topSource, value: kpi.topSource?.source || '—' },
+              { label: labels.topSource, value: kpi.topSource?.source || '-' },
             ].map((card, i) => (
               <div key={i} style={{
                 padding: '1rem', background: 'var(--mr-bg-card)', borderRadius: '8px',

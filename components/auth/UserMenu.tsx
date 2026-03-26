@@ -13,18 +13,14 @@ import Link from 'next/link'
 import { useAuth } from './AuthProvider'
 import { User, LogOut, ChevronDown, History, CreditCard, Settings } from 'lucide-react'
 
-// ============================================================================
-// TYPES / TIPOS
-// ============================================================================
+// --- Types / Tipos ---
 
 interface UserMenuProps {
   lang?: 'es' | 'en'
   isMobile?: boolean
 }
 
-// ============================================================================
-// TRANSLATIONS / TRADUCCIONES
-// ============================================================================
+// --- Translations / Traducciones ---
 
 const translations = {
   es: {
@@ -49,9 +45,7 @@ const translations = {
   }
 }
 
-// ============================================================================
-// COMPONENT / COMPONENTE
-// ============================================================================
+// --- Component / Componente ---
 
 export function UserMenu({ lang = 'es', isMobile = false }: UserMenuProps) {
   const { user, loading, signOut } = useAuth()

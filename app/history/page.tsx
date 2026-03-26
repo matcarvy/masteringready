@@ -36,11 +36,10 @@ import {
 } from 'lucide-react'
 import Select from '@/components/Select'
 import InterpretativeSection from '@/components/InterpretativeSection'
+import { useToast } from '@/components/ui/Toast'
 import useGeo from '@/lib/useGeo'
 
-// ============================================================================
-// TRANSLATIONS / TRADUCCIONES
-// ============================================================================
+// --- Translations ---
 
 const translations = {
   es: {
@@ -117,9 +116,7 @@ const translations = {
   }
 }
 
-// ============================================================================
-// CTA HELPER — replicates backend generate_cta() logic by score
-// ============================================================================
+// --- CTA Helper ---
 
 function getCtaForScore(score: number, lang: 'es' | 'en'): { title: string; body: string; button: string; action: string } {
   if (score >= 95) {
@@ -157,9 +154,7 @@ function getCtaForScore(score: number, lang: 'es' | 'en'): { title: string; body
     : { title: 'Your mix needs a deep review.', body: "There are fundamental decisions to resolve before mastering. If you'd like, write us.", button: 'Review my project', action: 'review' }
 }
 
-// ============================================================================
-// TYPES
-// ============================================================================
+// --- Types ---
 
 interface Analysis {
   id: string
@@ -187,9 +182,7 @@ type StatusFilter = 'all' | 'ready' | 'needs_work' | 'review'
 
 const PAGE_SIZE = 20
 
-// ============================================================================
-// HELPER: Score-based verdict (matches analyzer score_report exactly)
-// ============================================================================
+// --- Score-based Verdict Helper ---
 
 function scoreToVerdictLabel(score: number, lang: 'es' | 'en'): string {
   if (lang === 'es') {
@@ -212,9 +205,7 @@ function scoreToVerdictLabel(score: number, lang: 'es' | 'en'): string {
   return '❌ No margin for additional processing'
 }
 
-// ============================================================================
-// HELPER: Clean report text
-// ============================================================================
+// --- Clean Report Text Helper ---
 
 const cleanReportText = (text: string): string => {
   if (!text) return ''
@@ -270,9 +261,7 @@ const cleanReportText = (text: string): string => {
     .trim()
 }
 
-// ============================================================================
-// SKELETON LOADER
-// ============================================================================
+// --- Skeleton Loader ---
 
 function HistorySkeleton({ lang, isMobile }: { lang: string; isMobile: boolean }) {
   return (
@@ -384,14 +373,13 @@ function HistorySkeleton({ lang, isMobile }: { lang: string; isMobile: boolean }
   )
 }
 
-// ============================================================================
-// COMPONENT
-// ============================================================================
+// --- Component ---
 
 export default function HistoryPage() {
   const router = useRouter()
   const { user, session, loading: authLoading, isAdmin } = useAuth()
   const { geo } = useGeo()
+  const toast = useToast()
 
   const [lang, setLang] = useState<'es' | 'en'>('es')
   const [isMobile, setIsMobile] = useState(false)
@@ -620,9 +608,7 @@ export default function HistoryPage() {
                     .from('profiles')
                     .update({ preferred_language: newLang })
                     .eq('id', user.id)
-                    .then(({ error }) => {
-                      if (error) console.error('Error saving language preference:', error)
-                    })
+                    .then(() => {})
                 }
               }}
               style={{
@@ -1578,10 +1564,10 @@ export default function HistoryPage() {
                           document.body.removeChild(a)
                           URL.revokeObjectURL(url)
                         } else {
-                          alert(lang === 'es' ? 'Error al generar el PDF. Intenta de nuevo.' : 'Error generating PDF. Please try again.')
+                          toast.error(lang === 'es' ? 'Error al generar el PDF. Intenta de nuevo.' : 'Error generating PDF. Please try again.')
                         }
                       } catch {
-                        alert(lang === 'es' ? 'Error al descargar el PDF.' : 'Error downloading PDF.')
+                        toast.error(lang === 'es' ? 'Error al descargar el PDF.' : 'Error downloading PDF.')
                       }
                     }}
                     style={{

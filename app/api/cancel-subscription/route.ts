@@ -71,8 +71,7 @@ export async function POST(request: NextRequest) {
       cancel_at: updated.cancel_at ? new Date(updated.cancel_at * 1000).toISOString() : null
     })
 
-  } catch (error) {
-    console.error('Cancel subscription error:', error instanceof Error ? error.message : (error as any)?.message || 'Unknown error')
+  } catch {
     return NextResponse.json(
       { error: 'Cancellation failed' },
       { status: 500 }

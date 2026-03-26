@@ -46,9 +46,7 @@ export const EUROZONE_COUNTRIES = [
 
 // Pricing by country (amounts in cents)
 export const PRICING_BY_COUNTRY: Record<string, PricingConfig> = {
-  // ═══════════════════════════════════════════════════════════
-  // TIER 1: Local currency, full price
-  // ═══════════════════════════════════════════════════════════
+  // --- Tier 1: Local currency, full price ---
 
   // United States (base)
   'US': { currency: 'usd', pro_monthly: 999, pro_yearly: 9900, single: 599, addon: 399 },
@@ -62,32 +60,22 @@ export const PRICING_BY_COUNTRY: Record<string, PricingConfig> = {
   // Australia
   'AU': { currency: 'aud', pro_monthly: 1499, pro_yearly: 14900, single: 899, addon: 599 },
 
-  // ═══════════════════════════════════════════════════════════
-  // TIER 2: 0.75x - Chile, Uruguay
-  // ═══════════════════════════════════════════════════════════
+  // --- Tier 2: 0.75x - Chile, Uruguay ---
   'CL': { currency: 'usd', pro_monthly: 749, pro_yearly: 7490, single: 449, addon: 299 },
   'UY': { currency: 'usd', pro_monthly: 749, pro_yearly: 7490, single: 449, addon: 299 },
 
-  // ═══════════════════════════════════════════════════════════
-  // TIER 3: 0.70x - Mexico
-  // ═══════════════════════════════════════════════════════════
+  // --- Tier 3: 0.70x - Mexico ---
   'MX': { currency: 'usd', pro_monthly: 699, pro_yearly: 6990, single: 419, addon: 279 },
 
-  // ═══════════════════════════════════════════════════════════
-  // TIER 4: 0.60x - Brazil
-  // ═══════════════════════════════════════════════════════════
+  // --- Tier 4: 0.60x - Brazil ---
   'BR': { currency: 'usd', pro_monthly: 599, pro_yearly: 5990, single: 359, addon: 239 },
 
-  // ═══════════════════════════════════════════════════════════
-  // TIER 5: 0.55x - Colombia, Peru, Ecuador
-  // ═══════════════════════════════════════════════════════════
+  // --- Tier 5: 0.55x - Colombia, Peru, Ecuador ---
   'CO': { currency: 'usd', pro_monthly: 549, pro_yearly: 5490, single: 329, addon: 219 },
   'PE': { currency: 'usd', pro_monthly: 549, pro_yearly: 5490, single: 329, addon: 219 },
   'EC': { currency: 'usd', pro_monthly: 549, pro_yearly: 5490, single: 329, addon: 219 },
 
-  // ═══════════════════════════════════════════════════════════
-  // TIER 6: 0.40x - Argentina
-  // ═══════════════════════════════════════════════════════════
+  // --- Tier 6: 0.40x - Argentina ---
   'AR': { currency: 'usd', pro_monthly: 399, pro_yearly: 3990, single: 239, addon: 159 },
 }
 

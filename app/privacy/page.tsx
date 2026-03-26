@@ -10,9 +10,7 @@ import Link from 'next/link'
 import { detectLanguage, setLanguageCookie } from '@/lib/language'
 import { ArrowLeft, Shield } from 'lucide-react'
 
-// ============================================================================
-// TRANSLATIONS / TRADUCCIONES
-// ============================================================================
+// --- Translations ---
 
 const translations = {
   es: {
@@ -267,9 +265,7 @@ You can request deletion of your account and data at any time.`
   }
 }
 
-// ============================================================================
-// COMPONENT
-// ============================================================================
+// --- Component ---
 
 export default function PrivacyPage() {
   const [lang, setLang] = useState<'es' | 'en'>('es')

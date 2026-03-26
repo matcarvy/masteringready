@@ -25,12 +25,6 @@ export async function fetchHistoryData({
     client.from('analyses').select('*').eq('user_id', userId).is('deleted_at', null).order('created_at', { ascending: false }),
   ])
 
-  if (subResult.error && subResult.error.code !== 'PGRST116') {
-    console.error('[History] Subscription error:', subResult.error.message)
-  }
-  if (analysesResult.error) {
-    console.error('[History] Analyses error:', analysesResult.error.message)
-  }
 
   const isPro = subResult.data?.plan?.type === 'pro' || subResult.data?.plan?.type === 'studio'
 

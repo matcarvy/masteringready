@@ -3,11 +3,13 @@
 import { useRef, useState, useCallback } from 'react'
 import html2canvas from 'html2canvas'
 
-// ============================================================================
-// ScoreCard — Generates branded PNG score cards for sharing
-// Two formats: 1080x1080 (feed) and 1080x1920 (story)
-// Uses html2canvas to render a hidden div as a PNG image
-// ============================================================================
+// --- ScoreCard ---
+
+const CARD_WIDTH = 1080
+const FEED_HEIGHT = 1080
+const STORY_HEIGHT = 1920
+const RING_RADIUS = 88
+const CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS
 
 interface MetricBar {
   percentage: number
@@ -119,9 +121,6 @@ const dedupeMap: Record<string, string> = {
   tonal_balance: 'frequency_balance',
 }
 
-// SVG ring circumference (r=88, C=2*PI*88)
-const CIRCUMFERENCE = 2 * Math.PI * 88
-
 export default function ScoreCard({ score, verdict, filename, metricsBars, genre, lang }: ScoreCardProps) {
   const feedRef = useRef<HTMLDivElement>(null)
   const storyRef = useRef<HTMLDivElement>(null)
@@ -178,8 +177,8 @@ export default function ScoreCard({ score, verdict, filename, metricsBars, genre
       await new Promise(r => setTimeout(r, 100))
 
       const canvas = await html2canvas(el, {
-        width: format === 'feed' ? 1080 : 1080,
-        height: format === 'feed' ? 1080 : 1920,
+        width: CARD_WIDTH,
+        height: format === 'feed' ? FEED_HEIGHT : STORY_HEIGHT,
         scale: 2,
         backgroundColor: '#0D0D14',
         useCORS: true,
@@ -200,16 +199,13 @@ export default function ScoreCard({ score, verdict, filename, metricsBars, genre
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
-    } catch (err) {
-      console.error('Score card generation failed:', err)
+    } catch {
     } finally {
       setGenerating(null)
     }
   }, [trackName])
 
-  // ============================================================================
-  // Shared card content renderer
-  // ============================================================================
+  // --- Shared card content renderer ---
   const renderCardContent = (format: 'feed' | 'story') => {
     const isFeed = format === 'feed'
     // Sizing constants per format
@@ -301,8 +297,8 @@ export default function ScoreCard({ score, verdict, filename, metricsBars, genre
 
     return (
       <div style={{
-        width: '1080px',
-        height: isFeed ? '1080px' : '1920px',
+        width: `${CARD_WIDTH}px`,
+        height: isFeed ? `${FEED_HEIGHT}px` : `${STORY_HEIGHT}px`,
         background: '#0D0D14',
         borderRadius: '0px',
         overflow: 'hidden',

@@ -16,6 +16,8 @@ interface SelectProps {
   style?: React.CSSProperties
 }
 
+const DROPDOWN_Z_INDEX = 9999
+
 export default function Select({ value, onChange, options, compact, style }: SelectProps) {
   const [open, setOpen] = useState(false)
   const [highlighted, setHighlighted] = useState(-1)
@@ -180,7 +182,7 @@ export default function Select({ value, onChange, options, compact, style }: Sel
             border: '1px solid var(--mr-border-strong)',
             borderRadius: 'var(--mr-radius-sm)',
             boxShadow: 'var(--mr-shadow-lg)',
-            zIndex: 9999,
+            zIndex: DROPDOWN_Z_INDEX,
             maxHeight: '280px',
             overflowY: 'auto',
             opacity: mounted ? 1 : 0,

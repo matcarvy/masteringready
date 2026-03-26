@@ -38,14 +38,13 @@ import {
   Wrench
 } from 'lucide-react'
 import InterpretativeSection from '@/components/InterpretativeSection'
+import { useToast } from '@/components/ui/Toast'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { clearNotification } from '@/components/NotificationBadge'
 import { SkeletonBox, SkeletonText, SkeletonCircle } from '@/components/Skeleton'
 import ProgressTimeline from '@/components/ProgressTimeline'
 
-// ============================================================================
-// TRANSLATIONS / TRADUCCIONES
-// ============================================================================
+// --- Translations ---
 
 const translations = {
   es: {
@@ -198,9 +197,7 @@ const translations = {
   }
 }
 
-// ============================================================================
-// CTA HELPER — replicates backend generate_cta() logic by score
-// ============================================================================
+// --- CTA Helper ---
 
 function getCtaForScore(score: number, lang: 'es' | 'en'): { title: string; body: string; button: string; action: string } {
   if (score >= 95) {
@@ -238,9 +235,7 @@ function getCtaForScore(score: number, lang: 'es' | 'en'): { title: string; body
     : { title: 'Your mix needs a deep review.', body: "There are fundamental decisions to resolve before mastering. If you'd like, write us.", button: 'Review my project', action: 'review' }
 }
 
-// ============================================================================
-// FILE INFO HELPERS
-// ============================================================================
+// --- File Info Helpers ---
 
 function formatDuration(seconds: number): string {
   const m = Math.floor(seconds / 60)
@@ -259,9 +254,7 @@ function formatSampleRate(rate: number): string {
   return rate >= 1000 ? `${(rate / 1000).toFixed(rate % 1000 === 0 ? 0 : 1)} kHz` : `${rate} Hz`
 }
 
-// ============================================================================
-// TYPES
-// ============================================================================
+// --- Types ---
 
 interface Analysis {
   id: string
@@ -316,9 +309,7 @@ interface Subscription {
   }
 }
 
-// ============================================================================
-// HELPER: Score-based verdict (matches analyzer score_report exactly)
-// ============================================================================
+// --- Score-based Verdict Helper ---
 
 function scoreToVerdictLabel(score: number, lang: 'es' | 'en'): string {
   if (lang === 'es') {
@@ -341,9 +332,7 @@ function scoreToVerdictLabel(score: number, lang: 'es' | 'en'): string {
   return '❌ No margin for additional processing'
 }
 
-// ============================================================================
-// HELPER: Clean and format report text for display
-// ============================================================================
+// --- Clean Report Text Helper ---
 
 const cleanReportText = (text: string): string => {
   if (!text) return ''
@@ -411,9 +400,7 @@ const cleanReportText = (text: string): string => {
     .trim()
 }
 
-// ============================================================================
-// SKELETON LOADER
-// ============================================================================
+// --- Skeleton Loader ---
 
 function DashboardSkeleton({ lang, isMobile }: { lang: string; isMobile: boolean }) {
   return (
@@ -533,14 +520,13 @@ function DashboardSkeleton({ lang, isMobile }: { lang: string; isMobile: boolean
   )
 }
 
-// ============================================================================
-// COMPONENT
-// ============================================================================
+// --- Component ---
 
 function DashboardContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { user, session, loading: authLoading, isAdmin } = useAuth()
+  const toast = useToast()
 
   const [lang, setLang] = useState<'es' | 'en'>('es')
   const [selectedAnalysis, setSelectedAnalysis] = useState<Analysis | null>(null)
@@ -717,12 +703,10 @@ function DashboardContent() {
       if (data.url) {
         window.location.href = data.url
       } else {
-        console.error('Checkout error:', data.error)
-        alert(lang === 'es' ? 'Error al iniciar el pago' : 'Error starting payment')
+        toast.error(lang === 'es' ? 'Error al iniciar el pago' : 'Error starting payment')
       }
-    } catch (error) {
-      console.error('Checkout error:', error)
-      alert(lang === 'es' ? 'Error al iniciar el pago' : 'Error starting payment')
+    } catch {
+      toast.error(lang === 'es' ? 'Error al iniciar el pago' : 'Error starting payment')
     }
   }
 
@@ -741,11 +725,8 @@ function DashboardContent() {
 
       if (data.url) {
         window.location.href = data.url
-      } else {
-        console.error('Portal error:', data.error)
       }
-    } catch (error) {
-      console.error('Portal error:', error)
+    } catch {
     }
   }
 
@@ -841,9 +822,7 @@ function DashboardContent() {
                     .from('profiles')
                     .update({ preferred_language: newLang })
                     .eq('id', user.id)
-                    .then(({ error }) => {
-                      if (error) console.error('Error saving language preference:', error)
-                    })
+                    .then(() => {})
                 }
               }}
               style={{
@@ -2072,10 +2051,10 @@ function DashboardContent() {
                           document.body.removeChild(a)
                           URL.revokeObjectURL(url)
                         } else {
-                          alert(lang === 'es' ? 'Error al generar el PDF. Intenta de nuevo.' : 'Error generating PDF. Please try again.')
+                          toast.error(lang === 'es' ? 'Error al generar el PDF. Intenta de nuevo.' : 'Error generating PDF. Please try again.')
                         }
                       } catch {
-                        alert(lang === 'es' ? 'Error al descargar el PDF.' : 'Error downloading PDF.')
+                        toast.error(lang === 'es' ? 'Error al descargar el PDF.' : 'Error downloading PDF.')
                       }
                     }}
                     style={{

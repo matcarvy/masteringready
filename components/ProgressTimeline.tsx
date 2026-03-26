@@ -1,15 +1,7 @@
 'use client'
 
 /**
- * ProgressTimeline — Score evolution chart
- * =========================================
- * Line/area chart showing score history over time.
- * Color-coded points by score range, optional trend line,
- * motivational narrative stat line above the chart.
- *
- * Uses Recharts (lightweight, React-native).
- * All text bilingual (ES LATAM Neutro / US EN).
- * All colors via var(--mr-*) CSS tokens.
+ * ProgressTimeline - Score evolution chart with trend line and narrative stats.
  */
 
 import { useEffect, useMemo, useState } from 'react'
@@ -24,9 +16,7 @@ import {
 import { TrendingUp, Activity } from 'lucide-react'
 import Select from '@/components/Select'
 
-// ============================================================================
-// TYPES
-// ============================================================================
+// --- Types ---
 
 interface Analysis {
   id: string
@@ -41,9 +31,7 @@ interface ProgressTimelineProps {
   isMobile: boolean
 }
 
-// ============================================================================
-// TRANSLATIONS
-// ============================================================================
+// --- Translations ---
 
 const t = {
   es: {
@@ -84,9 +72,7 @@ const t = {
   },
 }
 
-// ============================================================================
-// HELPERS
-// ============================================================================
+// --- Helpers ---
 
 function getScoreColor(score: number): string {
   if (score >= 85) return '#10b981' // green
@@ -139,9 +125,7 @@ function truncateFilename(filename: string, maxLen: number): string {
   return name.slice(0, maxLen - 3) + '...'
 }
 
-// ============================================================================
-// CUSTOM DOT — tooltip only on direct dot hover (not X-axis proximity)
-// ============================================================================
+// --- Custom Dot ---
 
 // Dot hover state setter is passed via a module-level ref so CustomDot
 // (which must be a stable component for Recharts) can access it.
@@ -167,9 +151,7 @@ function CustomDot(props: any) {
   )
 }
 
-// ============================================================================
-// NARRATIVE STAT LINE
-// ============================================================================
+// --- Narrative Stat Line ---
 
 function NarrativeLine({
   analyses,
@@ -292,9 +274,7 @@ function NarrativeLine({
   )
 }
 
-// ============================================================================
-// MAIN COMPONENT
-// ============================================================================
+// --- Main Component ---
 
 export default function ProgressTimeline({ analyses, lang, isMobile }: ProgressTimelineProps) {
   const labels = t[lang]

@@ -35,11 +35,8 @@ export async function compressAudioFile(
   // Read file as ArrayBuffer
   const arrayBuffer = await file.arrayBuffer()
 
-  // ============================================================
-  // CAPTURE ORIGINAL METADATA BEFORE ANY COMPRESSION
-  // CRITICAL: parseFileHeader MUST run BEFORE decodeAudioData()
-  // because decodeAudioData() detaches the ArrayBuffer, making it empty
-  // ============================================================
+  // --- Capture Original Metadata ---
+  // parseFileHeader MUST run BEFORE decodeAudioData() because decode detaches the ArrayBuffer
   const headerInfo = parseFileHeader(arrayBuffer, file.name)
 
   // Decode audio (WARNING: this detaches arrayBuffer — do NOT use arrayBuffer after this)
@@ -52,14 +49,10 @@ export async function compressAudioFile(
     fileSize: file.size  // Original file size before compression
   }
 
-  // ============================================================
-
-  // STEREO SAFETY: If the browser decoder collapsed channels, skip compression
+  // --- Stereo Safety ---
+  // If the browser decoder collapsed channels, skip compression
   // Web Audio API may decode some formats (e.g. 32-bit float WAV) as mono
   if (headerInfo.numberOfChannels && headerInfo.numberOfChannels > audioBuffer.numberOfChannels) {
-    console.warn(
-      `[Compression] Browser decoded ${headerInfo.numberOfChannels}ch file as ${audioBuffer.numberOfChannels}ch — skipping compression to preserve stereo`
-    )
     audioContext.close()
     return {
       file,
@@ -238,8 +231,9 @@ function parseIeee80(view: DataView, offset: number): number {
   // value = 2^(exponent - 16383) * mantissa / 2^63
   // Rearranged to avoid JS precision loss with large integers:
   // value = mantissaHigh * 2^(32 - shift) + mantissaLow * 2^(-shift)
-  // where shift = 63 - (exponent - 16383) = 16446 - exponent
-  const shift = 16446 - exponent
+  // 63 - (exponent - 16383) collapsed to a single constant
+  const IEEE_754_EXPONENT_OFFSET = 16446
+  const shift = IEEE_754_EXPONENT_OFFSET - exponent
   const value = mantissaHigh * Math.pow(2, 32 - shift) + mantissaLow * Math.pow(2, -shift)
 
   return sign ? -value : value

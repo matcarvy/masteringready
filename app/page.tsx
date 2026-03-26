@@ -6,6 +6,7 @@ import { Download, Check, Upload, Zap, Shield, TrendingUp, Play, Music, Crown, X
 import { UserMenu, useAuth, AuthModal } from '@/components/auth'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import ScoreCard from '@/components/ScoreCard'
+import ReadyCertifiedBadge from '@/components/ReadyCertifiedBadge'
 import { analyzeFile, checkIpLimit, IpCheckResult } from '@/lib/api'
 import { startAnalysisPolling, getAnalysisStatus } from '@/lib/api'
 import { compressAudioFile, parseFileHeader } from '@/lib/audio-compression'
@@ -17,6 +18,7 @@ import { getErrorMessage, ERROR_MESSAGES } from '@/lib/error-messages'
 import { NotificationBadge, setNotification, clearNotification } from '@/components/NotificationBadge'
 import Select from '@/components/Select'
 import InterpretativeSection from '@/components/InterpretativeSection'
+import { useToast } from '@/components/ui/Toast'
 
 // Module-level quota cache — survives React state resets / component remounts
 // (GoTrueClient conflicts cause auth state flicker → state loss)
@@ -24,9 +26,11 @@ let _quotaCache: AnalysisStatus | null = null
 
 const ADMIN_STATUS: AnalysisStatus = { can_analyze: true, reason: 'ADMIN', analyses_used: 0, analyses_limit: -1, is_lifetime: false }
 
-// ============================================================================
-// Helper: Map score to database verdict enum (deterministic, mirrors backend score_report)
-// ============================================================================
+const MSG_ROTATE_BASE_MS = 6000
+const MSG_ROTATE_RANGE_MS = 2000
+const MAX_POLL_DURATION_MS = 5 * 60 * 1000
+
+// --- Map score to database verdict enum (deterministic, mirrors backend score_report) ---
 function scoreToVerdictEnum(score: number): 'ready' | 'almost_ready' | 'needs_work' | 'critical' {
   if (score >= 85) return 'ready'
   if (score >= 60) return 'almost_ready'
@@ -34,11 +38,7 @@ function scoreToVerdictEnum(score: number): 'ready' | 'almost_ready' | 'needs_wo
   return 'critical'
 }
 
-// ============================================================================
-// Services + Workshop External URLs (update when dates/links change)
-// All URLs start empty — buttons open ContactModal when empty.
-// Fill URLs as Sara creates external pages (Carrd, Stripe links).
-// ============================================================================
+// --- Services + Workshop External URLs ---
 const SERVICES_CONFIG = {
   mixReviewMaster: {
     standardPrice: 349,
@@ -76,10 +76,7 @@ const PriceUSD = ({ amount, size = '2rem' }: { amount: number; size?: string }) 
   </span>
 )
 
-// ============================================================================
-// Testimonials — fill when reviews come in. Empty array = section hidden.
-// Categories: accuracy ("spot on"), outcome ("fixed X, master improved"), confidence ("finally understood")
-// ============================================================================
+// --- Testimonials ---
 const TESTIMONIALS: {
   name: string
   role?: string
@@ -110,9 +107,7 @@ const TESTIMONIALS: {
   },
 ]
 
-// ============================================================================
-// Helper: Save analysis directly to database for logged-in users
-// ============================================================================
+// --- Save analysis directly to database for logged-in users ---
 async function saveAnalysisToDatabase(userId: string, analysis: any, fileObj?: File, countryCode?: string, isTestAnalysis?: boolean, sessionTokens?: { access_token: string; refresh_token: string }) {
   // Use a fresh client to avoid stale singleton state after analysis
   // (analysis makes multiple auth/quota checks that can leave the singleton locked)
@@ -186,7 +181,6 @@ async function saveAnalysisToDatabase(userId: string, analysis: any, fileObj?: F
   ])
 
   if (insertResult.error) {
-    console.error('[SaveAnalysis] INSERT ERROR:', insertResult.error.message)
     throw insertResult.error
   }
 
@@ -253,6 +247,7 @@ function Home() {
   // Auth state - check if user is logged in
   const { user, session, loading: authLoading, isAdmin, savePendingAnalysis, pendingAnalysisQuotaExceeded, clearPendingAnalysisQuotaExceeded, pendingAnalysisSaved, clearPendingAnalysisSaved } = useAuth()
   const isLoggedIn = !!user
+  const toast = useToast()
 
   const [file, setFile] = useState<File | null>(null)
   const [lang, setLang] = useState<'es' | 'en'>('es')
@@ -463,7 +458,7 @@ function Home() {
     // Random interval between 6-8 seconds per message
     let timeoutId: NodeJS.Timeout
     const scheduleNext = () => {
-      const delay = 6000 + Math.random() * 2000
+      const delay = MSG_ROTATE_BASE_MS + Math.random() * MSG_ROTATE_RANGE_MS
       timeoutId = setTimeout(() => {
         pickNext()
         scheduleNext()
@@ -745,15 +740,11 @@ const handleAnalyze = async () => {
   setResult(null)
   setError(null)
   try {
-    // ============================================================
-    // QUOTA CHECK — diagnostic + timeout safety net
-    // ============================================================
+    // --- Quota check ---
     // Use module-level cache as fallback when React state was lost (GoTrueClient conflicts)
     const effectiveQuotaStatus = userAnalysisStatus || _quotaCache
 
-    // ============================================================
-    // IP RATE LIMITING CHECK (for anonymous users only)
-    // ============================================================
+    // --- IP rate limiting check (anonymous users only) ---
     if (!isLoggedIn) {
       try {
         const ipCheck = await Promise.race([
@@ -783,10 +774,7 @@ const handleAnalyze = async () => {
         return
       }
     } else {
-      // ============================================================
-      // USER LIMIT CHECK (for logged-in users)
-      // Use cached status if available and positive — skip RPC round-trip
-      // ============================================================
+      // --- User limit check (cached status skips RPC round-trip) ---
       try {
         let analysisStatus: AnalysisStatus
         if (effectiveQuotaStatus?.can_analyze && effectiveQuotaStatus.reason !== 'ANONYMOUS') {
@@ -829,7 +817,7 @@ const handleAnalyze = async () => {
         return
       }
     }
-    // ============================================================
+    // --- End quota/limit checks ---
 
     let fileToAnalyze = file
     let originalMetadata: { sampleRate: number; bitDepth: number; numberOfChannels: number; duration: number; fileSize: number } | undefined = undefined
@@ -914,15 +902,14 @@ const handleAnalyze = async () => {
         setProgressAnimDuration(postCompressEst)
         setProgressKey(k => k + 1) // Restart CSS animation from 0%
         progressStartRef.current = { time: Date.now(), duration: postCompressEst }
-      } catch (compressionError: any) {
+      } catch (err) {
         clearInterval(compressionInterval)
         setCompressing(false)
         setCompressionProgress(0)
 
-        if (compressionError?.message === 'COMPRESSION_TIMEOUT') {
+        if (err instanceof Error && err.message === 'COMPRESSION_TIMEOUT') {
           // Compression timed out (browser couldn't decode this WAV format).
           // Skip compression and upload the original file — it's under 200MB backend limit.
-          console.error('[Compression] Timed out after 30s, uploading original file')
           fileToAnalyze = file
         } else {
           throw new Error(ERROR_MESSAGES.corrupt_file[lang])
@@ -950,49 +937,34 @@ const handleAnalyze = async () => {
 
     // POLL FOR RESULT — adaptive interval: fast at first, slows down
     const pollStartTime = Date.now()
-    const maxPollDuration = 5 * 60 * 1000  // 5 min max
     let pollCount = 0
 
     const pollForResult = async (): Promise<any> => {
-      return new Promise((resolve, reject) => {
-        const poll = async () => {
-          pollCount++
-          const elapsed = Date.now() - pollStartTime
+      await new Promise(r => setTimeout(r, 1000))
+      while (true) {
+        pollCount++
+        const elapsed = Date.now() - pollStartTime
 
-          // Adaptive delay: 1s first 10s, 3s after, 4s after 90s
-          const getDelay = () => {
-            if (elapsed < 10000) return 1000
-            if (elapsed < 90000) return 3000
-            return 4000
-          }
+        const statusData = await getAnalysisStatus(jobId, lang)
 
-          try {
-            const statusData = await getAnalysisStatus(jobId, lang)
-
-            // Update progress ref — render tick timer syncs to UI
-            const newProgress = statusData.progress || 0
-            if (newProgress > progressRef.current) {
-              progressRef.current = newProgress
-            }
-
-            if (statusData.status === 'complete') {
-              resolve(statusData.result)
-            } else if (statusData.status === 'error') {
-              console.error('Analysis error:', statusData.error)
-              reject(new Error(statusData.error || 'Analysis failed'))
-            } else if (elapsed >= maxPollDuration) {
-              console.error('Polling timeout')
-              reject(new Error(ERROR_MESSAGES.timeout[lang]))
-            } else {
-              setTimeout(poll, getDelay())
-            }
-          } catch (pollError: any) {
-            console.error('Polling error:', pollError)
-            reject(pollError)
-          }
+        const newProgress = statusData.progress || 0
+        if (newProgress > progressRef.current) {
+          progressRef.current = newProgress
         }
-        setTimeout(poll, 1000)  // First poll after 1s
-      })
+
+        if (statusData.status === 'complete') {
+          return statusData.result
+        }
+        if (statusData.status === 'error') {
+          throw new Error(statusData.error || 'Analysis failed')
+        }
+        if (elapsed >= MAX_POLL_DURATION_MS) {
+          throw new Error(ERROR_MESSAGES.timeout[lang])
+        }
+
+        const delay = elapsed < 10000 ? 1000 : elapsed < 90000 ? 3000 : 4000
+        await new Promise(r => setTimeout(r, delay))
+      }
     }
     
     // Wait for result
@@ -1019,8 +991,7 @@ const handleAnalyze = async () => {
               setLoading(false)
               return
             }
-          } catch (quotaErr) {
-            console.error('[Analysis] Quota re-check failed, blocking display:', quotaErr)
+          } catch {
             setShowFreeLimitModal(true)
             progressRef.current = 0
             setProgress(0)
@@ -1044,19 +1015,17 @@ const handleAnalyze = async () => {
           setUserAnalysisStatus(updated)
           _quotaCache = updated
         }
-        // Save to database — non-blocking so Supabase client is free for dashboard navigation.
-        // SPA navigation does NOT kill JS promises, so the save completes in background.
-        saveAnalysisToDatabase(user.id, {
-          ...data,
-          filename: file.name,
-          created_at: new Date().toISOString(),
-          lang,
-          strict,
-          api_request_id: requestIdRef.current || null
-        }, file, geo?.countryCode, isAdmin, session ? { access_token: session.access_token, refresh_token: session.refresh_token } : undefined)
-          .then(savedData => {
+        void (async () => {
+          try {
+            const savedData = await saveAnalysisToDatabase(user.id, {
+              ...data,
+              filename: file.name,
+              created_at: new Date().toISOString(),
+              lang,
+              strict,
+              api_request_id: requestIdRef.current || null
+            }, file, geo?.countryCode, isAdmin, session ? { access_token: session.access_token, refresh_token: session.refresh_token } : undefined)
             setSavedAnalysisId(savedData?.[0]?.id || null)
-            // Session counter: increments per analysis, resets on dashboard visit
             const prev = parseInt(sessionStorage.getItem('mr_new_analyses') || '0', 10)
             const count = prev + 1
             sessionStorage.setItem('mr_new_analyses', String(count))
@@ -1066,10 +1035,8 @@ const handleAnalyze = async () => {
               message_en: count === 1 ? 'Your analysis is ready' : `You have ${count} ${count === 1 ? 'analysis' : 'analyses'} ready`,
               href: `/dashboard?lang=${lang}`
             })
-          })
-          .catch(saveErr => {
-            console.error('[Analysis] Failed to save to database:', saveErr)
-          })
+          } catch {}
+        })()
       } else {
         // Anonymous: show results immediately and save to localStorage
         setResult(data)
@@ -1105,8 +1072,6 @@ const handleAnalyze = async () => {
             is_chunked: data.is_chunked_analysis || false,
             user_agent: ua.substring(0, 500),
             device_type: deviceType
-          }).then(() => {
-            // tracked
           })
         } catch {
           // Silently ignore tracking errors
@@ -1122,8 +1087,7 @@ const handleAnalyze = async () => {
       }
     }, 100)
     
-  } catch (err: any) {
-    console.error('Analysis error:', err)
+  } catch (err) {
     setError(getErrorMessage(err, lang))
   } finally {
     isAnalyzingRef.current = false
@@ -1161,24 +1125,24 @@ const handleAnalyze = async () => {
 
   // CTA click tracking (fire-and-forget)
   const trackCtaClick = (ctaType: string) => {
-    supabase.from('cta_clicks').insert({
+    void supabase.from('cta_clicks').insert({
       analysis_id: savedAnalysisId,
       user_id: user?.id || null,
       cta_type: ctaType,
       score_at_click: result?.score || null,
       client_country: geo?.countryCode || null
-    }).then(() => {})
+    })
   }
 
   // Contact request logging (fire-and-forget)
   const logContactRequest = (contactMethod: string) => {
-    supabase.from('contact_requests').insert({
+    void supabase.from('contact_requests').insert({
       analysis_id: savedAnalysisId,
       user_id: user?.id || null,
       cta_source: ctaSource,
       contact_method: contactMethod,
       client_country: geo?.countryCode || null
-    }).then(() => {})
+    })
   }
 
   // Analysis rating submission
@@ -1417,16 +1381,13 @@ ${new Date().toLocaleDateString()}
 
   const handleDownloadFull = async () => {
     if (!result) {
-      console.error('No result available')
-      alert(lang === 'es' ? 'Error: análisis no disponible' : 'Error: analysis not available')
+      toast.error(lang === 'es' ? 'Error: análisis no disponible' : 'Error: analysis not available')
       return
     }
 
-    // Verify that analysis is actually complete
     if (!result.score || !result.verdict) {
-      console.error('Analysis incomplete, missing score or verdict')
-      alert(lang === 'es' 
-        ? 'El análisis aún no está completo. Por favor espera unos segundos.' 
+      toast.error(lang === 'es'
+        ? 'El análisis aún no está completo. Por favor espera unos segundos.'
         : 'Analysis not yet complete. Please wait a few seconds.')
       return
     }
@@ -1483,12 +1444,8 @@ ${new Date().toLocaleDateString()}
           URL.revokeObjectURL(url)
 
           return
-        } else {
-          const errorText = await response.text()
-          console.error('[PDF Download] Error response:', response.status, errorText)
         }
-      } catch (pdfError) {
-        console.error('[PDF Download] Exception:', pdfError)
+      } catch {
       }
       
       // Fallback to TXT download
@@ -1534,11 +1491,9 @@ by Matías Carvajal
       URL.revokeObjectURL(url)
       
       
-    } catch (error) {
-      // Only show error if TXT download also failed
-      console.error('Complete download failed:', error)
-      alert(lang === 'es' 
-        ? 'Error al descargar archivo. Por favor intenta de nuevo.' 
+    } catch {
+      toast.error(lang === 'es'
+        ? 'Error al descargar archivo. Por favor intenta de nuevo.'
         : 'Error downloading file. Please try again.')
     }
   }
@@ -1714,13 +1669,10 @@ by Matías Carvajal
                   setLang(newLang)
                   setLanguageCookie(newLang)
                   if (user) {
-                    supabase
+                    void supabase
                       .from('profiles')
                       .update({ preferred_language: newLang })
                       .eq('id', user.id)
-                      .then(({ error }) => {
-                        if (error) console.error('Error saving language preference:', error)
-                      })
                   }
                 }}
                 style={{
@@ -4261,6 +4213,39 @@ by Matías Carvajal
                       filename={result.filename || file?.name || 'Unknown'}
                       metricsBars={(result as any).metrics_bars}
                       genre={(result as any).user_genre || null}
+                      lang={lang}
+                    />
+                  </div>
+                )}
+
+                {/* Ready Certified Badge — downloadable seal for scores ≥85 */}
+                {result && result.score >= 85 && (result as any).metrics_bars && (
+                  <div style={{ marginBottom: '1.5rem' }}>
+                    <ReadyCertifiedBadge
+                      analysis={{
+                        id: (result as any).id || 'current',
+                        filename: result.filename || file?.name || 'Unknown',
+                        score: result.score,
+                        verdict: result.verdict as 'ready' | 'almost_ready' | 'needs_work' | 'critical',
+                        metrics: {
+                          lufs: (result as any).lufs ?? 0,
+                          true_peak: (result as any).true_peak ?? 0,
+                          plr: (result as any).plr ?? 0,
+                          headroom: (result as any).headroom ?? 0,
+                          stereo_correlation: (result as any).stereo_correlation ?? 0,
+                          crest_factor: (result as any).crest_factor ?? 0,
+                          frequency_balance: (result as any).frequency_balance ?? 0,
+                          l_r_balance: (result as any).l_r_balance ?? 0,
+                          dc_offset: (result as any).dc_offset ?? 0,
+                          m_s_ratio: (result as any).m_s_ratio ?? 0,
+                        },
+                        metricsData: {
+                          user_genre: (result as any).user_genre || '',
+                          detected_genre: (result as any).detected_genre || '',
+                          metrics_bars: (result as any).metrics_bars || null,
+                        },
+                        created_at: new Date().toISOString(),
+                      }}
                       lang={lang}
                     />
                   </div>

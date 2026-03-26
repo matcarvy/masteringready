@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
       'https://masteringready.com',
       'https://www.masteringready.com',
       'https://masteringready-git-dev-matcarvys-projects.vercel.app',
-      'http://localhost:3000',
+      ...(process.env.NODE_ENV === 'development' ? ['http://localhost:3000'] : []),
     ]
     const origin = request.headers.get('origin')
     const safeOrigin = (origin && ALLOWED_ORIGINS.includes(origin))
@@ -82,8 +82,7 @@ export async function POST(request: NextRequest) {
       url: session.url
     })
 
-  } catch (error) {
-    console.error('Customer portal error:', error instanceof Error ? error.message : (error as any)?.message || 'Unknown error')
+  } catch {
     return NextResponse.json(
       { error: 'Portal creation failed' },
       { status: 500 }

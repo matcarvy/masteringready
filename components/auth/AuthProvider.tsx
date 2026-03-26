@@ -9,9 +9,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { User, Session } from '@supabase/supabase-js'
 import { supabase, setSignOutInProgress, isSignOutInProgress } from '@/lib/supabase'
 
-// ============================================================================
-// TYPES / TIPOS
-// ============================================================================
+// --- Types / Tipos ---
 
 type SaveAnalysisResult = 'saved' | 'quota_exceeded' | 'no_pending' | 'error'
 
@@ -32,9 +30,7 @@ interface AuthProviderProps {
   children: ReactNode
 }
 
-// ============================================================================
-// CONTEXT / CONTEXTO
-// ============================================================================
+// --- Context / Contexto ---
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
@@ -49,9 +45,7 @@ const AuthContext = createContext<AuthContextType>({
   clearPendingAnalysisSaved: () => {}
 })
 
-// ============================================================================
-// PROVIDER / PROVEEDOR
-// ============================================================================
+// --- Provider / Proveedor ---
 
 // Map score to database verdict enum (deterministic, mirrors backend score_report)
 function scoreToVerdictEnum(score: number): 'ready' | 'almost_ready' | 'needs_work' | 'critical' {
@@ -82,7 +76,6 @@ async function savePendingAnalysisForUser(userId: string, userIsAdmin: boolean =
     })
 
     if (quotaError) {
-      console.error('[SaveAnalysis] Quota check failed, DENYING save:', quotaError.message)
       return 'error'
     }
 
@@ -150,7 +143,6 @@ async function savePendingAnalysisForUser(userId: string, userIsAdmin: boolean =
       .select()
 
     if (error) {
-      console.error('[SaveAnalysis] INSERT ERROR:', error.message, error.details, error.hint)
       return 'error'
     }
 
@@ -158,20 +150,13 @@ async function savePendingAnalysisForUser(userId: string, userIsAdmin: boolean =
     const { data: rpcData, error: rpcError } = await supabase.rpc('increment_analysis_count', { p_user_id: userId })
 
     if (rpcError) {
-      console.error('[SaveAnalysis] RPC ERROR:', rpcError.message, rpcError.details)
-
-      // Fallback: Direct profile update if RPC doesn't exist
-
-      // First get current values
       const { data: profile, error: fetchError } = await supabase
         .from('profiles')
         .select('total_analyses, analyses_this_month')
         .eq('id', userId)
         .single()
 
-      if (fetchError) {
-        console.error('[SaveAnalysis] Profile fetch error:', fetchError.message)
-      } else if (profile) {
+      if (!fetchError && profile) {
         const { error: updateError } = await supabase
           .from('profiles')
           .update({
@@ -182,16 +167,12 @@ async function savePendingAnalysisForUser(userId: string, userIsAdmin: boolean =
           })
           .eq('id', userId)
 
-        if (updateError) {
-          console.error('[SaveAnalysis] Profile update failed:', updateError.message)
-        }
       }
     }
 
     return 'saved'
 
-  } catch (err) {
-    console.error('[SaveAnalysis] EXCEPTION:', err)
+  } catch {
     return 'error'
   }
 }
@@ -231,7 +212,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const { data: { user: freshUser }, error: userError } = await supabase.auth.getUser()
 
     if (userError) {
-      console.error('Error getting user for save:', userError)
       return 'error'
     }
 
@@ -256,11 +236,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     let storageKey = 'sb-auth-token'
     try { storageKey = `sb-${new URL(supabaseUrl).hostname.split('.')[0]}-auth-token` } catch {}
 
-    // ========================================================================
-    // PHASE 1: SYNCHRONOUS — decode stored JWT immediately (no network needed)
-    // This guarantees the user sees logged-in UI even if all Supabase async
-    // calls abort during force reload. No race conditions possible.
-    // ========================================================================
+    // --- Phase 1: Synchronous JWT decode (no network needed) ---
     let syncRestored = false
     try {
       const raw = localStorage.getItem(storageKey) || sessionStorage.getItem(storageKey)
@@ -298,17 +274,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
       // JWT decode failed — fall through to async path
     }
 
-    // ========================================================================
-    // PHASE 2: ASYNC — let Supabase properly recover (refresh token, etc.)
-    // If successful, upgrades the sync-restored state with a proper session.
-    // If it fails (AbortError on reload), sync state is already set — no harm.
-    // ========================================================================
+    // --- Phase 2: Async Supabase recovery ---
     const getSession = async () => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession()
-        if (error) {
-          console.error('Error getting session:', error)
-        }
         if (session) {
           // Supabase recovered successfully — upgrade to proper session
           setSession(session)
@@ -328,11 +297,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         }
         // If session is null and syncRestored is true, do NOT clear state
         // If session is null and syncRestored is false, user is genuinely not logged in
-      } catch (err) {
-        // AbortError on reload — if syncRestored, state is already set. If not, try storage.
-        if (!syncRestored) {
-          console.error('Auth error:', err)
-        }
+      } catch {
       } finally {
         setLoading(false)
       }
@@ -340,12 +305,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     getSession()
 
-    // ========================================================================
-    // PHASE 3: EVENT LISTENER — handle auth state changes
-    // Key: NEVER let GoTrueClient's internal confusion clear a sync-restored
-    // session. Only explicit user actions (SIGNED_IN, SIGNED_OUT via button)
-    // should change state.
-    // ========================================================================
+    // --- Phase 3: Auth state change listener ---
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         try {
@@ -461,28 +421,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
               setPendingAnalysisQuotaExceeded(true)
             }
 
-            // Link anonymous analyses to this user (fire-and-forget)
             try {
               const anonSessionId = typeof window !== 'undefined' ? sessionStorage.getItem('mr_anon_session') : null
               if (anonSessionId) {
-                supabase.from('anonymous_analyses')
+                await supabase.from('anonymous_analyses')
                   .update({ converted_to_user: true, user_id: u.id })
                   .eq('session_id', anonSessionId)
                   .eq('converted_to_user', false)
-                  .then(() => {
-                    sessionStorage.removeItem('mr_anon_session')
-                  })
+                sessionStorage.removeItem('mr_anon_session')
               }
             } catch {
-              // Non-blocking
             }
           }
-        } catch (err) {
-          // Catch all errors inside onAuthStateChange to prevent uncaught promise rejections
-          // (profile queries can abort during reload — non-fatal if sync restore already set state)
-          if (!(err instanceof DOMException && err.name === 'AbortError')) {
-            console.error('Auth state change error:', err)
-          }
+        } catch {
         }
       }
     )
@@ -502,8 +453,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setSignOutInProgress(true)
     try {
       await supabase.auth.signOut()
-    } catch (err) {
-      console.error('Sign out error:', err)
+    } catch {
     } finally {
       setSignOutInProgress(false)
     }
@@ -516,9 +466,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   )
 }
 
-// ============================================================================
-// HOOK
-// ============================================================================
+// --- Hook ---
 
 export function useAuth() {
   const context = useContext(AuthContext)

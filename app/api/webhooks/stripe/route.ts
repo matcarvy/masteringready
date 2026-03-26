@@ -54,14 +54,11 @@ export async function POST(request: NextRequest) {
       process.env.STRIPE_WEBHOOK_SECRET!
     )
   } catch (err) {
-    console.error('Webhook signature verification failed:', err)
     return NextResponse.json(
       { error: 'Invalid signature' },
       { status: 400 }
     )
   }
-
-  console.log(`Stripe webhook received: ${event.type}`)
 
   try {
     switch (event.type) {
@@ -90,13 +87,12 @@ export async function POST(request: NextRequest) {
         break
 
       default:
-        console.log(`Unhandled event type: ${event.type}`)
+        break
     }
 
     return NextResponse.json({ received: true })
 
-  } catch (error) {
-    console.error('Webhook handler error:', error instanceof Error ? error.message : (error as any)?.message || 'Unknown error')
+  } catch {
     return NextResponse.json(
       { error: 'Webhook handler failed' },
       { status: 500 }
@@ -122,10 +118,7 @@ async function insertPaymentIfNew(
       .select('id')
       .eq('stripe_payment_intent_id', payment.stripe_payment_intent_id)
       .maybeSingle()
-    if (existing) {
-      console.log(`Payment already recorded for intent ${payment.stripe_payment_intent_id}, skipping`)
-      return
-    }
+    if (existing) return
   }
   // Check invoice dedup (subscription payments route through invoices, payment_intent may be null)
   if (payment.stripe_invoice_id) {
@@ -134,10 +127,7 @@ async function insertPaymentIfNew(
       .select('id')
       .eq('stripe_invoice_id', payment.stripe_invoice_id)
       .maybeSingle()
-    if (existing) {
-      console.log(`Payment already recorded for invoice ${payment.stripe_invoice_id}, skipping`)
-      return
-    }
+    if (existing) return
   }
   await supabase.from('payments').insert(payment)
 }
@@ -157,11 +147,8 @@ async function handleCheckoutCompleted(
   const regionalPrice = (amountCents || 0) / 100
 
   if (!userId || !productType) {
-    console.error('Missing metadata in checkout session')
     return
   }
-
-  console.log(`Checkout completed: ${productType} for user ${userId}`)
 
   if (productType === 'pro_monthly') {
     // Handle Pro subscription
@@ -176,7 +163,6 @@ async function handleCheckoutCompleted(
       .single() as { data: { id: string } | null }
 
     if (!proPlan) {
-      console.error('Pro plan not found')
       return
     }
 
@@ -186,13 +172,7 @@ async function handleCheckoutCompleted(
       .select('analyses_lifetime_used')
       .eq('id', userId)
       .single()
-    if (profileError) {
-      console.error(`Failed to fetch profile for welcome bonus (user ${userId}):`, profileError)
-    }
     const welcomeBonus = Math.min(profileData?.analyses_lifetime_used || 0, 2)
-    if (welcomeBonus > 0) {
-      console.log(`Welcome bonus for user ${userId}: ${welcomeBonus} analyses restored`)
-    }
 
     // Get subscription period from Stripe
     // API 2025-12-15.clover moved period to items; fall back to top-level for older versions
@@ -229,10 +209,6 @@ async function handleCheckoutCompleted(
         onConflict: 'user_id'
       })
 
-    if (subError) {
-      console.error('Error updating subscription:', subError)
-    }
-
     // Record payment (idempotent — safe on webhook replay)
     await insertPaymentIfNew(supabase, {
       user_id: userId,
@@ -253,7 +229,6 @@ async function handleCheckoutCompleted(
       .single()
 
     if (!singlePlan) {
-      console.error('Single plan not found')
       return
     }
 
@@ -290,7 +265,6 @@ async function handleCheckoutCompleted(
       .single()
 
     if (!addonPlan) {
-      console.error('Addon plan not found')
       return
     }
 
@@ -367,11 +341,8 @@ async function handleInvoicePaid(
     .single()
 
   if (!subscription) {
-    console.error('Subscription not found for invoice:', invoice.id)
     return
   }
-
-  console.log(`Invoice paid for subscription ${subscriptionId}`)
 
   // Reset cycle counters on renewal
   const periodStart = invoice.lines?.data[0]?.period?.start
@@ -428,8 +399,6 @@ async function handleInvoicePaymentFailed(
 
   if (!subscriptionId) return
 
-  console.log(`Invoice payment failed for subscription ${subscriptionId}`)
-
   // Update subscription status
   await supabase
     .from('subscriptions')
@@ -464,8 +433,6 @@ async function handleSubscriptionDeleted(
   subscription: Stripe.Subscription,
   supabase: SupabaseAdmin
 ) {
-  console.log(`Subscription deleted: ${subscription.id}`)
-
   // Get user's subscription record
   const { data: subRecord } = await supabase
     .from('subscriptions')
@@ -506,8 +473,6 @@ async function handleSubscriptionUpdated(
   subscription: Stripe.Subscription,
   supabase: SupabaseAdmin
 ) {
-  console.log(`Subscription updated: ${subscription.id}, status: ${subscription.status}`)
-
   // Get period from Stripe — API 2025-12-15.clover moved period to items
   const subAny = subscription as any
   const periodStart: number | undefined =
@@ -559,7 +524,6 @@ async function handleChargeFailed(
   // Only handle one-time payment failures (subscriptions handled by invoice.payment_failed)
   const chargeData = charge as Stripe.Charge & { invoice?: string | null }
   if (chargeData.invoice) {
-    console.log(`Charge failed for invoice ${chargeData.invoice}, handled by invoice.payment_failed`)
     return
   }
 
@@ -568,11 +532,8 @@ async function handleChargeFailed(
     : (charge.customer as { id: string } | null)?.id
 
   if (!customerId) {
-    console.log('Charge failed with no customer ID, skipping')
     return
   }
-
-  console.log(`One-time charge failed for customer ${customerId}: ${charge.failure_message || 'unknown reason'}`)
 
   // Look up user by stripe_customer_id
   const { data: subscription } = await supabase
@@ -584,7 +545,6 @@ async function handleChargeFailed(
   const userId = subscription?.user_id || charge.metadata?.user_id
 
   if (!userId) {
-    console.log(`Could not find user for customer ${customerId}`)
     return
   }
 

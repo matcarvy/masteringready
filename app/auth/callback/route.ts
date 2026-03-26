@@ -26,7 +26,6 @@ export async function GET(request: NextRequest) {
 
   // Handle OAuth/Auth errors
   if (error) {
-    console.error('Auth error:', error, errorDescription)
     const errorParam = `error=${encodeURIComponent(errorDescription || error)}`
     const params = langParam ? `${errorParam}&${langParam}` : errorParam
     return NextResponse.redirect(
@@ -47,7 +46,6 @@ export async function GET(request: NextRequest) {
       })
 
       if (verifyError) {
-        console.error('Email verification error:', verifyError)
         const errorParam = `error=${encodeURIComponent(verifyError.message)}`
         const params = langParam ? `${errorParam}&${langParam}` : errorParam
         return NextResponse.redirect(
@@ -64,8 +62,7 @@ export async function GET(request: NextRequest) {
       // Other flows (signup confirmation) → redirect to home
       const params = langParam ? `verified=true&${langParam}` : 'verified=true'
       return NextResponse.redirect(new URL(`/?${params}`, origin))
-    } catch (err) {
-      console.error('Verification error:', err)
+    } catch {
       const errorParam = 'error=verification_error'
       const params = langParam ? `${errorParam}&${langParam}` : errorParam
       return NextResponse.redirect(
@@ -80,7 +77,6 @@ export async function GET(request: NextRequest) {
       const { error: sessionError } = await supabase.auth.exchangeCodeForSession(code)
 
       if (sessionError) {
-        console.error('Session exchange error:', sessionError)
         const errorParam = `error=${encodeURIComponent(sessionError.message)}`
         const params = langParam ? `${errorParam}&${langParam}` : errorParam
         return NextResponse.redirect(
@@ -91,8 +87,7 @@ export async function GET(request: NextRequest) {
       // Success - redirect to home with language
       const redirectUrl = langParam ? `/?${langParam}` : '/'
       return NextResponse.redirect(new URL(redirectUrl, origin))
-    } catch (err) {
-      console.error('Callback error:', err)
+    } catch {
       const errorParam = 'error=callback_error'
       const params = langParam ? `${errorParam}&${langParam}` : errorParam
       return NextResponse.redirect(

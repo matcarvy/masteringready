@@ -10,9 +10,7 @@
 import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
-// ============================================================================
-// TYPES / TIPOS
-// ============================================================================
+// --- Types / Tipos ---
 
 interface SocialLoginButtonsProps {
   lang?: 'es' | 'en'
@@ -23,9 +21,7 @@ interface SocialLoginButtonsProps {
 
 type Provider = 'google' | 'facebook'
 
-// ============================================================================
-// TRANSLATIONS / TRADUCCIONES
-// ============================================================================
+// --- Translations / Traducciones ---
 
 const translations = {
   es: {
@@ -40,9 +36,7 @@ const translations = {
   }
 }
 
-// ============================================================================
-// PROVIDER CONFIGS / CONFIGURACIONES DE PROVEEDORES
-// ============================================================================
+// --- Provider Configs / Configuraciones de Proveedores ---
 
 const providers: { id: Provider; name: string; icon: JSX.Element; bgColor: string; textColor: string; hoverBg: string }[] = [
   {
@@ -74,9 +68,7 @@ const providers: { id: Provider; name: string; icon: JSX.Element; bgColor: strin
   }
 ]
 
-// ============================================================================
-// COMPONENT / COMPONENTE
-// ============================================================================
+// --- Component / Componente ---
 
 export function SocialLoginButtons({
   lang = 'es',
@@ -106,14 +98,10 @@ export function SocialLoginButtons({
       })
 
       if (error) {
-        console.error(`${provider} login error:`, error)
         onError?.(`${t.error} ${provider}: ${error.message}`)
         setLoadingProvider(null)
       }
-      // Note: If successful, user will be redirected
-      // Nota: Si tiene éxito, el usuario será redirigido
-    } catch (err) {
-      console.error(`${provider} login error:`, err)
+    } catch {
       onError?.(`${t.error} ${provider}`)
       setLoadingProvider(null)
     }

@@ -15,6 +15,7 @@ import { useGeo } from '@/lib/useGeo'
 import { getAllPricesForCountry } from '@/lib/pricing-config'
 import { detectLanguage, setLanguageCookie } from '@/lib/language'
 import { ThemeToggle } from '@/components/ThemeToggle'
+import { useToast } from '@/components/ui/Toast'
 import { clearNotification } from '@/components/NotificationBadge'
 import {
   Music,
@@ -31,9 +32,7 @@ import {
   XCircle
 } from 'lucide-react'
 
-// ============================================================================
-// TRANSLATIONS / TRADUCCIONES
-// ============================================================================
+// --- Translations ---
 
 const translations = {
   es: {
@@ -150,13 +149,12 @@ const translations = {
   }
 }
 
-// ============================================================================
-// COMPONENT
-// ============================================================================
+// --- Component ---
 
 export default function SubscriptionPage() {
   const router = useRouter()
   const { user, session, loading: authLoading } = useAuth()
+  const toast = useToast()
 
   const [lang, setLang] = useState<'es' | 'en'>('es')
   const [isMobile, setIsMobile] = useState(false)
@@ -260,8 +258,7 @@ export default function SubscriptionPage() {
             setCanBuyAddon(addon?.can_buy ?? false)
           }
         }
-      } catch (error) {
-        console.error('Error fetching subscription data:', error)
+      } catch {
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -272,7 +269,7 @@ export default function SubscriptionPage() {
     }
 
     return () => { cancelled = true }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- user.id is stable, full user object causes unnecessary re-renders
   }, [user?.id])
 
   // Handle checkout (uses session from context, not stale singleton)
@@ -290,10 +287,9 @@ export default function SubscriptionPage() {
       if (data.url) {
         window.location.href = data.url
       } else {
-        alert(lang === 'es' ? 'Error al iniciar el pago' : 'Error starting payment')
+        toast.error(lang === 'es' ? 'Error al iniciar el pago' : 'Error starting payment')
       }
-    } catch (error) {
-      console.error('Checkout error:', error)
+    } catch {
     }
   }
 
@@ -310,8 +306,7 @@ export default function SubscriptionPage() {
       if (data.url) {
         window.location.href = data.url
       }
-    } catch (error) {
-      console.error('Portal error:', error)
+    } catch {
     }
   }
 
@@ -335,8 +330,7 @@ export default function SubscriptionPage() {
       // Success — reload to reflect new state
       setShowCancelModal(false)
       window.location.reload()
-    } catch (error) {
-      console.error('Cancel error:', error)
+    } catch {
       setCancelError(lang === 'es' ? 'Error de conexión' : 'Connection error')
       setCancelling(false)
     }
@@ -451,9 +445,7 @@ export default function SubscriptionPage() {
                     .from('profiles')
                     .update({ preferred_language: newLang })
                     .eq('id', user.id)
-                    .then(({ error }) => {
-                      if (error) console.error('Error saving language preference:', error)
-                    })
+                    .then(() => {})
                 }
               }}
               style={{

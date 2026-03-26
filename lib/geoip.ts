@@ -201,7 +201,6 @@ export async function detectCountry(forceRefresh = false): Promise<GeoData> {
 
   // Fallback to US if detection fails
   if (!countryCode) {
-    console.warn('[Geo] Country detection failed, falling back to US')
     countryCode = 'US'
   }
 
@@ -328,9 +327,7 @@ export const PRICING = {
   ADDON_PACK: 3.99
 } as const
 
-// ============================================================================
-// EXCHANGE RATES (Static - Updated Monthly)
-// ============================================================================
+// --- Exchange Rates (Static, Updated Monthly) ---
 // Last updated: February 20, 2026
 // These are approximate rates for display purposes only
 // Actual charge is always in USD via Stripe

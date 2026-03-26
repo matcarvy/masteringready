@@ -31,18 +31,6 @@ export async function fetchDashboardData({
     client.rpc('can_buy_addon', { p_user_id: userId }),
   ])
 
-  if (profileResult.error && profileResult.error.code !== 'PGRST116') {
-    console.error('[Dashboard] Profile error:', profileResult.error.message)
-  }
-  if (subResult.error && subResult.error.code !== 'PGRST116') {
-    console.error('[Dashboard] Subscription error:', subResult.error.message)
-  }
-  if (analysesResult.error) {
-    console.error('[Dashboard] Analyses error:', analysesResult.error.message)
-  }
-  if (statusResult.error) {
-    console.error('[Dashboard] Status error:', statusResult.error.message)
-  }
 
   const status = statusResult.data
     ? Array.isArray(statusResult.data) ? statusResult.data[0] : statusResult.data
