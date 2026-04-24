@@ -1468,9 +1468,12 @@ export default function AdminPage() {
             {/* Recent anonymous analyses table */}
             {statsData.anonymousFunnel.recentRecords && statsData.anonymousFunnel.recentRecords.length > 0 && (
               <div style={{ marginTop: '1.25rem', borderTop: '1px solid var(--mr-border)', paddingTop: '1.25rem' }}>
-                <h4 style={{ margin: '0 0 0.75rem', fontSize: '0.875rem', fontWeight: '600', color: 'var(--mr-text-primary)' }}>
-                  {lang === 'es' ? 'Análisis recientes' : 'Recent analyses'}
+                <h4 style={{ margin: '0 0 0.25rem', fontSize: '0.875rem', fontWeight: '600', color: 'var(--mr-text-primary)' }}>
+                  {lang === 'es' ? 'Visitantes anónimos recientes' : 'Recent anonymous visitors'}
                 </h4>
+                <p style={{ margin: '0 0 0.75rem', fontSize: '0.75rem', color: 'var(--mr-text-secondary)' }}>
+                  {lang === 'es' ? 'Solo análisis realizados antes de crear cuenta.' : 'Analyses run before signup only.'}
+                </p>
                 <div style={{ overflowX: 'auto' }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
                     <thead>

@@ -884,7 +884,7 @@ async def start_analysis(
                 if actual_duration_sec is not None:
                     # We have real duration - use it
                     estimated_duration_min = actual_duration_sec / 60.0
-                    use_chunked = estimated_duration_min > 2.0  # Use chunked for files > 2 minutes
+                    use_chunked = True  # Always chunked — bounded peak memory, fidelity preserved via ffmpeg global LUFS
                     logger.info(f"📊 [{job_id}] Using ACTUAL duration: {estimated_duration_min:.1f} min")
                 elif is_compressed:
                     # Compressed format - try to get duration via ffmpeg (zero memory)
@@ -906,13 +906,11 @@ async def start_analysis(
                         # Fallback: estimate from file size (conservative: ~0.7 MB/min for low bitrate)
                         estimated_duration_min = file_size_mb * 1.5
                         logger.info(f"📊 [{job_id}] Compressed duration estimated from size: {estimated_duration_min:.1f} min (probe failed: {e})")
-                    # Safety net: if duration is unknown/zero, default to chunked (safer than OOM)
+                    # Always chunked — bounded peak memory regardless of file size
+                    use_chunked = True
                     if estimated_duration_min <= 0:
-                        use_chunked = True
-                        logger.warning(f"⚠️ [{job_id}] Duration unknown/zero — defaulting to CHUNKED for safety")
-                    else:
-                        use_chunked = estimated_duration_min > 2.0
-                    logger.info(f"{'🔄' if use_chunked else '✅'} [{job_id}] Compressed format ({file_ext}) - {'CHUNKED' if use_chunked else 'NORMAL'} analysis ({estimated_duration_min:.1f} min)")
+                        logger.warning(f"⚠️ [{job_id}] Duration unknown/zero — CHUNKED")
+                    logger.info(f"🔄 [{job_id}] Compressed format ({file_ext}) - CHUNKED analysis ({estimated_duration_min:.1f} min)")
                 else:
                     # WAV/AIFF without known duration - try reading header directly
                     try:
@@ -930,7 +928,7 @@ async def start_analysis(
                             mb_per_min = 17.0  # Conservative: 24-bit 48kHz stereo
                         estimated_duration_min = file_size_mb / mb_per_min
                         logger.info(f"📊 [{job_id}] Duration estimated from file size: {estimated_duration_min:.1f} min ({mb_per_min:.1f} MB/min)")
-                    use_chunked = estimated_duration_min > 4.0
+                    use_chunked = True  # Always chunked — bounded peak memory
                 
                 loop = asyncio.get_event_loop()
                 
@@ -1664,7 +1662,7 @@ def _sr_platform_message(platform: str, lufs_delta: float, tp_pass: bool, tp_clo
         elif lufs_delta >= -2.0:
             # Good loudness range, just peaks are too hot
             return (
-                f"{tp_es} Reduce los picos para evitar la distorsión.",
+                f"{tp_es} Conviene reducir los picos para evitar la distorsión.",
                 f"{tp_en} Reduce the peaks to avoid distortion."
             )
         else:
@@ -1728,7 +1726,7 @@ def _sr_energy_message(energy_data: dict) -> tuple:
 
     if not curve:
         return (
-            "No pudimos analizar la energía de tu audio.",
+            "No pudimos analizar el volumen de tu audio.",
             "We couldn't analyze your audio energy."
         )
 
@@ -1756,7 +1754,7 @@ def _sr_energy_message(energy_data: dict) -> tuple:
     # High dynamic range — some parts much louder than others
     if dynamic_range > 0.7:
         return (
-            "Tu audio tiene partes fuertes y partes suaves. En parlantes de celular o en lugares ruidosos, las partes suaves pueden ser difíciles de escuchar.",
+            "Tu audio tiene partes fuertes y partes suaves. En el altavoz del celular o en lugares ruidosos, las partes suaves pueden ser difíciles de escuchar.",
             "Your audio has loud and quiet parts. On phone speakers or in noisy environments, the quiet parts may be hard to hear."
         )
 
@@ -1769,7 +1767,7 @@ def _sr_energy_message(energy_data: dict) -> tuple:
 
     # Moderate variation — normal for most content
     return (
-        "Tu audio tiene variación de volumen natural. Se va a escuchar bien en la mayoría de dispositivos.",
+        "Tu audio tiene cambios de volumen naturales. Se va a escuchar bien en la mayoría de dispositivos.",
         "Your audio has natural volume variation. It will sound fine on most devices."
     )
 

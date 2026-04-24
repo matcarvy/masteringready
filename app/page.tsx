@@ -1058,7 +1058,7 @@ const handleAnalyze = async () => {
           }
           const ua = navigator.userAgent || ''
           const deviceType = /iPad|Tablet/i.test(ua) ? 'tablet' : /Mobile|iPhone|Android.*Mobile/i.test(ua) ? 'mobile' : 'desktop'
-          void supabase.from('anonymous_analyses').insert({
+          supabase.from('anonymous_analyses').insert({
             session_id: anonSessionId,
             filename: file.name,
             score: data.score,
@@ -1072,9 +1072,28 @@ const handleAnalyze = async () => {
             is_chunked: data.is_chunked_analysis || false,
             user_agent: ua.substring(0, 500),
             device_type: deviceType
+          }).then(({ error }) => {
+            if (error) {
+              void fetch('/api/log-event', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  type: 'anon_analysis_insert_failed',
+                  message: error.message,
+                  metadata: { code: error.code, details: error.details }
+                })
+              }).catch(() => {})
+            }
           })
-        } catch {
-          // Silently ignore tracking errors
+        } catch (err) {
+          void fetch('/api/log-event', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              type: 'anon_analysis_track_threw',
+              message: err instanceof Error ? err.message : String(err)
+            })
+          }).catch(() => {})
         }
       }
     }
