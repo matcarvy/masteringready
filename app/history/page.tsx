@@ -38,6 +38,9 @@ import Select from '@/components/Select'
 import InterpretativeSection from '@/components/InterpretativeSection'
 import { useToast } from '@/components/ui/Toast'
 import useGeo from '@/lib/useGeo'
+import { getScoreColor, getVerdictColor, scoreToVerdictLabel } from '@/lib/scoreColor'
+import { formatDate } from '@/lib/formatDate'
+import { cleanReportText } from '@/lib/cleanReportText'
 
 // --- Translations ---
 
@@ -181,85 +184,6 @@ type SortOption = 'newest' | 'oldest' | 'score_high' | 'score_low'
 type StatusFilter = 'all' | 'ready' | 'needs_work' | 'review'
 
 const PAGE_SIZE = 20
-
-// --- Score-based Verdict Helper ---
-
-function scoreToVerdictLabel(score: number, lang: 'es' | 'en'): string {
-  if (lang === 'es') {
-    if (score >= 95) return '✅ Margen óptimo para mastering'
-    if (score >= 85) return '✅ Lista para mastering'
-    if (score >= 75) return '⚠️ Margen suficiente (revisar sugerencias)'
-    if (score >= 60) return '⚠️ Margen reducido - revisar antes de mastering'
-    if (score >= 40) return '⚠️ Margen limitado - ajustes recomendados'
-    if (score >= 20) return '❌ Margen comprometido para mastering'
-    if (score >= 5) return '❌ Requiere revisión'
-    return '❌ Sin margen para procesamiento adicional'
-  }
-  if (score >= 95) return '✅ Optimal margin for mastering'
-  if (score >= 85) return '✅ Ready for mastering'
-  if (score >= 75) return '⚠️ Sufficient margin (review suggestions)'
-  if (score >= 60) return '⚠️ Reduced margin - review before mastering'
-  if (score >= 40) return '⚠️ Limited margin - adjustments recommended'
-  if (score >= 20) return '❌ Compromised margin for mastering'
-  if (score >= 5) return '❌ Requires review'
-  return '❌ No margin for additional processing'
-}
-
-// --- Clean Report Text Helper ---
-
-const cleanReportText = (text: string): string => {
-  if (!text) return ''
-  return text
-    .replace(/^🎵\s*Sobre\s*"[^"]*"\s*\n*/i, '')
-    .replace(/^🎵\s*About\s*"[^"]*"\s*\n*/i, '')
-    .replace(/^Puntuación:\s*\d+\/100\s*\n*/im, '')
-    .replace(/^Score:\s*\d+\/100\s*\n*/im, '')
-    .replace(/^Puntuación MR:\s*\d+\/100\s*\n*/im, '')
-    .replace(/^MR Score:\s*\d+\/100\s*\n*/im, '')
-    .replace(/^Veredicto:\s*[^\n]+\s*\n*/im, '')
-    .replace(/^Verdict:\s*[^\n]+\s*\n*/im, '')
-    .replace(/[═─━_]{3,}/g, '')
-    .replace(/^[═─━_\s]+$/gm, '')
-    .replace(/[═─━]{2,}/g, '')
-    .replace(/(?<!✅\s)ASPECTOS POSITIVOS/g, '✅ Aspectos Positivos')
-    .replace(/(?<!✅\s)POSITIVE ASPECTS/g, '✅ Positive Aspects')
-    .replace(/(?<!⚠️\s)ASPECTOS PARA REVISAR/g, '⚠️ Aspectos para Revisar')
-    .replace(/(?<!⚠️\s)AREAS TO REVIEW/g, '⚠️ Areas to Review')
-    .replace(/(?<!⚠️\s)ÁREAS A MEJORAR/g, '⚠️ Áreas a Mejorar')
-    .replace(/(?<!⚠️\s)AREAS TO IMPROVE/g, '⚠️ Areas to Improve')
-    .replace(/(?<!⚠️\s)SI ESTE ARCHIVO CORRESPONDE A UNA MEZCLA:/g, '⚠️ Si este archivo corresponde a una mezcla:')
-    .replace(/(?<!⚠️\s)IF THIS FILE IS A MIX:/g, '⚠️ If this file is a mix:')
-    .replace(/(?<!✅\s)SI ESTE ES TU MASTER FINAL:/g, '✅ Si este es tu master final:')
-    .replace(/(?<!✅\s)IF THIS IS YOUR FINAL MASTER:/g, '✅ If this is your final master:')
-    .replace(/^✓\s*/gm, '• ')
-    .replace(/^→\s*/gm, '• ')
-    .replace(/✅\s*✅/g, '✅')
-    .replace(/⚠️\s*⚠️/g, '⚠️')
-    // Remove recommendation lines (CTA card handles this)
-    .replace(/\n*💡\s*Recomendaci[óo]n:[^\n]*/g, '')
-    .replace(/\n*💡\s*Recommendation:[^\n]*/g, '')
-    .replace(/\n*Recomendaci[óo]n:[^\n]*/g, '')
-    .replace(/\n*Recommendation:[^\n]*/g, '')
-    // Remove mode note (📊 Análisis realizado con estándares...)
-    .replace(/\n*📊\s*An[áa]lisis realizado[^\n]*/gu, '')
-    .replace(/\n*📊\s*Analysis performed[^\n]*/gu, '')
-    // Remove inline CTA section (already shown as CTA card below)
-    .replace(/\n*[🎧🔧🔍💬]\s*(Tu mezcla|Your mix|Escr[íi]benos|Write us|No recomiendo|I don't recommend|Enviarlo|Sending it|Hay aspectos|There are|Hay decisiones|Hay problemas|No significa|Está técnicamente)[^\n]*/gu, '')
-    // Remove any remaining lines starting with CTA emojis followed by text
-    .replace(/\n*[🎧🔧🔍💬][^\n]*/gu, '')
-    // Remove CTA continuation lines (contain "escríbenos" or "write us")
-    .replace(/\n*[^\n]*(escr[íi]benos|write us)[^\n]*/gi, '')
-    // Remove orphaned emoji lines (single emoji on its own line, broken rendering)
-    .replace(/^\s*[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{FE00}-\u{FE0F}]\s*$/gmu, '')
-    // Remove lone surrogates (broken rendering as small squares)
-    .replace(/[\uD800-\uDFFF]/g, '')
-    .replace(/\n{3,}/g, '\n\n')
-    .split('\n')
-    .map(line => line.trim())
-    .join('\n')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim()
-}
 
 // --- Skeleton Loader ---
 
@@ -492,32 +416,6 @@ export default function HistoryPage() {
   )
   const showingStart = filteredAnalyses.length === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1
   const showingEnd = Math.min(currentPage * PAGE_SIZE, filteredAnalyses.length)
-
-  // Helpers
-  const getScoreColor = (score: number) => {
-    if (score >= 85) return 'var(--mr-green)'
-    if (score >= 60) return 'var(--mr-amber)'
-    return 'var(--mr-red)'
-  }
-
-  const getVerdictColor = (verdict: string) => {
-    switch (verdict) {
-      case 'ready': return 'var(--mr-green)'
-      case 'almost_ready': return 'var(--mr-blue)'
-      case 'needs_work': return 'var(--mr-amber)'
-      case 'critical': return 'var(--mr-red)'
-      default: return 'var(--mr-text-secondary)'
-    }
-  }
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString(lang === 'es' ? 'es-ES' : 'en-US', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric'
-    })
-  }
 
   const handleTabClick = (tab: 'rapid' | 'summary' | 'complete') => {
     if (tab === 'complete' && !hasFullAccess) return
@@ -866,7 +764,7 @@ export default function HistoryPage() {
                             </span>
                             <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                               <Calendar size={12} />
-                              {formatDate(analysis.created_at)}
+                              {formatDate(analysis.created_at, lang)}
                             </span>
                           </div>
                         </div>
@@ -983,7 +881,7 @@ export default function HistoryPage() {
                   {selectedAnalysis.filename}
                 </h3>
                 <p style={{ fontSize: '0.75rem', color: 'var(--mr-text-secondary)' }}>
-                  {formatDate(selectedAnalysis.created_at)}
+                  {formatDate(selectedAnalysis.created_at, lang)}
                 </p>
               </div>
               <button

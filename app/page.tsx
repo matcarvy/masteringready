@@ -19,6 +19,8 @@ import { NotificationBadge, setNotification, clearNotification } from '@/compone
 import Select from '@/components/Select'
 import InterpretativeSection from '@/components/InterpretativeSection'
 import { useToast } from '@/components/ui/Toast'
+import { getScoreColor, getScoreBg, scoreToVerdictEnum } from '@/lib/scoreColor'
+import { cleanReportText } from '@/lib/cleanReportText'
 
 // Module-level quota cache — survives React state resets / component remounts
 // (GoTrueClient conflicts cause auth state flicker → state loss)
@@ -29,14 +31,6 @@ const ADMIN_STATUS: AnalysisStatus = { can_analyze: true, reason: 'ADMIN', analy
 const MSG_ROTATE_BASE_MS = 6000
 const MSG_ROTATE_RANGE_MS = 2000
 const MAX_POLL_DURATION_MS = 5 * 60 * 1000
-
-// --- Map score to database verdict enum (deterministic, mirrors backend score_report) ---
-function scoreToVerdictEnum(score: number): 'ready' | 'almost_ready' | 'needs_work' | 'critical' {
-  if (score >= 85) return 'ready'
-  if (score >= 60) return 'almost_ready'
-  if (score >= 40) return 'needs_work'
-  return 'critical'
-}
 
 // --- Services + Workshop External URLs ---
 const SERVICES_CONFIG = {
@@ -1521,87 +1515,8 @@ by Matías Carvajal
     document.getElementById('analyze')?.scrollIntoView({ behavior: 'smooth' })
   }
 
-  // Clean report text from decorative lines for better mobile display
-  const cleanReportText = (text: string): string => {
-    if (!text) return ''
-
-    return text
-      // Remove song title header (already shown above)
-      .replace(/^🎵\s*Sobre\s*"[^"]*"\s*\n*/i, '')
-      .replace(/^🎵\s*About\s*"[^"]*"\s*\n*/i, '')
-      // Remove score and verdict lines (already shown in header)
-      .replace(/^Puntuación:\s*\d+\/100\s*\n*/im, '')
-      .replace(/^Score:\s*\d+\/100\s*\n*/im, '')
-      .replace(/^Puntuación MR:\s*\d+\/100\s*\n*/im, '')
-      .replace(/^MR Score:\s*\d+\/100\s*\n*/im, '')
-      .replace(/^Veredicto:\s*[^\n]+\s*\n*/im, '')
-      .replace(/^Verdict:\s*[^\n]+\s*\n*/im, '')
-      // Remove ALL decorative lines
-      .replace(/[═─━_]{3,}/g, '')
-      .replace(/^[═─━_\s]+$/gm, '')
-      .replace(/[═─━]{2,}/g, '')
-      // Fix headers: Add emojis and proper casing (ONLY if not already present)
-      .replace(/(?<!✅\s)ASPECTOS POSITIVOS/g, '✅ Aspectos Positivos')
-      .replace(/(?<!✅\s)POSITIVE ASPECTS/g, '✅ Positive Aspects')
-      .replace(/(?<!⚠️\s)ASPECTOS PARA REVISAR/g, '⚠️ Aspectos para Revisar')
-      .replace(/(?<!⚠️\s)AREAS TO REVIEW/g, '⚠️ Areas to Review')
-      .replace(/(?<!⚠️\s)ÁREAS A MEJORAR/g, '⚠️ Áreas a Mejorar')
-      .replace(/(?<!⚠️\s)AREAS TO IMPROVE/g, '⚠️ Areas to Improve')
-      // Fix additional headers
-      .replace(/(?<!⚠️\s)SI ESTE ARCHIVO CORRESPONDE A UNA MEZCLA:/g, '⚠️ Si este archivo corresponde a una mezcla:')
-      .replace(/(?<!⚠️\s)IF THIS FILE IS A MIX:/g, '⚠️ If this file is a mix:')
-      .replace(/(?<!✅\s)SI ESTE ES TU MASTER FINAL:/g, '✅ Si este es tu master final:')
-      .replace(/(?<!✅\s)IF THIS IS YOUR FINAL MASTER:/g, '✅ If this is your final master:')
-      // Convert plain checkmarks and arrows to styled ones
-      .replace(/^✓\s*/gm, '• ')
-      .replace(/^→\s*/gm, '• ')
-      // Remove duplicate emojis
-      .replace(/✅\s*✅/g, '✅')
-      .replace(/⚠️\s*⚠️/g, '⚠️')
-      // Remove recommendation lines (CTA card handles this)
-      .replace(/\n*💡\s*Recomendaci[óo]n:[^\n]*/g, '')
-      .replace(/\n*💡\s*Recommendation:[^\n]*/g, '')
-      .replace(/\n*Recomendaci[óo]n:[^\n]*/g, '')
-      .replace(/\n*Recommendation:[^\n]*/g, '')
-      // Remove mode note (📊 Análisis realizado con estándares...)
-      .replace(/\n*📊\s*An[áa]lisis realizado[^\n]*/gu, '')
-      .replace(/\n*📊\s*Analysis performed[^\n]*/gu, '')
-      // Remove inline CTA section (already shown as CTA card below)
-      .replace(/\n*[🎧🔧🔍💬]\s*(Tu mezcla|Your mix|Escr[íi]benos|Write us|No recomiendo|I don't recommend|Enviarlo|Sending it|Hay aspectos|There are|Hay decisiones|Hay problemas|No significa|Está técnicamente)[^\n]*/gu, '')
-      // Remove any remaining lines starting with CTA emojis followed by text
-      .replace(/\n*[🎧🔧🔍💬][^\n]*/gu, '')
-      // Remove CTA continuation lines (contain "escríbenos" or "write us")
-      .replace(/\n*[^\n]*(escr[íi]benos|write us)[^\n]*/gi, '')
-      // Remove orphaned emoji lines (single emoji on its own line, broken rendering)
-      .replace(/^\s*[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{FE00}-\u{FE0F}]\s*$/gmu, '')
-      // Remove lone surrogates (broken rendering as small squares)
-      .replace(/[\uD800-\uDFFF]/g, '')
-      // Remove excessive newlines (max 2 consecutive)
-      .replace(/\n{3,}/g, '\n\n')
-      // Remove lines that are just spaces
-      .split('\n')
-      .map(line => line.trim())
-      .join('\n')
-      // Final cleanup - max 2 newlines
-      .replace(/\n{3,}/g, '\n\n')
-      // Trim
-      .trim()
-  }
-
   const isFileTooLarge = file && file.size > 200 * 1024 * 1024 // 200MB hard limit
   const needsCompression = file && file.size > 50 * 1024 * 1024 && file.size <= 200 * 1024 * 1024
-
-  const getScoreColor = (score: number) => {
-    if (score >= 85) return 'var(--mr-green)'
-    if (score >= 60) return 'var(--mr-amber)'
-    return 'var(--mr-red)'
-  }
-
-  const getScoreBg = (score: number) => {
-    if (score >= 85) return 'var(--mr-green-bg)'
-    if (score >= 60) return 'var(--mr-amber-bg)'
-    return 'var(--mr-red-bg)'
-  }
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--mr-bg-card)', fontFamily: 'Inter, system-ui, sans-serif' }}>
@@ -1922,16 +1837,27 @@ by Matías Carvajal
             {/* Left: Copy */}
             <div style={{ color: 'white' }}>
               <div className="methodology-badge" style={{
-                display: 'inline-block',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.5rem',
                 background: 'rgba(255, 255, 255, 0.2)',
                 backdropFilter: 'blur(10px)',
                 borderRadius: '9999px',
-                padding: 'clamp(0.375rem, 1vw, 0.5rem) clamp(0.75rem, 2vw, 1rem)'
+                padding: 'clamp(0.375rem, 1vw, 0.5rem) clamp(0.75rem, 2vw, 1rem)',
+                marginBottom: '1.25rem'
               }}>
+                <span style={{
+                  width: '7px',
+                  height: '7px',
+                  borderRadius: '50%',
+                  background: '#10b981',
+                  boxShadow: '0 0 0 4px rgba(16, 185, 129, 0.25)',
+                  flexShrink: 0
+                }} />
                 <span style={{ fontSize: 'clamp(0.8rem, 1.8vw, 1rem)', fontWeight: '500' }}>
-                  🎚️ {lang === 'es'
-                    ? 'Metodología probada en más de 300 producciones profesionales'
-                    : 'Methodology proven in over 300 professional productions'}
+                  {lang === 'es'
+                    ? 'Ingeniero de mastering · +300 producciones profesionales en 15 años'
+                    : 'Mastering engineer · 300+ professional productions across 15 years'}
                 </span>
               </div>
               
@@ -2109,6 +2035,50 @@ by Matías Carvajal
         </p>
       </div>
 
+      {/* Sobre el creador / About the creator */}
+      <section style={{
+        background: 'var(--mr-bg-base)',
+        padding: '0 1.5rem 2.5rem'
+      }}>
+        <div className="mr-creator" style={{ margin: '0 auto' }}>
+          <h3>{lang === 'es' ? 'Sobre el creador' : 'About the creator'}</h3>
+          <p style={{ margin: 0 }}>
+            {lang === 'es' ? (
+              <>
+                Soy Matias Carvajal, ingeniero de mastering. En 15 a\u00f1os he masterizado
+                m\u00e1s de 300 producciones profesionales, y trabaj\u00e9 como ingeniero en{' '}
+                <a
+                  href="https://www.allmusic.com/album/cumbiana-mw0003404055#credits"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Cumbiana
+                </a>{' '}
+                de Carlos Vives. Cientos de mezclas han llegado a mi mesa. Algunas
+                listas, muchas no. Mastering Ready es la lista de verificaci\u00f3n que
+                toda mezcla deber\u00eda pasar antes de llegar a m\u00ed.
+              </>
+            ) : (
+              <>
+                I\u2019m Matias Carvajal, a mastering engineer. Over 15 years I\u2019ve
+                mastered 300+ professional productions, and I worked as an engineer on
+                Carlos Vives\u2019{' '}
+                <a
+                  href="https://www.allmusic.com/album/cumbiana-mw0003404055#credits"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Cumbiana
+                </a>
+                . Hundreds of mixes have crossed my desk. Some ready, many not.
+                Mastering Ready is the checklist every mix should pass before it
+                reaches me.
+              </>
+            )}
+          </p>
+        </div>
+      </section>
+
       {/* Features Section */}
       <section id="features" className="features-section" style={{
         background: 'var(--mr-bg-base)',
@@ -2152,8 +2122,8 @@ by Matías Carvajal
                 icon: <TrendingUp size={48} color="var(--mr-primary)" />,
                 title: lang === 'es' ? 'Recomendaciones específicas' : 'Specific recommendations',
                 desc: lang === 'es'
-                  ? 'No solo números, te decimos qué ajustar y por qué.'
-                  : "Not just numbers. We tell you what to adjust and why."
+                  ? 'Números acompañados de qué ajustar y por qué.'
+                  : 'Numbers paired with what to adjust and why.'
               },
             ].map((feature, i) => (
               <div key={i} style={{

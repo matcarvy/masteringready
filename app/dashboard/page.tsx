@@ -43,6 +43,9 @@ import { ThemeToggle } from '@/components/ThemeToggle'
 import { clearNotification } from '@/components/NotificationBadge'
 import { SkeletonBox, SkeletonText, SkeletonCircle } from '@/components/Skeleton'
 import ProgressTimeline from '@/components/ProgressTimeline'
+import { getScoreColor, getVerdictColor, scoreToVerdictLabel } from '@/lib/scoreColor'
+import { formatDate } from '@/lib/formatDate'
+import { cleanReportText } from '@/lib/cleanReportText'
 
 // --- Translations ---
 
@@ -309,97 +312,6 @@ interface Subscription {
   }
 }
 
-// --- Score-based Verdict Helper ---
-
-function scoreToVerdictLabel(score: number, lang: 'es' | 'en'): string {
-  if (lang === 'es') {
-    if (score >= 95) return '✅ Margen óptimo para mastering'
-    if (score >= 85) return '✅ Lista para mastering'
-    if (score >= 75) return '⚠️ Margen suficiente (revisar sugerencias)'
-    if (score >= 60) return '⚠️ Margen reducido - revisar antes de mastering'
-    if (score >= 40) return '⚠️ Margen limitado - ajustes recomendados'
-    if (score >= 20) return '❌ Margen comprometido para mastering'
-    if (score >= 5) return '❌ Requiere revisión'
-    return '❌ Sin margen para procesamiento adicional'
-  }
-  if (score >= 95) return '✅ Optimal margin for mastering'
-  if (score >= 85) return '✅ Ready for mastering'
-  if (score >= 75) return '⚠️ Sufficient margin (review suggestions)'
-  if (score >= 60) return '⚠️ Reduced margin - review before mastering'
-  if (score >= 40) return '⚠️ Limited margin - adjustments recommended'
-  if (score >= 20) return '❌ Compromised margin for mastering'
-  if (score >= 5) return '❌ Requires review'
-  return '❌ No margin for additional processing'
-}
-
-// --- Clean Report Text Helper ---
-
-const cleanReportText = (text: string): string => {
-  if (!text) return ''
-
-  return text
-    // Remove song title header (already shown above)
-    .replace(/^🎵\s*Sobre\s*"[^"]*"\s*\n*/i, '')
-    .replace(/^🎵\s*About\s*"[^"]*"\s*\n*/i, '')
-    // Remove score and verdict lines (already shown in header)
-    .replace(/^Puntuación:\s*\d+\/100\s*\n*/im, '')
-    .replace(/^Score:\s*\d+\/100\s*\n*/im, '')
-    .replace(/^Puntuación MR:\s*\d+\/100\s*\n*/im, '')
-    .replace(/^MR Score:\s*\d+\/100\s*\n*/im, '')
-    .replace(/^Veredicto:\s*[^\n]+\s*\n*/im, '')
-    .replace(/^Verdict:\s*[^\n]+\s*\n*/im, '')
-    // Remove ALL decorative lines (multiple patterns)
-    .replace(/[═─━_]{3,}/g, '')              // Lines with 3+ chars (including underscores)
-    .replace(/^[═─━_\s]+$/gm, '')            // Lines that are ONLY decorative chars
-    .replace(/[═─━]{2,}/g, '')              // Lines with 2+ chars (more aggressive)
-    // Fix headers: Add emojis and proper casing (ONLY if not already present)
-    .replace(/(?<!✅\s)ASPECTOS POSITIVOS/g, '✅ Aspectos Positivos')
-    .replace(/(?<!✅\s)POSITIVE ASPECTS/g, '✅ Positive Aspects')
-    .replace(/(?<!⚠️\s)ASPECTOS PARA REVISAR/g, '⚠️ Aspectos para Revisar')
-    .replace(/(?<!⚠️\s)AREAS TO REVIEW/g, '⚠️ Areas to Review')
-    .replace(/(?<!⚠️\s)ÁREAS A MEJORAR/g, '⚠️ Áreas a Mejorar')
-    .replace(/(?<!⚠️\s)AREAS TO IMPROVE/g, '⚠️ Areas to Improve')
-    // Fix additional headers
-    .replace(/(?<!⚠️\s)SI ESTE ARCHIVO CORRESPONDE A UNA MEZCLA:/g, '⚠️ Si este archivo corresponde a una mezcla:')
-    .replace(/(?<!⚠️\s)IF THIS FILE IS A MIX:/g, '⚠️ If this file is a mix:')
-    .replace(/(?<!✅\s)SI ESTE ES TU MASTER FINAL:/g, '✅ Si este es tu master final:')
-    .replace(/(?<!✅\s)IF THIS IS YOUR FINAL MASTER:/g, '✅ If this is your final master:')
-    // Convert plain checkmarks and arrows to styled ones
-    .replace(/^✓\s*/gm, '• ')
-    .replace(/^→\s*/gm, '• ')
-    // Remove duplicate emojis
-    .replace(/✅\s*✅/g, '✅')
-    .replace(/⚠️\s*⚠️/g, '⚠️')
-    // Remove recommendation lines (CTA card handles this)
-    .replace(/\n*💡\s*Recomendaci[óo]n:[^\n]*/g, '')
-    .replace(/\n*💡\s*Recommendation:[^\n]*/g, '')
-    .replace(/\n*Recomendaci[óo]n:[^\n]*/g, '')
-    .replace(/\n*Recommendation:[^\n]*/g, '')
-    // Remove mode note (📊 Análisis realizado con estándares...)
-    .replace(/\n*📊\s*An[áa]lisis realizado[^\n]*/gu, '')
-    .replace(/\n*📊\s*Analysis performed[^\n]*/gu, '')
-    // Remove inline CTA section (already shown as CTA card below)
-    .replace(/\n*[🎧🔧🔍💬]\s*(Tu mezcla|Your mix|Escr[íi]benos|Write us|No recomiendo|I don't recommend|Enviarlo|Sending it|Hay aspectos|There are|Hay decisiones|Hay problemas|No significa|Está técnicamente)[^\n]*/gu, '')
-    // Remove any remaining lines starting with CTA emojis followed by text
-    .replace(/\n*[🎧🔧🔍💬][^\n]*/gu, '')
-    // Remove CTA continuation lines (contain "escríbenos" or "write us")
-    .replace(/\n*[^\n]*(escr[íi]benos|write us)[^\n]*/gi, '')
-    // Remove orphaned emoji lines (single emoji on its own line, broken rendering)
-    .replace(/^\s*[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{FE00}-\u{FE0F}]\s*$/gmu, '')
-    // Remove lone surrogates (broken rendering as small squares)
-    .replace(/[\uD800-\uDFFF]/g, '')
-    // Remove excessive newlines (max 2 consecutive)
-    .replace(/\n{3,}/g, '\n\n')
-    // Remove lines that are just spaces
-    .split('\n')
-    .map(line => line.trim())
-    .join('\n')
-    // Final cleanup - max 2 newlines
-    .replace(/\n{3,}/g, '\n\n')
-    // Trim
-    .trim()
-}
-
 // --- Skeleton Loader ---
 
 function DashboardSkeleton({ lang, isMobile }: { lang: string; isMobile: boolean }) {
@@ -644,34 +556,6 @@ function DashboardContent() {
       setLang(profile.preferred_language as 'es' | 'en')
     }
   }, [profile?.preferred_language])
-
-  // Get score color
-  const getScoreColor = (score: number) => {
-    if (score >= 85) return '#10b981'
-    if (score >= 60) return '#f59e0b'
-    return '#ef4444'
-  }
-
-  // Get verdict color
-  const getVerdictColor = (verdict: string) => {
-    switch (verdict) {
-      case 'ready': return '#10b981'
-      case 'almost_ready': return '#3b82f6'
-      case 'needs_work': return '#f59e0b'
-      case 'critical': return '#ef4444'
-      default: return '#6b7280'
-    }
-  }
-
-  // Format date
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString(lang === 'es' ? 'es-ES' : 'en-US', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric'
-    })
-  }
 
   // Handle tab click for complete (pro only)
   const handleTabClick = (tab: 'rapid' | 'summary' | 'complete') => {
@@ -1292,7 +1176,7 @@ function DashboardContent() {
                       </span>
                       <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                         <Calendar size={12} />
-                        {formatDate(analysis.created_at)}
+                        {formatDate(analysis.created_at, lang)}
                       </span>
                       {analysis.duration_seconds != null && (
                         <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
@@ -1367,7 +1251,7 @@ function DashboardContent() {
                   {selectedAnalysis.filename}
                 </h3>
                 <p style={{ fontSize: '0.75rem', color: 'var(--mr-text-secondary)' }}>
-                  {formatDate(selectedAnalysis.created_at)}
+                  {formatDate(selectedAnalysis.created_at, lang)}
                 </p>
               </div>
               <button

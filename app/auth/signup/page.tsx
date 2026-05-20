@@ -13,6 +13,7 @@ import { supabase, setRememberDevice } from '@/lib/supabase'
 import { detectLanguage, setLanguageCookie } from '@/lib/language'
 import { SocialLoginButtons } from '@/components/auth/SocialLoginButtons'
 import { Headphones, Mail, Lock, User, ArrowLeft, Eye, EyeOff, Check, Music } from 'lucide-react'
+import { isValidEmail } from '@/lib/email'
 
 // --- Translations ---
 
@@ -109,10 +110,6 @@ function SignupContent() {
     }
   }, [searchParams])
 
-  // Validate email format
-  const isValidEmail = (email: string) => {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
-  }
 
   // Handle email/password signup
   const handleEmailSignup = async (e: React.FormEvent) => {

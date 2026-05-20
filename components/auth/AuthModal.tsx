@@ -11,6 +11,7 @@ import { useState, useEffect, useRef } from 'react'
 import { supabase, setRememberDevice, getRememberDevice } from '@/lib/supabase'
 import { SocialLoginButtons } from './SocialLoginButtons'
 import { X, Mail, Lock, User, Eye, EyeOff, Check, Headphones, Music } from 'lucide-react'
+import { isValidEmail } from '@/lib/email'
 
 // --- Types / Tipos ---
 
@@ -143,8 +144,6 @@ export function AuthModal({ isOpen, onClose, onSuccess, lang }: AuthModalProps) 
     }
   }, [isOpen])
 
-  // Validate email format
-  const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
 
   // Handle email/password login
   const handleLogin = async (e: React.FormEvent) => {

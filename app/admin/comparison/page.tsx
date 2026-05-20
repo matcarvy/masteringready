@@ -17,6 +17,8 @@ import {
   ArrowLeft, Upload, BarChart3, RefreshCw,
   Check, X, Minus, ArrowRight, Target
 } from 'lucide-react'
+import { truncateFilename } from '@/lib/filename'
+import { getScoreColor } from '@/lib/scoreColor'
 
 // --- Constants ---
 
@@ -55,14 +57,6 @@ const INITIAL_SLOT: SlotData = {
 
 // --- Helpers ---
 
-function truncateFilename(name: string, max: number): string {
-  if (name.length <= max) return name
-  const dotIdx = name.lastIndexOf('.')
-  if (dotIdx === -1) return name.slice(0, max - 3) + '...'
-  const ext = name.slice(dotIdx)
-  return name.slice(0, max - ext.length - 3) + '...' + ext
-}
-
 function getDeltaColor(delta: number): string {
   const abs = Math.abs(delta)
   if (abs < 1) return 'var(--mr-text-tertiary)'
@@ -75,13 +69,6 @@ function getDeltaLabel(delta: number, lang: 'es' | 'en'): string {
   if (abs < 1) return lang === 'es' ? 'Sin cambio' : 'No change'
   if (abs < 3) return lang === 'es' ? 'Cambio menor' : 'Minor change'
   return lang === 'es' ? 'Cambio significativo' : 'Significant change'
-}
-
-function getScoreColor(score: number | undefined): string {
-  if (score === undefined || score === null) return 'var(--mr-text-primary)'
-  if (score >= 85) return 'var(--mr-green)'
-  if (score >= 60) return 'var(--mr-amber)'
-  return 'var(--mr-red)'
 }
 
 function getSpectral(result: any): Record<string, number> | null {

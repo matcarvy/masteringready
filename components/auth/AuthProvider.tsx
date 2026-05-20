@@ -8,6 +8,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 import { User, Session } from '@supabase/supabase-js'
 import { supabase, setSignOutInProgress, isSignOutInProgress } from '@/lib/supabase'
+import { scoreToVerdictEnum } from '@/lib/scoreColor'
 
 // --- Types / Tipos ---
 
@@ -46,14 +47,6 @@ const AuthContext = createContext<AuthContextType>({
 })
 
 // --- Provider / Proveedor ---
-
-// Map score to database verdict enum (deterministic, mirrors backend score_report)
-function scoreToVerdictEnum(score: number): 'ready' | 'almost_ready' | 'needs_work' | 'critical' {
-  if (score >= 85) return 'ready'
-  if (score >= 60) return 'almost_ready'
-  if (score >= 40) return 'needs_work'
-  return 'critical'
-}
 
 // Save pending analysis from localStorage to database
 async function savePendingAnalysisForUser(userId: string, userIsAdmin: boolean = false): Promise<SaveAnalysisResult> {

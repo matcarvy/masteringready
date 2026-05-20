@@ -13,6 +13,8 @@
   /* Brand */
   --mr-primary: #667eea;
   --mr-primary-dark: #764ba2;
+  --mr-accent-bright: #818cf8;
+  --mr-accent-deep: #4f46e5;
   --mr-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 
   /* Semantic (same in both themes) */
@@ -217,6 +219,89 @@
 .learn-card--amber { border-left: 3px solid var(--mr-amber); }
 .learn-card--red { border-left: 3px solid var(--mr-red); }
 .learn-card--purple { border-left: 3px solid var(--mr-primary); }
+
+/* ===== BRAND MARK (waveform) ===== */
+.mr-brand-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 22px;
+}
+.mr-brand-mark > i {
+  display: block;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--mr-accent-bright);
+}
+.mr-brand-mark > i:nth-child(1) { height: 8px; }
+.mr-brand-mark > i:nth-child(2) { height: 14px; }
+.mr-brand-mark > i:nth-child(3) { height: 22px; }
+.mr-brand-mark > i:nth-child(4) { height: 14px; }
+.mr-brand-mark > i:nth-child(5) { height: 8px; }
+
+/* ===== HERO CREDIBILITY BADGE ===== */
+.mr-credential-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--mr-bg-elevated);
+  border: 1px solid var(--mr-border-strong);
+  border-radius: 9999px;
+  padding: 0.375rem 0.875rem;
+  font-size: 0.8125rem;
+  color: var(--mr-text-secondary);
+  text-decoration: none;
+  line-height: 1.4;
+  transition: border-color 0.16s, color 0.16s;
+}
+.mr-credential-badge:hover {
+  border-color: var(--mr-accent-bright);
+  color: var(--mr-text-primary);
+}
+.mr-credential-badge .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--mr-green);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--mr-green) 22%, transparent);
+  flex-shrink: 0;
+}
+.mr-credential-badge a {
+  color: var(--mr-accent-bright);
+  text-decoration: none;
+  border-bottom: 1px solid color-mix(in srgb, var(--mr-accent-bright) 40%, transparent);
+}
+.mr-credential-badge a:hover {
+  border-bottom-color: var(--mr-accent-bright);
+}
+
+/* ===== FOUNDER SECTION ===== */
+.mr-creator {
+  background: var(--mr-bg-card);
+  border: 1px solid var(--mr-border);
+  border-radius: var(--mr-radius);
+  padding: 1.5rem 1.75rem;
+  margin: 2rem 0;
+  max-width: 760px;
+  color: var(--mr-text-secondary);
+  font-size: 0.9375rem;
+  line-height: 1.65;
+}
+.mr-creator h3 {
+  margin: 0 0 0.75rem;
+  color: var(--mr-text-primary);
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+.mr-creator a {
+  color: var(--mr-accent-bright);
+  text-decoration: none;
+  border-bottom: 1px solid color-mix(in srgb, var(--mr-accent-bright) 40%, transparent);
+}
+.mr-creator a:hover {
+  border-bottom-color: var(--mr-accent-bright);
+}
 
 /* ===== BASE STYLES ===== */
 * {

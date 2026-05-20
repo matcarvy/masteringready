@@ -18,6 +18,8 @@ import {
   ArrowLeft, Upload, BarChart3, RefreshCw,
   Check, X, Minus, Target, GitCompare, Zap, Music
 } from 'lucide-react'
+import { truncateFilename } from '@/lib/filename'
+import { getScoreColor } from '@/lib/scoreColor'
 
 // --- Constants ---
 
@@ -82,14 +84,6 @@ const INITIAL_SLOT: SlotData = {
 
 // --- Helpers ---
 
-function truncateFilename(name: string, max: number): string {
-  if (name.length <= max) return name
-  const dotIdx = name.lastIndexOf('.')
-  if (dotIdx === -1) return name.slice(0, max - 3) + '...'
-  const ext = name.slice(dotIdx)
-  return name.slice(0, max - ext.length - 3) + '...' + ext
-}
-
 function getSpectral(result: any): Record<string, number> | null {
   if (!result) return null
   if (result.spectral_6band && typeof result.spectral_6band === 'object') return result.spectral_6band
@@ -131,13 +125,6 @@ function extractMetrics(result: any): ExtractedMetrics | null {
     crestFactor: parseNum(crest?.value),
     spectral: getSpectral(result),
   }
-}
-
-function getScoreColor(score: number | undefined): string {
-  if (score === undefined || score === null) return 'var(--mr-text-primary)'
-  if (score >= 85) return 'var(--mr-green)'
-  if (score >= 60) return 'var(--mr-amber)'
-  return 'var(--mr-red)'
 }
 
 function fmtVal(v: number | null, decimals: number = 1): string {
