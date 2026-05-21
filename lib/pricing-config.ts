@@ -39,13 +39,13 @@ export interface PricingConfig {
 }
 
 // Eurozone countries that use EUR
-export const EUROZONE_COUNTRIES = [
+const EUROZONE_COUNTRIES = [
   'DE', 'FR', 'ES', 'IT', 'NL', 'BE', 'AT', 'PT', 'IE', 'FI',
   'GR', 'SK', 'SI', 'LT', 'LV', 'EE', 'LU', 'MT', 'CY', 'HR'
 ] as const
 
 // Pricing by country (amounts in cents)
-export const PRICING_BY_COUNTRY: Record<string, PricingConfig> = {
+const PRICING_BY_COUNTRY: Record<string, PricingConfig> = {
   // --- Tier 1: Local currency, full price ---
 
   // United States (base)
@@ -94,7 +94,7 @@ EUROZONE_COUNTRIES.forEach(countryCode => {
 })
 
 // Default pricing (USD, full price)
-export const DEFAULT_PRICING: PricingConfig = {
+const DEFAULT_PRICING: PricingConfig = {
   currency: 'usd',
   pro_monthly: 999,
   pro_yearly: 9900,
@@ -121,36 +121,6 @@ export function getProductPrice(
     currency: config.currency,
     amount: config[productType]
   }
-}
-
-/**
- * Format price for display (e.g., "$9.99", "€10.00", "£9.00")
- */
-export function formatPriceForDisplay(
-  amount: number,
-  currency: string
-): string {
-  const symbols: Record<string, string> = {
-    'usd': '$',
-    'eur': '€',
-    'gbp': '£',
-    'cad': 'CA$',
-    'aud': 'A$'
-  }
-
-  const symbol = symbols[currency.toLowerCase()] || '$'
-  const price = (amount / 100).toFixed(2)
-
-  // EUR and GBP symbol goes before the number
-  // CAD and AUD show currency code after
-  if (currency.toLowerCase() === 'cad') {
-    return `$${price} CAD`
-  }
-  if (currency.toLowerCase() === 'aud') {
-    return `$${price} AUD`
-  }
-
-  return `${symbol}${price}`
 }
 
 /**

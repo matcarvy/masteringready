@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 
-// Force dynamic — never evaluate at build time
+// Force dynamic; never evaluate at build time
 export const dynamic = 'force-dynamic'
 
 /**
@@ -30,7 +30,7 @@ export async function GET() {
   }
 
   try {
-    // Direct REST ping to PostgREST — queries profiles table to prove DB is alive
+    // Direct REST ping to PostgREST; queries profiles table to prove DB is alive
     // RLS may filter results, but endpoint returns 200 regardless
     const res = await fetch(`${url}/rest/v1/profiles?select=id&limit=1`, {
       headers: {

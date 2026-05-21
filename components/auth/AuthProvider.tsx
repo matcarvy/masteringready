@@ -58,7 +58,7 @@ async function savePendingAnalysisForUser(userId: string, userIsAdmin: boolean =
 
     // IMPORTANT: Remove from localStorage IMMEDIATELY to prevent race condition.
     // Both AuthProvider.onAuthStateChange and AuthModal.onSuccess can call this
-    // concurrently — the first caller claims the data, the second finds nothing.
+    // concurrently; the first caller claims the data, the second finds nothing.
     localStorage.removeItem('pendingAnalysis')
 
     const analysis = JSON.parse(pendingData)
@@ -175,13 +175,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
   const [isAdmin, _setIsAdmin] = useState(() => {
-    // Hydrate from localStorage — survives GoTrueClient abort errors
+    // Hydrate from localStorage; survives GoTrueClient abort errors
     if (typeof window !== 'undefined') {
       return localStorage.getItem('mr_is_admin') === 'true'
     }
     return false
   })
-  // Only persist to localStorage on definitive answers — not on query failures
+  // Only persist to localStorage on definitive answers; not on query failures
   const setIsAdmin = (val: boolean, definitive = true) => {
     if (!definitive && !val) return // Don't clear cache on failed/aborted queries
     _setIsAdmin(val)
@@ -224,7 +224,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }
 
   useEffect(() => {
-    // Supabase storage key — derived from project URL
+    // Supabase storage key; derived from project URL
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
     let storageKey = 'sb-auth-token'
     try { storageKey = `sb-${new URL(supabaseUrl).hostname.split('.')[0]}-auth-token` } catch {}
@@ -264,7 +264,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         }
       }
     } catch {
-      // JWT decode failed — fall through to async path
+      // JWT decode failed; fall through to async path
     }
 
     // --- Phase 2: Async Supabase recovery ---
@@ -272,7 +272,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       try {
         const { data: { session }, error } = await supabase.auth.getSession()
         if (session) {
-          // Supabase recovered successfully — upgrade to proper session
+          // Supabase recovered successfully; upgrade to proper session
           setSession(session)
           if (session.user) {
             try {
@@ -283,7 +283,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
                 .single()
               setIsAdmin(profile?.is_admin === true, profile !== null)
             } catch {
-              // Profile query failed (abort) — keep cached admin status
+              // Profile query failed (abort); keep cached admin status
             }
           }
           setUser(session.user ?? null)
@@ -302,19 +302,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         try {
-          // INITIAL_SESSION with null — GoTrueClient init failed or no session.
+          // INITIAL_SESSION with null; GoTrueClient init failed or no session.
           // If we sync-restored or have stored tokens, skip entirely.
           if (event === 'INITIAL_SESSION' && !session) {
             if (syncRestored) return
             const hasStoredTokens = localStorage.getItem(storageKey) || sessionStorage.getItem(storageKey)
             if (hasStoredTokens) return
-            // Genuinely no session — set loading false
+            // Genuinely no session; set loading false
             setLoading(false)
             return
           }
 
           // SIGNED_OUT from GoTrueClient's internal confusion (not user-initiated)
-          // — don't clear state if user didn't click sign out
+          //; don't clear state if user didn't click sign out
           if (event === 'SIGNED_OUT' && !isSignOutInProgress()) {
             return
           }

@@ -142,7 +142,7 @@ const structuredData = {
       availability: 'https://schema.org/InStock',
       priceValidUntil: '2027-12-31'
     },
-    // aggregateRating removed — will add when real reviews exist
+    // aggregateRating removed; will add when real reviews exist
     author: {
       '@type': 'Person',
       name: 'Matías Carvajal',
@@ -220,7 +220,7 @@ const structuredData = {
     ]
   },
 
-  // FAQPage Schema — targets high-intent queries for both SEO rich snippets and AI citation
+  // FAQPage Schema; targets high-intent queries for both SEO rich snippets and AI citation
   faqPage: {
     '@context': 'https://schema.org',
     '@type': 'FAQPage',
@@ -324,7 +324,7 @@ export default function RootLayout({
   return (
     <html lang="es" suppressHydrationWarning>
       <head>
-        {/* Theme initialization — runs before paint to prevent flash */}
+        {/* Theme initialization; runs before paint to prevent flash */}
         <script dangerouslySetInnerHTML={{ __html: `(function(){var s=localStorage.getItem('mr-theme');var q=window.matchMedia('(prefers-color-scheme:dark)').matches;var t=s==='dark'?'dark':s==='light'?'light':q?'dark':'light';document.documentElement.setAttribute('data-theme',t)})()` }} />
 
         {/* Prevent Safari text inflation on iOS accessibility text scaling */}

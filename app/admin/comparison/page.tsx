@@ -1,7 +1,7 @@
 'use client'
 
 /**
- * Frequency Comparison Tool — /admin/comparison
+ * Frequency Comparison Tool; /admin/comparison
  * Upload two versions of the same track to compare 6-band frequency balance.
  * Admin-only. Reuses existing analysis API (no backend changes).
  */
@@ -23,12 +23,12 @@ import { getScoreColor } from '@/lib/scoreColor'
 // --- Constants ---
 
 const BANDS = [
-  { key: 'sub', en: 'Sub', es: 'Sub', range: '20–60 Hz' },
-  { key: 'low', en: 'Low', es: 'Graves', range: '60–250 Hz' },
-  { key: 'low_mid', en: 'Low-Mid', es: 'Graves-Medios', range: '250–500 Hz' },
-  { key: 'mid', en: 'Mid', es: 'Medios', range: '500–2k Hz' },
-  { key: 'high_mid', en: 'High-Mid', es: 'Medios-Agudos', range: '2k–6k Hz' },
-  { key: 'high', en: 'High', es: 'Agudos', range: '6k–20k Hz' },
+  { key: 'sub', en: 'Sub', es: 'Sub', range: '20-60 Hz' },
+  { key: 'low', en: 'Low', es: 'Graves', range: '60-250 Hz' },
+  { key: 'low_mid', en: 'Low-Mid', es: 'Graves-Medios', range: '250-500 Hz' },
+  { key: 'mid', en: 'Mid', es: 'Medios', range: '500-2k Hz' },
+  { key: 'high_mid', en: 'High-Mid', es: 'Medios-Agudos', range: '2k-6k Hz' },
+  { key: 'high', en: 'High', es: 'Agudos', range: '6k-20k Hz' },
 ] as const
 
 const ACCEPTED_FORMATS = '.wav,.mp3,.aiff,.aif,.flac,.aac,.m4a,.ogg'
@@ -355,7 +355,7 @@ export default function ComparisonPage() {
             }))
           }
         } catch {
-          // Transient poll errors — keep polling
+          // Transient poll errors; keep polling
         }
       }, 3000)
     } catch (err) {
@@ -385,7 +385,7 @@ export default function ComparisonPage() {
     return (
       <div style={{
         display: 'flex', justifyContent: 'center', alignItems: 'center',
-        height: '100vh', background: 'var(--mr-bg-base)',
+        height: '100dvh', background: 'var(--mr-bg-base)',
       }}>
         <span style={{ color: 'var(--mr-text-secondary)' }}>
           {lang === 'es' ? 'Verificando acceso...' : 'Verifying access...'}
@@ -398,7 +398,7 @@ export default function ComparisonPage() {
     return (
       <div style={{
         display: 'flex', flexDirection: 'column', justifyContent: 'center',
-        alignItems: 'center', height: '100vh', gap: '1rem', background: 'var(--mr-bg-base)',
+        alignItems: 'center', height: '100dvh', gap: '1rem', background: 'var(--mr-bg-base)',
       }}>
         <p style={{ color: 'var(--mr-text-primary)', margin: 0 }}>
           {lang === 'es' ? 'Inicia sesion para acceder' : 'Log in to access'}
@@ -414,7 +414,7 @@ export default function ComparisonPage() {
     return (
       <div style={{
         display: 'flex', flexDirection: 'column', justifyContent: 'center',
-        alignItems: 'center', height: '100vh', gap: '1rem', background: 'var(--mr-bg-base)',
+        alignItems: 'center', height: '100dvh', gap: '1rem', background: 'var(--mr-bg-base)',
       }}>
         <p style={{ color: 'var(--mr-text-primary)', margin: 0 }}>
           {lang === 'es' ? 'Acceso denegado' : 'Access denied'}

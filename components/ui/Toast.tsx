@@ -28,7 +28,8 @@ const CONTAINER_STYLE: React.CSSProperties = {
   position: 'fixed',
   top: 16,
   right: 16,
-  zIndex: 99999,
+  // z-index scale: admin modal/overlay = 100, Toast = 200 (always above modals)
+  zIndex: 200,
   display: 'flex',
   flexDirection: 'column',
   gap: 8,

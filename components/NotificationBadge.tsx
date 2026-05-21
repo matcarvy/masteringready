@@ -49,7 +49,7 @@ function markDismissed(type: string) {
 /**
  * Set a notification (call from anywhere).
  * - 'analysis_ready': always shows (new event, clears any prior dismissed state for it)
- * - 'has_analyses': only shows once per session — skipped if already dismissed
+ * - 'has_analyses': only shows once per session; skipped if already dismissed
  */
 export function setNotification(data: NotifData) {
   if (typeof window === 'undefined') return
@@ -57,7 +57,7 @@ export function setNotification(data: NotifData) {
   if (data.type === 'has_analyses' && wasDismissed('has_analyses')) return
 
   if (data.type === 'analysis_ready') {
-    // New event — clear dismissed state so it always appears
+    // New event; clear dismissed state so it always appears
     const dismissed = sessionStorage.getItem(DISMISSED_KEY)
     if (dismissed) {
       try {
@@ -84,14 +84,6 @@ export function clearNotification() {
     } catch { /* */ }
   }
   sessionStorage.removeItem(NOTIF_KEY)
-}
-
-/**
- * Check if a notification exists
- */
-export function hasNotification(): boolean {
-  if (typeof window === 'undefined') return false
-  return sessionStorage.getItem(NOTIF_KEY) !== null
 }
 
 export function NotificationBadge({ lang, isMobile }: NotificationBadgeProps) {
@@ -196,19 +188,28 @@ export function NotificationBadge({ lang, isMobile }: NotificationBadgeProps) {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
+            width: '44px',
+            height: '44px',
+            background: 'transparent',
+            border: 'none',
+            cursor: 'pointer',
+            padding: 0
+          }}
+          aria-label={lang === 'es' ? 'Cerrar notificación' : 'Dismiss notification'}
+        >
+          <span style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
             width: '20px',
             height: '20px',
             borderRadius: '50%',
             background: 'rgba(102, 126, 234, 0.15)',
-            border: 'none',
             color: 'var(--mr-primary)',
-            cursor: 'pointer',
-            padding: 0,
             transition: 'background 0.15s'
-          }}
-          aria-label={lang === 'es' ? 'Cerrar notificación' : 'Dismiss notification'}
-        >
-          <X size={10} />
+          }}>
+            <X size={10} />
+          </span>
         </button>
       </div>
     )

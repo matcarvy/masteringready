@@ -195,14 +195,14 @@ export default function SubscriptionPage() {
     return () => window.removeEventListener('resize', check)
   }, [])
 
-  // Redirect if not logged in (to home, not login — home has login options in header)
+  // Redirect if not logged in (to home, not login; home has login options in header)
   useEffect(() => {
     if (!authLoading && !user) {
       window.location.href = `/?lang=${lang}`
     }
   }, [authLoading, user, lang])
 
-  // Fetch data — parallelized to avoid hitting safety timeout
+  // Fetch data; parallelized to avoid hitting safety timeout
   useEffect(() => {
     let cancelled = false
 
@@ -212,7 +212,7 @@ export default function SubscriptionPage() {
       setLoading(true)
 
       try {
-        // Pass session tokens directly from AuthProvider — avoids touching the shared
+        // Pass session tokens directly from AuthProvider; avoids touching the shared
         // Supabase singleton which can have stale internal state after SPA navigation
         const client = await createFreshQueryClient(
           session ? { access_token: session.access_token, refresh_token: session.refresh_token } : undefined
@@ -327,7 +327,7 @@ export default function SubscriptionPage() {
         setCancelling(false)
         return
       }
-      // Success — reload to reflect new state
+      // Success; reload to reflect new state
       setShowCancelModal(false)
       window.location.reload()
     } catch {
@@ -343,7 +343,7 @@ export default function SubscriptionPage() {
     ? Math.max(0, 30 - usedAnalyses)
     : Math.max(0, 2 - usedAnalyses)
 
-  // Safety timeout — if fetch hangs (stale connections from SPA navigation), auto-reload (max 1 attempt)
+  // Safety timeout; if fetch hangs (stale connections from SPA navigation), auto-reload (max 1 attempt)
   useEffect(() => {
     if (!loading) {
       sessionStorage.removeItem('mr_sub_reload')

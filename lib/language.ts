@@ -14,7 +14,7 @@ export type Lang = 'es' | 'en'
 /**
  * Read language preference from cookie (client-side)
  */
-export function getLanguageCookie(): Lang | null {
+function getLanguageCookie(): Lang | null {
   if (typeof document === 'undefined') return null
 
   const match = document.cookie.match(new RegExp(`(?:^|;\\s*)${LANG_COOKIE_NAME}=([^;]+)`))

@@ -1,7 +1,7 @@
 'use client'
 
 /**
- * Mastering Lab — /admin/mastering-lab
+ * Mastering Lab; /admin/mastering-lab
  * Upload up to 4 files (Mix, Reference, Your Master, Reference Master)
  * to compare mastering processes, results, and frequency profiles.
  * Admin-only. Reuses existing analysis API (no backend changes).
@@ -24,12 +24,12 @@ import { getScoreColor } from '@/lib/scoreColor'
 // --- Constants ---
 
 const BANDS = [
-  { key: 'sub', en: 'Sub', es: 'Sub', range: '20–60 Hz' },
-  { key: 'low', en: 'Low', es: 'Graves', range: '60–250 Hz' },
-  { key: 'low_mid', en: 'Low-Mid', es: 'Graves-Medios', range: '250–500 Hz' },
-  { key: 'mid', en: 'Mid', es: 'Medios', range: '500–2k Hz' },
-  { key: 'high_mid', en: 'High-Mid', es: 'Medios-Agudos', range: '2k–6k Hz' },
-  { key: 'high', en: 'High', es: 'Agudos', range: '6k–20k Hz' },
+  { key: 'sub', en: 'Sub', es: 'Sub', range: '20-60 Hz' },
+  { key: 'low', en: 'Low', es: 'Graves', range: '60-250 Hz' },
+  { key: 'low_mid', en: 'Low-Mid', es: 'Graves-Medios', range: '250-500 Hz' },
+  { key: 'mid', en: 'Mid', es: 'Medios', range: '500-2k Hz' },
+  { key: 'high_mid', en: 'High-Mid', es: 'Medios-Agudos', range: '2k-6k Hz' },
+  { key: 'high', en: 'High', es: 'Agudos', range: '6k-20k Hz' },
 ] as const
 
 const ACCEPTED_FORMATS = '.wav,.mp3,.aiff,.aif,.flac,.aac,.m4a,.ogg'
@@ -128,12 +128,12 @@ function extractMetrics(result: any): ExtractedMetrics | null {
 }
 
 function fmtVal(v: number | null, decimals: number = 1): string {
-  if (v === null) return '–'
+  if (v === null) return '-'
   return v.toFixed(decimals)
 }
 
 function fmtDelta(v: number | null, decimals: number = 1): string {
-  if (v === null) return '–'
+  if (v === null) return '-'
   return (v > 0 ? '+' : '') + v.toFixed(decimals)
 }
 
@@ -720,18 +720,18 @@ export default function MasteringLabPage() {
 
   // Auth gates
   if (!adminChecked) return (
-    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'var(--mr-bg-base)' }}>
+    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100dvh', background: 'var(--mr-bg-base)' }}>
       <span style={{ color: 'var(--mr-text-secondary)' }}>{lang === 'es' ? 'Verificando acceso...' : 'Verifying access...'}</span>
     </div>
   )
   if (!user) return (
-    <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100vh', gap: '1rem', background: 'var(--mr-bg-base)' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100dvh', gap: '1rem', background: 'var(--mr-bg-base)' }}>
       <p style={{ color: 'var(--mr-text-primary)', margin: 0 }}>{lang === 'es' ? 'Inicia sesión para acceder' : 'Log in to access'}</p>
       <Link href="/admin" style={{ color: 'var(--mr-primary)', textDecoration: 'underline' }}>{lang === 'es' ? 'Ir a Admin' : 'Go to Admin'}</Link>
     </div>
   )
   if (!isAdmin) return (
-    <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100vh', gap: '1rem', background: 'var(--mr-bg-base)' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100dvh', gap: '1rem', background: 'var(--mr-bg-base)' }}>
       <p style={{ color: 'var(--mr-text-primary)', margin: 0 }}>{lang === 'es' ? 'Acceso denegado' : 'Access denied'}</p>
       <Link href="/" style={{ color: 'var(--mr-primary)', textDecoration: 'underline' }}>{lang === 'es' ? 'Volver al inicio' : 'Back to home'}</Link>
     </div>
@@ -797,7 +797,7 @@ export default function MasteringLabPage() {
             : 'Each file is analyzed independently. Comparisons appear automatically.'}
         </p>
 
-        {/* Upload grid — 2x2 */}
+        {/* Upload grid; 2x2 */}
         <div style={{
           display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
           gap: '1rem', marginBottom: '2rem',

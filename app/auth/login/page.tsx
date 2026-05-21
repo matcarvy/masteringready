@@ -469,16 +469,14 @@ export default function LoginPage() {
         justifyContent: 'center',
         gap: '1rem'
       }}>
-        <style>{`@keyframes mr-pulse { 0%,100% { opacity: 0.6; transform: scale(0.95); } 50% { opacity: 1; transform: scale(1); } }`}</style>
-        <div style={{
+        <div className="mr-pulse" style={{
           width: '48px',
           height: '48px',
           background: 'rgba(255,255,255,0.2)',
           borderRadius: '0.75rem',
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center',
-          animation: 'mr-pulse 1.5s ease-in-out infinite'
+          justifyContent: 'center'
         }}>
           <Music size={24} color="white" />
         </div>

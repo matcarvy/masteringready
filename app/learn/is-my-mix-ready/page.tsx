@@ -32,7 +32,7 @@ export default function IsMyMixReadyPage() {
             : 'Is your mix ready for mastering?'}
         </h1>
 
-        {/* ===== OPENING PARAGRAPH (answer-first) ===== */}
+        {/* --- OPENING PARAGRAPH (answer-first) --- */}
         <div style={{
           fontSize: '1.0625rem',
           lineHeight: 1.75,
@@ -89,7 +89,7 @@ export default function IsMyMixReadyPage() {
           )}
         </div>
 
-        {/* ===== H2: THE 5 METRICS THAT MATTER ===== */}
+        {/* --- H2: THE 5 METRICS THAT MATTER --- */}
         <h2 style={h2Style}>
           {lang === 'es'
             ? 'Las 5 métricas que importan'
@@ -175,7 +175,7 @@ export default function IsMyMixReadyPage() {
             : 'LUFS (Loudness Units Full Scale) is informational but does not affect your Score. The ideal range is between -24 and -16 integrated LUFS, with -18 LUFS as center. Mastering Ready shows it as a reference but does not penalize you for it because final loudness is defined by mastering, not the mix.'}
         </div>
 
-        {/* ===== H2: WHAT A "READY" MIX LOOKS LIKE ===== */}
+        {/* --- H2: WHAT A "READY" MIX LOOKS LIKE --- */}
         <h2 style={h2Style}>
           {lang === 'es'
             ? 'Cómo se ve una mezcla "lista"'
@@ -192,7 +192,7 @@ export default function IsMyMixReadyPage() {
         <div style={{ marginBottom: '2.5rem' }}>
           {[
             {
-              range: '85 – 100',
+              range: '85-100',
               color: 'var(--mr-green)',
               bg: 'var(--mr-green-bg)',
               cardClass: 'learn-card learn-card--green',
@@ -200,7 +200,7 @@ export default function IsMyMixReadyPage() {
               en: 'Ready for mastering. Your metrics are in range. You can send your mix with confidence.',
             },
             {
-              range: '60 – 84',
+              range: '60-84',
               color: 'var(--mr-amber)',
               bg: 'var(--mr-amber-bg)',
               cardClass: 'learn-card learn-card--amber',
@@ -208,7 +208,7 @@ export default function IsMyMixReadyPage() {
               en: 'Almost ready. There are one or two areas worth reviewing before sending. The fixes are usually quick.',
             },
             {
-              range: '40 – 59',
+              range: '40-59',
               color: 'var(--mr-red)',
               bg: 'var(--mr-red-bg)',
               cardClass: 'learn-card learn-card--red',
@@ -216,7 +216,7 @@ export default function IsMyMixReadyPage() {
               en: 'Needs work. There are technical problems that mastering cannot solve. Go back to your DAW.',
             },
             {
-              range: '0 – 39',
+              range: '0-39',
               color: 'var(--mr-red)',
               bg: 'var(--mr-red-bg)',
               cardClass: 'learn-card learn-card--red',
@@ -253,7 +253,7 @@ export default function IsMyMixReadyPage() {
           ))}
         </div>
 
-        {/* ===== H2: COMMON PROBLEMS ===== */}
+        {/* --- H2: COMMON PROBLEMS --- */}
         <h2 style={h2Style}>
           {lang === 'es'
             ? 'Problemas comunes que impiden un buen mastering'
@@ -322,7 +322,7 @@ export default function IsMyMixReadyPage() {
           ))}
         </div>
 
-        {/* ===== H2: THE CLEAR COAT ANALOGY ===== */}
+        {/* --- H2: THE CLEAR COAT ANALOGY --- */}
         <h2 style={h2Style}>
           {lang === 'es'
             ? 'La analogía del barniz transparente'
@@ -361,7 +361,7 @@ export default function IsMyMixReadyPage() {
             : 'That is why it is so important to know if your mix is ready before sending it. We do not replace your mastering engineer. We help you arrive prepared.'}
         </p>
 
-        {/* ===== H2: QUICK SELF-CHECK ===== */}
+        {/* --- H2: QUICK SELF-CHECK --- */}
         <h2 style={h2Style}>
           {lang === 'es'
             ? 'Checklist rápido antes de enviar a mastering'
@@ -406,7 +406,7 @@ export default function IsMyMixReadyPage() {
           </ol>
         </div>
 
-        {/* ===== SPECS CALLOUT ===== */}
+        {/* --- SPECS CALLOUT --- */}
         <div style={{
           background: 'var(--mr-bg-elevated)',
           border: '1px solid var(--mr-border)',
@@ -426,7 +426,7 @@ export default function IsMyMixReadyPage() {
             : 'Supported formats: WAV, MP3, AIFF, FLAC, AAC, M4A, OGG. Max file size: 200 MB. Includes 2 free full analyses with detailed report and PDF.'}
         </div>
 
-        {/* ===== CTA SECTION ===== */}
+        {/* --- CTA SECTION --- */}
         <div style={{
           textAlign: 'center',
           padding: '2.5rem 1.5rem',

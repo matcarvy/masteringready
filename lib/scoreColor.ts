@@ -5,6 +5,13 @@ export function getScoreColor(score: number | null | undefined): string {
   return 'var(--mr-red)'
 }
 
+export function getScoreHex(score: number): string {
+  if (score >= 85) return '#10b981'
+  if (score >= 60) return '#f59e0b'
+  if (score >= 40) return '#f97316'
+  return '#ef4444'
+}
+
 export function getScoreBg(score: number | null | undefined): string {
   if (score === null || score === undefined) return 'var(--mr-bg-elevated)'
   if (score >= 85) return 'var(--mr-green-bg)'

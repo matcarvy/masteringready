@@ -658,7 +658,7 @@ export interface Database {
           created_at?: string
         }
       }
-      // Prospecting Leads — automated lead discovery from Reddit, YouTube, etc.
+      // Prospecting Leads; automated lead discovery from Reddit, YouTube, etc.
       prospecting_leads: {
         Row: {
           id: string
@@ -871,56 +871,3 @@ export type UserFeedbackInsert = Database['public']['Tables']['user_feedback']['
 export type FeedbackVote = Database['public']['Tables']['feedback_votes']['Row']
 export type FeedbackVoteInsert = Database['public']['Tables']['feedback_votes']['Insert']
 export type PublicFeatureRequest = Database['public']['Views']['public_feature_requests']['Row']
-
-// --- Bilingual Helpers ---
-
-/**
- * Get localized field from a plan
- * Obtener campo localizado de un plan
- */
-export function getLocalizedPlanField<T extends 'description' | 'features'>(
-  plan: Plan,
-  field: T,
-  lang: Language
-): T extends 'description' ? string | null : Json | null {
-  const key = `${field}_${lang}` as keyof Plan
-  return plan[key] as any
-}
-
-/**
- * Get localized feedback response
- * Obtener respuesta de retroalimentación localizada
- */
-export function getLocalizedFeedbackResponse(
-  feedback: UserFeedback,
-  lang: Language
-): string | null {
-  return lang === 'es' ? feedback.response_es : feedback.response_en
-}
-
-// --- Category and Status Labels ---
-
-export const FEEDBACK_CATEGORY_LABELS: Record<FeedbackCategory, { es: string; en: string }> = {
-  bug: { es: 'Error/Bug', en: 'Bug/Error' },
-  feature: { es: 'Solicitud de función', en: 'Feature request' },
-  improvement: { es: 'Mejora sugerida', en: 'Suggested improvement' },
-  praise: { es: 'Comentario positivo', en: 'Positive feedback' },
-  question: { es: 'Pregunta', en: 'Question' },
-  other: { es: 'Otro', en: 'Other' }
-}
-
-export const FEEDBACK_STATUS_LABELS: Record<FeedbackStatus, { es: string; en: string }> = {
-  new: { es: 'Nuevo', en: 'New' },
-  read: { es: 'Leído', en: 'Read' },
-  in_progress: { es: 'En progreso', en: 'In progress' },
-  resolved: { es: 'Resuelto', en: 'Resolved' },
-  wont_fix: { es: 'No se hará', en: "Won't fix" },
-  duplicate: { es: 'Duplicado', en: 'Duplicate' }
-}
-
-export const VERDICT_LABELS: Record<AnalysisVerdict, { es: string; en: string }> = {
-  ready: { es: 'Listo para mastering', en: 'Ready for mastering' },
-  almost_ready: { es: 'Casi listo', en: 'Almost ready' },
-  needs_work: { es: 'Necesita trabajo', en: 'Needs work' },
-  critical: { es: 'Problemas críticos', en: 'Critical issues' }
-}

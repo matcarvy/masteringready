@@ -15,6 +15,8 @@ import {
 } from 'recharts'
 import { TrendingUp, Activity } from 'lucide-react'
 import Select from '@/components/Select'
+import { getScoreHex } from '@/lib/scoreColor'
+import { truncateFilename as truncateName } from '@/lib/filename'
 
 // --- Types ---
 
@@ -74,13 +76,6 @@ const t = {
 
 // --- Helpers ---
 
-function getScoreColor(score: number): string {
-  if (score >= 85) return '#10b981' // green
-  if (score >= 60) return '#f59e0b' // amber
-  if (score >= 40) return '#f97316' // orange
-  return '#ef4444' // red
-}
-
 function formatShortDate(dateString: string, lang: 'es' | 'en'): string {
   const date = new Date(dateString)
   return date.toLocaleDateString(lang === 'es' ? 'es-ES' : 'en-US', {
@@ -116,13 +111,9 @@ function normalizeFilename(filename: string): string {
     .replace(/\s+/g, ' ')
 }
 
-/** Truncate filename for display */
+/** Truncate filename for display: strip audio extension, three-dot ellipsis */
 function truncateFilename(filename: string, maxLen: number): string {
-  if (!filename) return ''
-  // Remove extension
-  const name = filename.replace(/\.(wav|mp3|aiff|aif|flac|aac|m4a|ogg)$/i, '')
-  if (name.length <= maxLen) return name
-  return name.slice(0, maxLen - 3) + '...'
+  return truncateName(filename, maxLen, { stripAudioExt: true, ellipsis: '...' })
 }
 
 // --- Custom Dot ---
@@ -135,7 +126,7 @@ function CustomDot(props: any) {
   const { cx, cy, payload } = props
   if (cx == null || cy == null || !payload) return null
 
-  const color = getScoreColor(payload.score)
+  const color = getScoreHex(payload.score)
   return (
     <circle
       cx={cx}
@@ -243,7 +234,7 @@ function NarrativeLine({
         color: 'var(--mr-text-secondary)',
       }}>
         {labels.avgScore}:{' '}
-        <span style={{ color: getScoreColor(stats.avgAll), fontWeight: 600 }}>
+        <span style={{ color: getScoreHex(stats.avgAll), fontWeight: 600 }}>
           {stats.avgAll}
         </span>
       </div>
@@ -287,7 +278,7 @@ export default function ProgressTimeline({ analyses, lang, isMobile }: ProgressT
     return () => { _setHoveredDot = null }
   }, [])
 
-  // Group analyses by normalized filename — only include songs with 2+ analyses
+  // Group analyses by normalized filename; only include songs with 2+ analyses
   const trackOptions = useMemo(() => {
     const groups: Record<string, number> = {}
     for (const a of analyses) {
@@ -351,7 +342,7 @@ export default function ProgressTimeline({ analyses, lang, isMobile }: ProgressT
     })
   }, [filteredAnalyses, lang])
 
-  // Single analysis — show friendly message
+  // Single analysis; show friendly message
   if (analyses.length <= 1) {
     return (
       <div style={{
@@ -492,7 +483,7 @@ export default function ProgressTimeline({ analyses, lang, isMobile }: ProgressT
                   ticks={[0, 25, 50, 75, 100]}
                 />
 
-                {/* No built-in Tooltip — custom dot-hover tooltip below */}
+                {/* No built-in Tooltip; custom dot-hover tooltip below */}
 
                 {/* Reference lines at score thresholds */}
                 <ReferenceLine
@@ -508,7 +499,7 @@ export default function ProgressTimeline({ analyses, lang, isMobile }: ProgressT
                   strokeOpacity={0.3}
                 />
 
-                {/* Main score area — tooltip triggers only on direct dot hover */}
+                {/* Main score area; tooltip triggers only on direct dot hover */}
                 <Area
                   type="monotone"
                   dataKey="score"
@@ -520,7 +511,7 @@ export default function ProgressTimeline({ analyses, lang, isMobile }: ProgressT
                   isAnimationActive={false}
                 />
 
-                {/* Trend line (moving average) — only if 5+ data points */}
+                {/* Trend line (moving average); only if 5+ data points */}
                 {chartData.length >= 5 && chartData.some(d => d.trend !== null) && (
                   <Area
                     type="monotone"
@@ -540,7 +531,7 @@ export default function ProgressTimeline({ analyses, lang, isMobile }: ProgressT
               </AreaChart>
             </ResponsiveContainer>
 
-            {/* Custom tooltip — only appears on direct dot hover, clamped to chart bounds */}
+            {/* Custom tooltip; only appears on direct dot hover, clamped to chart bounds */}
             {hoveredDot && (
               <div style={{
                 position: 'absolute',
@@ -578,7 +569,7 @@ export default function ProgressTimeline({ analyses, lang, isMobile }: ProgressT
                   <span style={{
                     fontSize: '1.125rem',
                     fontWeight: 700,
-                    color: getScoreColor(hoveredDot.data.score),
+                    color: getScoreHex(hoveredDot.data.score),
                   }}>
                     {hoveredDot.data.score}
                   </span>
@@ -590,7 +581,7 @@ export default function ProgressTimeline({ analyses, lang, isMobile }: ProgressT
             )}
           </div>
 
-          {/* Legend — only show when trend line is visible */}
+          {/* Legend; only show when trend line is visible */}
           {chartData.length >= 5 && (
             <div style={{
               display: 'flex',

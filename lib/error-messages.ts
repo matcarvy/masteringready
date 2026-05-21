@@ -32,9 +32,9 @@ export type ErrorCategory = keyof typeof ERROR_MESSAGES
 
 /**
  * Classify an error into one of 6 categories based on its properties and message.
- * Priority order matters — more specific categories are checked first.
+ * Priority order matters; more specific categories are checked first.
  */
-export function classifyError(error: unknown): ErrorCategory {
+function classifyError(error: unknown): ErrorCategory {
   // Check if it's an AnalysisApiError with a pre-set category
   if (error && typeof error === 'object' && 'category' in error) {
     const cat = (error as { category: string }).category

@@ -1,5 +1,5 @@
 /**
- * Content Generator API — POST /api/admin/content/generate
+ * Content Generator API; POST /api/admin/content/generate
  * Takes an input and generates 9 content formats via Claude API.
  * Also supports single-format regeneration when format_type + item_id are provided.
  * Admin-only.

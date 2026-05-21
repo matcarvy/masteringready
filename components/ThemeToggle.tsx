@@ -1,8 +1,8 @@
 'use client'
 
 /**
- * ThemeToggle — Sun/Moon toggle button
- * =====================================
+ * ThemeToggle; Sun/Moon toggle button
+ * ---
  * Placed next to language toggle in headers.
  * Toggles between light and dark. Long-press or settings page for 'system'.
  */
@@ -34,8 +34,8 @@ export function ThemeToggle({ lang = 'es' }: ThemeToggleProps) {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        width: '36px',
-        height: '36px',
+        width: '44px',
+        height: '44px',
         borderRadius: '50%',
         border: 'none',
         background: 'transparent',

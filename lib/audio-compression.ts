@@ -39,7 +39,7 @@ export async function compressAudioFile(
   // parseFileHeader MUST run BEFORE decodeAudioData() because decode detaches the ArrayBuffer
   const headerInfo = parseFileHeader(arrayBuffer, file.name)
 
-  // Decode audio (WARNING: this detaches arrayBuffer — do NOT use arrayBuffer after this)
+  // Decode audio (WARNING: this detaches arrayBuffer; do NOT use arrayBuffer after this)
   const audioBuffer = await audioContext.decodeAudioData(arrayBuffer)
   const originalMetadata = {
     sampleRate: headerInfo.sampleRate || audioBuffer.sampleRate, // Prefer header (true rate), fallback to AudioContext
@@ -139,7 +139,7 @@ export async function compressAudioFile(
 export function parseFileHeader(arrayBuffer: ArrayBuffer, fileName: string): { bitDepth: number; sampleRate: number | null; numberOfChannels: number | null } {
   const name = fileName.toLowerCase()
 
-  // WAV: RIFF header — fmt chunk contains sampleRate + bitsPerSample + numChannels
+  // WAV: RIFF header; fmt chunk contains sampleRate + bitsPerSample + numChannels
   if (name.endsWith('.wav') && arrayBuffer.byteLength >= 44) {
     const view = new DataView(arrayBuffer)
     const riff = String.fromCharCode(view.getUint8(0), view.getUint8(1), view.getUint8(2), view.getUint8(3))
@@ -154,7 +154,7 @@ export function parseFileHeader(arrayBuffer: ArrayBuffer, fileName: string): { b
         const chunkSize = view.getUint32(offset + 4, true) // little-endian
         if (chunkId === 'fmt ') {
           // fmt chunk layout (little-endian):
-          //   +8:  audioFormat (uint16) — 1=PCM, 3=IEEE float
+          //   +8:  audioFormat (uint16); 1=PCM, 3=IEEE float
           //   +10: numChannels (uint16)
           //   +12: sampleRate  (uint32)
           //   +16: byteRate    (uint32)
@@ -175,7 +175,7 @@ export function parseFileHeader(arrayBuffer: ArrayBuffer, fileName: string): { b
     }
   }
 
-  // AIFF: FORM/AIFF header — COMM chunk contains numChannels + sampleSize + sampleRate
+  // AIFF: FORM/AIFF header; COMM chunk contains numChannels + sampleSize + sampleRate
   if ((name.endsWith('.aiff') || name.endsWith('.aif')) && arrayBuffer.byteLength >= 30) {
     const view = new DataView(arrayBuffer)
     const form = String.fromCharCode(view.getUint8(0), view.getUint8(1), view.getUint8(2), view.getUint8(3))
@@ -192,7 +192,7 @@ export function parseFileHeader(arrayBuffer: ArrayBuffer, fileName: string): { b
           // COMM chunk layout (big-endian):
           //   +8:  numChannels     (int16)
           //   +10: numSampleFrames (uint32)
-          //   +14: sampleSize      (int16) — bits per sample
+          //   +14: sampleSize      (int16); bits per sample
           //   +16: sampleRate      (80-bit IEEE 754 extended, 10 bytes)
           const numChannels = view.getInt16(offset + 8, false)
           const sampleSize = view.getInt16(offset + 14, false)
@@ -209,7 +209,7 @@ export function parseFileHeader(arrayBuffer: ArrayBuffer, fileName: string): { b
     }
   }
 
-  // Lossy formats (MP3, AAC) — no reliable header parsing
+  // Lossy formats (MP3, AAC); no reliable header parsing
   return { bitDepth: 16, sampleRate: null, numberOfChannels: null }
 }
 
@@ -226,7 +226,7 @@ function parseIeee80(view: DataView, offset: number): number {
   const mantissaLow = view.getUint32(offset + 6, false)
 
   if (exponent === 0 && mantissaHigh === 0 && mantissaLow === 0) return 0
-  if (exponent === 0x7FFF) return 0 // NaN/Inf — not a valid sample rate
+  if (exponent === 0x7FFF) return 0 // NaN/Inf; not a valid sample rate
 
   // value = 2^(exponent - 16383) * mantissa / 2^63
   // Rearranged to avoid JS precision loss with large integers:

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 /**
- * GET /api/geo — Returns the user's country code from Vercel headers.
+ * GET /api/geo; Returns the user's country code from Vercel headers.
  *
  * Vercel automatically provides X-Vercel-IP-Country on every request.
  * This works reliably on all devices (mobile, desktop, WiFi, cellular)

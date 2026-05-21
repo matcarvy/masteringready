@@ -3,6 +3,7 @@
 import { useRef, useState, useCallback } from 'react'
 import html2canvas from 'html2canvas'
 import { X, Download } from 'lucide-react'
+import { nbsp } from '@/lib/nbsp'
 
 // --- InfographicRenderer ---
 
@@ -41,11 +42,6 @@ function parseInfographic(content: string): InfographicData | null {
     fixLine: data['FIX LINE'] || '',
     bottom: data['BOTTOM'] || '',
   }
-}
-
-// Replace spaces with non-breaking spaces — html2canvas collapses regular spaces
-function nbsp(s: string): string {
-  return s.replace(/ /g, '\u00A0')
 }
 
 // --- Component ---
@@ -786,7 +782,7 @@ export default function InfographicRenderer({ content, onClose }: InfographicRen
           >
             {generating ? (
               <>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ animation: 'spin 1s linear infinite' }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="mr-spin">
                   <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
                 </svg>
                 Generating...
@@ -801,7 +797,7 @@ export default function InfographicRenderer({ content, onClose }: InfographicRen
         </div>
       </div>
 
-      {/* Hidden capture containers — rendered off-screen for html2canvas */}
+      {/* Hidden capture containers; rendered off-screen for html2canvas */}
       <div
         ref={feedRef}
         style={{ display: 'none', position: 'absolute', left: '-99999px', top: 0 }}

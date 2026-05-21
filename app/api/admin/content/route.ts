@@ -1,5 +1,5 @@
 /**
- * Content Queue CRUD API — /api/admin/content
+ * Content Queue CRUD API; /api/admin/content
  * GET: List content (filterable by status, batch_id, scheduled_from/to)
  * PATCH: Update status, content, notes, scheduled_date, image_url
  * DELETE: Remove content piece or entire batch
@@ -7,32 +7,9 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-import { createAdminSupabaseClient } from '@/lib/supabase'
+import { verifyAdmin } from '@/lib/verifyAdmin'
 
 export const dynamic = 'force-dynamic'
-
-async function verifyAdmin(request: NextRequest) {
-  const authHeader = request.headers.get('Authorization')
-  if (!authHeader?.startsWith('Bearer ')) return null
-
-  const token = authHeader.replace('Bearer ', '')
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
-  const { data: { user }, error } = await supabase.auth.getUser(token)
-  if (error || !user) return null
-
-  const adminClient = createAdminSupabaseClient()
-  const { data: profile } = await adminClient
-    .from('profiles')
-    .select('is_admin')
-    .eq('id', user.id)
-    .single()
-
-  return profile?.is_admin ? { user, adminClient } : null
-}
 
 export async function GET(request: NextRequest) {
   try {

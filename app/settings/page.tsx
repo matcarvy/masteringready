@@ -177,7 +177,7 @@ export default function SettingsPage() {
     return () => window.removeEventListener('resize', check)
   }, [])
 
-  // Redirect if not logged in (to home, not login — home has login options in header)
+  // Redirect if not logged in (to home, not login; home has login options in header)
   useEffect(() => {
     if (!authLoading && !user) {
       window.location.href = `/?lang=${lang}`
@@ -204,7 +204,7 @@ export default function SettingsPage() {
         const displayName = user.user_metadata?.full_name || user.user_metadata?.name || ''
         setFullName(displayName)
 
-        // Use fresh client — avoids stale singleton after SPA navigation
+        // Use fresh client; avoids stale singleton after SPA navigation
         const client = await createFreshQueryClient(
           { access_token: session.access_token, refresh_token: session.refresh_token }
         )
@@ -376,7 +376,7 @@ export default function SettingsPage() {
     }
   }
 
-  // Safety timeout — if loading hangs, auto-reload (max 1 attempt)
+  // Safety timeout; if loading hangs, auto-reload (max 1 attempt)
   useEffect(() => {
     if (!loading) {
       sessionStorage.removeItem('mr_set_reload')

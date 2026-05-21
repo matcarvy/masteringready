@@ -1,7 +1,7 @@
 'use client'
 
 /**
- * Content Creator — /admin/content
+ * Content Creator; /admin/content
  * Hormozi Method: 1 input → 9 content formats via Claude AI.
  * Admin-only. Generate, review, copy, edit, schedule, and track content for social media.
  * Phase 2: Calendar view, inline editing, regeneration, insights, scheduling, infographic preview, image URLs.
@@ -203,6 +203,7 @@ export default function ContentCreatorPage() {
   const [queueLoading, setQueueLoading] = useState(false)
   const [statusFilter, setStatusFilter] = useState<string | null>(null)
   const [expandedBatches, setExpandedBatches] = useState<Set<string>>(new Set())
+  const [confirmDeleteBatchId, setConfirmDeleteBatchId] = useState<string | null>(null)
 
   // Copy feedback
   const [copiedId, setCopiedId] = useState<string | null>(null)
@@ -302,7 +303,7 @@ export default function ContentCreatorPage() {
       setBatches(Array.from(batchMap.values()).sort((a, b) =>
         new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       ))
-    } catch (err) {
+    } catch {
     } finally {
       setQueueLoading(false)
     }
@@ -332,7 +333,7 @@ export default function ContentCreatorPage() {
       if (!res.ok) throw new Error(data.error)
 
       setCalendarItems((data.items || []) as ContentItem[])
-    } catch (err) {
+    } catch {
     } finally {
       setCalendarLoading(false)
     }
@@ -352,7 +353,7 @@ export default function ContentCreatorPage() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
       setInsightsData(data as InsightsData)
-    } catch (err) {
+    } catch {
     } finally {
       setInsightsLoading(false)
     }
@@ -406,13 +407,20 @@ export default function ContentCreatorPage() {
 
       const updatedItem = data.item as ContentItem
       updateItemInState(updatedItem)
-    } catch (err) {
+    } catch {
     }
   }
 
-  // Delete batch
-  const deleteBatch = async (batchId: string) => {
-    if (!confirm(lang === 'es' ? 'Eliminar todo el batch?' : 'Delete entire batch?')) return
+  // Delete batch (opens confirmation modal)
+  const deleteBatch = (batchId: string) => {
+    setConfirmDeleteBatchId(batchId)
+  }
+
+  // Delete batch (runs after modal confirmation)
+  const runDeleteBatch = async () => {
+    const batchId = confirmDeleteBatchId
+    if (!batchId) return
+    setConfirmDeleteBatchId(null)
     try {
       const res = await fetch(`/api/admin/content?batch_id=${batchId}`, {
         method: 'DELETE',
@@ -421,7 +429,7 @@ export default function ContentCreatorPage() {
       if (!res.ok) throw new Error('Delete failed')
       setBatches(prev => prev.filter(b => b.batch_id !== batchId))
       setGeneratedItems(prev => prev.filter(i => i.batch_id !== batchId))
-    } catch (err) {
+    } catch {
     }
   }
 
@@ -496,7 +504,7 @@ export default function ContentCreatorPage() {
       setEditingId(null)
       setEditEs('')
       setEditEn('')
-    } catch (err) {
+    } catch {
     }
   }
 
@@ -521,7 +529,7 @@ export default function ContentCreatorPage() {
       if (!res.ok) throw new Error(data.error || 'Regeneration failed')
       const updatedItem = data.item as ContentItem
       updateItemInState(updatedItem)
-    } catch (err) {
+    } catch {
     } finally {
       setRegeneratingId(null)
     }
@@ -542,7 +550,7 @@ export default function ContentCreatorPage() {
       if (!res.ok) throw new Error(data.error)
       const updatedItem = data.item as ContentItem
       updateItemInState(updatedItem)
-    } catch (err) {
+    } catch {
     }
   }
 
@@ -561,7 +569,7 @@ export default function ContentCreatorPage() {
       if (!res.ok) throw new Error(data.error)
       const updatedItem = data.item as ContentItem
       updateItemInState(updatedItem)
-    } catch (err) {
+    } catch {
     }
   }
 
@@ -630,7 +638,7 @@ export default function ContentCreatorPage() {
   if (!user || loading) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--mr-bg-base)' }}>
-        <Loader2 size={32} style={{ color: 'var(--mr-primary)', animation: 'spin 1s linear infinite' }} />
+        <Loader2 size={32} className="mr-spin" style={{ color: 'var(--mr-primary)' }} />
       </div>
     )
   }
@@ -731,9 +739,7 @@ export default function ContentCreatorPage() {
 
       {/* Content area */}
       <div style={{ maxWidth: tab === 'calendar' ? 1200 : 900, margin: '0 auto', padding: '24px 16px' }}>
-        {/* ================================================================ */}
-        {/* CREATE TAB                                                       */}
-        {/* ================================================================ */}
+        {/* --- CREATE TAB --- */}
         {tab === 'create' && (
           <>
             {/* Concepts Panel */}
@@ -847,7 +853,7 @@ export default function ContentCreatorPage() {
                 >
                   {generating ? (
                     <>
-                      <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} />
+                      <Loader2 size={16} className="mr-spin" />
                       {t('Generando...', 'Generating...')}
                     </>
                   ) : (
@@ -913,9 +919,7 @@ export default function ContentCreatorPage() {
           </>
         )}
 
-        {/* ================================================================ */}
-        {/* QUEUE TAB                                                        */}
-        {/* ================================================================ */}
+        {/* --- QUEUE TAB --- */}
         {tab === 'queue' && (
           <>
             {/* Status filter */}
@@ -958,7 +962,7 @@ export default function ContentCreatorPage() {
 
             {queueLoading ? (
               <div style={{ textAlign: 'center', padding: 40 }}>
-                <Loader2 size={28} style={{ color: 'var(--mr-primary)', animation: 'spin 1s linear infinite' }} />
+                <Loader2 size={28} className="mr-spin" style={{ color: 'var(--mr-primary)' }} />
               </div>
             ) : batches.length === 0 ? (
               <div style={{
@@ -1085,9 +1089,7 @@ export default function ContentCreatorPage() {
           </>
         )}
 
-        {/* ================================================================ */}
-        {/* CALENDAR TAB                                                     */}
-        {/* ================================================================ */}
+        {/* --- CALENDAR TAB --- */}
         {tab === 'calendar' && (
           <>
             {/* Calendar header */}
@@ -1170,7 +1172,7 @@ export default function ContentCreatorPage() {
 
             {calendarLoading ? (
               <div style={{ textAlign: 'center', padding: 40 }}>
-                <Loader2 size={28} style={{ color: 'var(--mr-primary)', animation: 'spin 1s linear infinite' }} />
+                <Loader2 size={28} className="mr-spin" style={{ color: 'var(--mr-primary)' }} />
               </div>
             ) : (
               <>
@@ -1377,7 +1379,7 @@ export default function ContentCreatorPage() {
             position: 'fixed',
             inset: 0,
             background: 'rgba(0,0,0,0.7)',
-            zIndex: 9999,
+            zIndex: 100,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -1421,13 +1423,76 @@ export default function ContentCreatorPage() {
         </div>
       )}
 
-      {/* Spin animation */}
-      <style>{`
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
+      {/* Delete batch confirmation modal */}
+      {confirmDeleteBatchId !== null && (
+        <div
+          onClick={() => setConfirmDeleteBatchId(null)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.7)',
+            zIndex: 100,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 24,
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: 'var(--mr-bg-card)',
+              borderRadius: 'var(--mr-radius)',
+              border: '1px solid var(--mr-border)',
+              maxWidth: 380,
+              width: '100%',
+              padding: 24,
+            }}
+          >
+            <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 8, color: 'var(--mr-text-primary)' }}>
+              {lang === 'es' ? 'Eliminar todo el batch?' : 'Delete entire batch?'}
+            </h3>
+            <p style={{ fontSize: 14, color: 'var(--mr-text-secondary)', marginBottom: 20 }}>
+              {lang === 'es'
+                ? 'Esta accion no se puede deshacer.'
+                : 'This action cannot be undone.'}
+            </p>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setConfirmDeleteBatchId(null)}
+                style={{
+                  background: 'var(--mr-bg-elevated, var(--mr-bg-base))',
+                  border: '1px solid var(--mr-border)',
+                  borderRadius: 'var(--mr-radius-sm)',
+                  color: 'var(--mr-text-primary)',
+                  cursor: 'pointer',
+                  fontSize: 14,
+                  fontWeight: 500,
+                  padding: '0.5rem 1rem',
+                }}
+              >
+                {lang === 'es' ? 'Cancelar' : 'Cancel'}
+              </button>
+              <button
+                onClick={runDeleteBatch}
+                style={{
+                  background: 'var(--mr-red-bg)',
+                  border: 'none',
+                  borderRadius: 'var(--mr-radius-sm)',
+                  color: 'var(--mr-red-text)',
+                  cursor: 'pointer',
+                  fontSize: 14,
+                  fontWeight: 500,
+                  padding: '0.5rem 1rem',
+                }}
+              >
+                {lang === 'es' ? 'Eliminar' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }
@@ -1476,7 +1541,7 @@ function FormatCard({
           justifyContent: 'center',
           borderRadius: 'var(--mr-radius-sm)',
         }}>
-          <Loader2 size={24} style={{ color: '#fff', animation: 'spin 1s linear infinite' }} />
+          <Loader2 size={24} className="mr-spin" style={{ color: '#fff' }} />
         </div>
       )}
 
@@ -2051,7 +2116,7 @@ function InsightsPanel({ lang, t, isOpen, onToggle, onLoad, data, loading, onUse
         <div style={{ padding: '0 16px 16px' }}>
           {loading ? (
             <div style={{ textAlign: 'center', padding: 20 }}>
-              <Loader2 size={20} style={{ color: 'var(--mr-primary)', animation: 'spin 1s linear infinite' }} />
+              <Loader2 size={20} className="mr-spin" style={{ color: 'var(--mr-primary)' }} />
             </div>
           ) : !data ? (
             <div style={{ textAlign: 'center', padding: 20, color: 'var(--mr-text-tertiary)', fontSize: 13 }}>

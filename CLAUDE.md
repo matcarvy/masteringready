@@ -4834,3 +4834,623 @@ All corners now show gradient color (`#667eea`), not white. Music note rendered 
 1. `a38c5e5` - fix: regenerate all icon PNGs + favicon.ico without rounded corners
 
 **Git state**: main on `a38c5e5`, pushed. Build clean.
+
+### Session 2026-03-15 — Shareable Score Card PNG Polish + Progress Timeline Fixes
+
+#### Context
+Multiple rounds of fixes to the ScoreCard PNG generator (`components/ScoreCard.tsx`) and ProgressTimeline (`components/ProgressTimeline.tsx`). Started with spaces collapsed, fuzzy text, wrong language, and unresponsive chart dots. Ended with both feed (1080x1080) and story (1080x1920) PNGs ship-ready.
+
+#### ScoreCard PNG Fixes (7 commits)
+
+**1. Space collapsing — root cause: html2canvas** (`0516bf1`, `8e19c4f`, `e13aee1`)
+- html2canvas collapses regular spaces in flex contexts at scale 2
+- Fix: triple insurance — `nbsp()` helper replaces spaces with `\u00A0`, `whiteSpace: 'pre'` on all text elements, `wordSpacing: '0.25em'` on outer container
+- `nbsp()` scoped only to `renderCardContent()` — never leaks to DOM, analytics, or DB
+
+**2. Text fuzziness** (`0516bf1`)
+- Changed html2canvas `scale: 1` → `scale: 2` for 2x resolution PNGs
+- Output: 2160x2160 (feed) / 2160x3840 (story) — crisp when platforms display at 1080px
+
+**3. Ring spiral at scale 2** (`8e19c4f`)
+- CSS `transform: rotate(-90deg)` on `<svg>` broke at scale 2 in html2canvas
+- Fix: moved to SVG-native `transform="rotate(-90 100 100)"` on the progress circle only
+
+**4. Language consistency** (`0516bf1`)
+- Verdict came from `result.verdict` (locked to analysis language)
+- Fix: new `getCardVerdict(score, lang)` derives verdict from score + current lang toggle
+- All 7 score tiers in both ES and EN, "Link en bio" localized
+
+**5. Story vertical centering** (`e13aee1`, `e5fa6d2`, `b95f15a`)
+- Multiple iterations: `space-between` → flex spacers → `flex: 1` centered wrapper
+- Final: outer `space-between`, middle content in `flex: 1` wrapper with `justifyContent: 'center'` + `paddingBottom: 120px` to shift content down visually
+
+**6. Score 100 clipping in story** (`b95f15a`)
+- Story 3-digit font reduced from 78px → 68px (ring inner diameter ~216px, 68px × 3 chars fits with clearance)
+- Feed 3-digit font (60px) was already correct
+
+**7. Story "Link in bio" removed from feed** — story-only swipe hint, feed has no "Link in bio"
+
+#### ProgressTimeline Fixes (4 commits)
+
+**1. Dot hit area** (`0516bf1`)
+- Initial attempt: invisible `r=14` circle around each dot
+- Didn't help — Recharts uses X-axis proximity for tooltip activation, not SVG pointer events
+
+**2. Tooltip on X-axis proximity (wrong behavior)** (`eed9c1d`)
+- Simplified CustomDot, added `wrapperStyle={{ pointerEvents: 'none' }}` to Tooltip
+- Still showed tooltip for nearest X-axis dot regardless of mouse Y position
+
+**3. Custom dot-hover tooltip (correct behavior)** (`e13aee1`)
+- Removed Recharts built-in `<Tooltip>` entirely
+- CustomDot has `onMouseEnter`/`onMouseLeave` → sets `hoveredDot` state via module-level ref
+- Custom tooltip `<div>` positioned absolutely at dot's `cx`/`cy` with `pointerEvents: 'none'`
+- Tooltip ONLY appears when mouse is directly ON a dot — not anywhere in the X column
+
+**4. Tooltip edge clipping** (`e5fa6d2`)
+- Added `overflow: visible` to chart wrapper
+- CSS `clamp()` on tooltip `left` position keeps it within chart bounds for edge dots
+
+**5. X-axis date deduplication** (`ba719c9`)
+- 50 analyses with many on same day → "6 mar 6 mar 6 mar..." repeated labels
+- Fix: only show date on first occurrence of each day, blank for subsequent same-day analyses
+- Tooltip still shows exact date for every dot
+
+#### Key Files Changed
+| File | Changes |
+|------|---------|
+| `components/ScoreCard.tsx` | nbsp(), wordSpacing, SVG transform, getCardVerdict(), scale 2, story layout, 100 font |
+| `components/ProgressTimeline.tsx` | Custom dot-hover tooltip, removed Recharts Tooltip, x-axis dedup, overflow visible |
+
+#### Commits to main (Session 2026-03-15)
+1. `0516bf1` - fix: score card PNG — nbsp spaces, 2x crispness, story layout, bilingual verdict, bigger dots
+2. `8e19c4f` - fix: score card ring, spaces, story layout — 3 root causes
+3. `eed9c1d` - fix: dashboard dots — simplify for Recharts X-axis proximity + tooltip passthrough
+4. `e13aee1` - fix: dot tooltips on hover only, score card spaces + story layout
+5. `e5fa6d2` - fix: dot tooltip clipping + story vertical centering
+6. `b95f15a` - fix: story score 100 clipping + vertical balance
+7. `ba719c9` - fix: deduplicate x-axis date labels on progress timeline
+
+**Git state**: main on `ba719c9`, pushed. Build clean.
+
+#### Status: DONE — Both PNGs Ship-Ready
+- Feed (1080x1080): ✅ All spaces correct, ring clean, score not clipped, crisp at 2x, bilingual
+- Story (1080x1920): ✅ Same + centered layout, "Link en bio" localized, 100 not clipped
+- Dashboard timeline: ✅ Dot-hover tooltips, deduplicated x-axis, overflow visible
+
+#### TODO (next session)
+- **IG safe zone margins**: Consider adding ~100px padding on story top/bottom for Instagram's UI overlay (profile pic, reply bar). Currently content extends to edges — may get clipped by IG chrome.
+- **Time filters (7d / 30d / All)**: Add to ProgressTimeline alongside existing track filter. Track filter = "how did this song evolve," time filter = "how's my mixing improving lately."
+- **G2: Progress Timeline** in CLAUDE.md roadmap: Mark as DONE
+
+### Session 2026-03-16 — Reference Comparison + Mastering Lab + Supabase Keep-Alive
+
+#### 1. Reference Track Comparison (`d823caf`)
+- Added optional 3rd upload slot (Reference) to `/admin/comparison`
+- When all 3 analyses complete, shows **per-band distance to reference**:
+  - `|A - Ref|` vs `|B - Ref|` for each of 6 frequency bands
+  - Closer mix per band highlighted green, 0.5% tolerance for noise
+  - Verdict banner: "B is closer to the reference in X/6 bands"
+  - Score distance: `|A - Ref|` vs `|B - Ref|` with closer one highlighted
+- Existing A vs B comparison unchanged — reference is purely additive
+- Hint text when A+B done but no reference uploaded
+
+#### 2. Mastering Lab (`10b1ebd`)
+- **New page**: `/admin/mastering-lab` — 4-file mastering comparison tool
+- **4 color-coded upload slots**: Your Mix (blue), Reference Track (amber), Your Master (purple), Reference Master (green)
+- **5 auto-detected comparisons** (appear as slots complete):
+  1. **Cross-Exam** (all 4 done) — delta-of-deltas process comparison. Compares what YOUR mastering did vs what the REFERENCE engineer did. Per-metric match indicators (≈ close / ~ moderate / ≠ far) + overall similarity %. Unique feature — no competitor offers this.
+  2. **Mix → Your Master** — what mastering changed (all metrics + spectral)
+  3. **Your Master vs Ref Master** — result comparison (raw metric deltas, not MR scores)
+  4. **Reference → Ref Master** — the "answer key" (what the pro did)
+  5. **Mix vs Reference** — EQ-only tonal comparison (volume-independent)
+- **Score overview bar** with caveat: "Score evaluates mastering readiness, not finished master quality"
+- **Cross-exam match thresholds**: LUFS ±1.0/±2.5, True Peak ±1.0/±2.0, PLR ±1.5/±3.0, Stereo ±0.05/±0.12, Crest Factor ±1.5/±3.0
+- **Metric extraction**: `extractMetrics()` parses both direct numeric fields (`peak_db`, `correlation`) and formatted strings (`parseNum()` regex)
+- **Reusable components**: `SpectralComparison`, `MetricDeltaTable`, `ComparisonPanel`, `CrossExamPanel`
+- Cross-links: Comparison page ↔ Mastering Lab in headers
+- Admin-only, bilingual, dark/light mode, no backend changes
+
+#### 3. Supabase Keep-Alive via GitHub Actions (`669e2cc`)
+- **Problem**: cron-job.org "MasteringReady Supabase Keep-Alive" failed last Tuesday, went Inactive
+- **Fix**: `.github/workflows/supabase-keepalive.yml` — cron every 5 days at 6:00 UTC
+- Pings Supabase REST API root directly (no Vercel middleman, no RLS, no table dependency)
+- `SUPABASE_ANON_KEY` GitHub Secret set
+- Manual trigger via Actions tab (`workflow_dispatch`)
+- Tested: success (9s run)
+- Cost: $0 (GitHub Actions free tier)
+- **Action**: Disable broken cron-job.org job
+
+#### Files Changed
+| File | Changes |
+|------|---------|
+| `app/admin/comparison/page.tsx` | 3rd upload slot (Reference), distance-to-reference section, nav link to Mastering Lab |
+| `app/admin/mastering-lab/page.tsx` | NEW — 4-file comparison tool with cross-exam |
+| `.github/workflows/supabase-keepalive.yml` | NEW — Supabase keep-alive cron |
+
+#### Commits to main (Session 2026-03-16)
+1. `d823caf` - feat: add reference track comparison to frequency comparator
+2. `10b1ebd` - feat: Mastering Lab — 4-file comparison tool with cross-exam
+3. `669e2cc` - feat: Supabase keep-alive via GitHub Actions (every 5 days)
+
+**Git state**: main on `669e2cc`, pushed. Build clean. 32 routes compiled.
+
+### Session 2026-03-16 Part 2 — Content Creator (Hormozi Content Machine)
+
+#### What was built
+Full content creation system at `/admin/content` — generates 9 Hormozi formats from a single input via Claude Sonnet 4.6 API. Phase 1 (generate + queue) and Phase 2 (production pipeline) built in one session.
+
+#### Architecture
+- **Claude API** (`@anthropic-ai/sdk`) called server-side in Next.js API routes
+- **Supabase** `content_queue` table stores all generated content with batch grouping
+- **Admin page** at `/admin/content` with 3 tabs: Generate, Queue, Calendar
+
+#### Files created (8 new)
+
+| File | Purpose |
+|------|---------|
+| `supabase/migrations/20260316000001_content_queue.sql` | Base table: id, batch_id, input_type, format_type, content_es/en, status, platform[] |
+| `supabase/migrations/20260316000002_content_queue_phase2.sql` | Adds scheduled_date + image_url columns |
+| `supabase/migrations/20260316000003_personal_input_type.sql` | Adds 'personal' to input_type CHECK constraint |
+| `lib/content-prompts.ts` | System prompt (MR voice + 9 formats), batch + single-format prompt builders, 5 input types |
+| `lib/content-concepts.ts` | 40 concept bank (15 educational, 12 personal/BTS, 8 opinion, 5 CTA), getRandomConcepts() with 60/25/10/5 ratio |
+| `app/api/admin/content/generate/route.ts` | POST — Claude Sonnet 4.6 generates all 9 formats (or single-format regeneration) |
+| `app/api/admin/content/route.ts` | GET/PATCH/DELETE — CRUD with filters (status, batch, date range) |
+| `app/api/admin/content/insights/route.ts` | GET — pulls MR analysis data (top scores, weak metrics, genre distribution) |
+| `components/InfographicRenderer.tsx` | Branded HTML → PNG (1080x1080 / 1080x1350) via html2canvas |
+| `app/admin/content/page.tsx` | Full admin UI (~2200 lines) |
+
+#### Files modified (1)
+| File | Change |
+|------|--------|
+| `package.json` | Added `@anthropic-ai/sdk` dependency |
+
+#### 9 Hormozi formats generated per input
+1. Reel/Short script (ES)
+2. Carousel slides (ES)
+3. IG caption + hashtags (ES)
+4. FB post (ES)
+5. LinkedIn post (EN only)
+6. X post (ES + EN)
+7. Story sequence (ES)
+8. Standalone text post (ES + EN)
+9. Infographic copy (ES)
+
+#### 5 input types
+`topic` | `testimony` | `before_after` | `transcript` | `personal`
+
+#### Features — Phase 1 (Generate + Queue)
+- Input type selector + textarea → Generate 9 formats in one Claude call
+- Queue with batch grouping, expand/collapse, status cycling (draft → approved → posted)
+- Copy-to-clipboard per format (ES and EN separately)
+- Batch delete with confirmation
+
+#### Features — Phase 2 (Production Pipeline)
+- **Edit in-place** — Pencil button, textarea mode, Save/Cancel
+- **Regenerate single format** — RefreshCw per card, loading overlay, uses single-format prompt
+- **Insights panel** — Auto-pulls from MR analyses: top scores (testimonials), weak metrics (edu content), genre distribution. "Use" buttons populate input.
+- **Ideas panel** — 40-concept bank with category filters (Educational, Personal, Opinion, CTA), shuffle, "Suggest batch" (3-5 concepts at 60/25/10/5 ratio)
+- **Calendar tab** — Week view (Mon-Sun), prev/next/today navigation, mini cards per day with expandable detail
+- **Scheduled dates** — Date picker on each FormatCard, integrates with calendar view
+- **Image URL** — Attach image links with thumbnail preview per format
+- **Infographic renderer** — Modal preview with branded HTML → PNG export (feed 1080x1080 + portrait 1080x1350), html2canvas at 2x scale
+
+#### Personal brand content
+System prompt includes personal/BTS voice guidance: first person, authentic, casual, subtle MR mentions. Concept bank covers studio vibes, late night mixing, gear, opinions, milestones, building MR. Personal concepts flag `needs_photo` with photo suggestions.
+
+#### Content strategy ratio (baked into getRandomConcepts)
+- 60% Educational/MR
+- 25% Personal/BTS
+- 10% Opinion
+- 5% Direct CTA
+
+#### API contracts
+
+**POST /api/admin/content/generate**
+- Full batch: `{ input_type, input_text }` → `{ batch_id, items[] }`
+- Single regenerate: `{ input_type, input_text, format_type, item_id }` → `{ item }`
+
+**GET /api/admin/content?status=&batch_id=&scheduled_from=&scheduled_to=&limit=**
+→ `{ items[] }`
+
+**PATCH /api/admin/content**
+`{ id, status?, content_es?, content_en?, notes?, scheduled_date?, image_url? }` → `{ item }`
+
+**DELETE /api/admin/content?id= or ?batch_id=**
+→ `{ success: true }`
+
+**GET /api/admin/content/insights**
+→ `{ high_scores[], total_analyses_30d, avg_score, weak_metrics[], genre_distribution[] }`
+
+#### Before deploying (TODO — next session)
+1. Run 3 SQL migrations in Supabase Dashboard → SQL Editor
+2. Add `ANTHROPIC_API_KEY` to Vercel env vars + `.env.local`
+3. Test end-to-end generation
+
+#### Phase 3 — Auto-posting (TODO — next session)
+- Meta Graph API (IG + FB) — needs Meta Developer App + Page Access Token + IG Business Account ID
+- X API — needs Developer Account + API Key/Secret + Access Token/Secret
+- LinkedIn API — needs Developer App + OAuth 2.0 credentials
+- Cron job for scheduled auto-posting (Vercel cron or GitHub Actions)
+- New DB columns for post IDs + timestamps per platform
+- Auto-generate cron (picks from insights + concepts, generates without manual input)
+
+**Git state**: dev, uncommitted. Build clean. 35 routes compiled.
+
+### Session 2026-03-22 — Google Search Console: Indexing Status Check
+
+#### Context
+Google Search Console email: "New reason preventing your pages from being indexed — Blocked by robots.txt."
+
+#### Findings
+- **1 page indexed**: Homepage (`/`)
+- **8 pages not indexed**, 2 reasons:
+  - **"Blocked by robots.txt" (1 page)**: `/auth/forgot-password` — intentionally blocked, no fix needed
+  - **"Discovered - currently not indexed" (7 pages)**: All 5 learn pages + `/privacy` + `/terms`. Google discovered them (via sitemap/links) but hasn't crawled them yet (all "Last crawled: N/A"). Normal for a 5-week-old low-authority site.
+
+#### Actions Taken
+- Requested indexing via URL Inspection tool for all 7 "Discovered" pages:
+  - `masteringready.com/learn/is-my-mix-ready`
+  - `masteringready.com/learn/lufs-for-streaming`
+  - `masteringready.com/learn/mastering-ready-vs-competitors`
+  - `masteringready.com/learn/mixing-vs-mastering`
+  - `masteringready.com/learn/prepare-mix-for-mastering`
+  - `masteringready.com/privacy`
+  - `masteringready.com/terms`
+- All 7 added to Google's priority crawl queue. Expected indexing within 1-3 days.
+- `/auth/forgot-password` blocked by robots.txt confirmed intentional — left as-is.
+
+#### Follow-up
+- Check Search Console in 3-4 days to confirm pages flip to "Indexed"
+
+### Session 2026-03-24 — Supabase Anon Key Root Endpoint Migration
+
+#### Context
+Supabase email: removing anon key access to `/rest/v1/` (root endpoint) on April 8th, 2026. Two MR projects flagged: `masteringready-prod` and `matcarvy's Project` (Mind2Magic).
+
+#### Findings
+Grep across all codebases found 2 files hitting the deprecated root endpoint:
+1. `.github/workflows/supabase-keepalive.yml:17` — `curl` to `/rest/v1/`
+2. `app/api/health/route.ts:35` — `fetch` to `/rest/v1/`
+
+Mind2Magic project had no code hits — those requests came from Supabase Dashboard/client library init.
+
+#### Fix (`60c57c7`)
+Both files changed from `/rest/v1/` to `/rest/v1/profiles?select=id&limit=1`. RLS may filter results, but endpoint returns 200 regardless — sufficient for keep-alive health check.
+
+**Git state**: main on `60c57c7`, pushed. Build clean.
+
+### Session 2026-03-25 — Google Search Console Redirect Error Fix
+
+#### Problem
+Google Search Console flagged 6 pages with "Redirect error" (first detected 3/24/26) + 1 page "Discovered - currently not indexed":
+
+**Redirect error (6 pages, all last crawled Mar 22):**
+- `/learn/prepare-mix-for-mastering`
+- `/privacy`
+- `/terms`
+- `/learn/is-my-mix-ready`
+- `/learn/mastering-ready-vs-competitors`
+- `/learn/mixing-vs-mastering`
+
+**Discovered - not indexed (1 page):**
+- `/learn/lufs-for-streaming` (never crawled)
+
+#### Root Cause
+Vercel domain configuration had `masteringready.com` (non-www) set to **307 Temporary Redirect** to `www.masteringready.com`. Every page Google crawled via the sitemap URLs (`masteringready.com/*`) hit a redirect instead of serving content.
+
+All sitemap URLs, canonical URLs, GSC property, and metadata pointed to `masteringready.com` (non-www), but Vercel served content from `www.masteringready.com` (www).
+
+#### Fix (Vercel Dashboard — no code changes)
+Swapped domain roles in Vercel > Settings > Domains:
+- **`masteringready.com`**: Changed from "Redirect to Another Domain" → **"Connect to an environment" → Production** (now serves content directly)
+- **`www.masteringready.com`**: Changed from "Connect to an environment" → **"Redirect to Another Domain" → 301 Moved Permanently → `masteringready.com`** (www now redirects to non-www)
+
+#### Verification (curl)
+All 6 affected pages confirmed returning **200 OK** directly from `masteringready.com`:
+- `masteringready.com/learn/is-my-mix-ready` → 200
+- `masteringready.com/learn/prepare-mix-for-mastering` → 200
+- `masteringready.com/learn/mixing-vs-mastering` → 200
+- `masteringready.com/learn/mastering-ready-vs-competitors` → 200
+- `masteringready.com/privacy` → 200
+- `masteringready.com/terms` → 200
+
+#### Follow-up
+- Clicked "Validate Fix" in Google Search Console for the Redirect error
+- Google will re-crawl affected pages within a few days
+- `/learn/lufs-for-streaming` should also get indexed on next crawl (was blocked by the same redirect)
+
+**Git state**: main on `60c57c7` (no code changes needed). Vercel domain config updated.
+
+### Session 2026-03-26 — Comprehensive Code Quality Audit + Fix
+
+#### Context
+Full 21-category code quality audit across all 78 source files, followed by parallel fix implementation using 6 agents.
+
+#### Audit Results (before fix)
+- **~480 total findings** across 21 categories
+- 8 categories clean (debug artifacts, hardcoded secrets, security, duplicate functions, scaffold leftovers, tautological comments, dev bypasses, verbose JSDoc)
+- Top offenders: console statements (130), banner comments (~230), catch var inconsistency (31), alert() calls (10)
+
+#### Fixes Applied (6 parallel agents, each owning distinct files)
+
+| Category | Before | After | Fix |
+|----------|-------:|------:|-----|
+| Console statements | 130 | 0 | Removed all console.log/error/warn |
+| Browser alert() | 10 | 0 | Replaced with toast notifications |
+| Banner comments `====` | ~230 | 0 | All converted to `// --- Section ---` |
+| Catch var inconsistency | 31 | 0 | Standardized to `err` or empty `catch {}` |
+| Async anti-patterns | 6 | 0 | Refactored mixed .then/await, unnecessary Promise wrappers |
+| Magic numbers | 8 | 0 | Extracted to named constants |
+| localhost ungated | 2 | 0 | Gated behind `NODE_ENV === 'development'` |
+| eslint-disable no reason | 4 | 0 | Added justification comments |
+| Em dashes in UI | 8 | 0 | Replaced with `-` |
+| TODO marker | 1 | 0 | Removed |
+| AI comment artifact | 1 | 0 | Removed |
+
+#### New File Created
+- `components/ui/Toast.tsx` — Lightweight toast notification system (provider + hook pattern, auto-dismiss 4s, top-right stacking, 3 variants: error/success/info). `ToastProvider` wraps children in `layout.tsx`.
+
+#### Agent File Ownership (no conflicts)
+1. **Toast + Layout**: Created Toast component, added ToastProvider to layout.tsx, fixed banner comments
+2. **page.tsx**: All fixes for main analyzer page (console, alert, async, catch, banners, magic numbers, empty catch)
+3. **Admin files**: admin/page.tsx, admin/content/page.tsx, admin/comparison/page.tsx, admin/mastering-lab/page.tsx
+4. **Lib files**: supabase.ts, api.ts, geoip.ts, audio-compression.ts, content-concepts.ts, useGeo.ts, theme.ts, database.types.ts, pricing-config.ts, queries/*
+5. **Components**: All components/*.tsx (AuthProvider, AuthModal, UserMenu, SocialLoginButtons, Results, ScoreCard, InfographicRenderer, ReadyCertifiedBadge, ProgressTimeline, Select, PrivacyBadge)
+6. **App routes**: dashboard, history, subscription, settings, auth/*, api/*, prospecting, privacy, terms, learn
+
+#### Verification
+- `npx next build` clean, 32 routes, zero errors
+- `npx tsc --noEmit` clean, zero type errors
+- `grep console.(log|error|warn)` across all .ts/.tsx: zero matches
+- `grep alert(` across all .ts/.tsx: zero matches
+- `grep "// ====="` across all .ts/.tsx: zero matches
+
+#### Git Config Fix
+- Git author email was unset, defaulting to `matcarvy@Matiass-MacBook-Pro.local`
+- Set `git config user.email "matcarvy@gmail.com"` + `git config user.name "Matias Carvajal"` for this repo
+- Vercel Hobby tier requires commits from the account owner email
+
+#### Commits to main
+1. `eed27db` - fix: comprehensive code quality audit - remove all amateur/AI tells
+2. `803c3ac` - fix: add @anthropic-ai/sdk dependency for content generation API
+
+**Git state**: main on `803c3ac`, pushed. Build clean.
+
+### Session 2026-04-24 — OOM Fix + Admin Label Clarity + Anon Insert Logging
+
+#### Context
+Render Starter instance OOM'd after processing a 65 MB WAV (6 min, chunked). The large chunked job completed successfully, but ~2.5 min later a small 1.7 MB MP3 crashed the worker during NORMAL analysis. Root cause: Python/glibc held freed heap after the big chunked job (fragmentation — even `malloc_trim(0)` can't always reclaim), so the MP3's NORMAL-path decode tipped RSS past 512 MB.
+
+Separately: admin "Análisis recientes" card on Overview had no rows past Mar 11 while authenticated users were analyzing daily. SQL diagnostic confirmed only 3 rows in past 60 days. Not a bug — the card reads `anonymous_analyses` table (pre-signup only). Funnel shape has shifted to signup-first (17 signups in 60 days, 82% skipped anonymous path). The label was ambiguous — users read it as "all recent activity."
+
+#### Changes (commit `fd337e5`)
+
+**1. OOM fix (bounded peak memory)**
+- `main.py` (3 decision branches ~lines 887, 911, 933): `use_chunked = True` unconditionally. Every file — regardless of duration or size — goes through the chunked path. Peak memory bounded to ~10 MB per chunk regardless of file size. Fidelity preserved: chunked already uses `ffmpeg_integrated_lufs()` for whole-file EBU R128 (not per-chunk averages); Peak/TP are `max()` = identical to whole-file; stereo/crest/freq differences are sub-threshold.
+- Render dashboard: Start command updated to `uvicorn main:app --host 0.0.0.0 --port $PORT --limit-max-requests 20`. (Initial attempt used `--max-requests` — that's gunicorn, uvicorn uses `--limit-max-requests`. No `--jitter` flag in uvicorn standalone — real-world analysis timing provides natural spread.) Worker retires every 20 requests, OS fully reclaims RSS.
+
+**2. Anon insert logging** (page.tsx ~L1061)
+- Replaced silent `catch {}` with `.then(({ error }) => { if (error) fetch('/api/log-event', ...) })`.
+- Outer try/catch also posts to `/api/log-event` on throw.
+- New `app/api/log-event/route.ts`: unauthenticated POST endpoint, writes client events to Vercel server logs via `console.error`. No DB table, no secrets. Don't pass user-entered content through `metadata` without scrubbing.
+
+**3. Admin label clarity** (admin/page.tsx ~L1471)
+- Heading "Análisis recientes" / "Recent analyses" → "Visitantes anónimos recientes" / "Recent anonymous visitors"
+- Added subtitle: "Solo análisis realizados antes de crear cuenta." / "Analyses run before signup only."
+
+#### Key Architectural Decisions
+- **Chunked as universal default**: Design already treated chunked as the accuracy-preserving path (ffmpeg global LUFS, max-of-chunks for peak/TP). Lowering the threshold to zero extends the proven path. NORMAL branch (lines 962-972) is now unreachable dead code, left in place as defensive fallback.
+- **Worker recycling > perfect cleanup**: `gc.collect() + malloc_trim(0)` is already in place but glibc arena fragmentation can still hoard freed pages. Process-level recycling is the only bulletproof way to return RSS to OS.
+- **Admin card scope was correct**: The card always showed anonymous-only funnel data. The fix was labeling, not querying. Authenticated analyses are surfaced via KPI cards (Total/Today) and per-user Users tab.
+
+#### Diagnostic Findings (for context)
+- 3 anonymous analyses in past 60 days (most recent Mar 11) vs 17 signups → 82% signup-first funnel
+- 55 total analyses, 21 users, 61.9% repeat rate — healthy engagement for user base
+- `Análisis más largo: 81.4s` — exceeds 68-73s benchmark, matches the OOM incident file
+- 96.4% chunked already — fidelity of chunked path proven by existing traffic
+
+#### Verification
+- Python `ast.parse` clean on main.py
+- `npx next build` clean, 33 routes, zero errors
+- Agent audit (4 items): all PASS — no regressions, no orphan JSX, no broken promises, no secrets leaked
+- Render redeploy successful, service live
+
+#### Commits to main (Session 2026-04-24)
+1. `fd337e5` - fix: force chunked analysis, surface anon insert failures, clarify admin label
+
+**Git state**: main on `fd337e5`, pushed. Render redeployed with new start command. Vercel deployed frontend changes.
+
+### Session 2026-04-24 (later) — Render Restart-Flap Fix (`--limit-max-requests` removal)
+
+#### Context
+Render fired "Instance failed: wcxb6 / Service recovered" alerts on a precise **3h20m cadence** (03:10, 06:30, 09:50). Logs showed the instance serving exactly 20 `/health` pings from `116.203.134.67` (keepalive pinger), then "Shutting down / Application shutdown complete", then a fresh process boot.
+
+#### Root cause
+The `--limit-max-requests 20` flag added in the earlier session today (`fd337e5`, see §Session 2026-04-24 OOM Fix above) was designed for **gunicorn worker recycling** — in gunicorn, a master process gracefully respawns a retired worker while siblings keep serving. On **standalone uvicorn** the same flag terminates the entire server process, which Render (correctly) reports as an instance failure.
+
+Math: keepalive every 10 min × 20 requests = **200 min = 3h20m** → matches the observed alert cadence exactly.
+
+#### Fix
+- **Render dashboard → Settings → Start Command**: changed to `uvicorn main:app --host 0.0.0.0 --port $PORT` (dropped `--limit-max-requests 20`).
+- **Render dashboard → Environment**: added `MALLOC_ARENA_MAX=2` to retain memory-fragmentation protection without worker recycling.
+  - Caps glibc per-thread malloc arenas (default 8×CPU). Reduces RSS fragmentation 40–60% on multithreaded Python workloads. Preserves the OOM mitigation the earlier session was protecting against.
+- No code change, no git commit. Both changes are Render-side only.
+
+#### Why not gunicorn
+Gunicorn isn't in `requirements.txt` (only `uvicorn[standard]==0.24.0`). Switching to `gunicorn -k uvicorn.workers.UvicornWorker --max-requests 20 --max-requests-jitter 5` would be the "proper" worker-recycling path but requires adding the dep + redeploy. `MALLOC_ARENA_MAX=2` is zero-code-change and typically sufficient. Escalate to gunicorn only if RSS still trends upward over days of traffic.
+
+#### Verification
+- Redeploy successful, `Uvicorn running on http://0.0.0.0:10000`, service live.
+- Rolling deploy after env var added: new `process [55]` came up healthy before old `process [37]` drained — zero-downtime handoff confirmed. The "Shutting down" line in the new log belongs to the old process, not the new one.
+- Next check: watch for absence of "Instance failed" alerts past the old 3h20m mark (~13:10 on 2026-04-24).
+
+#### Key learning (don't repeat)
+`--limit-max-requests` / `--max-requests` are **worker-recycling flags**, not process-level restart flags. They only give graceful behavior under a supervisor (gunicorn master, systemd with Restart=always, etc.). On bare uvicorn under Render, they manufacture instance failures on a predictable schedule.
+
+**Git state**: unchanged, main on `fd337e5`. Fix was Render config only (start command + `MALLOC_ARENA_MAX=2` env var).
+
+### Session 2026-05-17 — Full Audit + Redesign Prototype (no code changes)
+
+#### Scope
+User asked whether to run `/audit-code` full (incl. iOS blown-up text), evolve the design toward a sleeker look, and add the Grammy/credibility line. Decided: audit first, design scope after audit, Grammy = approved ES line + draft EN for sign-off (deferred). Then asked for an audit-only baseline vs a redesigned version to compare before approving a full makeover.
+
+#### Audit results (report-only, nothing fixed)
+Ran `/audit-code` full tier (21 quality + 19 vibe + 12 copy + 23 mobile) via parallel agents on `app/ components/ lib/ scripts/ content/`. Python analyzer excluded (locked v7.4.2).
+
+- **No Critical defects.** No secrets, no `eval`/unsafe `dangerouslySetInnerHTML`, no unguarded console/debug, consistent `catch (err)` ×31, `localhost` gated by NODE_ENV, all `eslint-disable` justified.
+- **iOS / mobile priority items all PASS:** M23 `-webkit-text-size-adjust: 100%` + `text-size-adjust: 100%` present on `html` (value `100%`, not `none`) — injected via `<style dangerouslySetInnerHTML>` in `app/layout.tsx:332` (works; canonical home would be globals.css). M2 `maximumScale: 5` (zoom not blocked). M3 content uses `minHeight:100vh` not `height` (no iOS toolbar clip). M1 viewport export present. So the Magic CRM blown-up-text class of bug does NOT affect this site.
+- **Top real issues (Medium):** (1) Utility duplication — `getScoreColor` ×7 files, `formatDate` ×5, `cleanReportText` ×3, `truncateFilename` ×3, plus `getVerdictColor`/`scoreToVerdictLabel`/`isValidEmail`/`stripExtension` ×2. Risk: score-color thresholds drifting across views. Extract to `lib/`. (2) God components — `app/page.tsx` **6,905 lines / 17 useEffects**, `admin/page.tsx` 3,787, `dashboard` 2,766, 12 more >400.
+- **Low/polish:** inline-styled spinner SVG duplicated ×7 (no shared `<Spinner/>`; but `components/Skeleton.tsx` exists+used, so V1 full-page-spinner tell does NOT apply); 52 TS escape hatches; em dashes in comments of 38 files + `// ====` banner comments (shipped copy is clean); `Toast.tsx` `zIndex:99999`; no `forced-colors` support; 2 dismiss buttons ~34px (<44px).
+- **Copy:** English copy clean except one C11 negative-parallelism line, `app/page.tsx:2156` "Not just numbers. We tell you what to adjust and why." (ES twin correctly not flagged).
+- Dead code noted: `components/Results.tsx` not imported anywhere; Tailwind dormant (no tailwind/postcss config), responsiveness driven by JS `isMobile` 768px pattern, not Tailwind.
+
+#### Redesign prototype (throwaway, outside the repo)
+Built `~/masteringready-redesign-proto/index.html` — single self-contained static file, no Supabase/Stripe/analyzer wiring, zero Vercel cost. 3 screens via tab switcher (Inicio / Resultado del análisis / Mis Análisis) + Night/Day toggle, "Prototipo" chip. Served locally at `http://127.0.0.1:8123` (python http.server, backgrounded). Compare against live masteringready.com.
+- Direction: keeps MR identity (indigo→purple, real ES copy, score-ring + verdict + metric-bars, "Mis Análisis", verdict tiers + thresholds from audit). Changes toward "its own sleeker thing" per user: waveform brand mark (audio-native, not a M2M/Magic CRM clone), gradient restricted to brand mark + primary CTA only (answers the AI-palette audit flag), tighter type, hairline borders over heavy shadows, no emoji in headings.
+- Proves direction, not parity. Awaiting user verdict before scoping the real in-codebase makeover.
+
+#### Decisions / next steps (open)
+- If approved, real makeover MUST pair visual refresh with utility extraction (`lib/scoreColor.ts`, `formatDate`, `cleanReportText`, shared `<Spinner/>`) so the new design lands once, not across 7 divergent copies — do NOT redesign in place on the 6,905-line `page.tsx`.
+- Branch rule reminder: this project follows `dev` → `main` (the main-only exception is Magic CRM, NOT Mastering Ready). All makeover work branches to `dev` first, one bundled commit/push per work unit.
+- Grammy line still pending: approved ES Cumbiana line ready; EN to be drafted against no-stretching rules ("album won, not Mat"; he is one of ~19 credited engineers) for sign-off before shipping.
+
+**Git state**: unchanged, main on `fd337e5`. No code modified this session — audit + prototype only.
+
+### Session 2026-05-18 — Hero Iteration, Grammy Copy Locked, Makeover Plan (still no repo code changes)
+
+#### Prototype hero rebuilt + iterated (`~/masteringready-redesign-proto/index.html`)
+Caught that the first prototype hero had dropped conversion-critical elements vs the real `app/page.tsx:1908-2093` hero. Restored + iterated over many passes. Final hero state:
+- Two-column: copy left, theme-following demo/score card right ("Puntuación MR 97/100", green metric rows, "Lista para mastering profesional" verdict pill with check, no emoji).
+- Credibility badge (linked): "Créditos en Cumbiana (Carlos Vives) y +300 producciones" — "Cumbiana" links to AllMusic credits.
+- Trust line "Tu audio nunca se guarda" + "Inglés y Español"; audience line "Para productores y engineers que envían a mastering profesional."; non-italic positioning line.
+- "Sobre el creador" founder section below the bridge (final locked copy, see below).
+- Real light/dark mode: solid theme bg (removed fragile `background-attachment:fixed` full-page gradient that caused light-mode sections to render dark + cache-confusion), contained hero glow, score card follows theme with light-mode-tuned deeper green (#047857 text) so it isn't washed out. Footer carries a `build YYYY-MM-DD·HHMM` stamp as a cache-bust diagnostic (no-store meta added). Compliance: zero dashes-as-punctuation (new global rule), no emoji in headings, ES LATAM neutro, "Mis Análisis".
+
+#### Grammy / Cumbiana copy — LOCKED (honesty rules upheld)
+- **Display name: "Matias Carvajal"** (matches official credit → NO "acreditado como" clarifier needed anywhere).
+- **Verification link (canonical): AllMusic credits** `https://www.allmusic.com/album/cumbiana-mw0003404055#credits` (supersedes the earlier Discogs URL). Discogs lists him under "Recorded By"; consistent with the verified "Engineer" credit. Both block automated fetch (403) but work for humans/SEO.
+- **Badge (ES, approved, live in prototype):** "Créditos en Cumbiana (Carlos Vives) y +300 producciones".
+- **Founder section (ES, approved, live in prototype):** "Soy Matias Carvajal. Trabajé como engineer en Cumbiana de Carlos Vives y en más de 300 producciones profesionales a lo largo de 15 años. Vi cientos de mezclas llegar al ingeniero de mastering. Algunas listas, muchas no. Mastering Ready es la lista de verificación que yo hubiera querido tener antes de enviar una mezcla."
+- **Founder section (EN, approved):** "I'm Matias Carvajal. I worked as an engineer on Carlos Vives' Cumbiana and on 300+ professional productions across 15 years. I watched hundreds of mixes reach the mastering engineer. Some ready, many not. Mastering Ready is the checklist I wish I'd had before sending a mix."
+- **Rejected: "300+ productions as a mastering engineer."** Reasons: contradicts product positioning ("No reemplazamos al ingeniero de mastering") and the founder narrative's POV; unverified role escalation (Cumbiana credit is generic "Engineer", never sub-specify without session record); weaker than the vantage-point story. Strengthener used instead = verified "a lo largo de 15 años / across 15 years".
+
+#### (c) Makeover plan — agreed, plan-only, NOT yet executed
+Branch `dev` (Mastering Ready follows dev→main; Magic CRM is the main-only exception, not this). One bundled commit, build clean before push, no preview deploys, analyzer v7.4.2 untouched, bilingual preserved.
+- Phase 0: extract duplicated utils to `lib/` (`getScoreColor`×7, `formatDate`×5, `cleanReportText`×3, `truncateFilename`×3, `getVerdictColor`/`scoreToVerdictLabel`/`isValidEmail`/`stripExtension`×2) + shared `<Spinner/>`. Build green = behavior unchanged.
+- Phase 1: retune `--mr-*` tokens in `globals.css` to the prototype dark-first system (keep light); add waveform brand mark.
+- Phase 2: restyle Hero/DemoCard/Results/Mis Análisis, extracting each as a component out of the 6,905-line `page.tsx` while touched (full decomposition is out of scope — flag follow-up).
+- Phase 3: swap badge to approved Cumbiana ES line + AllMusic link; add "Sobre el creador"; fix C11 line `page.tsx:2156`.
+- Phase 4: build clean, mobile/dash/emoji/forbidden-word sweep, one commit to `dev`, merge to `main` only on user go.
+- Risks: ~99% inline styles in `page.tsx` (token swap won't catch hardcoded hex like `#667eea`/`#ffffff`-on-gradient — manual sweep); light mode re-check after dark-first retune; keep bilingual strings paired.
+- Marketing note: the light-card score render photographs better than dark (mint = passed/healthy) — use light-card stills for social/store regardless of app default theme.
+
+**Git state**: unchanged, main on `fd337e5`. Still no repo code modified — all work is in the throwaway prototype + this log. Makeover (c) awaiting user go to execute on `dev`.
+
+**Copy correction (later 2026-05-18, per Mat directly):** the "rejected mastering engineer" call was overturned by the principal. Mat IS a mastering engineer by trade. Honest non-conflated framing: Cumbiana = general "ingeniero" credit; 300+ productions over 15 years = as "ingeniero de mastering" (keep the two separate). Spanish copy must be fully Spanish ("ingeniero", not "engineer"). Final approved badge/founder ES+EN lines and full rationale are in memory `mat-credentials-cumbiana.md` (Locked decisions section) — that file is now the single source of truth, supersedes the line above.
+
+### Session 2026-05-18 (later) — Full-site prototype + before/after, review verdict = SHIP
+
+#### Deliverables (still ZERO repo code changes; all in `~/masteringready-redesign-proto/`)
+- `index.html` — full redesigned site (build stamp ·1600), 3 screens: Inicio (hero, bridge, Sobre el creador, ¿Por qué Mastering Ready?, testimonials, pricing 4-tier with "Más elegido" on Pro, FAQ 8-item accordion, footer) + Resultado del análisis + Mis Análisis. Sticky-on-scroll CTA (fires >620px, landing only). Real light/dark.
+- `original.html` — static visual replica of the CURRENT live site ("Sitio actual") for true before/after.
+- Both also copied to `~/Downloads/masteringready-rediseno.html` and `~/Downloads/masteringready-sitio-actual.html` (snapshot of build ·1600; re-copy after future edits).
+- Real content verbatim: 3 live testimonials (Giovanni Caldas, Jhonny Chaux, Pedro Rovetto), real 4-tier pricing ($0 / $5.99 / $9.99mo / $3.99 add-on), 8 real FAQs. Testimonials NOT invented or "tightened" (integrity line held). Confirmed: live site has NO sticky CTA, so it's a net-new research-backed add, not a replica.
+
+#### External review verdict: SHIP IT
+- Recalibration: the live site is already developed (real testimonials/4-tier pricing/8 FAQ/bridge) — redesign is presentation + trust + product-visibility, not adding missing content.
+- Biggest unlock identified: it's a **product showcase**, not a hero redesign. Showing Resultado del análisis + Mis Análisis pre-signup (score ring, color metric bars, findings, history mini-rings) sells better than copy. This is the top reason to ship.
+- Credential badge + Sobre el creador land cleanly in markup; AllMusic link has rel=noopener noreferrer.
+
+#### Production-scaffolding gaps (must add when building real (c) — NOT in prototype yet)
+- No auth UI: production nav needs Iniciar Sesión / Registrarse, language toggle (EN — EN bio exists), real nav anchors (#features/#pricing/#faq) or mobile hamburger. Current `.shell` is a prototype shell only.
+- Footer must keep legal links (Política de privacidad, Términos, copyright) — prototype footer is stub.
+- Polish: fixed the "engineers"→"ingenieros" anglicism in audience line (ES LATAM Neutro — recurring tell, watch for it); still open: brand-mark waveform animates `infinite` (consider pause-after-Ns or hover-only; reduced-motion already handled); non-standard font-weights 680/730 (fallback rounds to 700 — lock to 600/700 if precision matters); unify "success" visual language (results CTA card vs demo verdict pill differ for same green state).
+
+#### RESOLVED 2026-05-18 (per Mat): mastering service is REAL
+Mat masters songs as a paid service. The Resultado-screen "Masterizar" CTA is a genuine lead path into that offering, not a placeholder. Coherent funnel: analyzer qualifies the mix → founder bio establishes Mat is the ingeniero de mastering → CTA converts to a mastering job. (c) build MUST add a lightweight Services touchpoint (FAQ line + a small Services blurb, and the results CTA must route to a real contact flow — live site uses ContactModal WhatsApp/Email/IG) so a clicker is not dropped into a dead modal. Open sub-items for (c) scoping: how mastering is priced/quoted, and whether Services is a dedicated section vs a FAQ line + results CTA only. See memory `masteringready-mastering-service.md`.
+
+#### Next steps (agreed)
+"Run the whole site soon" = execute the (c) makeover on `dev` (utility extraction paired with visual port, one bundled commit, build clean, analyzer untouched, + production scaffolding above) PLUS "some extra features" (TBD — scope when starting). Plan-only until Mat says go.
+
+**Git state**: unchanged, main on `fd337e5`. No repo code modified. Prototype is the design reference; (c) build + extra features queued, awaiting go.
+
+### Session 2026-05-20 → 05-21 — (c) Landing Redesign Executed on `dev`
+
+Executed the (c) makeover. The redesign prototype (`~/masteringready-redesign-proto/index.html`) is now ported into the real app's landing page. All work on `dev`, uncommitted on top of commit `5006e3c` except where noted.
+
+#### Branch sync
+- `dev` was 257 commits behind `main`. Stashed in-progress files, fast-forwarded `dev` to `main` (`fd337e5`), popped stash. `dev` now current.
+
+#### Phase 0 — utility extraction (COMMITTED: `5006e3c`)
+Extracted duplicated utils to `lib/`, consolidating 7+ drifted copies:
+- `lib/scoreColor.ts` — getScoreColor, getScoreBg, getVerdictColor, scoreToVerdictEnum, scoreToVerdictLabel
+- `lib/formatDate.ts` — shared bilingual date formatter
+- `lib/cleanReportText.ts` — canonical version (full pattern set)
+- `lib/filename.ts` — stripExtension, truncateFilename
+- `lib/email.ts` — isValidEmail
+Call sites rewired in page.tsx, dashboard, history, admin/comparison, admin/mastering-lab, AuthProvider, AuthModal, auth/signup. ProgressTimeline/ScoreCard/ReadyCertifiedBadge keep specialized local variants intentionally. This commit also added the credential badge + "Sobre el creador" + the C11 copy fix as a first pass.
+
+#### Phases 1–4 — landing redesign (UNCOMMITTED on `dev`)
+Modified: `app/globals.css`, `app/page.tsx`, `lib/geoip.ts`, `lib/useGeo.ts`.
+
+**globals.css** — added the full `.mr-rd-*` redesign class system (waveform brand mark, eyebrow, hero grid, demo card, bridge, founder card, lsec/lhead, feature cards, testimonial cards, pricing plans, FAQ accordion, sticky CTA). New tokens: `--mr-accent-bright` (#818cf8), `--mr-accent-deep` (#4f46e5). Grid column modifiers `.mr-rd-cols-2/3` (classes, never inline — inline beats media queries).
+
+**page.tsx landing sections ported to `.mr-rd-*`:**
+- Nav — animated waveform brand mark replaces music-note-in-box
+- Hero — dark bg + radial accent glow (not full purple gradient), two-column: copy + demo score card
+- Bridge — borderless, whitespace-only separation (removed hairline "gap line")
+- "Sobre el creador" — now a proper CARD (bg-card, hairline border, padded); MOVED to before Services so founder authority backs the paid tiers
+- Features, Testimonials, Pricing (3-tier grid, Pro featured), FAQ (native `<details>`) — all on `.mr-rd-*`
+- Services, eBook — restyled to `.mr-rd-*` system
+- Analyzer section header → `.mr-rd-lhead` (upload/results internals untouched)
+- Sticky CTA bar — appears past hero fold, hides when footer (`#mr-footer`) enters view
+
+**Copy changes (locked, see memory `mat-credentials-cumbiana.md`):**
+- Founder bio: "uno de los ingenieros en el álbum Cumbiana" / EN "one of the engineers on Carlos Vives' album Cumbiana" (honest framing — ~19 share the credit)
+- Years: 15 → 12 ("En 12 años" / "across 12 years")
+- Hero trust pill: "Inglés y Español" → "2 análisis gratis con PDF" (offer beats feature at the CTA)
+- C11 negative-parallelism line fixed
+- "Cientos de mezclas han llegado a mi mesa" — KEEP VERBATIM (industry slang, Mat-confirmed)
+
+**Bug fixes:**
+- Hydration mismatch — `useGeo` now starts from `DEFAULT_GEO` (exported from geoip.ts) instead of reading localStorage during render → server/client first render match
+- Responsive grid — pricing/testimonials grids collapse to 1 column under 860px (was overridden by inline styles)
+- Sticky CTA — now reliably hides at the footer (explicit `#mr-footer` id + resize handler)
+- `.mr-rd-btn` — added `text-decoration: none` (eBook CTA `<a>` was underlined)
+
+**Typography pass:** small body text bumped ~1px (feature/FAQ/plan text), card metrics to 15px/weight 700, section header→content gap 40px→32px.
+
+#### Verdict so far
+External reviews + Mat: redesign is a major win. Founder card, two-column hero, sticky CTA all landed well. Caught and corrected several hallucinated review points by verifying against actual code (see memory `feedback_verify_review_against_code.md`).
+
+#### 2026-05-21: /audit-code + full code sweep (DONE, on dev)
+
+Ran `/audit-code` (quality + vibe + copy + full mobile) on the landing redesign, then swept the whole codebase per the "full sweep" decision.
+
+**Redesign-scope fixes (globals.css + page.tsx):**
+- Sticky CTA: added `env(safe-area-inset-bottom)` so it clears the iPhone home indicator.
+- Fluid type: `.mr-rd-demo-score` / `-demo-lab` / `.mr-rd-plan .amt` now use `clamp()`.
+- All `.mr-rd-*` body text and inline `fontSize` converted px to rem.
+- Services subtitle "crédito Latin Grammy" tightened to "crédito en Cumbiana (Carlos Vives)" (the album won; Mat is 1 of ~19 credited engineers, see memory `mat-credentials-cumbiana`).
+- eBook C11 negative-parallelism line rewritten (ES + EN).
+- Banner comments to `/* --- */` style; em dashes purged from comments.
+
+**App-wide sweep (section B):**
+- 11 duplicate functions consolidated to lib utils; new `lib/cta.ts`, `lib/nbsp.ts`, `lib/scoreCard.ts`, `lib/verifyAdmin.ts`. Diverging dupes (stripExtension, truncateFilename, getScoreColor) parameterized for byte-identical output.
+- ~38 dead exports removed from lib/ (net about 485 lines deleted).
+- 19 empty/unused-var catch blocks to bare `catch {}`; native `confirm()` replaced with a custom modal.
+- Shared `components/Spinner.tsx` + `.mr-spin` / `.mr-pulse` classes; `@keyframes` centralized in globals.css; all inline-styled spinners swapped.
+- 8 `height:100vh` to `100dvh`; sub-44px touch targets fixed (ThemeToggle, UserMenu, NotificationBadge); 4-digit z-index normalized.
+- 111+ comment em/en dashes swept; frequency/score ranges normalized to hyphens.
+
+Build clean, types valid, 33 routes. 55 files changed.
+
+**DEFERRED to a separate architecture-refactor project (not sweepable in one commit):**
+- God components: `page.tsx` 6302 lines, `admin/page.tsx` 3787, `dashboard` 2650; cascading useEffect chains; React Query vs raw fetch inconsistency.
+- Type the analysis `result` object (~30 `as any` in page.tsx). Same root cause as the god component; do it as part of the page.tsx split, not before.
+
+**Still open (pre-existing):**
+- Resultado del análisis + Mis Análisis screens not yet ported to `.mr-rd-*` (landing-only pass).
+- Optional: founder card avatar (needs a real headshot of Matías).
+
+**Git state**: committed on `dev`. Untracked `content/` + 3 supabase migrations are pre-existing and unrelated; left out of the commit.

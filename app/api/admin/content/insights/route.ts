@@ -1,5 +1,5 @@
 /**
- * Content Insights API — GET /api/admin/content/insights
+ * Content Insights API; GET /api/admin/content/insights
  * Pulls analysis data to surface content creation opportunities:
  * high scores (testimonials), weak metrics (educational content),
  * genre distribution (audience insights).
@@ -36,7 +36,7 @@ interface HighScoreRow {
 
 export async function GET(request: NextRequest) {
   try {
-    // Auth check — same pattern as stats route
+    // Auth check; same pattern as stats route
     const authHeader = request.headers.get('Authorization')
     if (!authHeader?.startsWith('Bearer ')) {
       return NextResponse.json(
@@ -75,7 +75,7 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Queries — all using adminClient (bypasses RLS)
+    // Queries; all using adminClient (bypasses RLS)
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
 
     const [highScoresResult, totalAnalysesResult, recentAnalysesResult] = await Promise.all([
@@ -118,7 +118,7 @@ export async function GET(request: NextRequest) {
       ? Math.round((scores.reduce((sum, s) => sum + s, 0) / scores.length) * 10) / 10
       : 0
 
-    // Compute weak_metrics — count how many times each metric scores below 60
+    // Compute weak_metrics; count how many times each metric scores below 60
     const metricLowCounts: Record<string, number> = {}
     const metricTotalCounts: Record<string, number> = {}
 

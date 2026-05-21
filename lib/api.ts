@@ -116,7 +116,7 @@ export async function startAnalysisPolling(
     formData.append('original_metadata_json', JSON.stringify(options.originalMetadata))
   }
 
-  // 2-minute timeout on upload — prevents indefinite hang on slow connections
+  // 2-minute timeout on upload; prevents indefinite hang on slow connections
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), 120000)
 

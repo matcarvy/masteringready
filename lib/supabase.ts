@@ -16,14 +16,13 @@ import { createClient } from '@supabase/supabase-js'
 // --- Environment Variables ---
 
 // Use placeholder values at build time to prevent "supabaseUrl is required" error.
-// createClient only validates non-empty strings — it doesn't connect at creation time.
+// createClient only validates non-empty strings; it doesn't connect at creation time.
 // At runtime, real env vars are always available.
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key'
 
-// Lazy getters for factory functions (read env vars at call time, not module load)
+// Lazy getter for factory functions (read env vars at call time, not module load)
 const getSupabaseUrl = () => process.env.NEXT_PUBLIC_SUPABASE_URL || supabaseUrl
-const getSupabaseAnonKey = () => process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || supabaseAnonKey
 
 // --- Auth Storage Adapter ---
 
@@ -66,7 +65,7 @@ const authStorage = {
   },
   removeItem: (key: string): void => {
     if (typeof window === 'undefined') return
-    // Only remove tokens during explicit signOut — block GoTrueClient's
+    // Only remove tokens during explicit signOut; block GoTrueClient's
     // internal cleanup that fires on AbortError during page reload
     if (!_signOutInProgress) return
     localStorage.removeItem(key)
@@ -107,14 +106,14 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     autoRefreshToken: true,
     detectSessionInUrl: true,
     storage: authStorage,
-    // @ts-expect-error – prevent Navigator Lock from blocking all session access during long operations (compression, analysis)
+    // @ts-expect-error; prevent Navigator Lock from blocking all session access during long operations (compression, analysis)
     lock: async (_name: string, _acquireTimeout: number, fn: () => Promise<unknown>) => await fn(),
   }
 })
 
 /**
  * Create a fresh Supabase client for isolated queries.
- * Use this in pages that navigate from the analyzer — the shared singleton
+ * Use this in pages that navigate from the analyzer; the shared singleton
  * can have stale internal state (auth locks, pending requests) that causes
  * queries to hang on SPA navigation.
  *
@@ -152,31 +151,6 @@ export async function createFreshQueryClient(sessionTokens?: { access_token: str
   return fresh
 }
 
-// --- Server-Side Supabase Client ---
-
-/**
- * Create a Supabase client for server-side usage
- * Crear un cliente Supabase para uso en servidor
- *
- * Use this in:
- * - API routes
- * - Server components
- * - getServerSideProps
- *
- * Usar esto en:
- * - Rutas de API
- * - Componentes de servidor
- * - getServerSideProps
- */
-export function createServerSupabaseClient() {
-  return createClient(getSupabaseUrl(), getSupabaseAnonKey(), {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false
-    }
-  })
-}
-
 // --- Admin Client ---
 
 /**
@@ -202,64 +176,6 @@ export function createAdminSupabaseClient() {
       autoRefreshToken: false
     }
   })
-}
-
-// --- Auth Helpers ---
-
-/**
- * Get current user session
- * Obtener sesión del usuario actual
- */
-export async function getCurrentUser() {
-  const { data: { user }, error } = await supabase.auth.getUser()
-
-  if (error) return null
-
-  return user
-}
-
-/**
- * Get current user's profile
- * Obtener perfil del usuario actual
- */
-export async function getCurrentProfile() {
-  const user = await getCurrentUser()
-
-  if (!user) return null
-
-  const { data: profile, error } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', user.id)
-    .single()
-
-  if (error) return null
-
-  return profile
-}
-
-/**
- * Get user's current subscription with plan details
- * Obtener suscripción actual del usuario con detalles del plan
- */
-export async function getCurrentSubscription() {
-  const user = await getCurrentUser()
-
-  if (!user) return null
-
-  const { data: subscription, error } = await supabase
-    .from('subscriptions')
-    .select(`
-      *,
-      plan:plans(*)
-    `)
-    .eq('user_id', user.id)
-    .eq('status', 'active')
-    .single()
-
-  if (error) return null
-
-  return subscription
 }
 
 /**
@@ -321,7 +237,7 @@ export async function checkCanAnalyze(attempt = 1, sessionTokens?: { access_toke
       is_lifetime: false
     }
   } catch (err) {
-    // GoTrueClient abort — retry once after short delay
+    // GoTrueClient abort; retry once after short delay
     if (attempt < 2 && err instanceof DOMException && (err as DOMException).name === 'AbortError') {
       await new Promise(r => setTimeout(r, 500))
       return checkCanAnalyze(attempt + 1)
@@ -334,15 +250,6 @@ export async function checkCanAnalyze(attempt = 1, sessionTokens?: { access_toke
       is_lifetime: false
     }
   }
-}
-
-/**
- * Legacy function for backwards compatibility
- * @deprecated Use checkCanAnalyze() instead
- */
-export async function canUserAnalyze(): Promise<boolean> {
-  const status = await checkCanAnalyze()
-  return status.can_analyze
 }
 
 /**
@@ -359,306 +266,4 @@ export interface UserDashboardStatus {
   can_analyze: boolean
   subscription_status: string
   current_period_end: string | null
-}
-
-/**
- * Get complete user analysis status for dashboard
- * Obtener estado completo de análisis del usuario para dashboard
- */
-export async function getUserAnalysisStatus(): Promise<UserDashboardStatus | null> {
-  const user = await getCurrentUser()
-
-  if (!user) return null
-
-  const { data, error } = await supabase.rpc('get_user_analysis_status', {
-    p_user_id: user.id
-  })
-
-  if (error) return null
-
-  // The function returns an array with one row
-  const result = Array.isArray(data) ? data[0] : data
-  return result || null
-}
-
-/**
- * Get user's available single purchases (unused)
- * Obtener compras individuales disponibles del usuario
- */
-export async function getAvailablePurchases() {
-  const user = await getCurrentUser()
-
-  if (!user) return []
-
-  const { data, error } = await supabase
-    .from('purchases')
-    .select('*')
-    .eq('user_id', user.id)
-    .eq('status', 'succeeded')
-    .gt('analyses_granted', supabase.rpc('coalesce', { col: 'analyses_used', default_val: 0 }))
-
-  if (error) {
-    // Fallback query without the comparison
-    const { data: fallbackData } = await supabase
-      .from('purchases')
-      .select('*')
-      .eq('user_id', user.id)
-      .eq('status', 'succeeded')
-
-    return (fallbackData || []).filter((p: { analyses_granted: number; analyses_used: number }) =>
-      p.analyses_granted > (p.analyses_used || 0)
-    )
-  }
-
-  return data || []
-}
-
-/**
- * Check if Pro user can buy addon pack
- * Verificar si usuario Pro puede comprar paquete adicional
- */
-export async function checkCanBuyAddon(): Promise<{
-  can_buy: boolean
-  reason: string
-  packs_this_cycle: number
-  max_packs: number
-}> {
-  const user = await getCurrentUser()
-
-  if (!user) {
-    return {
-      can_buy: false,
-      reason: 'NOT_LOGGED_IN',
-      packs_this_cycle: 0,
-      max_packs: 0
-    }
-  }
-
-  const { data, error } = await supabase.rpc('can_buy_addon', {
-    p_user_id: user.id
-  })
-
-  if (error) {
-    return {
-      can_buy: false,
-      reason: 'ERROR',
-      packs_this_cycle: 0,
-      max_packs: 2
-    }
-  }
-
-  const result = Array.isArray(data) ? data[0] : data
-  return result || {
-    can_buy: false,
-    reason: 'NO_DATA',
-    packs_this_cycle: 0,
-    max_packs: 2
-  }
-}
-
-// --- Analysis Helpers ---
-
-/**
- * Save analysis to database
- * Guardar análisis en la base de datos
- */
-export async function saveAnalysis(analysisData: {
-  filename: string
-  score: number
-  verdict: 'ready' | 'almost_ready' | 'needs_work' | 'critical'
-  metrics?: object
-  interpretations?: object
-  report_short?: string
-  report_write?: string
-  report_visual?: string
-  lang?: 'es' | 'en'
-  strict_mode?: boolean
-  file_size_bytes?: number
-  duration_seconds?: number
-  sample_rate?: number
-  bit_depth?: number
-  channels?: number
-  processing_time_seconds?: number
-}) {
-  const user = await getCurrentUser()
-
-  const { data, error } = await supabase
-    .from('analyses')
-    .insert({
-      user_id: user?.id || null,
-      filename: analysisData.filename,
-      score: analysisData.score,
-      verdict: analysisData.verdict,
-      metrics: analysisData.metrics || null,
-      interpretations: analysisData.interpretations || null,
-      report_short: analysisData.report_short || null,
-      report_write: analysisData.report_write || null,
-      report_visual: analysisData.report_visual || null,
-      lang: analysisData.lang || 'es',
-      strict_mode: analysisData.strict_mode || false,
-      file_size_bytes: analysisData.file_size_bytes || null,
-      duration_seconds: analysisData.duration_seconds || null,
-      sample_rate: analysisData.sample_rate || null,
-      bit_depth: analysisData.bit_depth || null,
-      channels: analysisData.channels || null,
-      processing_time_seconds: analysisData.processing_time_seconds || null
-    })
-    .select()
-    .single()
-
-  if (error) throw error
-
-  // Increment user's analysis count if logged in
-  // Incrementar contador de análisis del usuario si está logueado
-  if (user) {
-    const { data: incrementResult } = await supabase.rpc('increment_analysis_count', { p_user_id: user.id })
-    // incrementResult contains { success: boolean, source: 'free' | 'pro' | 'addon' | 'single' }
-  }
-
-  return data
-}
-
-/**
- * Use a single purchase credit for analysis
- * Usar un crédito de compra individual para análisis
- */
-export async function useSinglePurchase(purchaseId: string): Promise<boolean> {
-  const user = await getCurrentUser()
-
-  if (!user) return false
-
-  const { data, error } = await supabase.rpc('use_single_purchase', {
-    p_user_id: user.id,
-    p_purchase_id: purchaseId
-  })
-
-  if (error) return false
-
-  return data ?? false
-}
-
-/**
- * Get user's analysis history
- * Obtener historial de análisis del usuario
- */
-export async function getAnalysisHistory(limit = 20) {
-  const user = await getCurrentUser()
-
-  if (!user) return []
-
-  const { data, error } = await supabase
-    .from('analyses')
-    .select('*')
-    .eq('user_id', user.id)
-    .is('deleted_at', null)
-    .order('created_at', { ascending: false })
-    .limit(limit)
-
-  if (error) return []
-
-  return data
-}
-
-// --- Feedback Helpers ---
-
-/**
- * Submit user feedback
- * Enviar retroalimentación de usuario
- */
-export async function submitFeedback(feedbackData: {
-  subject: string
-  message: string
-  category?: 'bug' | 'feature' | 'improvement' | 'praise' | 'question' | 'other'
-  lang?: 'es' | 'en'
-  satisfaction?: '1' | '2' | '3' | '4' | '5'
-  analysis_id?: string
-  contact_email?: string
-  wants_response?: boolean
-}) {
-  const user = await getCurrentUser()
-
-  const { data, error } = await supabase
-    .from('user_feedback')
-    .insert({
-      user_id: user?.id || null,
-      subject: feedbackData.subject,
-      message: feedbackData.message,
-      category: feedbackData.category || 'other',
-      lang: feedbackData.lang || 'es',
-      satisfaction: feedbackData.satisfaction || null,
-      analysis_id: feedbackData.analysis_id || null,
-      contact_email: feedbackData.contact_email || null,
-      wants_response: feedbackData.wants_response || false,
-      source: 'web_app',
-      page_url: typeof window !== 'undefined' ? window.location.href : null,
-      user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : null
-    })
-    .select()
-    .single()
-
-  if (error) throw error
-
-  return data
-}
-
-/**
- * Get public feature requests
- * Obtener solicitudes de funciones públicas
- */
-export async function getPublicFeatureRequests(limit = 20) {
-  const { data, error } = await supabase
-    .from('public_feature_requests')
-    .select('*')
-    .limit(limit)
-
-  if (error) return []
-
-  return data
-}
-
-/**
- * Vote on a feature request
- * Votar en una solicitud de función
- */
-export async function voteOnFeature(feedbackId: string, voteType: 'upvote' | 'downvote' = 'upvote') {
-  const user = await getCurrentUser()
-
-  if (!user) {
-    throw new Error('Must be logged in to vote / Debe iniciar sesión para votar')
-  }
-
-  // Upsert vote (update if exists, insert if not)
-  const { data, error } = await supabase
-    .from('feedback_votes')
-    .upsert({
-      feedback_id: feedbackId,
-      user_id: user.id,
-      vote_type: voteType
-    }, {
-      onConflict: 'feedback_id,user_id'
-    })
-    .select()
-    .single()
-
-  if (error) throw error
-
-  return data
-}
-
-// --- Plans Helper ---
-
-/**
- * Get all active plans
- * Obtener todos los planes activos
- */
-export async function getPlans() {
-  const { data, error } = await supabase
-    .from('plans')
-    .select('*')
-    .eq('is_active', true)
-    .order('display_order', { ascending: true })
-
-  if (error) return []
-
-  return data
 }

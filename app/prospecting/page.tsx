@@ -240,12 +240,12 @@ export default function ProspectingPage() {
   }, [])
 
   // Admin status derived from fetchLeads response (API route already verifies admin).
-  // No separate Supabase client needed — avoids GoTrueClient lock contention.
+  // No separate Supabase client needed; avoids GoTrueClient lock contention.
   useEffect(() => {
     if (authLoading) return
     if (!user) { setIsAdmin(false); setAdminChecked(true); return }
     if (!session?.access_token) { setAdminChecked(true); return }
-    // Attempt fetch — 403 means not admin, success means admin
+    // Attempt fetch; 403 means not admin, success means admin
     const checkViaFetch = async () => {
       try {
         const res = await fetch(`/api/admin/prospecting?page=1&limit=50`, {
@@ -297,7 +297,7 @@ export default function ProspectingPage() {
       setLeads(data.leads || [])
       setTotalLeads(data.total || 0)
       setKpi(data.kpi || null)
-    } catch (err) {
+    } catch {
       setError(lang === 'es' ? 'Error al cargar leads' : 'Failed to load leads')
     } finally {
       setLoading(false)
@@ -306,7 +306,7 @@ export default function ProspectingPage() {
 
   useEffect(() => {
     if (!isAdmin || !session?.access_token) return
-    // Skip the first trigger — initial load already handled by admin check
+    // Skip the first trigger; initial load already handled by admin check
     if (!initialLoadDone.current) return
     fetchLeads()
   }, [isAdmin, fetchLeads])
@@ -330,7 +330,7 @@ export default function ProspectingPage() {
       setLeads(prev => prev.map(l =>
         l.id === id ? { ...l, ...updates, updated_at: new Date().toISOString() } : l
       ))
-    } catch (err) {
+    } catch {
     }
   }
 
@@ -345,7 +345,7 @@ export default function ProspectingPage() {
   // Auth guard
   if (authLoading || !adminChecked) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'var(--mr-bg-base)', color: 'var(--mr-text-primary)' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100dvh', background: 'var(--mr-bg-base)', color: 'var(--mr-text-primary)' }}>
         <p>{labels.loading}</p>
       </div>
     )
@@ -353,7 +353,7 @@ export default function ProspectingPage() {
 
   if (!user || !isAdmin) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100vh', gap: '1rem', background: 'var(--mr-bg-base)', color: 'var(--mr-text-primary)' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100dvh', gap: '1rem', background: 'var(--mr-bg-base)', color: 'var(--mr-text-primary)' }}>
         <Shield size={48} style={{ color: 'var(--mr-red)' }} />
         <h1 style={{ fontSize: '1.5rem' }}>{labels.accessDenied}</h1>
         <p style={{ color: 'var(--mr-text-secondary)' }}>{!user ? labels.loginRequired : labels.accessDeniedDesc}</p>

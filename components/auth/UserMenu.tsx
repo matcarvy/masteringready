@@ -65,7 +65,7 @@ export function UserMenu({ lang = 'es', isMobile = false }: UserMenuProps) {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  // Not logged in (or still loading — show login/signup as default to avoid blank flash)
+  // Not logged in (or still loading; show login/signup as default to avoid blank flash)
   if (!user) {
     // On mobile, login/signup is handled by hamburger menu in page.tsx
     if (isMobile) return null
@@ -153,8 +153,11 @@ export function UserMenu({ lang = 'es', isMobile = false }: UserMenuProps) {
         style={{
           display: 'flex',
           alignItems: 'center',
+          justifyContent: 'center',
           gap: '0.5rem',
           padding: '0.375rem 0.75rem',
+          minWidth: '44px',
+          minHeight: '44px',
           background: 'rgba(255,255,255,0.15)',
           border: 'none',
           borderRadius: '9999px',
@@ -193,7 +196,7 @@ export function UserMenu({ lang = 'es', isMobile = false }: UserMenuProps) {
           </div>
         )}
 
-        {/* Name — hidden on mobile to save header space */}
+        {/* Name; hidden on mobile to save header space */}
         {!isMobile && (
           <span style={{
             color: 'var(--mr-text-primary)',

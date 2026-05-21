@@ -141,13 +141,12 @@ export function SocialLoginButtons({
           }}
         >
           {loadingProvider === provider.id ? (
-            <div style={{
+            <div className="mr-spin" style={{
               width: '20px',
               height: '20px',
               border: '2px solid transparent',
               borderTopColor: provider.textColor,
-              borderRadius: '50%',
-              animation: 'spin 1s linear infinite'
+              borderRadius: '50%'
             }} />
           ) : (
             provider.icon
@@ -160,12 +159,6 @@ export function SocialLoginButtons({
           </span>
         </button>
       ))}
-
-      <style jsx>{`
-        @keyframes spin {
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
     </div>
   )
 }

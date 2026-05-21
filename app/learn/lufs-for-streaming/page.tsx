@@ -306,7 +306,7 @@ export default function LufsForStreamingPage() {
   )
 }
 
-/* ===== Shared inline style objects ===== */
+/* --- Shared inline style objects --- */
 
 const paragraphStyle: React.CSSProperties = {
   fontSize: '1rem',

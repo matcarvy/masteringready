@@ -209,7 +209,7 @@ async function handleCheckoutCompleted(
         onConflict: 'user_id'
       })
 
-    // Record payment (idempotent — safe on webhook replay)
+    // Record payment (idempotent; safe on webhook replay)
     await insertPaymentIfNew(supabase, {
       user_id: userId,
       stripe_payment_intent_id: session.payment_intent as string || null,
@@ -246,7 +246,7 @@ async function handleCheckoutCompleted(
       status: 'succeeded' as PaymentStatus
     })
 
-    // Record payment (idempotent — safe on webhook replay)
+    // Record payment (idempotent; safe on webhook replay)
     await insertPaymentIfNew(supabase, {
       user_id: userId,
       stripe_payment_intent_id: session.payment_intent as string || null,
@@ -302,7 +302,7 @@ async function handleCheckoutCompleted(
         .eq('id', userSub.id)
     }
 
-    // Record payment (idempotent — safe on webhook replay)
+    // Record payment (idempotent; safe on webhook replay)
     await insertPaymentIfNew(supabase, {
       user_id: userId,
       stripe_payment_intent_id: session.payment_intent as string || null,
@@ -367,7 +367,7 @@ async function handleInvoicePaid(
     ? invoiceData.payment_intent
     : invoiceData.payment_intent?.id || null
 
-  // Record payment (idempotent — safe on webhook replay)
+  // Record payment (idempotent; safe on webhook replay)
   await insertPaymentIfNew(supabase, {
     user_id: subscription.user_id,
     subscription_id: subscription.id,
@@ -413,7 +413,7 @@ async function handleInvoicePaymentFailed(
     .single()
 
   if (subscription) {
-    // Record failed payment (idempotent — safe on webhook replay)
+    // Record failed payment (idempotent; safe on webhook replay)
     await insertPaymentIfNew(supabase, {
       user_id: subscription.user_id,
       stripe_invoice_id: invoice.id,
@@ -473,7 +473,7 @@ async function handleSubscriptionUpdated(
   subscription: Stripe.Subscription,
   supabase: SupabaseAdmin
 ) {
-  // Get period from Stripe — API 2025-12-15.clover moved period to items
+  // Get period from Stripe; API 2025-12-15.clover moved period to items
   const subAny = subscription as any
   const periodStart: number | undefined =
     subAny.current_period_start ??
@@ -515,7 +515,7 @@ async function handleSubscriptionUpdated(
 }
 
 /**
- * Handle charge.failed — records failed one-time payments (Single/Addon)
+ * Handle charge.failed; records failed one-time payments (Single/Addon)
  */
 async function handleChargeFailed(
   charge: Stripe.Charge,

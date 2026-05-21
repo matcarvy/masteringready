@@ -2,6 +2,10 @@
 
 import { useRef, useState, useCallback } from 'react'
 import html2canvas from 'html2canvas'
+import { getScoreHex } from '@/lib/scoreColor'
+import { getBarColor } from '@/lib/scoreCard'
+import { stripExtension } from '@/lib/filename'
+import { nbsp } from '@/lib/nbsp'
 
 // --- ScoreCard ---
 
@@ -25,46 +29,6 @@ interface ScoreCardProps {
   metricsBars: Record<string, MetricBar> | null
   genre: string | null
   lang: 'es' | 'en'
-}
-
-// Score color logic — matches app getScoreColor thresholds
-function getScoreHex(score: number): string {
-  if (score >= 85) return '#10b981'
-  if (score >= 60) return '#f59e0b'
-  if (score >= 40) return '#f97316'
-  return '#ef4444'
-}
-
-// Bar solid color by status — html2canvas renders gradients unreliably
-// (Bug 2: gradients cause color bleed artifacts, e.g., red at start of green bar)
-function getBarColor(status: string): string {
-  switch (status) {
-    case 'excellent': return '#10b981'
-    case 'good': return '#3b82f6'
-    case 'warning': return '#f59e0b'
-    case 'critical': return '#ef4444'
-    default: return '#6b7280'
-  }
-}
-
-function getStatusColor(status: string): string {
-  switch (status) {
-    case 'excellent': return '#10b981'
-    case 'good': return '#3b82f6'
-    case 'warning': return '#f59e0b'
-    case 'critical': return '#ef4444'
-    default: return '#6b7280'
-  }
-}
-
-// Strip file extension from filename
-function stripExtension(filename: string): string {
-  return filename.replace(/\.(wav|mp3|aiff|aif|flac|aac|m4a|ogg)$/i, '')
-}
-
-// Replace spaces with non-breaking spaces — html2canvas collapses regular spaces
-function nbsp(s: string): string {
-  return s.replace(/ /g, '\u00A0')
 }
 
 // Score-based bilingual verdict for PNG cards (always matches current lang)
@@ -101,7 +65,7 @@ const genreLabels: Record<string, { es: string; en: string }> = {
   'Country': { es: 'Country', en: 'Country' },
 }
 
-// Metric display labels (bilingual) — same order as the app bars
+// Metric display labels (bilingual); same order as the app bars
 const metricLabels: Record<string, { es: string; en: string }> = {
   headroom: { es: 'Headroom', en: 'Headroom' },
   true_peak: { es: 'True Peak', en: 'True Peak' },
@@ -116,7 +80,7 @@ const metricLabels: Record<string, { es: string; en: string }> = {
 // Ordered keys for consistent bar display
 const orderedKeys = ['headroom', 'true_peak', 'plr', 'dynamic_range', 'stereo_width', 'stereo_correlation', 'frequency_balance', 'tonal_balance']
 
-// Metric keys that represent the same thing — only show one
+// Metric keys that represent the same thing; only show one
 const dedupeMap: Record<string, string> = {
   tonal_balance: 'frequency_balance',
 }
@@ -146,7 +110,7 @@ export default function ScoreCard({ score, verdict, filename, metricsBars, genre
 
   const scoreColor = getScoreHex(score)
   const dashOffset = CIRCUMFERENCE * (1 - score / 100)
-  const trackName = stripExtension(filename)
+  const trackName = stripExtension(filename, true)
   // Derive verdict from score + lang (always matches current language, not API response language)
   const verdictText = getCardVerdict(score, lang)
   const genreDisplay = genre && genreLabels[genre]
@@ -271,7 +235,7 @@ export default function ScoreCard({ score, verdict, filename, metricsBars, genre
               <div style={{ flex: 1, height: barHeight, background: '#1E1E2A', borderRadius: `${parseInt(barHeight) / 2}px`, overflow: 'hidden' }}>
                 <div style={{ width: `${bar.percentage}%`, height: '100%', background: getBarColor(bar.status), borderRadius: `${parseInt(barHeight) / 2}px` }} />
               </div>
-              <span style={{ width: valueWidth, fontSize: metricFont, fontWeight: 700, color: getStatusColor(bar.status), textAlign: 'left' as const, flexShrink: 0 }}>
+              <span style={{ width: valueWidth, fontSize: metricFont, fontWeight: 700, color: getBarColor(bar.status), textAlign: 'left' as const, flexShrink: 0 }}>
                 {bar.percentage}%
               </span>
             </div>
@@ -310,7 +274,7 @@ export default function ScoreCard({ score, verdict, filename, metricsBars, genre
         padding,
         fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
         color: '#f5f5f7',
-        // html2canvas collapses spaces — wordSpacing forces visible gaps between words
+        // html2canvas collapses spaces; wordSpacing forces visible gaps between words
         wordSpacing: '0.25em',
       }}>
         {/* Top gradient line */}
@@ -415,7 +379,7 @@ export default function ScoreCard({ score, verdict, filename, metricsBars, genre
 
   return (
     <>
-      {/* Download Buttons — visible in the UI */}
+      {/* Download Buttons; visible in the UI */}
       <div style={{
         display: 'flex',
         gap: '0.75rem',
@@ -456,7 +420,7 @@ export default function ScoreCard({ score, verdict, filename, metricsBars, genre
         >
           {generating === 'feed' ? (
             <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ animation: 'spin 1s linear infinite' }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="mr-spin">
                 <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
               </svg>
               {lang === 'es' ? 'Generando...' : 'Generating...'}
@@ -508,7 +472,7 @@ export default function ScoreCard({ score, verdict, filename, metricsBars, genre
         >
           {generating === 'story' ? (
             <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ animation: 'spin 1s linear infinite' }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="mr-spin">
                 <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
               </svg>
               {lang === 'es' ? 'Generando...' : 'Generating...'}
@@ -526,7 +490,7 @@ export default function ScoreCard({ score, verdict, filename, metricsBars, genre
         </button>
       </div>
 
-      {/* Hidden card containers — rendered off-screen for html2canvas capture */}
+      {/* Hidden card containers; rendered off-screen for html2canvas capture */}
       <div
         ref={feedRef}
         style={{ display: 'none', position: 'absolute', left: '-99999px', top: 0 }}

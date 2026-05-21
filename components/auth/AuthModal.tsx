@@ -179,7 +179,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, lang }: AuthModalProps) 
       }
 
       if (data.user) {
-        // Close modal immediately — page.tsx handles unlock animation
+        // Close modal immediately; page.tsx handles unlock animation
         // based on AuthProvider quota check result
         setLoading(false)
         onSuccess()

@@ -1,5 +1,5 @@
 /**
- * Content Machine — Prompt Templates
+ * Content Machine; Prompt Templates
  * Hormozi Method: 1 input → 9 content formats
  *
  * Valid input types (must match DB CHECK constraint on content_queue.input_type):
@@ -21,14 +21,6 @@ export const FORMAT_DEFS = [
 export type FormatKey = typeof FORMAT_DEFS[number]['key']
 export type InputType = 'topic' | 'testimony' | 'before_after' | 'transcript' | 'personal'
 
-export const INPUT_TYPE_LABELS: Record<InputType, { es: string; en: string }> = {
-  topic: { es: 'Tema / Idea', en: 'Topic / Idea' },
-  testimony: { es: 'Testimonio', en: 'Testimonial' },
-  before_after: { es: 'Antes / Después', en: 'Before / After' },
-  transcript: { es: 'Transcripción', en: 'Transcript' },
-  personal: { es: 'Personal / BTS', en: 'Personal / BTS' },
-}
-
 export function buildSystemPrompt(): string {
   return `You are the content creator for MasteringReady, a professional audio analysis platform for musicians and producers. Your job is to take a single input and multiply it into 9 content formats following the Hormozi content multiplication method.
 
@@ -37,7 +29,7 @@ export function buildSystemPrompt(): string {
 - Factual, direct, technical but accessible.
 - Never use hype words like "amazing", "incredible", "game-changer".
 - Never moralize or give unsolicited praise. State what's measurable.
-- CTA is always to masteringready.com — never pushy, always natural.
+- CTA is always to masteringready.com; never pushy, always natural.
 - Primary language: ES LATAM Neutro (no regionalismos, no Spain Spanish).
 - For LinkedIn and international X: US English.
 - Never use em dashes (—) in copy.

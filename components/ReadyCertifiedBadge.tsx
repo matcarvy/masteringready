@@ -2,6 +2,9 @@
 
 import { useRef, useState, useCallback } from 'react'
 import html2canvas from 'html2canvas'
+import { getBarColor } from '@/lib/scoreCard'
+import { stripExtension } from '@/lib/filename'
+import { nbsp } from '@/lib/nbsp'
 
 // --- ReadyCertifiedBadge ---
 
@@ -44,24 +47,6 @@ interface ReadyCertifiedBadgeProps {
 
 // --- Helpers ---
 
-function stripExtension(filename: string): string {
-  return filename.replace(/\.(wav|mp3|aiff|aif|flac|aac|m4a|ogg)$/i, '')
-}
-
-function nbsp(s: string): string {
-  return s.replace(/ /g, '\u00A0')
-}
-
-function getBarColor(status: string): string {
-  switch (status) {
-    case 'excellent': return '#10b981'
-    case 'good': return '#3b82f6'
-    case 'warning': return '#f59e0b'
-    case 'critical': return '#ef4444'
-    default: return '#6b7280'
-  }
-}
-
 function getStatusLabel(status: string, lang: 'es' | 'en'): string {
   const labels: Record<string, { es: string; en: string }> = {
     excellent: { es: 'Excelente', en: 'Excellent' },
@@ -72,7 +57,7 @@ function getStatusLabel(status: string, lang: 'es' | 'en'): string {
   return labels[status]?.[lang] || status
 }
 
-// Metric display labels (bilingual) — same order as ScoreCard
+// Metric display labels (bilingual); same order as ScoreCard
 const metricLabels: Record<string, { es: string; en: string }> = {
   headroom: { es: 'Headroom', en: 'Headroom' },
   true_peak: { es: 'True Peak', en: 'True Peak' },
@@ -102,7 +87,7 @@ export default function ReadyCertifiedBadge({ analysis, lang }: ReadyCertifiedBa
   const [copied, setCopied] = useState(false)
 
   const isCertified = analysis.score >= 85
-  const trackName = stripExtension(analysis.filename)
+  const trackName = stripExtension(analysis.filename, true)
   const dateStr = new Date(analysis.created_at).toLocaleDateString(
     lang === 'es' ? 'es-ES' : 'en-US',
     { year: 'numeric', month: 'short', day: 'numeric' }
@@ -216,7 +201,7 @@ export default function ReadyCertifiedBadge({ analysis, lang }: ReadyCertifiedBa
             setCopied(true)
             setTimeout(() => setCopied(false), 2000)
           } catch {
-            // Clipboard API may not be available — fallback to download
+            // Clipboard API may not be available; fallback to download
             handleDownload('feed')
           }
         }
@@ -730,7 +715,7 @@ export default function ReadyCertifiedBadge({ analysis, lang }: ReadyCertifiedBa
           >
             {generating === 'feed' ? (
               <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ animation: 'spin 1s linear infinite' }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="mr-spin">
                   <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
                 </svg>
                 {lang === 'es' ? 'Generando...' : 'Generating...'}
@@ -782,7 +767,7 @@ export default function ReadyCertifiedBadge({ analysis, lang }: ReadyCertifiedBa
           >
             {generating === 'icon' ? (
               <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ animation: 'spin 1s linear infinite' }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="mr-spin">
                   <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
                 </svg>
                 {lang === 'es' ? 'Generando...' : 'Generating...'}

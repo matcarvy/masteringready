@@ -1,5 +1,5 @@
 /**
- * Content Concept Bank — Personal Brand + MR Mix
+ * Content Concept Bank; Personal Brand + MR Mix
  * Auto-rotates concepts for content generation.
  * Ratio target: 60% educational/testimonial, 25% personal/BTS, 10% opinion, 5% CTA
  */
@@ -314,14 +314,14 @@ const CTA_CONCEPTS: ContentConcept[] = [
 
 // --- All Concepts ---
 
-export const ALL_CONCEPTS: ContentConcept[] = [
+const ALL_CONCEPTS: ContentConcept[] = [
   ...EDUCATIONAL_CONCEPTS,
   ...PERSONAL_CONCEPTS,
   ...OPINION_CONCEPTS,
   ...CTA_CONCEPTS,
 ]
 
-/** Alias for ALL_CONCEPTS — used by admin content page. */
+/** Concept bank consumed by the admin content page. */
 export const CONCEPT_BANK = ALL_CONCEPTS
 
 // --- Helpers ---

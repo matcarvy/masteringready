@@ -2,10 +2,11 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { Download, Check, Upload, Zap, Shield, TrendingUp, Play, Music, Crown, X, AlertTriangle, Globe, Headphones, Menu, GraduationCap, Stethoscope, Wrench, ChevronDown } from 'lucide-react'
+import { Download, Check, Upload, Zap, Shield, TrendingUp, Play, Music, Crown, X, AlertTriangle, Globe, Headphones, Menu, GraduationCap, Stethoscope, Wrench } from 'lucide-react'
 import { UserMenu, useAuth, AuthModal } from '@/components/auth'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import ScoreCard from '@/components/ScoreCard'
+import Spinner from '@/components/Spinner'
 import ReadyCertifiedBadge from '@/components/ReadyCertifiedBadge'
 import { analyzeFile, checkIpLimit, IpCheckResult } from '@/lib/api'
 import { startAnalysisPolling, getAnalysisStatus } from '@/lib/api'
@@ -22,7 +23,7 @@ import { useToast } from '@/components/ui/Toast'
 import { getScoreColor, getScoreBg, scoreToVerdictEnum } from '@/lib/scoreColor'
 import { cleanReportText } from '@/lib/cleanReportText'
 
-// Module-level quota cache — survives React state resets / component remounts
+// Module-level quota cache; survives React state resets / component remounts
 // (GoTrueClient conflicts cause auth state flicker → state loss)
 let _quotaCache: AnalysisStatus | null = null
 
@@ -37,7 +38,7 @@ const SERVICES_CONFIG = {
   mixReviewMaster: {
     standardPrice: 349,
     launchPrice: 249,
-    url: '', // Stripe checkout or Carrd — empty = ContactModal
+    url: '', // Stripe checkout or Carrd; empty = ContactModal
   },
   fullMixMaster: {
     standardPrice: 997,
@@ -46,11 +47,11 @@ const SERVICES_CONFIG = {
   },
   mastering: {
     price: 80,
-    url: '', // Contextual CTA for high-scoring mixes — empty = ContactModal
+    url: '', // Contextual CTA for high-scoring mixes; empty = ContactModal
   },
   workshop: {
-    url: '',   // External Carrd — empty hides banner
-    date: '',  // e.g., 'Marzo 15' — empty hides banner
+    url: '',   // External Carrd; empty hides banner
+    date: '',  // e.g., 'Marzo 15'; empty hides banner
     price: 97,
   },
   audit: {
@@ -265,7 +266,7 @@ function Home() {
   // Mobile detection
   const [isMobile, setIsMobile] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  // fileInfoExpanded removed — file info always visible on main analyzer (collapsible only on dashboard)
+  // fileInfoExpanded removed; file info always visible on main analyzer (collapsible only on dashboard)
   const mobileMenuRef = useRef<HTMLDivElement>(null)
   const [loadingMsgIndex, setLoadingMsgIndex] = useState(0)
   const [glossaryOpen, setGlossaryOpen] = useState(false)
@@ -284,7 +285,7 @@ function Home() {
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false)
   const [workshopBannerDismissed, setWorkshopBannerDismissed] = useState(true) // default true to prevent flash
-  const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null)
+  const [showStickyCta, setShowStickyCta] = useState(false)
   const [feedback, setFeedback] = useState({ rating: 0, liked: '', change: '', add: '' })
   // Feedback widget + CTA tracking state
   const [savedAnalysisId, setSavedAnalysisId] = useState<string | null>(null)
@@ -312,6 +313,24 @@ function Home() {
     if (SERVICES_CONFIG.workshop.url && SERVICES_CONFIG.workshop.date) {
       const dismissed = sessionStorage.getItem('mr_workshop_banner_dismissed')
       if (!dismissed) setWorkshopBannerDismissed(false)
+    }
+  }, [])
+
+  // Sticky CTA bar; appears past the hero fold, hides once the footer is in view
+  useEffect(() => {
+    const update = () => {
+      const footer = document.getElementById('mr-footer')
+      const footerInView = footer
+        ? footer.getBoundingClientRect().top <= window.innerHeight
+        : false
+      setShowStickyCta(window.scrollY > 620 && !footerInView)
+    }
+    window.addEventListener('scroll', update, { passive: true })
+    window.addEventListener('resize', update, { passive: true })
+    update()
+    return () => {
+      window.removeEventListener('scroll', update)
+      window.removeEventListener('resize', update)
     }
   }, [])
 
@@ -465,15 +484,15 @@ function Home() {
     return () => clearTimeout(timeoutId)
   }, [loading])
 
-  // Progress bar animation duration — computed when loading starts.
+  // Progress bar animation duration; computed when loading starts.
   // Pure CSS animation (no React state) prevents the stuck-at-1% issue.
   const [progressAnimDuration, setProgressAnimDuration] = useState(60)
-  // Key forces React to unmount/remount the animation div on each analysis — restarts CSS animation
+  // Key forces React to unmount/remount the animation div on each analysis; restarts CSS animation
   const [progressKey, setProgressKey] = useState(0)
-  // Stable start time for percentage counter — ref avoids useEffect restart on duration changes
+  // Stable start time for percentage counter; ref avoids useEffect restart on duration changes
   const progressStartRef = useRef<{ time: number; duration: number }>({ time: 0, duration: 60 })
 
-  // Percentage counter — runs alongside CSS animation, uses DOM manipulation (proven reliable)
+  // Percentage counter; runs alongside CSS animation, uses DOM manipulation (proven reliable)
   useEffect(() => {
     if (!loading) return
     const timer = setInterval(() => {
@@ -489,14 +508,14 @@ function Home() {
         const percent = Math.round(1 + Math.sqrt(fraction) * 92)
         el.textContent = `${percent}%`
       } else {
-        // Beyond animation duration — slowly increment to show still working
+        // Beyond animation duration; slowly increment to show still working
         const overTime = (elapsed - durationMs) / 1000
         const percent = Math.min(97, Math.round(93 + overTime * 0.1))
         el.textContent = `${percent}%`
       }
     }, 300)
     return () => clearInterval(timer)
-  }, [loading]) // Only depends on loading — ref handles duration changes
+  }, [loading]) // Only depends on loading; ref handles duration changes
 
   // Auto-detect language based on user's location
   // Priority: URL param > cookie > timezone/browser detection
@@ -549,7 +568,7 @@ function Home() {
   }, [result])
 
   // Quota guard: clear results immediately when user logs in
-  // "Guilty until proven innocent" — results from anonymous analysis are cleared
+  // "Guilty until proven innocent"; results from anonymous analysis are cleared
   // on login, then quota is checked directly to determine follow-up:
   //   has quota → AuthProvider signal → redirect to dashboard
   //   no quota → FreeLimitModal immediately
@@ -570,11 +589,11 @@ function Home() {
         setResult(null)
         setIsUnlocking(false)
 
-        // Admin bypass — skip RPC entirely (avoids abort errors from auth flicker)
+        // Admin bypass; skip RPC entirely (avoids abort errors from auth flicker)
         if (isAdmin) {
           setUserAnalysisStatus(ADMIN_STATUS); _quotaCache = ADMIN_STATUS
         } else {
-          // Check quota directly — don't rely solely on AuthProvider signal
+          // Check quota directly; don't rely solely on AuthProvider signal
           const qTokens = session ? { access_token: session.access_token, refresh_token: session.refresh_token } : undefined
           checkCanAnalyze(1, qTokens).then((status) => {
             setUserAnalysisStatus(status); _quotaCache = status
@@ -586,7 +605,7 @@ function Home() {
           })
         }
       } else {
-        // No pending analysis — check if user has existing analyses to nudge them
+        // No pending analysis; check if user has existing analyses to nudge them
         // Show notification only if user has unseen analyses from this session
         const unseen = parseInt(sessionStorage.getItem('mr_new_analyses') || '0', 10)
         if (unseen > 0) {
@@ -626,18 +645,18 @@ function Home() {
     }
   }, [pendingAnalysisQuotaExceeded, clearPendingAnalysisQuotaExceeded])
 
-  // Proactive quota cache — pre-fetch quota status so handleAnalyze can use cached check
+  // Proactive quota cache; pre-fetch quota status so handleAnalyze can use cached check
   // Modal is NOT shown here; it only appears when user clicks Analyze (conversion-friendly UX)
   useEffect(() => {
     if (authLoading || !isLoggedIn || result || loading) return
-    // Admin bypass — skip RPC entirely
+    // Admin bypass; skip RPC entirely
     if (isAdmin) {
       setUserAnalysisStatus(ADMIN_STATUS); _quotaCache = ADMIN_STATUS
       return
     }
     const preTokens = session ? { access_token: session.access_token, refresh_token: session.refresh_token } : undefined
     checkCanAnalyze(1, preTokens).then((status) => {
-      // NO_PLAN means profile may not exist yet (new OAuth user) — retry after 2s
+      // NO_PLAN means profile may not exist yet (new OAuth user); retry after 2s
       if (status.reason === 'NO_PLAN') {
         setTimeout(() => {
           checkCanAnalyze(1, preTokens).then((retryStatus) => {
@@ -703,27 +722,27 @@ function Home() {
 
 const handleAnalyze = async () => {
   if (!file) return
-  // Wait for auth state to be determined — prevents treating a logged-in user
+  // Wait for auth state to be determined; prevents treating a logged-in user
   // as anonymous when navigating back (auth re-initializing)
   if (authLoading) return
   // Mutex: prevent concurrent executions (ref is synchronous, not batched by React)
   if (isAnalyzingRef.current) return
   isAnalyzingRef.current = true
 
-  // Snapshot auth state at start — used to skip redundant post-analysis re-check
+  // Snapshot auth state at start; used to skip redundant post-analysis re-check
   const wasLoggedInAtStart = isLoggedIn
 
   // Quick check: if cached status already says quota is exhausted, block immediately
   // (prevents re-click after closing FreeLimitModal with file still loaded)
-  // Skip if reason is NO_PLAN (new user profile may not exist yet — let RPC re-check)
+  // Skip if reason is NO_PLAN (new user profile may not exist yet; let RPC re-check)
   if (isLoggedIn && !isAdmin && userAnalysisStatus && !userAnalysisStatus.can_analyze && userAnalysisStatus.reason !== 'NO_PLAN') {
-    isAnalyzingRef.current = false // Release mutex — this return is before try/finally
+    isAnalyzingRef.current = false // Release mutex; this return is before try/finally
     setShowFreeLimitModal(true)
     return
   }
 
   // Set CSS animation duration based on file size (before loading starts so first render uses it)
-  // Set ONCE — never change mid-handler (causes CSS animation glitch + counter desync)
+  // Set ONCE; never change mid-handler (causes CSS animation glitch + counter desync)
   const estSeconds = file.size > 50 * 1024 * 1024 ? 90 : file.size > 10 * 1024 * 1024 ? 60 : 35
   setProgressAnimDuration(estSeconds)
   setProgressKey(k => k + 1) // Force CSS animation restart on repeat analyses
@@ -783,7 +802,7 @@ const handleAnalyze = async () => {
         setUserAnalysisStatus(analysisStatus); _quotaCache = analysisStatus
 
         // Defensive: if user is logged in but checkCanAnalyze returns ANONYMOUS,
-        // the Supabase session may have expired — deny analysis rather than bypass quota
+        // the Supabase session may have expired; deny analysis rather than bypass quota
         if (analysisStatus.reason === 'ANONYMOUS') {
           setLoading(false)
           setError(lang === 'es'
@@ -800,12 +819,12 @@ const handleAnalyze = async () => {
       } catch {
         setLoading(false)
         if (isAdmin) {
-          // Admin should never see payment modal — show retryable error instead
+          // Admin should never see payment modal; show retryable error instead
           setError(lang === 'es'
             ? 'No se pudo verificar tu sesión. Recarga la página e intenta de nuevo.'
             : 'Could not verify your session. Please reload the page and try again.')
         } else {
-          // RPC failed — show upgrade modal as safe fallback (user likely hit limit)
+          // RPC failed; show upgrade modal as safe fallback (user likely hit limit)
           setShowFreeLimitModal(true)
         }
         return
@@ -818,7 +837,7 @@ const handleAnalyze = async () => {
 
     progressRef.current = 3
 
-    // Header parse ONLY for files needing compression (>50MB) — captures original metadata
+    // Header parse ONLY for files needing compression (>50MB); captures original metadata
     // before compression destroys it. For smaller files, backend reads metadata directly.
     // This eliminates the only await between setLoading(true) and startAnalysisPolling.
     const maxSize = 50 * 1024 * 1024
@@ -846,7 +865,7 @@ const handleAnalyze = async () => {
           }
         }
       } catch {
-        // Header parsing failed or timed out — backend will read from file directly
+        // Header parsing failed or timed out; backend will read from file directly
       }
     }
 
@@ -862,7 +881,7 @@ const handleAnalyze = async () => {
       }, 100)
 
       try {
-        // Race compression against a 30s timeout — if the browser's decodeAudioData()
+        // Race compression against a 30s timeout; if the browser's decodeAudioData()
         // hangs on unusual WAV formats (BWF, WAVE_FORMAT_EXTENSIBLE, etc.), skip compression
         // and upload the original file (well under the 200MB backend limit).
         const compressionTimeout = new Promise<never>((_, reject) =>
@@ -887,7 +906,7 @@ const handleAnalyze = async () => {
         setCompressing(false)
         setCompressionProgress(0)
 
-        // Reset progress animation AFTER compression — the CSS animation and percentage
+        // Reset progress animation AFTER compression; the CSS animation and percentage
         // counter were running during compression, making them desync with actual analysis.
         // Recalculate estimated time based on compressed file size + duration.
         const postCompressEst = fileDuration && fileDuration > 120
@@ -903,7 +922,7 @@ const handleAnalyze = async () => {
 
         if (err instanceof Error && err.message === 'COMPRESSION_TIMEOUT') {
           // Compression timed out (browser couldn't decode this WAV format).
-          // Skip compression and upload the original file — it's under 200MB backend limit.
+          // Skip compression and upload the original file; it's under 200MB backend limit.
           fileToAnalyze = file
         } else {
           throw new Error(ERROR_MESSAGES.corrupt_file[lang])
@@ -929,7 +948,7 @@ const handleAnalyze = async () => {
 
     progressRef.current = 10
 
-    // POLL FOR RESULT — adaptive interval: fast at first, slows down
+    // POLL FOR RESULT; adaptive interval: fast at first, slows down
     const pollStartTime = Date.now()
     let pollCount = 0
 
@@ -966,7 +985,7 @@ const handleAnalyze = async () => {
 
     progressRef.current = 100
 
-    // Save analysis — quota must be verified before showing results.
+    // Save analysis; quota must be verified before showing results.
     // DB save runs in background to prevent UI from hanging on slow Supabase calls.
     if (data) {
       if (isLoggedIn && user) {
@@ -979,7 +998,7 @@ const handleAnalyze = async () => {
             if (!quotaCheck.can_analyze || quotaCheck.reason === 'ANONYMOUS') {
               setUserAnalysisStatus(quotaCheck); _quotaCache = quotaCheck
               setShowFreeLimitModal(true)
-              // Do NOT show results — analysis is lost
+              // Do NOT show results; analysis is lost
               progressRef.current = 0
               setProgress(0)
               setLoading(false)
@@ -993,7 +1012,7 @@ const handleAnalyze = async () => {
             return
           }
         }
-        // Quota verified — show results immediately
+        // Quota verified; show results immediately
         setResult(data)
         // Optimistically update quota cache (no network call)
         // Use module-level _quotaCache as fallback if React state was lost
@@ -1113,7 +1132,7 @@ const handleAnalyze = async () => {
 }
 
   const handleReset = () => {
-    // Check quota before allowing new upload — don't let user waste time uploading
+    // Check quota before allowing new upload; don't let user waste time uploading
     // Admin always passes (unlimited analyses)
     const quotaForReset = userAnalysisStatus || _quotaCache
     if (isLoggedIn && !isAdmin && quotaForReset && !quotaForReset.can_analyze && quotaForReset.reason !== 'NO_PLAN') {
@@ -1407,7 +1426,7 @@ ${new Date().toLocaleDateString()}
     
     try {
       // Generate PDF on-demand from analysis data (same pattern as dashboard/history).
-      // Does NOT depend on Render's in-memory job storage — survives deploys + 10-min expiry.
+      // Does NOT depend on Render's in-memory job storage; survives deploys + 10-min expiry.
       try {
         const formData = new FormData()
         formData.append('lang', lang)
@@ -1539,26 +1558,16 @@ by Matías Carvajal
       }}>
         <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 1rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', minHeight: '64px', gap: '0.5rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0, flex: '1 1 auto', overflow: 'hidden' }}>
-              <div style={{
-                width: '32px',
-                height: '32px',
-                background: 'var(--mr-gradient)',
-                borderRadius: '0.5rem',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0
-              }}>
-                <Music size={18} color="white" />
-              </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', minWidth: 0, flex: '1 1 auto', overflow: 'hidden' }}>
+              <span className="mr-rd-wave" aria-hidden="true">
+                <i></i><i></i><i></i><i></i>
+              </span>
               {!isMobile && (
                 <span style={{
-                  fontWeight: '700',
-                  background: 'var(--mr-gradient)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  backgroundClip: 'text',
+                  fontWeight: '650',
+                  fontSize: '0.97rem',
+                  letterSpacing: '-0.02em',
+                  color: 'var(--mr-text-primary)',
                   whiteSpace: 'nowrap'
                 }}>
                   Mastering Ready
@@ -1629,13 +1638,13 @@ by Matías Carvajal
               {/* Theme Toggle */}
               <ThemeToggle lang={lang} />
 
-              {/* Notification Badge — persistent until clicked or dismissed */}
+              {/* Notification Badge; persistent until clicked or dismissed */}
               {user && <NotificationBadge lang={lang} isMobile={isMobile} />}
 
-              {/* User Menu — hidden on mobile when not logged in (hamburger handles it) */}
+              {/* User Menu; hidden on mobile when not logged in (hamburger handles it) */}
               <UserMenu lang={lang} isMobile={isMobile} />
 
-              {/* Analyze CTA — always visible */}
+              {/* Analyze CTA; always visible */}
               <button
                 onClick={scrollToAnalyzer}
                 style={{
@@ -1663,7 +1672,7 @@ by Matías Carvajal
                 {lang === 'es' ? 'Analizar' : 'Analyze'}
               </button>
 
-              {/* Hamburger menu — mobile only, when not logged in */}
+              {/* Hamburger menu; mobile only, when not logged in */}
               {isMobile && !user && (
                 <div ref={mobileMenuRef} style={{ position: 'relative' }}>
                   <button
@@ -1772,7 +1781,7 @@ by Matías Carvajal
         </div>
       </nav>
 
-      {/* Workshop Announcement Banner — only visible when config has URL + date */}
+      {/* Workshop Announcement Banner; only visible when config has URL + date */}
       {!workshopBannerDismissed && SERVICES_CONFIG.workshop.url && SERVICES_CONFIG.workshop.date && (
         <div style={{
           background: 'var(--mr-gradient)',
@@ -1821,115 +1830,61 @@ by Matías Carvajal
       )}
 
       {/* Hero Section */}
-      <section className="hero-section" style={{
-        paddingBottom: '4rem',
-        paddingLeft: '1.5rem',
-        paddingRight: '1.5rem',
-        background: 'var(--mr-gradient)'
+      <section className="mr-rd-hero" style={{
+        paddingTop: '6rem',
+        paddingBottom: '0',
+        paddingLeft: '1.375rem',
+        paddingRight: '1.375rem'
       }}>
-        <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)',
-            gap: '3rem',
-            alignItems: 'center'
-          }}>
+        <div style={{ maxWidth: '1120px', margin: '0 auto' }}>
+          <div className="mr-rd-hero-grid">
             {/* Left: Copy */}
-            <div style={{ color: 'white' }}>
-              <div className="methodology-badge" style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                background: 'rgba(255, 255, 255, 0.2)',
-                backdropFilter: 'blur(10px)',
-                borderRadius: '9999px',
-                padding: 'clamp(0.375rem, 1vw, 0.5rem) clamp(0.75rem, 2vw, 1rem)',
-                marginBottom: '1.25rem'
-              }}>
-                <span style={{
-                  width: '7px',
-                  height: '7px',
-                  borderRadius: '50%',
-                  background: '#10b981',
-                  boxShadow: '0 0 0 4px rgba(16, 185, 129, 0.25)',
-                  flexShrink: 0
-                }} />
-                <span style={{ fontSize: 'clamp(0.8rem, 1.8vw, 1rem)', fontWeight: '500' }}>
+            <div>
+              <span className="mr-rd-eyebrow">
+                <span className="mr-rd-wave-eb" aria-hidden="true"><i></i><i></i><i></i></span>
+                <span>
                   {lang === 'es'
-                    ? 'Ingeniero de mastering · +300 producciones profesionales en 15 años'
-                    : 'Mastering engineer · 300+ professional productions across 15 years'}
+                    ? 'Ingeniero de mastering · +300 producciones profesionales en 12 años'
+                    : 'Mastering engineer · 300+ professional productions across 12 years'}
                 </span>
-              </div>
-              
-              <h1 className="hero-main-title" style={{
-                fontSize: 'clamp(1.75rem, 5vw, 3.75rem)',
-                fontWeight: 'bold',
-                marginBottom: '1.5rem',
-                lineHeight: '1.2'
-              }}>
+              </span>
+
+              <h1 className="mr-rd-h1">
                 {lang === 'es'
-                  ? 'No adivines si tu mezcla está lista'
-                  : "Don't guess if your mix is ready"}
+                  ? <>No adivines si tu mezcla <span className="grad">está lista</span></>
+                  : <>Don&rsquo;t guess if your mix <span className="grad">is ready</span></>}
               </h1>
-              
-              <p className="hero-subtitle" style={{
-                fontSize: 'clamp(0.95rem, 2vw, 1.5rem)',
-                marginBottom: '1.5rem',
-                color: '#e9d5ff'
-              }}>
+
+              <p className="mr-rd-sub">
                 {lang === 'es'
-                  ? <>Te decimos qué debes revisar <span style={{ whiteSpace: 'nowrap' }}>antes de</span> <span style={{ whiteSpace: 'nowrap' }}>enviarla a master</span></>
-                  : <>We tell you what to check <span style={{ whiteSpace: 'nowrap' }}>before sending it</span> <span style={{ whiteSpace: 'nowrap' }}>to master</span></>}
+                  ? 'Te decimos qué debes revisar antes de enviarla a master.'
+                  : 'We tell you what to check before sending it to master.'}
               </p>
-              
-              <button
-                onClick={scrollToAnalyzer}
-                className="hero-cta-button"
-                style={{
-                  background: '#ffffff',
-                  color: '#667eea',
-                  padding: 'clamp(0.75rem, 1.5vw, 1rem) clamp(1.5rem, 3vw, 2rem)',
-                  borderRadius: '9999px',
-                  fontWeight: 'bold',
-                  fontSize: 'clamp(0.875rem, 2vw, 1.125rem)',
-                  border: 'none',
-                  cursor: 'pointer',
-                  marginBottom: '1.5rem',
-                  transition: 'all 0.3s',
-                  boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
-                  minHeight: '44px'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'scale(1.05)'
-                  e.currentTarget.style.boxShadow = '0 8px 30px rgba(0,0,0,0.2)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'scale(1)'
-                  e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.1)'
-                }}
-              >
-                {lang === 'es' ? 'Analiza tu mezcla gratis' : 'Analyze your mix free'}
-              </button>
-              
-              <div className="hero-checks" style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem', fontSize: '0.875rem' }}>
-                {[
-                  lang === 'es' ? 'Privacidad primero' : 'Privacy-first',
-                  lang === 'es' ? 'Inglés y Español' : 'English & Spanish'
-                ].map((text, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <Check size={20} />
-                    {text}
-                  </div>
-                ))}
+
+              <p className="mr-rd-audience">
+                {lang === 'es'
+                  ? 'Para productores e ingenieros que envían a mastering profesional.'
+                  : 'For producers and engineers who send to professional mastering.'}
+              </p>
+
+              <div className="mr-rd-cta-row">
+                <button onClick={scrollToAnalyzer} className="mr-rd-btn mr-rd-btn-primary">
+                  {lang === 'es' ? 'Analiza tu mezcla gratis' : 'Analyze your mix free'}
+                </button>
               </div>
 
-              <p style={{
-                marginTop: '1.25rem',
-                fontSize: 'clamp(0.85rem, 1.8vw, 1rem)',
-                color: 'rgba(255, 255, 255, 0.7)',
-                fontStyle: 'italic',
-                textAlign: 'center'
-              }}>
+              <div className="mr-rd-trust">
+                <span>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4"><path d="M20 6L9 17l-5-5" /></svg>
+                  {lang === 'es' ? 'Tu audio nunca se guarda' : 'Your audio is never stored'}
+                </span>
+                <span>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4"><path d="M20 6L9 17l-5-5" /></svg>
+                  {lang === 'es' ? '2 análisis gratis con PDF' : '2 free analyses with PDF'}
+                </span>
+              </div>
+
+              <p className="mr-rd-positioning">
                 {lang === 'es'
                   ? 'No reemplazamos al ingeniero de mastering. Te ayudamos a llegar preparado.'
                   : "We don't replace your mastering engineer. We help you arrive prepared."}
@@ -1937,217 +1892,91 @@ by Matías Carvajal
             </div>
 
             {/* Right: Demo Card */}
-            <div className="demo-card-container">
-              <div style={{
-                background: 'var(--mr-bg-card)',
-                border: 'var(--mr-card-border)',
-                borderRadius: '1rem',
-                boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
-                padding: '2rem',
-                transition: 'transform 0.3s'
-              }}>
-                <div style={{ marginBottom: '1.5rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                    <span style={{ color: 'var(--mr-text-secondary)', fontWeight: '500', fontSize: '1.125rem' }}>
-                      {lang === 'es' ? 'Puntuación MR' : 'MR Score'}
+            <div className="mr-rd-demo-card">
+              <div className="mr-rd-demo-head">
+                <span className="mr-rd-demo-lab">{lang === 'es' ? 'Puntuación MR' : 'MR Score'}</span>
+                <span className="mr-rd-demo-score">97<small>/100</small></span>
+              </div>
+              <div className="mr-rd-demo-bar"><i></i></div>
+              <div className="mr-rd-demo-metrics">
+                {[
+                  { label: 'Headroom', value: '-6.2 dBFS' },
+                  { label: 'True Peak', value: '-3.1 dBTP' },
+                  { label: lang === 'es' ? 'Imagen Estéreo' : 'Stereo Image', value: '0.75' }
+                ].map((item, i) => (
+                  <div key={i} className="mr-rd-dm">
+                    <span>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6"><path d="M20 6L9 17l-5-5" /></svg>
+                      {item.label}
                     </span>
-                    <span style={{
-                      fontSize: '2.25rem',
-                      fontWeight: 'bold',
-                      background: 'var(--mr-gradient)',
-                      WebkitBackgroundClip: 'text',
-                      WebkitTextFillColor: 'transparent',
-                      backgroundClip: 'text'
-                    }}>
-                      97/100
-                    </span>
+                    <b>{item.value}</b>
                   </div>
-                  <div style={{
-                    width: '100%',
-                    height: '0.75rem',
-                    background: 'var(--mr-bg-hover)',
-                    borderRadius: '9999px',
-                    overflow: 'hidden'
-                  }}>
-                    <div style={{
-                      width: '97%',
-                      height: '100%',
-                      background: 'var(--mr-gradient)',
-                      transition: 'width 1s ease-out'
-                    }} />
-                  </div>
-                </div>
-                
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                  {[
-                    { label: 'Headroom', value: '-6.2 dBFS' },
-                    { label: 'True Peak', value: '-3.1 dBTP' },
-                    { label: lang === 'es' ? 'Imagen Estéreo' : 'Stereo Image', value: '0.75' }
-                  ].map((item, i) => (
-                    <div key={i} style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      padding: '0.75rem',
-                      background: 'var(--mr-green-bg)',
-                      borderRadius: '0.5rem'
-                    }}>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--mr-green-text)' }}>
-                        <Check size={20} color="var(--mr-green)" />
-                        {item.label}
-                      </span>
-                      <span style={{ color: 'var(--mr-green-text)', fontWeight: '600' }}>{item.value}</span>
-                    </div>
-                  ))}
-                </div>
-                
-                <div style={{
-                  marginTop: '1.5rem',
-                  padding: '1rem',
-                  background: 'var(--mr-purple-bg)',
-                  borderRadius: '0.5rem'
-                }}>
-                  <p style={{ fontSize: '1rem', color: 'var(--mr-purple-text)', fontWeight: '600' }}>
-                    ✅ {lang === 'es' 
-                      ? 'Lista para mastering profesional'
-                      : 'Ready for professional mastering'}
-                  </p>
-                </div>
+                ))}
+              </div>
+              <div className="mr-rd-demo-verdict">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8"><path d="M20 6L9 17l-5-5" /></svg>
+                {lang === 'es' ? 'Lista para mastering profesional' : 'Ready for professional mastering'}
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Bridge Statement */}
-      <div className="bridge-section" style={{
-        textAlign: 'center',
-        background: 'var(--mr-bg-base)'
-      }}>
-        <p className="bridge-text" style={{
-          fontWeight: '400',
-          fontStyle: 'italic',
-          lineHeight: '1.6',
-          margin: '0 auto'
-        }}>
-          {lang === 'es'
-            ? 'Lo importante no es la métrica. Es saber qué hacer con ella.'
-            : 'The metric isn\u2019t what matters. Knowing what to do with it is.'}
-        </p>
-      </div>
-
-      {/* Sobre el creador / About the creator */}
-      <section style={{
-        background: 'var(--mr-bg-base)',
-        padding: '0 1.5rem 2.5rem'
-      }}>
-        <div className="mr-creator" style={{ margin: '0 auto' }}>
-          <h3>{lang === 'es' ? 'Sobre el creador' : 'About the creator'}</h3>
-          <p style={{ margin: 0 }}>
-            {lang === 'es' ? (
-              <>
-                Soy Matias Carvajal, ingeniero de mastering. En 15 a\u00f1os he masterizado
-                m\u00e1s de 300 producciones profesionales, y trabaj\u00e9 como ingeniero en{' '}
-                <a
-                  href="https://www.allmusic.com/album/cumbiana-mw0003404055#credits"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  Cumbiana
-                </a>{' '}
-                de Carlos Vives. Cientos de mezclas han llegado a mi mesa. Algunas
-                listas, muchas no. Mastering Ready es la lista de verificaci\u00f3n que
-                toda mezcla deber\u00eda pasar antes de llegar a m\u00ed.
-              </>
-            ) : (
-              <>
-                I\u2019m Matias Carvajal, a mastering engineer. Over 15 years I\u2019ve
-                mastered 300+ professional productions, and I worked as an engineer on
-                Carlos Vives\u2019{' '}
-                <a
-                  href="https://www.allmusic.com/album/cumbiana-mw0003404055#credits"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  Cumbiana
-                </a>
-                . Hundreds of mixes have crossed my desk. Some ready, many not.
-                Mastering Ready is the checklist every mix should pass before it
-                reaches me.
-              </>
-            )}
-          </p>
-        </div>
-      </section>
-
-      {/* Features Section */}
-      <section id="features" className="features-section" style={{
-        background: 'var(--mr-bg-base)',
-        scrollMarginTop: '80px',
-      }}>
-        <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
-          <div className="features-title-container" style={{
-            textAlign: 'center'
-          }}>
-            <h2 style={{ fontSize: '2.25rem', fontWeight: 'bold', marginTop: '0.25rem', marginBottom: '1rem' }}>
-              {lang === 'es' ? '¿Por qué Mastering Ready?' : 'Why Mastering Ready?'}
-            </h2>
-            <p style={{ fontSize: '1.25rem', color: 'var(--mr-text-secondary)' }}>
-              {lang === 'es'
-                ? 'Criterio técnico aplicado a tu mezcla'
-                : 'Technical judgment applied to your mix'}
+      {/* Bridge + Founder */}
+      <div style={{ background: 'var(--mr-bg-base)' }}>
+        <div style={{ maxWidth: '1120px', margin: '0 auto', padding: '0 1.375rem' }}>
+          <div className="mr-rd-bridge">
+            <p>
+              {lang === 'es' ? (
+                <>Lo importante no es la métrica.<br /><span className="accent">Es saber qué hacer con ella.</span></>
+              ) : (
+                <>The metric isn&rsquo;t what matters.<br /><span className="accent">Knowing what to do with it is.</span></>
+              )}
             </p>
           </div>
+        </div>
+      </div>
 
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(250px, 1fr))',
-            gap: '1.5rem'
-          }}>
+      {/* Features Section */}
+      <section id="features" style={{
+        background: 'var(--mr-bg-base)',
+        scrollMarginTop: '80px',
+        padding: '0 1.375rem'
+      }}>
+        <div className="mr-rd-lsec" style={{ maxWidth: '1120px', margin: '0 auto' }}>
+          <div className="mr-rd-lhead">
+            <h2>{lang === 'es' ? '¿Por qué Mastering Ready?' : 'Why Mastering Ready?'}</h2>
+            <p>{lang === 'es' ? 'Criterio técnico aplicado a tu mezcla.' : 'Technical judgment applied to your mix.'}</p>
+          </div>
+
+          <div className="mr-rd-feat-grid">
             {[
               {
-                icon: <Zap size={48} color="var(--mr-primary)" />,
-                title: lang === 'es' ? 'Análisis profesional en 60 segundos' : 'Professional analysis in 60 seconds',
+                icon: <Zap size={19} />,
+                title: lang === 'es' ? '60 segundos' : '60 seconds',
                 desc: lang === 'es'
-                  ? 'LUFS, True Peak, headroom, correlación estéreo, balance frecuencial y más.'
-                  : 'LUFS, True Peak, headroom, stereo correlation, frequency balance and more.'
+                  ? 'Analiza tu mezcla en menos de un minuto. Sin esperas, sin formularios.'
+                  : 'Analyze your mix in under a minute. No waiting, no forms.'
               },
               {
-                icon: <Shield size={48} color="var(--mr-primary)" />,
-                title: lang === 'es' ? 'Privacidad garantizada' : 'Privacy guaranteed',
+                icon: <Shield size={19} />,
+                title: lang === 'es' ? 'Privacidad total' : 'Total privacy',
                 desc: lang === 'es'
-                  ? 'Tu audio nunca se almacena. Análisis en memoria, eliminación inmediata.'
-                  : 'Your audio is never stored. In-memory analysis, immediate deletion.'
+                  ? 'Tu archivo de audio nunca se guarda. Solo procesamos datos técnicos anónimos.'
+                  : 'Your audio file is never stored. We only process anonymous technical data.'
               },
               {
-                icon: <TrendingUp size={48} color="var(--mr-primary)" />,
+                icon: <TrendingUp size={19} />,
                 title: lang === 'es' ? 'Recomendaciones específicas' : 'Specific recommendations',
                 desc: lang === 'es'
-                  ? 'Números acompañados de qué ajustar y por qué.'
-                  : 'Numbers paired with what to adjust and why.'
+                  ? 'No solo números. Te decimos qué revisar antes de enviar a mastering.'
+                  : 'Not just numbers. We tell you what to review before sending to mastering.'
               },
             ].map((feature, i) => (
-              <div key={i} style={{
-                background: 'var(--mr-bg-card)',
-                border: 'var(--mr-card-border)',
-                padding: '2rem',
-                borderRadius: '1rem',
-                boxShadow: 'var(--mr-shadow)',
-                transition: 'transform 0.3s, box-shadow 0.3s',
-                cursor: 'pointer'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-5px)'
-                e.currentTarget.style.boxShadow = '0 20px 40px rgba(0,0,0,0.12)'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)'
-                e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.08)'
-              }}>
-                <div style={{ marginBottom: '1rem' }}>{feature.icon}</div>
-                <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '0.75rem' }}>
-                  {feature.title}
-                </h3>
-                <p style={{ color: 'var(--mr-text-secondary)', lineHeight: '1.6' }}>{feature.desc}</p>
+              <div key={i} className="mr-rd-feat">
+                <div className="mr-rd-feat-ic">{feature.icon}</div>
+                <h3>{feature.title}</h3>
+                <p>{feature.desc}</p>
               </div>
             ))}
           </div>
@@ -2156,98 +1985,23 @@ by Matías Carvajal
 
       {/* Testimonials Section */}
       {TESTIMONIALS.length > 0 && (
-        <section style={{
-          background: 'var(--mr-bg-elevated)',
-          borderTop: '1px solid var(--mr-border)',
-          borderBottom: '1px solid var(--mr-border)',
-          padding: isMobile ? '2.5rem 1.25rem' : '3rem 1.5rem 3.5rem'
-        }}>
-          <div style={{ maxWidth: '900px', margin: '0 auto' }}>
-            <h2 style={{
-              fontSize: isMobile ? '1.5rem' : '2rem',
-              fontWeight: 'bold',
-              textAlign: 'center',
-              marginBottom: '0.5rem',
-              color: 'var(--mr-text-primary)'
-            }}>
-              {lang === 'es'
-                ? 'Lo que dicen quienes lo probaron'
-                : 'What people say after trying it'}
-            </h2>
-            <p style={{
-              textAlign: 'center',
-              color: 'var(--mr-text-tertiary)',
-              fontSize: '0.9375rem',
-              marginBottom: '2rem'
-            }}>
-              {lang === 'es'
-                ? 'Resultados reales, sin filtro.'
-                : 'Real results, unfiltered.'}
-            </p>
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: isMobile ? '1fr' : TESTIMONIALS.length <= 2 ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)',
-              gap: '1.25rem'
-            }}>
+        <section style={{ background: 'var(--mr-bg-base)', padding: '0 1.375rem' }}>
+          <div className="mr-rd-lsec" style={{ maxWidth: '1120px', margin: '0 auto' }}>
+            <div className="mr-rd-lhead">
+              <h2>{lang === 'es' ? 'Lo que dicen quienes lo probaron' : 'What people say after trying it'}</h2>
+              <p>{lang === 'es' ? 'Productores e ingenieros, sin filtro.' : 'Producers and engineers, unfiltered.'}</p>
+            </div>
+            <div className={`mr-rd-tg${TESTIMONIALS.length <= 2 ? ' mr-rd-cols-2' : ''}`}>
               {TESTIMONIALS.map((t, i) => (
-                <div key={i} style={{
-                  background: 'var(--mr-bg-card)',
-                  borderLeft: '3px solid var(--mr-primary)',
-                  borderRadius: '0.75rem',
-                  padding: '1rem 1.5rem 1.5rem',
-                  boxShadow: 'var(--mr-shadow)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0'
-                }}>
-                  <span style={{
-                    fontSize: '3rem',
-                    lineHeight: 1,
-                    color: 'var(--mr-primary)',
-                    opacity: 0.25,
-                    fontFamily: 'Georgia, serif',
-                    userSelect: 'none',
-                    marginBottom: '-0.25rem'
-                  }}>&ldquo;</span>
-                  <p style={{
-                    fontSize: '1.0625rem',
-                    lineHeight: '1.6',
-                    color: 'var(--mr-text-primary)',
-                    margin: 0,
-                    fontStyle: 'italic',
-                    flex: 1
-                  }}>
-                    {lang === 'es' ? t.quote_es : t.quote_en}
-                  </p>
-                  <div style={{
-                    borderTop: '1px solid var(--mr-border)',
-                    marginTop: '1rem',
-                    paddingTop: '0.75rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem'
-                  }}>
-                    <div>
-                      <p style={{
-                        fontSize: '0.8125rem',
-                        fontWeight: '700',
-                        color: 'var(--mr-text-primary)',
-                        margin: 0
-                      }}>
-                        {t.name}
-                      </p>
-                      {t.role && (
-                        <p style={{
-                          fontSize: '0.6875rem',
-                          color: 'var(--mr-text-tertiary)',
-                          margin: 0
-                        }}>
-                          {lang === 'es' ? t.role_es || t.role : t.role}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </div>
+                <figure key={i} className="mr-rd-tc">
+                  <blockquote>{lang === 'es' ? t.quote_es : t.quote_en}</blockquote>
+                  <figcaption>
+                    <span className="tn">{t.name}</span>
+                    {t.role && (
+                      <span className="tr">{lang === 'es' ? t.role_es || t.role : t.role}</span>
+                    )}
+                  </figcaption>
+                </figure>
               ))}
             </div>
           </div>
@@ -2255,446 +2009,214 @@ by Matías Carvajal
       )}
 
       {/* Pricing Section */}
-      <section id="pricing" className="pricing-section" style={{
+      <section id="pricing" style={{
         background: 'var(--mr-bg-base)',
-        borderTop: '1px solid var(--mr-border)',
         scrollMarginTop: '80px',
+        padding: '0 1.375rem'
       }}>
-        <div style={{ maxWidth: '1080px', margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
-            <h2 style={{ fontSize: '2.25rem', fontWeight: 'bold', marginBottom: '0.75rem', color: 'var(--mr-text-primary)' }}>
-              {lang === 'es' ? 'Elige tu plan' : 'Choose your plan'}
-            </h2>
-            <p style={{ fontSize: '1.125rem', color: 'var(--mr-text-secondary)' }}>
-              {lang === 'es'
-                ? 'Empieza gratis. Escala cuando lo necesites.'
-                : 'Start free. Scale when you need to.'}
-            </p>
+        <div className="mr-rd-lsec" style={{ maxWidth: '1120px', margin: '0 auto' }}>
+          <div className="mr-rd-lhead">
+            <h2>{lang === 'es' ? 'Elige tu plan' : 'Choose your plan'}</h2>
+            <p>{lang === 'es' ? 'Precios en tu moneda.' : 'Prices in your currency.'}</p>
           </div>
 
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
-            gap: '1.5rem',
-            alignItems: 'start'
-          }}>
+          <div className="mr-rd-price-grid mr-rd-cols-3">
             {/* Free Plan */}
-            <div style={{
-              background: 'var(--mr-bg-card)',
-              border: 'var(--mr-card-border)',
-              borderRadius: '1rem',
-              padding: '2rem',
-              boxShadow: 'var(--mr-shadow)',
-              order: 0
-            }}>
-              <div style={{ marginBottom: '1.5rem' }}>
-                <h3 style={{ fontSize: '1.25rem', fontWeight: '700', color: 'var(--mr-text-primary)', marginBottom: '0.25rem' }}>
-                  {lang === 'es' ? 'Gratis' : 'Free'}
-                </h3>
-                <p style={{ fontSize: '0.875rem', color: 'var(--mr-text-tertiary)' }}>
-                  {lang === 'es' ? 'Para probar tu mezcla' : 'To test your mix'}
-                </p>
-              </div>
-              <div style={{ fontSize: '2rem', fontWeight: '800', color: 'var(--mr-text-primary)', marginBottom: '1.5rem' }}>
-                $0
-              </div>
-              <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                {[
-                  lang === 'es' ? '2 análisis completos' : '2 full analyses',
-                  lang === 'es' ? 'Informe profesional en PDF' : 'Professional PDF report',
-                  lang === 'es' ? 'Historial de análisis' : 'Analysis history'
-                ].map((item, i) => (
-                  <li key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9375rem', color: 'var(--mr-text-secondary)' }}>
-                    <Check size={16} style={{ color: 'var(--mr-green)', flexShrink: 0 }} />
-                    {item}
-                  </li>
-                ))}
+            <div className="mr-rd-plan">
+              <h3>{lang === 'es' ? 'Gratis' : 'Free'}</h3>
+              <div className="amt">$0</div>
+              <ul>
+                <li>{lang === 'es' ? '2 análisis completos' : '2 full analyses'}</li>
+                <li>{lang === 'es' ? 'Informe Completo y PDF' : 'Full report and PDF'}</li>
+                <li>{lang === 'es' ? 'Guardar en Mis Análisis' : 'Save to My Analyses'}</li>
               </ul>
               <button
+                className="mr-rd-btn mr-rd-btn-ghost full"
                 onClick={() => isLoggedIn ? scrollToAnalyzer() : setShowAuthModal(true)}
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  background: 'transparent',
-                  color: 'var(--mr-primary)',
-                  border: '2px solid var(--mr-primary)',
-                  borderRadius: '0.5rem',
-                  fontWeight: '600',
-                  fontSize: '0.9375rem',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'var(--mr-primary)'
-                  e.currentTarget.style.color = '#ffffff'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'transparent'
-                  e.currentTarget.style.color = 'var(--mr-primary)'
-                }}
               >
                 {isLoggedIn
                   ? (lang === 'es' ? 'Analizar ahora' : 'Analyze now')
-                  : (lang === 'es' ? 'Crear cuenta gratis' : 'Create free account')}
-              </button>
-            </div>
-
-            {/* Pro Plan - Highlighted */}
-            <div style={{
-              background: 'var(--mr-bg-card)',
-              border: '2px solid var(--mr-primary)',
-              borderRadius: '1rem',
-              padding: '2rem',
-              boxShadow: '0 8px 30px rgba(102, 126, 234, 0.15)',
-              position: 'relative',
-              transform: isMobile ? 'none' : 'translateY(-8px)',
-              order: 1
-            }}>
-              {/* Popular badge */}
-              <div style={{
-                position: 'absolute',
-                top: '-12px',
-                left: '50%',
-                transform: 'translateX(-50%)',
-                background: 'var(--mr-gradient)',
-                color: 'white',
-                padding: '0.25rem 1rem',
-                borderRadius: '9999px',
-                fontSize: '0.75rem',
-                fontWeight: '600',
-                whiteSpace: 'nowrap'
-              }}>
-                {lang === 'es' ? 'Más popular' : 'Most popular'}
-              </div>
-              <div style={{ marginBottom: '1.5rem' }}>
-                <h3 style={{ fontSize: '1.25rem', fontWeight: '700', color: 'var(--mr-text-primary)', marginBottom: '0.25rem' }}>
-                  Pro
-                </h3>
-                <p style={{ fontSize: '0.875rem', color: 'var(--mr-text-tertiary)' }}>
-                  {lang === 'es' ? 'Para producir con confianza' : 'To produce with confidence'}
-                </p>
-              </div>
-              <div style={{ marginBottom: '1.5rem' }}>
-                <span style={{ fontSize: '2rem', fontWeight: '800', color: 'var(--mr-text-primary)' }}>
-                  {prices.pro_monthly}
-                </span>
-                <span style={{ fontSize: '0.9375rem', color: 'var(--mr-text-tertiary)', marginLeft: '0.25rem' }}>
-                  /{lang === 'es' ? 'mes' : 'mo'}
-                </span>
-              </div>
-              <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                {[
-                  lang === 'es' ? '30 análisis al mes' : '30 analyses per month',
-                  lang === 'es' ? 'Informe profesional en PDF' : 'Professional PDF report',
-                  lang === 'es' ? 'Historial completo' : 'Full history',
-                  lang === 'es' ? 'Selector de género' : 'Genre selector'
-                ].map((item, i) => (
-                  <li key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9375rem', color: 'var(--mr-text-secondary)' }}>
-                    <Check size={16} style={{ color: 'var(--mr-green)', flexShrink: 0 }} />
-                    {item}
-                  </li>
-                ))}
-              </ul>
-              <button
-                onClick={() => isLoggedIn ? (window.location.href = `/subscription?lang=${lang}`) : setShowAuthModal(true)}
-                style={{
-                  display: 'block',
-                  width: '100%',
-                  padding: '0.75rem',
-                  background: 'var(--mr-gradient)',
-                  color: 'white',
-                  textAlign: 'center',
-                  borderRadius: '0.5rem',
-                  fontWeight: '600',
-                  fontSize: '0.9375rem',
-                  boxSizing: 'border-box',
-                  transition: 'all 0.2s',
-                  border: 'none',
-                  cursor: 'pointer'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-2px)'
-                  e.currentTarget.style.boxShadow = '0 4px 15px rgba(102, 126, 234, 0.35)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)'
-                  e.currentTarget.style.boxShadow = 'none'
-                }}
-              >
-                {isLoggedIn
-                  ? (lang === 'es' ? 'Suscribirme' : 'Subscribe')
-                  : (lang === 'es' ? 'Crear cuenta gratis' : 'Create free account')}
+                  : (lang === 'es' ? 'Analiza gratis' : 'Analyze free')}
               </button>
             </div>
 
             {/* Individual Plan */}
-            <div style={{
-              background: 'var(--mr-bg-card)',
-              border: 'var(--mr-card-border)',
-              borderRadius: '1rem',
-              padding: '2rem',
-              boxShadow: 'var(--mr-shadow)',
-              order: 2
-            }}>
-              <div style={{ marginBottom: '1.5rem' }}>
-                <h3 style={{ fontSize: '1.25rem', fontWeight: '700', color: 'var(--mr-text-primary)', marginBottom: '0.25rem' }}>
-                  {lang === 'es' ? 'Individual' : 'Single'}
-                </h3>
-                <p style={{ fontSize: '0.875rem', color: 'var(--mr-text-tertiary)' }}>
-                  {lang === 'es' ? 'Para una canción específica' : 'For a specific song'}
-                </p>
-              </div>
-              <div style={{ fontSize: '2rem', fontWeight: '800', color: 'var(--mr-text-primary)', marginBottom: '1.5rem' }}>
-                {prices.single}
-              </div>
-              <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                {[
-                  lang === 'es' ? '1 análisis completo' : '1 full analysis',
-                  lang === 'es' ? 'Informe profesional en PDF' : 'Professional PDF report',
-                  lang === 'es' ? 'Sin suscripción' : 'No subscription'
-                ].map((item, i) => (
-                  <li key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9375rem', color: 'var(--mr-text-secondary)' }}>
-                    <Check size={16} style={{ color: 'var(--mr-green)', flexShrink: 0 }} />
-                    {item}
-                  </li>
-                ))}
+            <div className="mr-rd-plan">
+              <h3>{lang === 'es' ? 'Análisis individual' : 'Single analysis'}</h3>
+              <div className="amt">{prices.single}</div>
+              <ul>
+                <li>{lang === 'es' ? '1 análisis completo' : '1 full analysis'}</li>
+                <li>{lang === 'es' ? 'Informe Completo y PDF' : 'Full report and PDF'}</li>
+                <li>{lang === 'es' ? 'Descarga inmediata' : 'Instant download'}</li>
               </ul>
               <button
+                className="mr-rd-btn mr-rd-btn-ghost full"
                 onClick={() => isLoggedIn ? (window.location.href = `/subscription?lang=${lang}`) : setShowAuthModal(true)}
-                style={{
-                  display: 'block',
-                  width: '100%',
-                  padding: '0.75rem',
-                  background: 'transparent',
-                  color: 'var(--mr-primary)',
-                  textAlign: 'center',
-                  borderRadius: '0.5rem',
-                  fontWeight: '600',
-                  fontSize: '0.9375rem',
-                  border: '2px solid var(--mr-primary)',
-                  boxSizing: 'border-box',
-                  transition: 'all 0.2s',
-                  cursor: 'pointer'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'var(--mr-primary)'
-                  e.currentTarget.style.color = '#ffffff'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'transparent'
-                  e.currentTarget.style.color = 'var(--mr-primary)'
-                }}
               >
                 {isLoggedIn
                   ? (lang === 'es' ? 'Comprar análisis' : 'Buy analysis')
                   : (lang === 'es' ? 'Crear cuenta gratis' : 'Create free account')}
               </button>
             </div>
+
+            {/* Pro Plan - Featured */}
+            <div className="mr-rd-plan featured">
+              <span className="mr-rd-ptag">{lang === 'es' ? 'Más elegido' : 'Most chosen'}</span>
+              <h3>Mastering Ready Pro</h3>
+              <div className="amt">{prices.pro_monthly}<small>/{lang === 'es' ? 'mes' : 'mo'}</small></div>
+              <ul>
+                <li>{lang === 'es' ? '30 análisis al mes' : '30 analyses per month'}</li>
+                <li>{lang === 'es' ? 'Informe Completo y PDF' : 'Full report and PDF'}</li>
+                <li>{lang === 'es' ? 'Histórico completo' : 'Full history'}</li>
+                <li>{lang === 'es' ? 'Selector de género' : 'Genre selector'}</li>
+              </ul>
+              <button
+                className="mr-rd-btn mr-rd-btn-primary full"
+                onClick={() => isLoggedIn ? (window.location.href = `/subscription?lang=${lang}`) : setShowAuthModal(true)}
+              >
+                {isLoggedIn
+                  ? (lang === 'es' ? 'Comenzar' : 'Get started')
+                  : (lang === 'es' ? 'Crear cuenta gratis' : 'Create free account')}
+              </button>
+            </div>
           </div>
         </div>
       </section>
+      {/* Sobre el creador - placed before Services so founder authority backs the paid tiers */}
+      <div style={{ background: 'var(--mr-bg-base)', padding: '0 1.375rem' }}>
+        <div className="mr-rd-lsec" style={{ maxWidth: '1120px', margin: '0 auto' }}>
+          <div className="mr-rd-creator">
+            <h3>{lang === 'es' ? 'Sobre el creador' : 'About the creator'}</h3>
+            {lang === 'es' ? (
+              <>
+                <p>
+                  Soy Matias Carvajal, ingeniero de mastering. En 12 años he masterizado
+                  más de 300 producciones profesionales, y trabajé como uno de los
+                  ingenieros en el álbum{' '}
+                  <a href="https://www.allmusic.com/album/cumbiana-mw0003404055#credits" target="_blank" rel="noopener noreferrer">Cumbiana</a>{' '}
+                  de Carlos Vives.
+                </p>
+                <p>
+                  Cientos de mezclas han llegado a mi mesa. Algunas listas, muchas no.
+                  Mastering Ready es la lista de verificación que toda mezcla debería
+                  pasar antes de llegar a mí.
+                </p>
+              </>
+            ) : (
+              <>
+                <p>
+                  I&rsquo;m Matias Carvajal, a mastering engineer. Over 12 years I&rsquo;ve
+                  mastered 300+ professional productions, and I worked as one of the
+                  engineers on Carlos Vives&rsquo; album{' '}
+                  <a href="https://www.allmusic.com/album/cumbiana-mw0003404055#credits" target="_blank" rel="noopener noreferrer">Cumbiana</a>.
+                </p>
+                <p>
+                  Hundreds of mixes have crossed my desk. Some ready, many not.
+                  Mastering Ready is the checklist every mix should pass before it
+                  reaches me.
+                </p>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
 
-      {/* Services Section — Mix Review + Master / Full Mix + Master */}
-      <section id="services" className="services-section" style={{ background: 'var(--mr-bg-base)' }}>
-        <div style={{ maxWidth: '900px', margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-            <h2 style={{ fontSize: 'clamp(1.5rem, 4vw, 2rem)', fontWeight: '800', color: 'var(--mr-text-primary)', marginBottom: '0.5rem' }}>
-              {lang === 'es' ? 'Servicios profesionales' : 'Professional services'}
-            </h2>
-            <p style={{ color: 'var(--mr-text-secondary)', fontSize: '1rem', maxWidth: '600px', margin: '0 auto' }}>
+      {/* Services Section; Mix Review + Master / Full Mix + Master */}
+      <section id="services" style={{ background: 'var(--mr-bg-base)', padding: '0 1.375rem' }}>
+        <div className="mr-rd-lsec" style={{ maxWidth: '1120px', margin: '0 auto' }}>
+          <div className="mr-rd-lhead">
+            <h2>{lang === 'es' ? 'Servicios profesionales' : 'Professional services'}</h2>
+            <p>
               {lang === 'es'
-                ? '300+ masters, crédito Latin Grammy. Mezcla y mastering con criterio.'
-                : '300+ masters, Latin Grammy credit. Mixing and mastering with judgment.'}
+                ? '300+ masters, crédito en Cumbiana (Carlos Vives). Mezcla y mastering con criterio.'
+                : '300+ masters, credit on Cumbiana (Carlos Vives). Mixing and mastering with judgment.'}
             </p>
           </div>
 
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)',
-            gap: '1.5rem'
-          }}>
-            {/* Card 1: Mix Review + Master */}
-            <div style={{
-              background: 'var(--mr-bg-card)',
-              border: 'var(--mr-card-border)',
-              borderRadius: '1rem',
-              padding: '2rem',
-              boxShadow: 'var(--mr-shadow)',
-              transition: 'transform 0.2s, box-shadow 0.2s'
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = 'var(--mr-shadow-lg)' }}
-            onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'var(--mr-shadow)' }}
-            >
-              <div style={{ marginBottom: '1rem' }}>
-                <h3 style={{ fontSize: '1.25rem', fontWeight: '700', color: 'var(--mr-text-primary)', marginBottom: '0.25rem' }}>
-                  Mix Review + Master
+          <div className="mr-rd-price-grid mr-rd-cols-2">
+            {[
+              {
+                title: 'Mix Review + Master',
+                desc: lang === 'es'
+                  ? 'Revisamos tu mezcla, te damos retroalimentación y masterizamos cuando esté lista.'
+                  : "We review your mix, give you feedback, and master it when it's ready.",
+                cfg: SERVICES_CONFIG.mixReviewMaster,
+                ctaSource: 'service_mix_review',
+                features: lang === 'es'
+                  ? ['Revisión detallada de tu mezcla', '1 ronda de revisión incluida', 'Master profesional', '5-7 días hábiles']
+                  : ['Detailed mix feedback', '1 revision round included', 'Professional master', '5-7 business days']
+              },
+              {
+                title: 'Full Mix + Master',
+                desc: lang === 'es'
+                  ? 'Mezclamos y masterizamos tu proyecto completo.'
+                  : 'We mix and master your full project.',
+                cfg: SERVICES_CONFIG.fullMixMaster,
+                ctaSource: 'service_full_mix',
+                features: lang === 'es'
+                  ? ['Mezcla completa profesional', '2 rondas de revisión incluidas', 'Master profesional', '7-14 días hábiles']
+                  : ['Full professional mix', '2 revision rounds included', 'Professional master', '7-14 business days']
+              }
+            ].map((svc, i) => (
+              <div key={i} className="mr-rd-plan">
+                <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--mr-text-primary)', margin: 0 }}>
+                  {svc.title}
                 </h3>
-                <p style={{ fontSize: '0.875rem', color: 'var(--mr-text-tertiary)' }}>
-                  {lang === 'es' ? 'Revisamos tu mezcla, te damos retroalimentación y masterizamos cuando esté lista.' : 'We review your mix, give you feedback, and master it when it\'s ready.'}
+                <p style={{ fontSize: '0.875rem', color: 'var(--mr-text-tertiary)', margin: '6px 0 16px', lineHeight: 1.55 }}>
+                  {svc.desc}
                 </p>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', marginBottom: '0.75rem' }}>
-                <PriceUSD amount={SERVICES_CONFIG.mixReviewMaster.launchPrice} />
-                <span style={{ fontSize: '1rem', color: 'var(--mr-text-tertiary)', textDecoration: 'line-through' }}>
-                  ${SERVICES_CONFIG.mixReviewMaster.standardPrice} USD
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  <PriceUSD amount={svc.cfg.launchPrice} />
+                  <span style={{ fontSize: '0.95rem', color: 'var(--mr-text-tertiary)', textDecoration: 'line-through' }}>
+                    ${svc.cfg.standardPrice} USD
+                  </span>
+                </div>
+                <span style={{
+                  alignSelf: 'flex-start',
+                  background: 'var(--mr-green-bg)',
+                  color: 'var(--mr-green-text)',
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  padding: '0.25rem 0.75rem',
+                  borderRadius: '999px',
+                  margin: '12px 0 18px'
+                }}>
+                  {lang === 'es' ? 'Precio de lanzamiento' : 'Launch price'}
                 </span>
+                <ul>
+                  {svc.features.map((item, j) => (
+                    <li key={j}>{item}</li>
+                  ))}
+                </ul>
+                <button
+                  className="mr-rd-btn mr-rd-btn-ghost full"
+                  onClick={() => {
+                    if (svc.cfg.url) {
+                      window.open(svc.cfg.url, '_blank')
+                    } else {
+                      setCtaSource(svc.ctaSource)
+                      setShowContactModal(true)
+                    }
+                  }}
+                >
+                  {lang === 'es' ? 'Solicitar servicio' : 'Request service'}
+                </button>
               </div>
-              <span style={{
-                display: 'inline-block',
-                background: 'var(--mr-green-bg)',
-                color: 'var(--mr-green-text)',
-                fontSize: '0.75rem',
-                fontWeight: '600',
-                padding: '0.25rem 0.75rem',
-                borderRadius: '1rem',
-                marginBottom: '1.25rem'
-              }}>
-                {lang === 'es' ? 'Precio de lanzamiento' : 'Launch price'}
-              </span>
-              <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 1.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                {[
-                  lang === 'es' ? 'Revisión detallada de tu mezcla' : 'Detailed mix feedback',
-                  lang === 'es' ? '1 ronda de revisión incluida' : '1 revision round included',
-                  lang === 'es' ? 'Master profesional' : 'Professional master',
-                  lang === 'es' ? '5-7 días hábiles' : '5-7 business days'
-                ].map((item, i) => (
-                  <li key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', color: 'var(--mr-text-secondary)' }}>
-                    <Check size={16} style={{ color: 'var(--mr-green)', flexShrink: 0 }} />
-                    {item}
-                  </li>
-                ))}
-              </ul>
-              <button
-                onClick={() => {
-                  if (SERVICES_CONFIG.mixReviewMaster.url) {
-                    window.open(SERVICES_CONFIG.mixReviewMaster.url, '_blank')
-                  } else {
-                    setCtaSource('service_mix_review')
-                    setShowContactModal(true)
-                  }
-                }}
-                style={{
-                  display: 'block',
-                  width: '100%',
-                  padding: '0.75rem',
-                  background: 'transparent',
-                  color: 'var(--mr-primary)',
-                  textAlign: 'center',
-                  borderRadius: '0.5rem',
-                  fontWeight: '600',
-                  fontSize: '0.9375rem',
-                  border: '2px solid var(--mr-primary)',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s'
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--mr-primary)'; e.currentTarget.style.color = '#ffffff' }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--mr-primary)' }}
-              >
-                {lang === 'es' ? 'Solicitar servicio' : 'Request service'}
-              </button>
-            </div>
-
-            {/* Card 2: Full Mix + Master */}
-            <div style={{
-              background: 'var(--mr-bg-card)',
-              border: 'var(--mr-card-border)',
-              borderRadius: '1rem',
-              padding: '2rem',
-              boxShadow: 'var(--mr-shadow)',
-              transition: 'transform 0.2s, box-shadow 0.2s'
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = 'var(--mr-shadow-lg)' }}
-            onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'var(--mr-shadow)' }}
-            >
-              <div style={{ marginBottom: '1rem' }}>
-                <h3 style={{ fontSize: '1.25rem', fontWeight: '700', color: 'var(--mr-text-primary)', marginBottom: '0.25rem' }}>
-                  Full Mix + Master
-                </h3>
-                <p style={{ fontSize: '0.875rem', color: 'var(--mr-text-tertiary)' }}>
-                  {lang === 'es' ? 'Mezclamos y masterizamos tu proyecto completo.' : 'We mix and master your full project.'}
-                </p>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', marginBottom: '0.75rem' }}>
-                <PriceUSD amount={SERVICES_CONFIG.fullMixMaster.launchPrice} />
-                <span style={{ fontSize: '1rem', color: 'var(--mr-text-tertiary)', textDecoration: 'line-through' }}>
-                  ${SERVICES_CONFIG.fullMixMaster.standardPrice} USD
-                </span>
-              </div>
-              <span style={{
-                display: 'inline-block',
-                background: 'var(--mr-green-bg)',
-                color: 'var(--mr-green-text)',
-                fontSize: '0.75rem',
-                fontWeight: '600',
-                padding: '0.25rem 0.75rem',
-                borderRadius: '1rem',
-                marginBottom: '1.25rem'
-              }}>
-                {lang === 'es' ? 'Precio de lanzamiento' : 'Launch price'}
-              </span>
-              <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 1.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                {[
-                  lang === 'es' ? 'Mezcla completa profesional' : 'Full professional mix',
-                  lang === 'es' ? '2 rondas de revisión incluidas' : '2 revision rounds included',
-                  lang === 'es' ? 'Master profesional' : 'Professional master',
-                  lang === 'es' ? '7-14 días hábiles' : '7-14 business days'
-                ].map((item, i) => (
-                  <li key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', color: 'var(--mr-text-secondary)' }}>
-                    <Check size={16} style={{ color: 'var(--mr-green)', flexShrink: 0 }} />
-                    {item}
-                  </li>
-                ))}
-              </ul>
-              <button
-                onClick={() => {
-                  if (SERVICES_CONFIG.fullMixMaster.url) {
-                    window.open(SERVICES_CONFIG.fullMixMaster.url, '_blank')
-                  } else {
-                    setCtaSource('service_full_mix')
-                    setShowContactModal(true)
-                  }
-                }}
-                style={{
-                  display: 'block',
-                  width: '100%',
-                  padding: '0.75rem',
-                  background: 'transparent',
-                  color: 'var(--mr-primary)',
-                  textAlign: 'center',
-                  borderRadius: '0.5rem',
-                  fontWeight: '600',
-                  fontSize: '0.9375rem',
-                  border: '2px solid var(--mr-primary)',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s'
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--mr-primary)'; e.currentTarget.style.color = '#ffffff' }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--mr-primary)' }}
-              >
-                {lang === 'es' ? 'Solicitar servicio' : 'Request service'}
-              </button>
-            </div>
+            ))}
           </div>
         </div>
       </section>
-
       {/* FAQ Section */}
       <section id="faq" style={{
         background: 'var(--mr-bg-base)',
-        borderTop: '1px solid var(--mr-border)',
         scrollMarginTop: '80px',
+        padding: '0 1.375rem 76px'
       }}>
-        <div style={{ maxWidth: '800px', margin: '0 auto', padding: isMobile ? '3rem 1.25rem' : '4rem 2rem' }}>
-          <h2 style={{
-            fontSize: isMobile ? '1.5rem' : '2rem',
-            fontWeight: 'bold',
-            textAlign: 'center',
-            marginBottom: '2rem',
-            color: 'var(--mr-text-primary)'
-          }}>
-            {lang === 'es' ? 'Preguntas frecuentes' : 'Frequently asked questions'}
-          </h2>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+        <div className="mr-rd-lsec" style={{ maxWidth: '1120px', margin: '0 auto' }}>
+          <div className="mr-rd-lhead">
+            <h2>{lang === 'es' ? 'Preguntas frecuentes' : 'Frequently asked questions'}</h2>
+          </div>
+          <div className="mr-rd-faq">
             {[
               {
                 q_es: '¿Qué hace Mastering Ready?',
@@ -2744,64 +2266,15 @@ by Matías Carvajal
                 a_es: 'No. El mastering puede mejorar una buena mezcla, pero no puede corregir problemas fundamentales como balance pobre, headroom excesivo o problemas de fase. Por eso importa analizar tu mezcla antes. Mastering Ready identifica los problemas específicos que debes resolver para que el ingeniero de mastering pueda hacer su mejor trabajo.',
                 a_en: 'No. Mastering can enhance a good mix but cannot fix fundamental problems like poor balance, excessive headroom issues, or phase problems. That is why analyzing your mix before mastering matters. Mastering Ready identifies the issues you should address so the mastering engineer can do their best work.'
               }
-            ].map((faq, i) => {
-              const isOpen = openFaqIndex === i
-              return (
-                <div key={i} style={{
-                  background: 'var(--mr-bg-card)',
-                  borderRadius: '0.75rem',
-                  border: '1px solid var(--mr-border)',
-                  overflow: 'hidden'
-                }}>
-                  <button
-                    onClick={() => setOpenFaqIndex(isOpen ? null : i)}
-                    style={{
-                      width: '100%',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      padding: '1rem 1.25rem',
-                      background: 'none',
-                      border: 'none',
-                      cursor: 'pointer',
-                      textAlign: 'left',
-                      color: 'var(--mr-text-primary)',
-                      fontWeight: '600',
-                      fontSize: isMobile ? '0.9375rem' : '1rem',
-                      gap: '1rem'
-                    }}
-                    aria-expanded={isOpen}
-                  >
-                    <span>{lang === 'es' ? faq.q_es : faq.q_en}</span>
-                    <ChevronDown size={18} style={{
-                      flexShrink: 0,
-                      color: 'var(--mr-text-tertiary)',
-                      transform: isOpen ? 'rotate(180deg)' : 'rotate(0)',
-                      transition: 'transform 0.2s'
-                    }} />
-                  </button>
-                  <div style={{
-                    maxHeight: isOpen ? '300px' : '0',
-                    overflow: 'hidden',
-                    transition: 'max-height 0.3s ease'
-                  }}>
-                    <p style={{
-                      padding: '0 1.25rem 1rem',
-                      color: 'var(--mr-text-secondary)',
-                      fontSize: '0.9375rem',
-                      lineHeight: '1.6',
-                      margin: 0
-                    }}>
-                      {lang === 'es' ? faq.a_es : faq.a_en}
-                    </p>
-                  </div>
-                </div>
-              )
-            })}
+            ].map((faq, i) => (
+              <details key={i}>
+                <summary>{lang === 'es' ? faq.q_es : faq.q_en}</summary>
+                <p>{lang === 'es' ? faq.a_es : faq.a_en}</p>
+              </details>
+            ))}
           </div>
         </div>
       </section>
-
       {/* Analyzer Section - Same as before but with inline styles */}
       <section id="analyze" className="analyzer-section" style={{
         background: 'var(--mr-bg-card)'
@@ -2809,16 +2282,14 @@ by Matías Carvajal
         <div style={{ maxWidth: '896px', margin: '0 auto' }}>
           {!result ? (
             <>
-              <div className="analyzer-title-container" style={{ textAlign: 'center' }}>
-                <h2 style={{ fontSize: '2.25rem', fontWeight: 'bold', marginBottom: '1rem' }}>
-                  {lang === 'es' ? 'Analiza tu mezcla ahora' : 'Analyze your mix now'}
-                </h2>
-                <p style={{ fontSize: '1.25rem', color: 'var(--mr-text-secondary)' }}>
+              <div className="mr-rd-lhead">
+                <h2>{lang === 'es' ? 'Analiza tu mezcla ahora' : 'Analyze your mix now'}</h2>
+                <p>
                   {lang === 'es'
-                    ? 'Sube tu archivo y obtén un reporte profesional en 60 segundos'
-                    : 'Upload your file and get a professional report in 60 seconds'}
+                    ? 'Sube tu archivo y obtén un reporte profesional en 60 segundos.'
+                    : 'Upload your file and get a professional report in 60 seconds.'}
                 </p>
-                <p style={{ fontSize: '0.9rem', color: 'var(--mr-text-tertiary)', marginTop: '0.5rem' }}>
+                <p style={{ fontSize: '0.875rem', color: 'var(--mr-text-tertiary)', marginTop: '0.5rem' }}>
                   {lang === 'es'
                     ? 'Crea tu cuenta gratis y recibe 2 análisis completos con informe profesional en PDF.'
                     : 'Create your free account and get 2 full analyses with a professional PDF report.'}
@@ -3168,10 +2639,7 @@ by Matías Carvajal
                   }}>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', width: '100%' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                        <svg style={{ animation: 'spin 1s linear infinite', height: '1.5rem', width: '1.5rem', color: 'var(--mr-primary)' }} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                          <circle style={{ opacity: 0.25 }} cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path style={{ opacity: 0.75 }} fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
+                        <Spinner size={24} color="var(--mr-primary)" />
                         <span style={{ fontSize: '1.125rem', fontWeight: '600' }}>
                           {lang === 'es' ? 'Comprimiendo...' : 'Compressing...'}
                         </span>
@@ -3220,10 +2688,7 @@ by Matías Carvajal
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.25rem', width: '100%' }}>
                       {/* Spinner + rotating methodology message */}
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                        <svg style={{ animation: 'spin 1s linear infinite', height: '1.25rem', width: '1.25rem', color: 'var(--mr-primary)', flexShrink: 0 }} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                          <circle style={{ opacity: 0.25 }} cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path style={{ opacity: 0.75 }} fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
+                        <Spinner size={20} color="var(--mr-primary)" />
                         <p
                           key={loadingMsgIndex}
                           style={{
@@ -3239,7 +2704,7 @@ by Matías Carvajal
                         </p>
                       </div>
 
-                      {/* Progress bar — pure CSS animation (no React state) */}
+                      {/* Progress bar; pure CSS animation (no React state) */}
                       <div style={{ width: '100%' }}>
                         <div style={{
                           width: '100%',
@@ -3472,7 +2937,7 @@ by Matías Carvajal
                   </p>
                 </div>
 
-                {/* File Technical Info Strip — always visible on main analyzer */}
+                {/* File Technical Info Strip; always visible on main analyzer */}
                 {(result as any).file && (
                   <div style={{
                     background: 'var(--mr-bg-base)',
@@ -3573,7 +3038,7 @@ by Matías Carvajal
                   ))}
                 </div>
 
-                {/* Inline signup banner for anonymous users — visible near locked tabs */}
+                {/* Inline signup banner for anonymous users; visible near locked tabs */}
                 {!isLoggedIn && result && (
                   <div style={{
                     display: 'flex',
@@ -3764,7 +3229,7 @@ by Matías Carvajal
                           })()}
                         </div>
 
-                        {/* Genre badge — shows detected or user-selected genre */}
+                        {/* Genre badge; shows detected or user-selected genre */}
                         {(() => {
                           const genreLabels: { [key: string]: { es: string; en: string } } = {
                             'Pop/Balada': { es: 'Pop / Balada', en: 'Pop / Ballad' },
@@ -4110,7 +3575,7 @@ by Matías Carvajal
                     )}
                   </button>
 
-                  {/* Download Full Report — hidden for anonymous (single CTA funnel), shown for logged-in users */}
+                  {/* Download Full Report; hidden for anonymous (single CTA funnel), shown for logged-in users */}
                   {isLoggedIn && (
                   <button
                     onClick={() => {
@@ -4175,7 +3640,7 @@ by Matías Carvajal
                   )}
                 </div>
 
-                {/* Share Score Card — download branded PNG for social sharing */}
+                {/* Share Score Card; download branded PNG for social sharing */}
                 {result && (result as any).metrics_bars && (
                   <div style={{ marginBottom: '1.5rem' }}>
                     <p style={{
@@ -4207,7 +3672,7 @@ by Matías Carvajal
                   </div>
                 )}
 
-                {/* Ready Certified Badge — downloadable seal for scores ≥85 */}
+                {/* Ready Certified Badge; downloadable seal for scores ≥85 */}
                 {result && result.score >= 85 && (result as any).metrics_bars && (
                   <div style={{ marginBottom: '1.5rem' }}>
                     <ReadyCertifiedBadge
@@ -4241,7 +3706,7 @@ by Matías Carvajal
                 )}
               </div>
 
-              {/* CTA for Mastering Service — combined card for ≥85, backend-driven for lower scores */}
+              {/* CTA for Mastering Service; combined card for ≥85, backend-driven for lower scores */}
               {result.score >= 85 ? (
                 <div style={{
                   background: 'linear-gradient(to bottom right, #7478d6 0%, #5a5ec8 100%)',
@@ -4401,7 +3866,7 @@ by Matías Carvajal
                 </div>
               ) : null}
 
-              {/* Inline testimonials — validates the analysis, nudges toward next step */}
+              {/* Inline testimonials; validates the analysis, nudges toward next step */}
               {result && TESTIMONIALS.length > 0 && (
                 <div style={{
                   maxWidth: '680px',
@@ -4448,7 +3913,7 @@ by Matías Carvajal
                 </div>
               )}
 
-              {/* 3-path CTA — also in dashboard/page.tsx and history/page.tsx (search "3-path CTA") */}
+              {/* 3-path CTA; also in dashboard/page.tsx and history/page.tsx (search "3-path CTA") */}
               {result && (
                 <div style={{
                   maxWidth: '780px',
@@ -4685,7 +4150,7 @@ by Matías Carvajal
                 </div>
               )}
 
-              {/* Analysis Rating Widget — appears with fade-in after 4s */}
+              {/* Analysis Rating Widget; appears with fade-in after 4s */}
               {!ratingSubmitted && (
                 <div style={{
                   textAlign: 'center',
@@ -4976,221 +4441,166 @@ by Matías Carvajal
       {/* eBook Section */}
       <section className="ebook-section" style={{
         background: 'var(--mr-bg-base)',
-        padding: '4rem 1.5rem',
-        borderTop: '1px solid var(--mr-border)'
+        padding: '0 1.375rem 76px'
       }}>
-        <div style={{ maxWidth: '900px', margin: '0 auto' }}>
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'minmax(0, 1fr)',
-            gap: '2rem',
-            alignItems: 'center'
+        <div className="mr-rd-lsec" style={{ maxWidth: '760px', margin: '0 auto', textAlign: 'center' }}>
+          <span className="mr-rd-eyebrow" style={{
+            marginBottom: '20px',
+            background: 'color-mix(in srgb, var(--mr-primary) 14%, transparent)',
+            borderColor: 'color-mix(in srgb, var(--mr-primary) 30%, transparent)',
+            color: 'var(--mr-accent-bright)',
+            fontWeight: 600
           }}>
-            {/* Content */}
-            <div style={{ textAlign: 'center' }}>
-              {/* Badge */}
-              <div style={{
+            {lang === 'es' ? 'Profundiza en la metodología' : 'Go deeper into the methodology'}
+          </span>
+
+          <h2 style={{
+            fontSize: 'clamp(1.6rem, 3.4vw, 2.3rem)',
+            fontWeight: 670,
+            letterSpacing: '-0.03em',
+            color: 'var(--mr-text-primary)',
+            margin: '0 0 1.25rem',
+            lineHeight: 1.15
+          }}>
+            {lang === 'es'
+              ? '¿Quieres preparar tus mezclas con criterio profesional?'
+              : 'Want to prepare your mixes with professional judgment?'}
+          </h2>
+
+          <div style={{
+            fontSize: '1rem',
+            color: 'var(--mr-text-secondary)',
+            lineHeight: 1.7,
+            maxWidth: '620px',
+            margin: '0 auto 1.75rem'
+          }}>
+            {lang === 'es' ? (
+              <>
+                <p style={{ margin: '0 0 0.85rem' }}>
+                  El eBook Mastering Ready te ayuda a entender qué decisiones realmente importan cuando preparas una mezcla para mastering.
+                </p>
+                <p style={{ margin: '0 0 0.85rem' }}>
+                  Vas a aprender a escuchar mejor, a tomar decisiones conscientes y a evitar los errores comunes que afectan el resultado final. Ningún preset ni fórmula rápida reemplaza ese criterio.
+                </p>
+                <p style={{ margin: 0 }}>
+                  Es el mismo criterio aplicado en más de 300 producciones reales.
+                </p>
+              </>
+            ) : (
+              <>
+                <p style={{ margin: '0 0 0.85rem' }}>
+                  The Mastering Ready eBook helps you understand which decisions actually matter when preparing a mix for mastering.
+                </p>
+                <p style={{ margin: '0 0 0.85rem' }}>
+                  You&rsquo;ll learn to listen better, make conscious decisions, and avoid the common mistakes that affect the final result. No preset or quick formula replaces that judgment.
+                </p>
+                <p style={{ margin: 0 }}>
+                  This is the same professional judgment applied across more than 300 real-world productions.
+                </p>
+              </>
+            )}
+          </div>
+
+          {/* Chapter pills */}
+          <div style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            justifyContent: 'center',
+            gap: '10px',
+            marginBottom: '1.75rem'
+          }}>
+            {[
+              lang === 'es' ? 'Headroom y control dinámico' : 'Headroom and dynamic control',
+              lang === 'es' ? 'Balance de frecuencias' : 'Frequency balance',
+              lang === 'es' ? 'Errores comunes antes del mastering' : 'Common pre-mastering mistakes',
+              lang === 'es' ? 'Checklist profesional de entrega' : 'Professional delivery checklist'
+            ].map((feature, i) => (
+              <div key={i} style={{
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '0.5rem',
-                background: 'var(--mr-gradient)',
-                color: 'white',
-                padding: '0.5rem 1rem',
-                borderRadius: '9999px',
-                fontSize: '0.75rem',
-                fontWeight: '600',
-                marginBottom: '1.5rem',
-                textTransform: 'uppercase',
-                letterSpacing: '0.05em'
+                gap: '7px',
+                background: 'var(--mr-bg-card)',
+                border: '1px solid var(--mr-border)',
+                padding: '8px 14px',
+                borderRadius: '999px',
+                fontSize: '0.875rem',
+                color: 'var(--mr-text-secondary)'
               }}>
-                <span>📖</span>
-                <span>{lang === 'es' ? 'Profundiza en la metodología' : 'Go deeper into the methodology'}</span>
+                <Check size={14} style={{ color: 'var(--mr-green)', flexShrink: 0 }} />
+                <span>{feature}</span>
               </div>
+            ))}
+          </div>
 
-              <h2 style={{
-                fontSize: 'clamp(1.75rem, 4vw, 2.25rem)',
-                fontWeight: '800',
-                color: 'var(--mr-text-primary)',
-                marginBottom: '1.5rem',
-                lineHeight: '1.2'
+          <p style={{
+            fontSize: '0.9375rem',
+            color: 'var(--mr-text-secondary)',
+            fontStyle: 'italic',
+            maxWidth: '520px',
+            margin: '0 auto 1.5rem',
+            lineHeight: 1.6
+          }}>
+            {lang === 'es'
+              ? 'Si mezclas música y quieres que el mastering funcione como debería, este libro es para ti.'
+              : 'If you mix music and want mastering to work the way it should, this book is for you.'}
+          </p>
+
+          <a
+            href="https://payhip.com/b/TXrCn"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mr-rd-btn mr-rd-btn-primary"
+          >
+            <span>{lang === 'es' ? 'Ver eBook' : 'View eBook'}</span>
+            <span style={{ opacity: 0.65 }}>·</span>
+            <span>15 USD</span>
+          </a>
+
+          {/* Discount info */}
+          <div style={{
+            marginTop: '1rem',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '0.375rem'
+          }}>
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              color: 'var(--mr-green-text)',
+              fontSize: '0.875rem',
+              fontWeight: 600
+            }}>
+              <span style={{
+                background: 'var(--mr-green-bg)',
+                padding: '0.25rem 0.5rem',
+                borderRadius: '0.25rem',
+                fontSize: '0.75rem'
               }}>
-                {lang === 'es' 
-                  ? '¿Quieres preparar tus mezclas con criterio profesional?' 
-                  : 'Want to prepare your mixes with professional judgment?'}
-              </h2>
-
-              <div style={{
-                fontSize: '1.125rem',
-                color: 'var(--mr-text-secondary)',
-                marginBottom: '2rem',
-                lineHeight: '1.8',
-                maxWidth: '650px',
-                margin: '0 auto 2rem',
-                textAlign: 'center'
-              }}>
-                {lang === 'es' ? (
-                  <>
-                    <p style={{ marginBottom: '1rem' }}>
-                      El eBook Mastering Ready te ayuda a entender qué decisiones realmente importan cuando preparas una mezcla para mastering.
-                    </p>
-                    <p style={{ marginBottom: '1rem' }}>
-                      No se trata de presets ni de fórmulas rápidas. Se trata de escuchar mejor, tomar decisiones conscientes y evitar errores comunes que afectan el resultado final.
-                    </p>
-                    <p>
-                      Es el mismo criterio aplicado en más de 300 producciones reales.
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <p style={{ marginBottom: '1rem' }}>
-                      The Mastering Ready eBook helps you understand which decisions actually matter when preparing a mix for mastering.
-                    </p>
-                    <p style={{ marginBottom: '1rem' }}>
-                      It's not about presets or quick formulas. It's about listening better, making conscious decisions, and avoiding common mistakes that affect the final result.
-                    </p>
-                    <p>
-                      This is the same professional judgment applied across more than 300 real-world productions.
-                    </p>
-                  </>
-                )}
-              </div>
-
-              {/* Features list */}
-              <div style={{
-                display: 'flex',
-                flexWrap: 'wrap',
-                justifyContent: 'center',
-                gap: '1rem',
-                marginBottom: '2rem'
-              }}>
-                {[
-                  lang === 'es' ? 'Headroom y control dinámico' : 'Headroom and dynamic control',
-                  lang === 'es' ? 'Balance de frecuencias' : 'Frequency balance',
-                  lang === 'es' ? 'Errores comunes antes del mastering' : 'Common pre-mastering mistakes',
-                  lang === 'es' ? 'Checklist profesional de entrega' : 'Professional delivery checklist'
-                ].map((feature, i) => (
-                  <div key={i} style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.375rem',
-                    background: 'var(--mr-bg-card)',
-                    padding: '0.5rem 1rem',
-                    borderRadius: '9999px',
-                    fontSize: '0.875rem',
-                    color: 'var(--mr-text-secondary)',
-                    border: '1px solid var(--mr-border)',
-                    boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
-                  }}>
-                    <Check size={14} style={{ color: 'var(--mr-green)' }} />
-                    <span>{feature}</span>
-                  </div>
-                ))}
-              </div>
-
-              {/* Closing line - human touch */}
-              <p style={{
-                fontSize: '1rem',
-                color: 'var(--mr-text-secondary)',
-                fontStyle: 'italic',
-                marginBottom: '1.5rem',
-                maxWidth: '500px',
-                margin: '0 auto 1.5rem'
-              }}>
-                {lang === 'es'
-                  ? 'Si mezclas música y quieres que el mastering funcione como debería, este libro es para ti.'
-                  : 'If you mix music and want mastering to work the way it should, this book is for you.'}
-              </p>
-
-              {/* CTA Button */}
-              <a
-                href="https://payhip.com/b/TXrCn"
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  background: 'var(--mr-gradient)',
-                  color: 'white',
-                  padding: '1rem 2rem',
-                  borderRadius: '0.75rem',
-                  fontWeight: '700',
-                  fontSize: '1.125rem',
-                  textDecoration: 'none',
-                  transition: 'all 0.2s',
-                  boxShadow: '0 4px 15px rgba(102, 126, 234, 0.35)'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-3px)'
-                  e.currentTarget.style.boxShadow = '0 8px 25px rgba(102, 126, 234, 0.45)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)'
-                  e.currentTarget.style.boxShadow = '0 4px 15px rgba(102, 126, 234, 0.35)'
-                }}
-              >
-                <span>{lang === 'es' ? 'Ver eBook' : 'View eBook'}</span>
-                <span style={{ opacity: 0.7 }}>·</span>
-                <span>15 USD</span>
-              </a>
-
-              {/* Discount info - separated */}
-              <div style={{
-                marginTop: '1rem',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: '0.375rem'
-              }}>
-                <div style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  color: 'var(--mr-green-text)',
-                  fontSize: '0.875rem',
-                  fontWeight: '600'
-                }}>
-                  <span style={{
-                    background: 'var(--mr-green-bg)',
-                    padding: '0.25rem 0.5rem',
-                    borderRadius: '0.25rem',
-                    fontSize: '0.75rem'
-                  }}>
-                    -37%
-                  </span>
-                  <span>{lang === 'es' ? 'Precio de lanzamiento' : 'Launch price'}</span>
-                </div>
-                <p style={{
-                  fontSize: '0.8rem',
-                  color: 'var(--mr-text-secondary)',
-                  margin: 0
-                }}>
-                  {lang === 'es'
-                    ? '15 USD con código READY15'
-                    : '15 USD with code READY15'}
-                </p>
-                <p style={{
-                  fontSize: '0.75rem',
-                  color: 'var(--mr-text-tertiary)',
-                  margin: '0.5rem 0 0 0',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '0.375rem'
-                }}>
-                  <span>📘</span>
-                  {lang === 'es' 
-                    ? 'Disponible en español. Al comprar tendrás acceso a la versión en inglés cuando esté disponible.'
-                    : 'Currently in Spanish. Purchase now and get access to the English version when released.'}
-                </p>
-              </div>
+                -37%
+              </span>
+              <span>{lang === 'es' ? 'Precio de lanzamiento' : 'Launch price'}</span>
             </div>
+            <p style={{ fontSize: '0.8rem', color: 'var(--mr-text-secondary)', margin: 0 }}>
+              {lang === 'es' ? '15 USD con código READY15' : '15 USD with code READY15'}
+            </p>
+            <p style={{
+              fontSize: '0.75rem',
+              color: 'var(--mr-text-tertiary)',
+              margin: '0.5rem 0 0',
+              maxWidth: '420px',
+              lineHeight: 1.55
+            }}>
+              {lang === 'es'
+                ? 'Disponible en español. Al comprar tendrás acceso a la versión en inglés cuando esté disponible.'
+                : 'Currently in Spanish. Purchase now and get access to the English version when released.'}
+            </p>
           </div>
         </div>
       </section>
-
       {/* Footer */}
-      <footer className="footer-section" style={{
+      <footer id="mr-footer" className="footer-section" style={{
         background: 'linear-gradient(to bottom, #1e1b4b 0%, #312e81 100%)',
         color: 'white',
         textAlign: 'center',
@@ -5415,6 +4825,18 @@ by Matías Carvajal
           </div>
         </div>
       </footer>
+
+      {/* Sticky CTA bar */}
+      <div className={`mr-rd-stickycta${showStickyCta && !result ? ' show' : ''}`}>
+        <span>
+          {lang === 'es'
+            ? 'No adivines si tu mezcla está lista.'
+            : "Don't guess if your mix is ready."}
+        </span>
+        <button onClick={scrollToAnalyzer} className="mr-rd-btn mr-rd-btn-primary">
+          {lang === 'es' ? 'Analiza tu mezcla gratis' : 'Analyze your mix free'}
+        </button>
+      </div>
 
       {/* Contact Modal */}
       {showContactModal && (
@@ -5869,7 +5291,7 @@ by Matías Carvajal
         onClose={() => setShowAuthModal(false)}
         onSuccess={() => {
           setShowAuthModal(false)
-          // Don't trigger unlock animation here — wait for AuthProvider to signal
+          // Don't trigger unlock animation here; wait for AuthProvider to signal
           // either pendingAnalysisSaved (→ unlock) or pendingAnalysisQuotaExceeded (→ paywall)
         }}
         lang={lang}
@@ -6608,11 +6030,6 @@ by Matías Carvajal
       )}
 
       <style jsx global>{`
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-
         @keyframes fadeInMsg {
           0% { opacity: 0; transform: translateY(4px); }
           100% { opacity: 1; transform: translateY(0); }
@@ -6653,10 +6070,8 @@ by Matías Carvajal
           }
         }
 
-        /* ============================================
-           DESKTOP STYLES (default)
-           ============================================ */
-        
+        /* --- Desktop styles (default) --- */
+
         /* Hero Section */
         .hero-section {
           padding-top: 6rem;
@@ -6676,7 +6091,7 @@ by Matías Carvajal
           padding-bottom: 0;
         }
 
-        /* Bridge Statement — tighter spacing, feels like hero closure */
+        /* Bridge Statement; tighter spacing, feels like hero closure */
         .bridge-section {
           padding: 1.25rem 1.5rem 0rem 1.5rem;
         }
@@ -6705,7 +6120,7 @@ by Matías Carvajal
 
         /* Services Section */
         .services-section {
-          padding: 2.5rem 1.5rem 3.5rem 1.5rem;
+          padding: 76px 1.5rem 0 1.5rem;
         }
 
         /* Analyzer Section */
@@ -6753,9 +6168,7 @@ by Matías Carvajal
           padding-top: 0.875rem;
         }
 
-        /* ============================================
-           MOBILE STYLES (max-width: 767px)
-           ============================================ */
+        /* --- Mobile styles (max-width: 767px) --- */
         @media (max-width: 767px) {
           /* Hero Section */
           .hero-section {
@@ -6795,7 +6208,7 @@ by Matías Carvajal
              - Reaseguro: pegado al CTA
           */
           
-          /* Bridge Statement — tighter spacing, feels like hero closure */
+          /* Bridge Statement; tighter spacing, feels like hero closure */
           .bridge-section {
             padding: 0.875rem 1.5rem 0rem 1.5rem;
           }
@@ -6820,7 +6233,7 @@ by Matías Carvajal
 
           /* Services Section */
           .services-section {
-            padding: 2rem 1.25rem 2.5rem 1.25rem;
+            padding: 56px 1.25rem 0 1.25rem;
           }
 
           /* Analyzer Section */

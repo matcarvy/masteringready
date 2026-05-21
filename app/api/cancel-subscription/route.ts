@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Cancel at period end — user keeps access until billing cycle ends
+    // Cancel at period end; user keeps access until billing cycle ends
     const updated = await cancelSubscription(subscription.stripe_subscription_id)
 
     return NextResponse.json({

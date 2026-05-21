@@ -3,15 +3,12 @@
  *
  * Usage:
  * const { geo, loading, error, refresh } = useGeo()
- *
- * // Access pricing info
- * const proPrice = calculateLocalPrice(PRICING.PRO_MONTHLY, geo)
  */
 
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { detectCountry, getCurrentGeo, clearGeoCache, GeoData } from './geoip'
+import { detectCountry, clearGeoCache, GeoData, DEFAULT_GEO } from './geoip'
 
 interface UseGeoResult {
   geo: GeoData
@@ -21,7 +18,9 @@ interface UseGeoResult {
 }
 
 export function useGeo(): UseGeoResult {
-  const [geo, setGeo] = useState<GeoData>(getCurrentGeo())
+  // Always start from DEFAULT_GEO so server and client first render match.
+  // The effect below resolves the real country (and reads the localStorage cache).
+  const [geo, setGeo] = useState<GeoData>(DEFAULT_GEO)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
 

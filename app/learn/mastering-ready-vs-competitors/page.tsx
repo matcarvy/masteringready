@@ -326,7 +326,7 @@ export default function MasteringReadyVsCompetitorsPage() {
           {s.categoryP2}
         </p>
 
-        {/* Philosophy — Our Approach */}
+        {/* Philosophy; Our Approach */}
         <div className="learn-callout" style={{ borderLeftColor: 'var(--mr-primary)', marginBottom: '2.5rem' }}>
           <h2 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: '0.75rem', marginTop: 0, color: 'var(--mr-text-primary)' }}>
             {s.philosophyTitle}

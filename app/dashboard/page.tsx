@@ -46,6 +46,7 @@ import ProgressTimeline from '@/components/ProgressTimeline'
 import { getScoreColor, getVerdictColor, scoreToVerdictLabel } from '@/lib/scoreColor'
 import { formatDate } from '@/lib/formatDate'
 import { cleanReportText } from '@/lib/cleanReportText'
+import { getCtaForScore } from '@/lib/cta'
 
 // --- Translations ---
 
@@ -201,42 +202,6 @@ const translations = {
 }
 
 // --- CTA Helper ---
-
-function getCtaForScore(score: number, lang: 'es' | 'en'): { title: string; body: string; button: string; action: string } {
-  if (score >= 95) {
-    return lang === 'es'
-      ? { title: 'Tu mezcla está lista.', body: 'Está técnicamente preparada para el mastering. Si quieres, escríbenos y coordinamos.', button: 'Masterizar este track', action: 'mastering' }
-      : { title: 'Your mix is ready.', body: "It's technically prepared for mastering. If you'd like, write us and we'll coordinate.", button: 'Master this track', action: 'mastering' }
-  }
-  if (score >= 85) {
-    return lang === 'es'
-      ? { title: 'Tu mezcla está en muy buen estado.', body: 'Hay detalles menores que no comprometen el resultado. Si quieres avanzar, escríbenos.', button: 'Masterizar este track', action: 'mastering' }
-      : { title: 'Your mix is in great shape.', body: "There are minor details that won't compromise the result. If you'd like to move forward, write us.", button: 'Master this track', action: 'mastering' }
-  }
-  if (score >= 75) {
-    return lang === 'es'
-      ? { title: 'Tu mezcla está cerca.', body: 'Hay aspectos técnicos que conviene revisar antes del mastering. Si necesitas orientación, escríbenos.', button: 'Preparar mi mezcla', action: 'preparation' }
-      : { title: 'Your mix is close.', body: 'There are technical aspects worth reviewing before mastering. If you need guidance, write us.', button: 'Prepare my mix', action: 'preparation' }
-  }
-  if (score >= 60) {
-    return lang === 'es'
-      ? { title: 'Tu mezcla necesita ajustes antes del mastering.', body: 'Hay decisiones técnicas que pueden afectar el resultado. Si quieres que te ayudemos, escríbenos.', button: 'Revisar mi mezcla', action: 'preparation' }
-      : { title: 'Your mix needs adjustments before mastering.', body: "There are technical decisions that could affect the result. If you'd like help, write us.", button: 'Review my mix', action: 'preparation' }
-  }
-  if (score >= 40) {
-    return lang === 'es'
-      ? { title: 'Tu mezcla necesita trabajo en áreas clave.', body: 'Enviarlo en este estado limita el margen de maniobra del mastering. Si quieres, escríbenos.', button: 'Trabajar mi mezcla', action: 'review' }
-      : { title: 'Your mix needs work in key areas.', body: "In this state, mastering has limited room to work. If you'd like, write us.", button: 'Work on my mix', action: 'review' }
-  }
-  if (score >= 20) {
-    return lang === 'es'
-      ? { title: 'Tu mezcla tiene problemas técnicos importantes.', body: 'No recomiendo masterizar en este estado. Si quieres, escríbenos y trabajamos juntos.', button: 'Trabajar mi mezcla', action: 'review' }
-      : { title: 'Your mix has significant technical issues.', body: "I don't recommend mastering in this state. If you'd like, write us and we'll work through it together.", button: 'Work on my mix', action: 'review' }
-  }
-  return lang === 'es'
-    ? { title: 'Tu mezcla necesita una revisión profunda.', body: 'Hay decisiones fundamentales que resolver antes del mastering. Si quieres, escríbenos.', button: 'Revisar mi proyecto', action: 'review' }
-    : { title: 'Your mix needs a deep review.', body: "There are fundamental decisions to resolve before mastering. If you'd like, write us.", button: 'Review my project', action: 'review' }
-}
 
 // --- File Info Helpers ---
 
@@ -452,7 +417,7 @@ function DashboardContent() {
   const [showWelcomeBanner, setShowWelcomeBanner] = useState(false)
   const [welcomeBonus, setWelcomeBonus] = useState(0)
 
-  // React Query — single fetch for all dashboard data
+  // React Query; single fetch for all dashboard data
   const { data, isLoading } = useQuery({
     queryKey: ['dashboard', user?.id],
     queryFn: () => fetchDashboardData({
@@ -534,7 +499,7 @@ function DashboardContent() {
     return () => { document.body.style.overflow = '' }
   }, [selectedAnalysis, showUpgradeModal, showContactModal])
 
-  // Redirect if not logged in (to home, not login — home has login options in header)
+  // Redirect if not logged in (to home, not login; home has login options in header)
   useEffect(() => {
     if (!authLoading && !user) {
       window.location.href = `/?lang=${lang}`
@@ -625,7 +590,7 @@ function DashboardContent() {
     setShowWelcomeBanner(true)
   }, [loading, profile, subscription, searchParams])
 
-  // Loading state — isLoading only true on first load, not background refetches
+  // Loading state; isLoading only true on first load, not background refetches
   if (authLoading || isLoading) {
     return <DashboardSkeleton lang={lang} isMobile={isMobile} />
   }
@@ -1317,7 +1282,7 @@ function DashboardContent() {
               </div>
             </div>
 
-            {/* File Info — collapsible via max-height */}
+            {/* File Info; collapsible via max-height */}
             {(() => {
               const items: { label: string; value: string }[] = []
               if (selectedAnalysis.duration_seconds != null) items.push({ label: t.fileInfo.duration, value: formatDuration(selectedAnalysis.duration_seconds) })
@@ -1335,7 +1300,7 @@ function DashboardContent() {
                   borderRadius: '0.5rem',
                   border: '1px solid var(--mr-bg-elevated)'
                 }}>
-                  {/* Toggle header — always visible */}
+                  {/* Toggle header; always visible */}
                   <button
                     onClick={() => setFileInfoExpanded(!fileInfoExpanded)}
                     style={{
@@ -1366,7 +1331,7 @@ function DashboardContent() {
                       fontSize: '0.625rem'
                     }}>▼</span>
                   </button>
-                  {/* File info content — CSS collapse via max-height */}
+                  {/* File info content; CSS collapse via max-height */}
                   <div style={{
                     maxHeight: fileInfoExpanded ? '200px' : '0',
                     overflow: 'hidden',
@@ -1578,7 +1543,7 @@ function DashboardContent() {
                         })()}
                       </div>
 
-                      {/* Genre badge — shows detected or user-selected genre */}
+                      {/* Genre badge; shows detected or user-selected genre */}
                       {(() => {
                         const genreLabels: { [key: string]: { es: string; en: string } } = {
                           'Pop/Balada': { es: 'Pop / Balada', en: 'Pop / Ballad' },
@@ -1903,7 +1868,7 @@ function DashboardContent() {
                       try {
                         const formData = new FormData()
                         formData.append('lang', lang)
-                        // Send full analysis data from DB — PDF generates on-demand,
+                        // Send full analysis data from DB; PDF generates on-demand,
                         // no dependency on in-memory jobs (survives deploys + expiry)
                         formData.append('analysis_data', JSON.stringify({
                           score: selectedAnalysis.score,
@@ -1991,7 +1956,7 @@ function DashboardContent() {
                 )}
               </div>
 
-              {/* CTA — dynamic based on score (after downloads) */}
+              {/* CTA; dynamic based on score (after downloads) */}
               {(() => {
                 const cta = getCtaForScore(selectedAnalysis.score, lang)
                 const score = selectedAnalysis.score
@@ -2062,7 +2027,7 @@ function DashboardContent() {
                 )
               })()}
 
-              {/* 3-path CTA — also in page.tsx and history/page.tsx (search "3-path CTA") */}
+              {/* 3-path CTA; also in page.tsx and history/page.tsx (search "3-path CTA") */}
               <div style={{ marginTop: '1.5rem' }}>
                 <h3 style={{
                   fontSize: '1rem',

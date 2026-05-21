@@ -11,6 +11,7 @@ import Link from 'next/link'
 import { useAuth } from '@/components/auth/AuthProvider'
 import { supabase, createFreshQueryClient } from '@/lib/supabase'
 import { detectLanguage, setLanguageCookie } from '@/lib/language'
+import { formatDate as formatDateLib } from '@/lib/formatDate'
 import ThemeToggle from '@/components/ThemeToggle'
 import {
   Users, BarChart3, DollarSign, MessageSquare, Activity,
@@ -512,12 +513,7 @@ const translations = {
 // --- Helpers ---
 
 function formatDate(dateStr: string, lang: 'es' | 'en'): string {
-  const date = new Date(dateStr)
-  return date.toLocaleDateString(lang === 'es' ? 'es-CO' : 'en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric'
-  })
+  return formatDateLib(dateStr, lang, 'es-CO')
 }
 
 function formatCurrency(amount: number): string {
@@ -598,7 +594,7 @@ function AdminLoginForm({ lang }: { lang: 'es' | 'en' }) {
         setLoading(false)
         return
       }
-      // Success — onAuthStateChange will update user state and re-render AdminPage
+      // Success; onAuthStateChange will update user state and re-render AdminPage
     } catch {
       setError(t.error)
       setLoading(false)
@@ -789,7 +785,7 @@ export default function AdminPage() {
       return
     }
 
-    // Reset before async check — prevents "Access Denied" flash
+    // Reset before async check; prevents "Access Denied" flash
     // when transitioning from no-user (adminChecked=true) to logged-in
     setAdminChecked(false)
 
@@ -850,7 +846,7 @@ export default function AdminPage() {
       } else {
         setFetchError(t.fetchError)
       }
-    } catch (err) {
+    } catch {
       setFetchError(t.fetchError)
     }
     setStatsLoading(false)
@@ -908,7 +904,7 @@ export default function AdminPage() {
           subscription: subsMap[u.id]
         })))
       }
-    } catch (err) {
+    } catch {
       setFetchError(t.fetchError)
     }
     setUsersLoading(false)
@@ -930,7 +926,7 @@ export default function AdminPage() {
         .order('created_at', { ascending: false })
         .limit(20)
       setUserAnalyses(data || [])
-    } catch (err) {
+    } catch {
     }
     setUserAnalysesLoading(false)
   }, [session?.access_token])
@@ -966,7 +962,7 @@ export default function AdminPage() {
           }
         }))
       }
-    } catch (err) {
+    } catch {
       setFetchError(t.fetchError)
     }
     setPaymentsLoading(false)
@@ -1025,7 +1021,7 @@ export default function AdminPage() {
           }
         }))
       }
-    } catch (err) {
+    } catch {
       setFetchError(t.fetchError)
     }
     setFeedbackLoading(false)
@@ -1042,7 +1038,7 @@ export default function AdminPage() {
         setLeadsList(data.leads || [])
         setLeadsKpi(data.kpi || null)
       }
-    } catch (err) {
+    } catch {
       setFetchError(t.fetchError)
     }
     setLeadsLoading(false)
@@ -1088,7 +1084,7 @@ export default function AdminPage() {
     }
   }, [feedbackFilter, isAdmin, activeTab, fetchFeedback])
 
-  // Safety timeout — if initial fetch hangs (stale connections from SPA navigation), auto-reload (max 1 attempt)
+  // Safety timeout; if initial fetch hangs (stale connections from SPA navigation), auto-reload (max 1 attempt)
   useEffect(() => {
     if (!statsLoading) {
       sessionStorage.removeItem('mr_adm_reload')
@@ -1119,7 +1115,7 @@ export default function AdminPage() {
         setResponseEn('')
         setAdminNotes('')
       }
-    } catch (err) {
+    } catch {
     }
   }
 
@@ -1240,7 +1236,7 @@ export default function AdminPage() {
               fontWeight: '500'
             }}
           >
-            <RefreshCw size={16} style={{ animation: statsLoading ? 'spin 1s linear infinite' : 'none' }} />
+            <RefreshCw size={16} className={statsLoading ? 'mr-spin' : undefined} />
             {t.refresh}
           </button>
         </div>
@@ -2346,7 +2342,7 @@ export default function AdminPage() {
           {t.analytics.techInsightsTitle}
         </h3>
 
-        {/* Categorical Flags — Mix Health Status */}
+        {/* Categorical Flags; Mix Health Status */}
         <div style={{
           background: 'var(--mr-bg-card)',
           borderRadius: '1rem',
@@ -2396,7 +2392,7 @@ export default function AdminPage() {
           )}
         </div>
 
-        {/* Spectral Profile — Overall Average */}
+        {/* Spectral Profile; Overall Average */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1rem' }}>
           <div style={{
             background: 'var(--mr-bg-card)',
@@ -2977,7 +2973,7 @@ export default function AdminPage() {
             }}
             aria-label={t.refresh}
           >
-            <RefreshCw size={14} style={{ animation: leadsLoading ? 'spin 1s linear infinite' : 'none' }} />
+            <RefreshCw size={14} className={leadsLoading ? 'mr-spin' : undefined} />
             {t.refresh}
           </button>
         </div>
@@ -3194,7 +3190,7 @@ export default function AdminPage() {
             }}
             aria-label={t.refresh}
           >
-            <RefreshCw size={14} style={{ animation: feedbackLoading ? 'spin 1s linear infinite' : 'none' }} />
+            <RefreshCw size={14} className={feedbackLoading ? 'mr-spin' : undefined} />
             {t.refresh}
           </button>
         </div>
@@ -3563,10 +3559,6 @@ export default function AdminPage() {
     }}>
       {/* Animations */}
       <style>{`
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
         @keyframes shimmer {
           0% { background-position: 200% 0; }
           100% { background-position: -200% 0; }
@@ -3588,7 +3580,7 @@ export default function AdminPage() {
           fontWeight: '500',
           whiteSpace: 'nowrap',
           pointerEvents: 'none',
-          zIndex: 9999,
+          zIndex: 100,
           boxShadow: '0 4px 12px rgba(0, 0, 0, 0.4)'
         }}>
           {chartTooltip.content}
@@ -3678,7 +3670,7 @@ export default function AdminPage() {
                   setIsAdmin(false)
                   setAdminChecked(false)
                   await signOut()
-                } catch (err) {
+                } catch {
                 }
               }}
               style={{

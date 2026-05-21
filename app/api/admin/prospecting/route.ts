@@ -1,43 +1,17 @@
 /**
  * Admin Prospecting API Endpoint
  *
- * GET  /api/admin/prospecting — List leads with filters + KPIs (admin auth)
- * POST /api/admin/prospecting — Ingest leads from scraper (secret header auth)
- * PATCH /api/admin/prospecting — Update lead status/notes (admin auth)
+ * GET  /api/admin/prospecting; List leads with filters + KPIs (admin auth)
+ * POST /api/admin/prospecting; Ingest leads from scraper (secret header auth)
+ * PATCH /api/admin/prospecting; Update lead status/notes (admin auth)
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
 import { createHmac, timingSafeEqual } from 'crypto'
 import { createAdminSupabaseClient } from '@/lib/supabase'
+import { verifyAdmin } from '@/lib/verifyAdmin'
 
 export const dynamic = 'force-dynamic'
-
-// Verify admin user from Bearer token
-async function verifyAdmin(request: NextRequest) {
-  const authHeader = request.headers.get('Authorization')
-  if (!authHeader?.startsWith('Bearer ')) {
-    return null
-  }
-
-  const token = authHeader.replace('Bearer ', '')
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
-  const { data: { user }, error } = await supabase.auth.getUser(token)
-  if (error || !user) return null
-
-  const adminClient = createAdminSupabaseClient()
-  const { data: profile } = await adminClient
-    .from('profiles')
-    .select('is_admin')
-    .eq('id', user.id)
-    .single()
-
-  if (!profile?.is_admin) return null
-  return { user, adminClient }
-}
 
 export async function GET(request: NextRequest) {
   try {
@@ -165,7 +139,7 @@ export async function POST(request: NextRequest) {
           authenticated = true
         }
       } catch {
-        // Invalid hex — fall through to reject
+        // Invalid hex; fall through to reject
       }
     } else if (legacySecret) {
       // Legacy path: plain secret comparison

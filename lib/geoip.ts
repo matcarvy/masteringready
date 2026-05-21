@@ -35,14 +35,15 @@ interface IpInfoResponse {
   timezone?: string
 }
 
-// Default fallback (US benchmark)
-const DEFAULT_GEO: GeoData = {
+// Default fallback (US benchmark); detectedAt fixed at 0 so it's
+// deterministic across server/client (SSR-safe initial state)
+export const DEFAULT_GEO: GeoData = {
   countryCode: 'US',
   currency: 'USD',
   multiplier: 1.0,
   tier: 1,
   paymentProvider: 'stripe',
-  detectedAt: Date.now()
+  detectedAt: 0
 }
 
 /**
@@ -223,100 +224,11 @@ export async function detectCountry(forceRefresh = false): Promise<GeoData> {
 }
 
 /**
- * Get the current geo data (from cache or default)
- * Does not make network requests - use detectCountry() for fresh data
- */
-export function getCurrentGeo(): GeoData {
-  const cached = getCachedGeo()
-  return cached || DEFAULT_GEO
-}
-
-/**
  * Clear geo cache (useful for testing or when user requests different region)
  */
 export function clearGeoCache(): void {
   if (typeof window === 'undefined') return
   localStorage.removeItem(CACHE_KEY)
-}
-
-/**
- * Calculate localized price based on geo data
- *
- * @param baseUsdPrice - Price in USD (benchmark)
- * @param geo - GeoData from detectCountry()
- * @returns Localized price (still in USD for Stripe, but adjusted)
- */
-export function calculateLocalPrice(baseUsdPrice: number, geo: GeoData): number {
-  const localPrice = baseUsdPrice * geo.multiplier
-  // Round to 2 decimal places
-  return Math.round(localPrice * 100) / 100
-}
-
-/**
- * Format price for display
- *
- * @param price - Price amount
- * @param currency - Currency code (USD, EUR, etc.)
- * @param locale - Locale for formatting (optional, defaults based on currency)
- */
-export function formatPrice(price: number, currency: string, locale?: string): string {
-  // Format: "9.99 USD", "25,200 COP" — number + currency code, no $ symbol
-  const noDecimalCurrencies = ['COP', 'CLP', 'PYG']
-  const decimals = noDecimalCurrencies.includes(currency) ? 0 : 2
-
-  const localeMap: Record<string, string> = {
-    'USD': 'en-US',
-    'EUR': 'de-DE',
-    'GBP': 'en-GB',
-    'MXN': 'es-MX',
-    'COP': 'es-CO',
-    'BRL': 'pt-BR',
-    'ARS': 'es-AR',
-    'CLP': 'es-CL',
-    'PEN': 'es-PE'
-  }
-
-  const displayLocale = locale || localeMap[currency] || 'en-US'
-
-  try {
-    const formatted = new Intl.NumberFormat(displayLocale, {
-      style: 'decimal',
-      minimumFractionDigits: decimals,
-      maximumFractionDigits: decimals
-    }).format(price)
-    return `${formatted} ${currency}`
-  } catch {
-    return `${price.toFixed(decimals)} ${currency}`
-  }
-}
-
-/**
- * Get display price for a plan based on user's location
- *
- * @param baseUsdPrice - Base price in USD
- * @param geo - GeoData from detectCountry()
- * @returns Object with price amount and formatted strings
- */
-export function getPlanDisplayPrice(baseUsdPrice: number, geo: GeoData): {
-  amount: number
-  formatted: string
-  formattedLocal: string
-  currency: string
-  localCurrency: string
-  showLocal: boolean
-} {
-  const adjustedUsdPrice = calculateLocalPrice(baseUsdPrice, geo)
-  const localCurrency = geo.currency || 'USD'
-  const showLocal = localCurrency !== 'USD' && EXCHANGE_RATES[localCurrency] !== undefined
-
-  return {
-    amount: adjustedUsdPrice,
-    formatted: formatPrice(adjustedUsdPrice, 'USD'),
-    formattedLocal: showLocal ? formatLocalCurrencyPrice(adjustedUsdPrice, localCurrency) : formatPrice(adjustedUsdPrice, 'USD'),
-    currency: 'USD',
-    localCurrency: localCurrency,
-    showLocal: showLocal
-  }
 }
 
 // Pricing constants from spec (USD benchmarks)
@@ -365,30 +277,6 @@ export const EXCHANGE_RATES: Record<string, number> = {
   'AUD': 1.418,
 }
 
-// Currency symbols for display
-export const CURRENCY_SYMBOLS: Record<string, string> = {
-  'USD': '$',
-  'CAD': 'CA$',
-  'MXN': 'MX$',
-  'EUR': '€',
-  'GBP': '£',
-  'COP': '$',
-  'BRL': 'R$',
-  'ARS': '$',
-  'CLP': '$',
-  'PEN': 'S/',
-  'UYU': '$',
-  'PYG': '₲',
-  'BOB': 'Bs',
-  'VES': 'Bs',
-  'GTQ': 'Q',
-  'HNL': 'L',
-  'NIO': 'C$',
-  'CRC': '₡',
-  'PAB': 'B/.',
-  'DOP': 'RD$',
-}
-
 /**
  * Convert USD price to local currency
  *
@@ -396,7 +284,7 @@ export const CURRENCY_SYMBOLS: Record<string, string> = {
  * @param currency - Target currency code
  * @returns Price in local currency
  */
-export function convertToLocalCurrency(usdPrice: number, currency: string): number {
+function convertToLocalCurrency(usdPrice: number, currency: string): number {
   const rate = EXCHANGE_RATES[currency] || 1
   return usdPrice * rate
 }
@@ -430,7 +318,7 @@ export function formatLocalCurrencyPrice(usdPrice: number, currency: string): st
     displayPrice = Math.round(localPrice * 100) / 100
   }
 
-  // Format: "25,200 COP" — number + currency code, no $ symbol
+  // Format: "25,200 COP"; number + currency code, no $ symbol
   const localeMap: Record<string, string> = {
     'USD': 'en-US',
     'EUR': 'de-DE',
