@@ -5497,3 +5497,6 @@ Browser uploads go directly to Render (200MB files can't proxy through Vercel), 
 **Verification**: `ast.parse` clean on main.py; `npx next build` clean (both new routes compiled); `npx tsc --noEmit` clean.
 
 **Git state**: dev, uncommitted (this session's changes + prior CLAUDE.md edits).
+
+#### 2026-06-11 (later): DEPLOYED + ENFORCEMENT VERIFIED LIVE
+Committed as `12542df`, merged dev → main, pushed. `ANALYZE_TOKEN_SECRET` set on Vercel AND Render prod. Live probes (invalid-ext files, no jobs created): no token → 401, garbage token → 401, `is_authenticated=true` spoof → 401, real Vercel token → accepted; both `/api/analyze/start` and `/api/analyze/mix` enforce. Note: mix endpoint validates file extension BEFORE the token gate (a .txt probe 400s there) — expected, not a gap. log-event 413 on >2KB confirmed. CORS preflight rejects non-GET/POST. The dev Render service (`masteringready-dev`) does NOT have the secret yet — set it (any value matching the Vercel Preview env) before testing analysis on previews, or preview analyses will 401 once Preview env has the secret... and conversely, if Vercel Preview has the secret but dev Render doesn't, dev Render simply ignores tokens (safe).
