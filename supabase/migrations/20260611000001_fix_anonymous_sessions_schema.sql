@@ -23,6 +23,17 @@ ALTER TABLE anonymous_sessions
   ADD COLUMN IF NOT EXISTS user_agent TEXT,
   ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
+-- The live table's original schema has a leftover NOT NULL token column that
+-- nothing in the codebase uses; the RPC insert doesn't provide it, so inserts
+-- abort. Make it nullable (guarded: fresh DBs built from migrations lack it).
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns
+             WHERE table_name = 'anonymous_sessions' AND column_name = 'token') THEN
+    ALTER TABLE anonymous_sessions ALTER COLUMN token DROP NOT NULL;
+  END IF;
+END $$;
+
 -- ON CONFLICT (ip_hash) in record_anonymous_analysis requires a unique index.
 -- Multiple NULLs (pre-existing rows) are allowed by Postgres unique indexes.
 CREATE UNIQUE INDEX IF NOT EXISTS anonymous_sessions_ip_hash_key
