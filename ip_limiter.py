@@ -12,10 +12,58 @@ Version: 1.0.0
 import os
 import hashlib
 import logging
+from types import SimpleNamespace
 from typing import Optional, Dict, Any, Tuple
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
+
+
+class SupabaseRpcClient:
+    """
+    Minimal async PostgREST RPC client built on aiohttp.
+
+    Exposes the same rpc(name, params).execute() shape as supabase-py so
+    IPLimiter works with either, without pulling the full supabase-py
+    dependency tree onto the memory-constrained Render instance. Both RPCs
+    (check_ip_limit, record_anonymous_analysis) are SECURITY DEFINER, so the
+    public anon key is sufficient. execute() is async and must be awaited.
+    """
+
+    def __init__(self, url: str, key: str):
+        self._url = url.rstrip('/')
+        self._key = key
+
+    def rpc(self, fn_name: str, params: Dict[str, Any]) -> '_SupabaseRpcCall':
+        return _SupabaseRpcCall(self._url, self._key, fn_name, params)
+
+
+class _SupabaseRpcCall:
+    def __init__(self, url: str, key: str, fn_name: str, params: Dict[str, Any]):
+        self._endpoint = f"{url}/rest/v1/rpc/{fn_name}"
+        self._fn_name = fn_name
+        self._key = key
+        self._params = params
+
+    async def execute(self) -> SimpleNamespace:
+        # Imported here so a missing aiohttp degrades to the memory store
+        # (callers catch exceptions) instead of breaking module import
+        import aiohttp
+        headers = {
+            'apikey': self._key,
+            'Authorization': f'Bearer {self._key}',
+            'Content-Type': 'application/json',
+        }
+        timeout = aiohttp.ClientTimeout(total=6)
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+            async with session.post(self._endpoint, json=self._params, headers=headers) as resp:
+                if resp.status >= 400:
+                    body = (await resp.text())[:200]
+                    raise RuntimeError(f"Supabase RPC {self._fn_name} failed: HTTP {resp.status} {body}")
+                if resp.status == 204:
+                    return SimpleNamespace(data=None)
+                data = await resp.json(content_type=None)
+                return SimpleNamespace(data=data)
 
 # Feature flag - enabled by default for security (set to 'false' to disable)
 ENABLE_IP_RATE_LIMIT = os.getenv('ENABLE_IP_RATE_LIMIT', 'true').lower() == 'true'
@@ -127,7 +175,7 @@ class IPLimiter:
         # Try Supabase first
         if self.supabase:
             try:
-                result = self.supabase.rpc(
+                result = await self.supabase.rpc(
                     'check_ip_limit',
                     {'p_ip_hash': ip_hash}
                 ).execute()
@@ -210,7 +258,7 @@ class IPLimiter:
         # Try Supabase first
         if self.supabase:
             try:
-                self.supabase.rpc(
+                await self.supabase.rpc(
                     'record_anonymous_analysis',
                     {
                         'p_ip_address': ip_address,

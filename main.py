@@ -90,7 +90,7 @@ ANALYZER_VERSION = "7.4.2"
 
 # Import IP rate limiting and VPN detection
 try:
-    from ip_limiter import init_ip_limiter, get_ip_limiter, get_client_ip, IPLimiter
+    from ip_limiter import init_ip_limiter, get_ip_limiter, get_client_ip, IPLimiter, SupabaseRpcClient
     from vpn_detector import init_vpn_detector, get_vpn_detector, VPNDetector
     IP_LIMITER_AVAILABLE = True
     logger_placeholder = logging.getLogger(__name__)  # Will be replaced
@@ -360,11 +360,17 @@ def convert_to_wav(input_path: str, file_ext: str) -> str:
     logger.info(f"✅ Converted to WAV: {wav_temp.name}")
     return wav_temp.name
 
-# Initialize IP rate limiter and VPN detector
+# Initialize IP rate limiter and VPN detector. With SUPABASE_URL + a key set,
+# anonymous limits persist in the anonymous_sessions table; otherwise the
+# in-memory fallback applies (resets on every deploy/restart).
 if IP_LIMITER_AVAILABLE:
-    ip_limiter = init_ip_limiter()
+    _sb_url = _os.getenv('SUPABASE_URL', '')
+    _sb_key = _os.getenv('SUPABASE_SERVICE_ROLE_KEY') or _os.getenv('SUPABASE_ANON_KEY') or ''
+    _sb_client = SupabaseRpcClient(_sb_url, _sb_key) if _sb_url and _sb_key else None
+    ip_limiter = init_ip_limiter(_sb_client)
     vpn_detector = init_vpn_detector()
-    logger.info(f"✅ IP Limiter initialized. Enabled: {ip_limiter.is_enabled()}")
+    _ip_store = 'Supabase (persistent)' if _sb_client else 'memory (set SUPABASE_URL + SUPABASE_ANON_KEY to persist)'
+    logger.info(f"✅ IP Limiter initialized. Enabled: {ip_limiter.is_enabled()}. Store: {_ip_store}")
     logger.info(f"✅ VPN Detector initialized. Enabled: {vpn_detector.is_enabled()}")
 else:
     ip_limiter = None
