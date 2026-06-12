@@ -688,7 +688,7 @@ export default function MasteringLabPage() {
     setSlot({ state: 'uploading', file, progress: 5, result: null, error: null, jobId: null })
 
     try {
-      const response = await startAnalysisPolling(file, { lang, mode: 'short', strict: false, genre: null, isAuthenticated: true })
+      const response = await startAnalysisPolling(file, { lang, mode: 'short', strict: false, genre: null, isAuthenticated: true, accessToken: session?.access_token })
       const jobId = response.job_id
       setSlot(prev => ({ ...prev, state: 'analyzing', progress: 10, jobId }))
 

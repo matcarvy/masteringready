@@ -54,6 +54,11 @@ import re
 import subprocess
 import unicodedata
 import urllib.parse
+import hmac
+import hashlib
+import base64
+import json
+import time
 from typing import Optional, Dict, Any
 from datetime import datetime, timedelta
 import soundfile as sf
@@ -247,9 +252,54 @@ app.add_middleware(
     ],
     allow_origin_regex=r"https://(masteringready|streamready).*\.vercel\.app",
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type", "Authorization"],
 )
+
+# Signed-token gate (Vercel issues, Render validates). Inert until
+# ANALYZE_TOKEN_SECRET is set on BOTH Vercel and Render: without the secret,
+# the self-reported is_authenticated form field is used as before.
+ANALYZE_TOKEN_SECRET = _os.getenv('ANALYZE_TOKEN_SECRET', '')
+
+
+def verify_signed_token(token: Optional[str]) -> Optional[dict]:
+    """Validate an HMAC-signed analyze token issued by /api/analyze-token
+    on Vercel. Returns the payload dict, or None when missing/invalid/expired."""
+    if not token or '.' not in token:
+        return None
+    payload_b64, sig = token.rsplit('.', 1)
+    expected = hmac.new(
+        ANALYZE_TOKEN_SECRET.encode(), payload_b64.encode(), hashlib.sha256
+    ).hexdigest()
+    if not hmac.compare_digest(expected, sig):
+        return None
+    try:
+        padded = payload_b64 + '=' * (-len(payload_b64) % 4)
+        payload = json.loads(base64.urlsafe_b64decode(padded))
+    except Exception:
+        return None
+    if not isinstance(payload, dict) or payload.get('exp', 0) < time.time():
+        return None
+    return payload
+
+
+def resolve_request_auth(signed_token: Optional[str], is_authenticated: bool, lang: str) -> bool:
+    """Resolve the caller's auth status for analyze endpoints. When the token
+    secret is configured, a valid signed token is required and its verified
+    auth claim is the only trusted source; the self-reported form field is
+    ignored. Without the secret, legacy behavior applies."""
+    if not ANALYZE_TOKEN_SECRET:
+        return is_authenticated
+    payload = verify_signed_token(signed_token)
+    if payload is None:
+        raise HTTPException(
+            status_code=401,
+            detail='No se pudo verificar la solicitud. Recarga la página e intenta de nuevo.'
+            if lang == 'es'
+            else 'Could not verify the request. Reload the page and try again.'
+        )
+    return bool(payload.get('auth'))
+
 
 # Constants
 MAX_FILE_SIZE = 200 * 1024 * 1024  # 200MB
@@ -460,7 +510,8 @@ async def analyze_mix_endpoint(
     mode: str = Form("write"),
     strict: bool = Form(False),
     genre: Optional[str] = Form(None),
-    original_metadata_json: Optional[str] = Form(None)  # Original file metadata from frontend
+    original_metadata_json: Optional[str] = Form(None),  # Original file metadata from frontend
+    signed_token: Optional[str] = Form(None)  # HMAC token from /api/analyze-token (Vercel)
 ):
     """
     Analyze audio mix for mastering readiness.
@@ -527,8 +578,12 @@ async def analyze_mix_endpoint(
             detail=bilingual_error('corrupt_file', lang)
         )
 
+    # Resolve auth from the signed token when the gate is active (this endpoint
+    # has no is_authenticated form field, so the token is the only auth source)
+    token_authenticated = resolve_request_auth(signed_token, False, lang)
+
     # Server-side IP rate limit enforcement (sync endpoint)
-    if IP_LIMITER_AVAILABLE and ip_limiter and ip_limiter.is_enabled():
+    if not token_authenticated and IP_LIMITER_AVAILABLE and ip_limiter and ip_limiter.is_enabled():
         try:
             client_ip = get_client_ip(request)
             user_agent = request.headers.get('User-Agent')
@@ -669,7 +724,8 @@ async def start_analysis(
     strict: bool = Form(False),
     genre: Optional[str] = Form(None),
     original_metadata_json: Optional[str] = Form(None),  # Original file metadata from frontend
-    is_authenticated: bool = Form(False)  # Whether user is logged in
+    is_authenticated: bool = Form(False),  # Whether user is logged in
+    signed_token: Optional[str] = Form(None)  # HMAC token from /api/analyze-token (Vercel)
 ):
     """
     Start analysis and return job_id immediately (<1 sec).
@@ -685,8 +741,14 @@ async def start_analysis(
     - strict: Strict mode (true/false)
     - original_metadata_json: (Optional) JSON with original file metadata
         Example: {"sampleRate": 48000, "bitDepth": 24, "duration": 391.2, "numberOfChannels": 2}
-    - is_authenticated: Whether user is logged in (bypasses IP limit)
+    - is_authenticated: Whether user is logged in (bypasses IP limit; only
+      trusted when ANALYZE_TOKEN_SECRET is unset, otherwise the signed token's
+      verified auth claim replaces it)
+    - signed_token: Required when ANALYZE_TOKEN_SECRET is configured
     """
+
+    # Resolve auth from the signed token when the gate is active
+    is_authenticated = resolve_request_auth(signed_token, is_authenticated, lang)
 
     # Get client IP for rate limiting
     client_ip = None

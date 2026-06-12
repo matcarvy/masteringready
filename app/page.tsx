@@ -939,7 +939,8 @@ const handleAnalyze = async () => {
       strict,
       genre,
       originalMetadata,
-      isAuthenticated: isLoggedIn
+      isAuthenticated: isLoggedIn,
+      accessToken: session?.access_token
     })
     const jobId = startData.job_id
 

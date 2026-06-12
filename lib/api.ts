@@ -17,6 +17,34 @@ export class AnalysisApiError extends Error {
   }
 }
 
+/**
+ * Fetch a short-lived signed token from /api/analyze-token before calling
+ * the analysis backend. Returns null when the token system is not yet
+ * configured or the request fails; the backend only enforces tokens once
+ * ANALYZE_TOKEN_SECRET is set on both sides.
+ */
+async function fetchAnalyzeToken(accessToken?: string): Promise<string | null> {
+  try {
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 8000)
+    const headers: Record<string, string> = {}
+    if (accessToken) {
+      headers['Authorization'] = `Bearer ${accessToken}`
+    }
+    const res = await fetch('/api/analyze-token', {
+      method: 'POST',
+      headers,
+      signal: controller.signal,
+    })
+    clearTimeout(timeoutId)
+    if (!res.ok) return null
+    const data = await res.json()
+    return data.token || null
+  } catch {
+    return null
+  }
+}
+
 // ORIGINAL: Direct analysis (kept for backward compatibility)
 export async function analyzeFile(
   file: File,
@@ -24,6 +52,7 @@ export async function analyzeFile(
     lang: 'es' | 'en'
     mode: 'short' | 'write'
     strict: boolean
+    accessToken?: string  // Supabase session token, exchanged for a signed analyze token
     originalMetadata?: {  // NEW: Optional original metadata
       sampleRate: number
       bitDepth: number
@@ -38,6 +67,11 @@ export async function analyzeFile(
   formData.append('lang', options.lang)
   formData.append('mode', options.mode)
   formData.append('strict', String(options.strict))
+
+  const signedToken = await fetchAnalyzeToken(options.accessToken)
+  if (signedToken) {
+    formData.append('signed_token', signedToken)
+  }
 
   // NEW: Add original metadata if provided
   if (options.originalMetadata) {
@@ -98,6 +132,7 @@ export async function startAnalysisPolling(
       fileSize: number
     }
     isAuthenticated?: boolean  // NEW: Whether user is logged in
+    accessToken?: string  // Supabase session token, exchanged for a signed analyze token
   }
 ) {
   const formData = new FormData()
@@ -109,6 +144,11 @@ export async function startAnalysisPolling(
     formData.append('genre', options.genre)
   }
   formData.append('is_authenticated', String(options.isAuthenticated || false))
+
+  const signedToken = await fetchAnalyzeToken(options.accessToken)
+  if (signedToken) {
+    formData.append('signed_token', signedToken)
+  }
 
   // CRITICAL: Add original metadata if provided
   // Backend expects 'original_metadata_json' parameter name

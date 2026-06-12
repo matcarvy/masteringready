@@ -319,6 +319,7 @@ export default function ComparisonPage() {
         strict: false,
         genre: null,
         isAuthenticated: true,
+        accessToken: session?.access_token,
       })
 
       const jobId = response.job_id

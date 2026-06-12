@@ -5452,5 +5452,48 @@ Build clean, types valid, 33 routes. 55 files changed.
 **Still open (pre-existing):**
 - Resultado del análisis + Mis Análisis screens not yet ported to `.mr-rd-*` (landing-only pass).
 - Optional: founder card avatar (needs a real headshot of Matías).
+- Testimonial quote text should not be italic. Remove inline `fontStyle: 'italic'` from the results-screen inline-testimonials block (`page.tsx` ~3898). Batch with next work, no standalone build.
 
-**Git state**: committed on `dev`. Untracked `content/` + 3 supabase migrations are pre-existing and unrelated; left out of the commit.
+**Git state**: `45c015e` (audit sweep) merged to `main` and pushed 2026-05-21. CLAUDE.md carries further uncommitted edits on `dev` (open-items above + the feature spec below) to ride with the next work batch. Untracked `content/` + 3 supabase migrations are pre-existing and unrelated.
+
+#### Next feature — reference comparison (agreed 2026-05-21)
+Productize the admin `comparison` + `mastering-lab` tools into a user-facing feature. The comparison engine already exists; this is UI packaging + credit gating.
+- **Two modes, one flow**: mix vs reference (pre-master diagnostic) and master vs master (post-master QC). Same UI (two upload slots, one comparison report); they differ in analysis lens + copy.
+- **UX**: 2 analyzer tabs, `Análisis` (current single analysis) + `Comparación con referencia`. A mix/master toggle inside Comparación picks the sub-mode. Not 3 tabs.
+- **Pricing**: 1 analysis credit, gated to paid tiers only. The free 2 stay single-analysis. Not 2 credits (credit math kills conversion); the reference track is an input, not a deliverable.
+- **Phase 2**: genre-benchmark reference library (curated profiles per genre) so users compare without uploading a commercial track; sidesteps copyright.
+- **Copyright**: an uploaded reference is analyzed only (numbers extracted), never stored or shared; add one line of UI reassurance.
+- Full spec in memory `mr-reference-comparison.md`.
+
+### Session 2026-06-11 — Security Hardening: Signed Token System + CORS + log-event Throttle (on dev, UNCOMMITTED)
+
+Implemented the 4 open items from the 2026-06-11 security scan (memory `mr-security-audit.md`). All changes inert until env vars are set — zero behavior change at deploy time.
+
+#### 1. Signed token system (the long-deferred "Shared secret Vercel ↔ Render")
+Browser uploads go directly to Render (200MB files can't proxy through Vercel), so a static secret can't live in the JS bundle. Design = the HMAC token approach from the roadmap:
+- **NEW `app/api/analyze-token/route.ts`** — POST issues a 10-min HMAC-SHA256 token (`base64url(payload).hexsig`, payload = `{exp, auth, uid}`). If caller sends a Supabase Bearer token: verifies session via `auth.getUser()` AND runs `can_user_analyze` RPC with the service role key — explicit `can_analyze=false` → 403, no token. So neither auth status nor quota is self-reported anymore. RPC infra errors fall through (fail-open on infra, fail-closed on explicit no-quota).
+- **`lib/api.ts`** — new `fetchAnalyzeToken(accessToken?)` (8s timeout, returns null on any failure); both `startAnalysisPolling` and `analyzeFile` accept `accessToken` and append `signed_token` form field when a token is issued.
+- **Call sites** — `page.tsx` handleAnalyze + `admin/comparison` + `admin/mastering-lab` pass `session?.access_token`.
+- **`main.py`** — `ANALYZE_TOKEN_SECRET` env + `verify_signed_token()` (hmac.compare_digest, exp check) + `resolve_request_auth()`. Both `/api/analyze/start` and `/api/analyze/mix` take `signed_token: Form(None)`. When the secret is SET: token required (401 bilingual error if missing/invalid/expired) and its verified `auth` claim REPLACES the self-reported `is_authenticated` field. When UNSET: legacy behavior, fully inert.
+- **Closes two holes**: direct Render calls burning the 512MB Starter, and `is_authenticated=true` spoofing to bypass the IP limiter.
+
+#### 2. CORS tightened (`main.py`)
+`allow_methods` `["*"]` → `["GET", "POST"]`; `allow_headers` `["*"]` → `["Content-Type", "Authorization"]`. All endpoints are GET/POST; frontend sends no other headers to Render (token travels in the form body, so no new preflight).
+
+#### 3. `/api/log-event` hardened
+2KB body cap (413), per-IP throttle 10 events/min (429, in-memory Map with pruning — per-serverless-instance, blunts naive abuse), and `type`/`message` length caps (50/500 chars).
+
+#### ACTIVATION (manual, do in this order)
+1. **Vercel** → Project Settings → Environment Variables → add `ANALYZE_TOKEN_SECRET` (Production + Preview) → redeploy. Tokens start being issued; Render still ignores them. Harmless.
+2. **Render** → Environment → add the SAME `ANALYZE_TOKEN_SECRET` value → redeploy. Enforcement live.
+- Never set Render first (would 401 all analyses until Vercel has it).
+- Use different secret values for the dev Render service + Preview env if isolating environments.
+
+#### Findings logged (not fixed this session)
+- `init_ip_limiter()` at main.py:~370 is called WITHOUT a Supabase client → Render's IP limiter runs on the in-memory fallback only (resets every deploy/restart). The `check_ip_limit` Supabase RPC path is dead code on Render. Fix when desired: init a Supabase client on Render (needs SUPABASE_URL + key env vars) and pass it in.
+- Stream Ready endpoints (`/api/stream/analyze`) intentionally NOT token-gated — SR frontend isn't deployed; gate them when SR ships.
+- Token replay within the 10-min TTL is accepted (goal is stopping scripted abuse, not building a full auth system).
+
+**Verification**: `ast.parse` clean on main.py; `npx next build` clean (both new routes compiled); `npx tsc --noEmit` clean.
+
+**Git state**: dev, uncommitted (this session's changes + prior CLAUDE.md edits).
