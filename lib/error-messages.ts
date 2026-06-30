@@ -26,6 +26,10 @@ export const ERROR_MESSAGES = {
     es: 'Parece que perdiste la conexión. Verifica tu internet e intenta de nuevo.',
     en: 'It looks like you lost connection. Check your internet and try again.',
   },
+  token_unavailable: {
+    es: 'No pudimos verificar tu acceso en este momento. Espera unos segundos e intenta de nuevo.',
+    en: "We couldn't verify your access right now. Wait a few seconds and try again.",
+  },
 } as const
 
 export type ErrorCategory = keyof typeof ERROR_MESSAGES

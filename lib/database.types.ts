@@ -791,6 +791,10 @@ export interface Database {
         Args: { p_user_id: string; p_purchase_id: string }
         Returns: boolean
       }
+      consume_purchase_credit: {
+        Args: { p_user_id: string }
+        Returns: boolean
+      }
       add_addon_pack: {
         Args: { p_user_id: string; p_purchase_id: string }
         Returns: boolean

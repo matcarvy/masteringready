@@ -29,109 +29,109 @@ export async function compressAudioFile(
   
   const maxBytes = maxSizeMB * 1024 * 1024
   
-  // Create audio context to read original metadata
+  // Create audio context to read original metadata. Closed in finally so a
+  // throw/hang in decodeAudioData or startRendering can't leak contexts (the
+  // browser caps them at ~6, after which decode fails as a false "corrupt file").
   const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
-  
-  // Read file as ArrayBuffer
-  const arrayBuffer = await file.arrayBuffer()
 
-  // --- Capture Original Metadata ---
-  // parseFileHeader MUST run BEFORE decodeAudioData() because decode detaches the ArrayBuffer
-  const headerInfo = parseFileHeader(arrayBuffer, file.name)
+  try {
+    // Read file as ArrayBuffer
+    const arrayBuffer = await file.arrayBuffer()
 
-  // Decode audio (WARNING: this detaches arrayBuffer; do NOT use arrayBuffer after this)
-  const audioBuffer = await audioContext.decodeAudioData(arrayBuffer)
-  const originalMetadata = {
-    sampleRate: headerInfo.sampleRate || audioBuffer.sampleRate, // Prefer header (true rate), fallback to AudioContext
-    bitDepth: headerInfo.bitDepth,
-    numberOfChannels: headerInfo.numberOfChannels || audioBuffer.numberOfChannels,
-    duration: audioBuffer.duration,
-    fileSize: file.size  // Original file size before compression
-  }
+    // --- Capture Original Metadata ---
+    // parseFileHeader MUST run BEFORE decodeAudioData() because decode detaches the ArrayBuffer
+    const headerInfo = parseFileHeader(arrayBuffer, file.name)
 
-  // --- Stereo Safety ---
-  // If the browser decoder collapsed channels, skip compression
-  // Web Audio API may decode some formats (e.g. 32-bit float WAV) as mono
-  if (headerInfo.numberOfChannels && headerInfo.numberOfChannels > audioBuffer.numberOfChannels) {
-    audioContext.close()
+    // Decode audio (WARNING: this detaches arrayBuffer; do NOT use arrayBuffer after this)
+    const audioBuffer = await audioContext.decodeAudioData(arrayBuffer)
+    const originalMetadata = {
+      sampleRate: headerInfo.sampleRate || audioBuffer.sampleRate, // Prefer header (true rate), fallback to AudioContext
+      bitDepth: headerInfo.bitDepth,
+      numberOfChannels: headerInfo.numberOfChannels || audioBuffer.numberOfChannels,
+      duration: audioBuffer.duration,
+      fileSize: file.size  // Original file size before compression
+    }
+
+    // --- Stereo Safety ---
+    // If the browser decoder collapsed channels, skip compression
+    // Web Audio API may decode some formats (e.g. 32-bit float WAV) as mono
+    if (headerInfo.numberOfChannels && headerInfo.numberOfChannels > audioBuffer.numberOfChannels) {
+      return {
+        file,
+        compressed: false,
+        originalSize: file.size,
+        newSize: file.size,
+        originalMetadata
+      }
+    }
+
+    // If file is already under limit, return as-is with original metadata
+    if (file.size <= maxBytes) {
+      return {
+        file,
+        compressed: false,
+        originalSize: file.size,
+        newSize: file.size,
+        originalMetadata
+      }
+    }
+
+    const duration = audioBuffer.duration
+
+    // Strategy: Intelligent compression while ALWAYS preserving stereo
+    // CRITICAL: Never convert to mono for mastering analysis
+    let targetSampleRate = 44100
+    const targetChannels = Math.min(audioBuffer.numberOfChannels, 2) // ALWAYS preserve stereo (max 2 channels)
+
+    // Estimate compressed size
+    const estimatedSize = duration * targetSampleRate * targetChannels * 2 // 16-bit
+
+    // Adjust sample rate based on file size, but NEVER reduce channels
+    if (file.size > 150 * 1024 * 1024) {
+      // Very large files (>150MB): Use 32kHz stereo
+      targetSampleRate = 32000
+    } else if (file.size > 100 * 1024 * 1024) {
+      // Large files (>100MB): Use 44.1kHz stereo
+      targetSampleRate = 44100
+    } else if (estimatedSize > maxBytes * 0.8) {
+      // Medium files approaching limit: Use 48kHz stereo
+      targetSampleRate = 48000
+    }
+
+    // Create offline context for resampling
+    const offlineContext = new OfflineAudioContext(
+      targetChannels,
+      duration * targetSampleRate,
+      targetSampleRate
+    )
+
+    // Create buffer source
+    const source = offlineContext.createBufferSource()
+    source.buffer = audioBuffer
+    source.connect(offlineContext.destination)
+    source.start()
+
+    // Render
+    const renderedBuffer = await offlineContext.startRendering()
+
+    // Convert to WAV (always WAV, never WebM)
+    const wavBlob = audioBufferToWav(renderedBuffer)
+
+    const compressedFile = new File(
+      [wavBlob],
+      file.name.replace(/\.[^/.]+$/, '_compressed.wav'),
+      { type: 'audio/wav' }
+    )
+
     return {
-      file,
-      compressed: false,
+      file: compressedFile,
+      compressed: true,
       originalSize: file.size,
-      newSize: file.size,
+      newSize: compressedFile.size,
       originalMetadata
     }
-  }
-
-  // If file is already under limit, return as-is with original metadata
-  if (file.size <= maxBytes) {
+  } finally {
     audioContext.close()
-    return {
-      file,
-      compressed: false,
-      originalSize: file.size,
-      newSize: file.size,
-      originalMetadata
-    }
-  }
-
-  const duration = audioBuffer.duration
-  
-  // Strategy: Intelligent compression while ALWAYS preserving stereo
-  // CRITICAL: Never convert to mono for mastering analysis
-  let targetSampleRate = 44100
-  let targetChannels = Math.min(audioBuffer.numberOfChannels, 2) // ALWAYS preserve stereo (max 2 channels)
-  
-  // Estimate compressed size
-  const estimatedSize = duration * targetSampleRate * targetChannels * 2 // 16-bit
-  
-  // Adjust sample rate based on file size, but NEVER reduce channels
-  if (file.size > 150 * 1024 * 1024) {
-    // Very large files (>150MB): Use 32kHz stereo
-    targetSampleRate = 32000
-  } else if (file.size > 100 * 1024 * 1024) {
-    // Large files (>100MB): Use 44.1kHz stereo
-    targetSampleRate = 44100
-  } else if (estimatedSize > maxBytes * 0.8) {
-    // Medium files approaching limit: Use 48kHz stereo
-    targetSampleRate = 48000
-  }
-  
-  
-  // Create offline context for resampling
-  const offlineContext = new OfflineAudioContext(
-    targetChannels,
-    duration * targetSampleRate,
-    targetSampleRate
-  )
-  
-  // Create buffer source
-  const source = offlineContext.createBufferSource()
-  source.buffer = audioBuffer
-  source.connect(offlineContext.destination)
-  source.start()
-  
-  // Render
-  const renderedBuffer = await offlineContext.startRendering()
-  
-  // Convert to WAV (always WAV, never WebM)
-  const wavBlob = audioBufferToWav(renderedBuffer)
-  
-  const compressedFile = new File(
-    [wavBlob],
-    file.name.replace(/\.[^/.]+$/, '_compressed.wav'),
-    { type: 'audio/wav' }
-  )
-  
-  // Close context
-  audioContext.close()
-  
-  return {
-    file: compressedFile,
-    compressed: true,
-    originalSize: file.size,
-    newSize: compressedFile.size,
-    originalMetadata // ← NUEVO: Return ORIGINAL metadata (not compressed)
   }
 }
 

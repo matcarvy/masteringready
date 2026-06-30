@@ -5507,3 +5507,99 @@ Committed as `12542df`, merged dev → main, pushed. `ANALYZE_TOKEN_SECRET` set 
 - **`main.py`**: builds the adapter from `SUPABASE_URL` + (`SUPABASE_SERVICE_ROLE_KEY` or `SUPABASE_ANON_KEY`) env vars and passes it to `init_ip_limiter()`. Without env vars → memory fallback, identical to before (inert deploy). Startup log says `Store: Supabase (persistent)` or `Store: memory (...)`.
 - **Migration `20260611000001_fix_anonymous_sessions_schema.sql`**: additive ALTERs (12 columns), unique index on `ip_hash` (required by ON CONFLICT; NULLs from old rows allowed), re-applies both function definitions (SECURITY DEFINER preserved). Idempotent, no drops. RUN IN SQL EDITOR (masteringready-prod) before/with setting the Render env vars.
 - **Activation**: (1) run migration in SQL Editor, (2) Render env: `SUPABASE_URL=https://cetgbmrylzgaqnrlfamt.supabase.co` + `SUPABASE_ANON_KEY=<same anon key as Vercel's NEXT_PUBLIC_SUPABASE_ANON_KEY>`, service auto-restarts. Verify via Render logs init line.
+
+### Session 2026-06-18 — Token fix re-verified live + migration parity merged to main (NOT pushed)
+- **Re-verified the signed-token gate live in prod** (properly-shaped multipart probes, not JSON — JSON 422s at FastAPI form validation before the auth check): `/api/analyze/start` no-token → 401, garbage token → 401; `/api/analyze/mix` spoofed `is_authenticated=true` (no token) → 401 with "Could not verify the request" (self-reported auth ignored, token claim is the only trusted source); Vercel `/api/log-event` 6KB body → 413. Site 200. Gate working as designed.
+- **`resolve_request_auth` ordering** (main.py): `/api/analyze/start` checks auth FIRST (line ~757); `/api/analyze/mix` checks file extension first (~565) THEN auth (~589) — so probe `/start` with any file to hit the gate cleanly.
+- **`/api/log-event` is a Vercel route** (`app/api/log-event/route.ts`), NOT on Render — probe masteringready.com, not the Render host.
+- **Merged the lone dev-only commit `a3dc77d`** ("make leftover anonymous_sessions.token column nullable in migration" — guarded idempotent `DROP NOT NULL`, DB change already applied live 06-11) into local `main` via clean fast-forward. **NOT pushed** — local `main` is 1 commit ahead of `origin/main`; bundle this push with the next MR work unit (one-push-per-work-unit / Vercel minutes). Repo left on `dev`.
+
+### Session 2026-06-29 — Pre-Promotion Reliability Audit (FINDINGS ONLY — implemented 2026-06-30, see session below)
+
+#### Why
+Mat hit an error "during analysis/upload after a couple of analyses" and is about to start promoting MR daily. Goal: make the analysis + payment path bulletproof for paying users before driving traffic. Ran live backend probes + 3 deep agents (backend/Render memory, frontend upload-analyze, auth/quota/credits), then verified the two highest-stakes findings against actual code + migrations. **Nothing was edited — this is the diagnosis + fix plan to execute next session.**
+
+#### Live state confirmed
+- Render backend healthy (v7.4.2, analyzer loaded, ~0.2s). Health at `/health` (NOT `/api/health`). `/api/stats` showed 0 errors today.
+- Service is NOT hard-down — the failure degrades with repeated use, consistent with the findings below.
+
+#### 🔴 CRITICAL 1 — Signed-token gate is the most likely cause of Mat's error (and it's recent: activated 06-11)
+- Every analysis now calls `/api/analyze-token` → 10-min HMAC token → sent to Render.
+- `lib/api.ts:40` `fetchAnalyzeToken` returns `null` on ANY non-OK / timeout (8s abort) / cold start / RPC blip → client proceeds **tokenless** (fails OPEN).
+- `main.py:294` — when `ANALYZE_TOKEN_SECRET` is set (it is, prod), a **missing token → 401** "Could not verify the request" (fails CLOSED).
+- Mismatch → any transient token-endpoint hiccup becomes a hard analysis failure, surfaced as generic "server_error" with NO retry button. Intermittent + "after a couple" = exactly this. Went live 18 days ago = "recently."
+- Also: a real quota-exceeded user who slips the client pre-check gets `analyze-token` → 403 → `null` → Render 401 generic error instead of the FreeLimitModal (403 swallowed, indistinguishable from "no secret").
+- **Fix**: `fetchAnalyzeToken` must distinguish 403 (→ surface FreeLimitModal) from transient failures (→ retry 1-2x and/or raise the 8s timeout); a transient token-fetch failure must NOT become a hard 401 for an authenticated user.
+
+#### 🔴 CRITICAL 2 — $5.99 Single purchase grants NO usable analysis credit (CONFIRMED IN CODE — revenue/credibility killer for daily promo)
+- Live `can_user_analyze` (`supabase/migrations/20260214000001_free_tier_to_1_full.sql`) only evaluates `free`/`pro`/`studio` from `subscriptions`. It **never reads the `purchases` table**.
+- The `single` webhook branch (`app/api/webhooks/stripe/route.ts:223-247`) inserts a `purchases` row with `analyses_granted:1, analyses_used:0` — but nothing ever consults it. Plan stays `free`.
+- `use_single_purchase()` + `add_addon_pack()` (defined `20260125000001_pricing_restructure.sql`) are **dead code** — grep finds only type defs, never called.
+- Result: free user uses 2 free → buys Single → `can_user_analyze` sees `free` + `lifetime_used>=2` → `FREE_LIMIT_REACHED` → **blocked. Paid, got nothing.**
+- **Fix (pick one)**: make `can_user_analyze` count unused `purchases` (`analyses_granted - analyses_used > 0`) as available credit AND call `use_single_purchase()` on consume; OR simplest — have the `single` webhook grant a real credit into a counter the RPC already reads (e.g. addon).
+
+#### 🟡 3 — Backend memory (mostly already mitigated, lower priority)
+- Force-chunked everything (~10MB/chunk, Session 2026-04-24) + `MALLOC_ARENA_MAX=2` on Render already bound peak memory. The classic OOM theory is largely handled.
+- Residual: full upload still buffered in RAM via `content = await file.read()` (`main.py:799`) BEFORE the `Semaphore(1)` (`main.py:854`); two overlapping uploads can stack. Stream Ready endpoint already streams to disk in 64KB chunks (`main.py:1891`) — use as template if we fix.
+- Also latent: no timeout on `run_in_executor` analysis call (`main.py:1042`) → a hung analysis holds the semaphore forever; legacy `/api/analyze/mix` (`main.py:511-714`) is uncapped + runs on the event loop. Neither is the current bug; close opportunistically.
+
+#### 🟡 4 — Smaller robustness gaps (batch with the fix)
+- Failed analyses have NO retry button; 401/413/429 all collapse to "server_error" (`lib/api.ts:96-100,182-187`) — misleading + non-actionable.
+- AudioContext leak on >50MB compression path: `lib/audio-compression.ts:33` `new AudioContext()` only closed on happy returns; if `decodeAudioData`/`startRendering` throws/hangs (or the 30s race in `page.tsx:887` wins) it's never closed → ~6-context cap → spurious "corrupt_file" on repeated large files. Wrap body in try/finally close.
+- Addon webhook credit grant NOT idempotent (`route.ts:259-303`) — replay re-adds +10, skips the max-2-packs guard. Dedup on `stripe_checkout_session_id` before incrementing.
+- `saveAnalysisToDatabase` silent `catch {}` (`page.tsx:1032`) + optimistic `_quotaCache` increment → quota cache can drift from server; failed save never reaches history silently.
+- Server-side quota gate at token issuance fails OPEN on RPC error (`analyze-token/route.ts:56-63`) — only client `checkCanAnalyze` is fail-closed.
+
+#### Genuinely solid (verified — do NOT re-audit)
+- Failed analysis does NOT burn a credit (`increment_analysis_count` only after successful insert, `page.tsx:175`).
+- GoTrue lock→403 trap properly mitigated (no-op `lock` on both singleton + fresh client, separate `storageKey`, fail-closed `checkCanAnalyze`).
+- Stripe webhook raw-body signature verify + subscription idempotency (payment_intent + invoice_id) correct; price→credit server-side; admin bypass keyed on `is_admin`; RLS in place; token re-fetched per analysis (no stale reuse); polling bounded (5-min cap, backoff); state reset between runs.
+
+#### Recommended plan (proposed to Mat, awaiting go)
+1. **Fix C1 + C2 now** (directly hit paying users), harden #4 along the way, leave #3 as monitored follow-up.
+2. **2 caveats before touching anything**: (a) live `can_user_analyze` may differ from committed migration (admin bypass was hand-applied via SQL) — confirm live def in Supabase SQL editor first; (b) verify `MALLOC_ARENA_MAX=2` is still set on Render dashboard (off-repo).
+3. Branch `dev` → one bundled commit → build clean → merge to `main` on go (remember local `main` is already 1 commit ahead of origin from `a3dc77d`).
+
+**Git state**: on `dev`, no code changes this session. Diagnosis only. Resume by deciding C2 fix shape (RPC reads purchases vs webhook grants addon credit) + implementing C1 token retry/403-distinction.
+
+---
+
+#### Addendum 2026-06-29 (later) — decisions locked, still NO code changes (IMPLEMENTED 2026-06-30, see next section)
+
+**Caveat (a) RESOLVED.** Pasted the live `can_user_analyze(uuid)` def from the Supabase SQL editor (`SELECT pg_get_functiondef('can_user_analyze(uuid)'::regprocedure)`). It matches the committed migration `20260214000001_free_tier_to_1_full.sql` **byte-for-byte** — admin bypass present, no hidden hand-edits. Safe to `CREATE OR REPLACE` against that migration as the source of truth.
+
+**C2 decision LOCKED → purchases approach (NOT the addon hack).** The audit's "simplest: have the webhook grant into a counter the RPC already reads" is **wrong** — verified in the live def: `addon_analyses_remaining` is read **only inside the `pro` branch**. The `free` branch (which is what a $5.99 Single buyer is) reads **nothing but `v_lifetime_used >= 2`**. So *any* C2 fix MUST modify `can_user_analyze` — there is no zero-RPC path. Given that's unavoidable, the purchases path wins on every axis: the `single` webhook **already** inserts the `purchases` row correctly (`analyses_granted:1, analyses_used:0, status:succeeded`); `use_single_purchase()` **already exists** (just never called — dead code to wire in, not write); `purchases` has explicit per-row granted/used accounting (auditable, idempotent-friendly, supports multiple purchases). The addon route would be more code + a hack on a counter not built for free users, with no upside.
+
+**C2 implementation plan (refined, to execute):**
+1. New migration — `CREATE OR REPLACE can_user_analyze`: add a **purchase-credit fallback** that fires only when the plan would *otherwise block* (so a free user spends their 2 free analyses FIRST, then purchase credit). Compute `v_purchase_remaining = SUM(analyses_granted - analyses_used)` over the user's `status='succeeded'` purchases; if > 0 at a would-be-blocked point, return `TRUE` with reason `'USING_PURCHASE'`. Covers free AND exhausted-pro users. Same migration adds `consume_purchase_credit(p_user_id)` — a FIFO wrapper that picks the oldest purchase with `remaining > 0` and decrements via the existing `use_single_purchase()` logic, so the frontend never has to track purchase IDs.
+2. Frontend success path — when the RPC `reason === 'USING_PURCHASE'`, call `consume_purchase_credit` **instead of** `increment_analysis_count`, so a paid analysis does NOT also burn the free lifetime counter (no double-count). (Was about to grep `increment_analysis_count` / `checkCanAnalyze` wiring in `page.tsx` when we stopped — that's the first read on resume.)
+
+**`supabase_admin does not exist` FATAL errors — INVESTIGATED + DISMISSED (not the bug, no action).** Mat saw 2 FATAL `database "supabase_admin" does not exist` in Postgres logs at 19:44 local + a scary-looking "Postgres 12 ERR / 50% Success Rate" banner. Verdict: benign, unrelated to MR. Evidence: (a) **not us** — codebase has zero direct PG connections (no psycopg/DATABASE_URL/pooler; all DB access via PostgREST, which is Healthy/green); (b) the keep-alive `.github/workflows/supabase-keepalive.yml` is **correctly built** (REST `/rest/v1/profiles` + anon key, cron `0 6 */5 * *`) and is NOT the source — wrong layer (HTTPS REST never connects as `supabase_admin`) + wrong time (06:00 UTC vs the errors at 00:44 UTC). The FATALs are wire-level connection rejections (a client connecting as user `supabase_admin` with no dbname → libpq defaults dbname to username → rejected at the door, no query runs). Most likely Mat's own dashboard session/DB tool at 7:44pm. The "50% success rate / 12 ERR" banner just counts these rejected connections, NOT failed user queries. Keep-alive: **leave as-is** (with daily promo traffic the project won't pause anyway).
+
+**Still NOT done:** C1 (lib/api.ts token retry + 403-vs-transient distinction) not started; C2 not started. Next session resume order: (1) grep `increment_analysis_count`/`checkCanAnalyze` wiring in frontend, (2) implement C1 in `lib/api.ts`, (3) write the C2 migration + consume wiring, (4) harden #4 gaps opportunistically, (5) one bundled commit on `dev` → build clean → merge to `main` on go (local `main` already 1 commit ahead of origin from `a3dc77d`). Git: still on `dev`, no code changes.
+
+---
+
+### Session 2026-06-30 — C1 + C2 + #4 hardening IMPLEMENTED (built, build+tsc clean, NOT committed, awaiting Mat's go to commit/merge)
+
+Executed the locked plan from the two addenda above. All five steps done in one uncommitted working set on `dev`. **`npx tsc --noEmit` = clean, `npm run build` = exit 0.** Nothing committed yet (per "commit only on request").
+
+**C1 — signed-token gate (`lib/api.ts`).** Rewrote `fetchAnalyzeToken` (was: return `null` on ANY failure → tokenless → backend 401):
+- **403 → throws `AnalysisApiError('quota_exceeded', 403)`** (real quota refusal from the server gate), caught in `page.tsx` and surfaced as the **FreeLimitModal** instead of a generic server error.
+- **Transient (5xx / network / timeout) → retries up to 3× (400ms·attempt backoff, 12s timeout each)**; if still failing throws `AnalysisApiError('token_unavailable')` → retryable bilingual message. No longer proceeds tokenless (which would 401 in prod since the secret IS set).
+- **Returns `null` ONLY on explicit 200 `{token:null}`** (secret unset → backend skips validation → tokenless is legitimate). New `token_unavailable` category added to `lib/error-messages.ts`; `quota_exceeded` is intercepted in the page `catch` before `getErrorMessage`. Imported `AnalysisApiError` into `page.tsx`.
+
+**C2 — purchase credit (purchases approach, as locked).** New migration **`supabase/migrations/20260630000001_purchase_credit_fallback.sql`**:
+- `CREATE OR REPLACE can_user_analyze` rebuilt from the live def (20260214000001, admin bypass preserved). Adds `v_purchase_remaining = SUM(granted-used)` over `status='succeeded'` purchases, and at **every would-block point** (free ≥2, pro inactive, pro limit reached, and the no-subscription default) returns `TRUE, 'USING_PURCHASE', v_purchase_used, v_purchase_granted, FALSE` **only if** purchase credit remains — so free/cycle allowance is always spent FIRST. Returning purchase totals in the used/limit columns makes the frontend optimistic cache self-correct.
+- Adds `consume_purchase_credit(p_user_id)` — FIFO wrapper: picks the oldest succeeded purchase with remaining>0 (`ORDER BY created_at ASC LIMIT 1 FOR UPDATE SKIP LOCKED`) and calls the existing `use_single_purchase()`. No grants needed (project relies on default PUBLIC execute, like `increment_analysis_count`).
+- **Frontend wiring (`page.tsx`)**: captured the authoritative `resolvedReason` (the reason that authorized THIS analysis — set from the pre-check `analysisStatus.reason` and the post-analysis `quotaCheck.reason`, NOT the possibly-stale `userAnalysisStatus` cache). `saveAnalysisToDatabase` got a `usingPurchase?` param; when true it calls `consume_purchase_credit` **instead of** `increment_analysis_count` (so a paid analysis never burns the free lifetime counter). Added `consume_purchase_credit` to `lib/database.types.ts` so the typed `.rpc()` compiles. The server analyze-token gate now also passes purchase users (it calls the same updated `can_user_analyze`).
+
+**#4 hardening (batched, lower-risk items only):**
+- **AudioContext leak (`lib/audio-compression.ts`)**: wrapped `compressAudioFile` body in `try { … } finally { audioContext.close() }`, removed the 3 inline closes → context always released even if `decodeAudioData`/`startRendering` throws/hangs (kills the ~6-context cap → false "corrupt_file" on repeated large files). Also `let targetChannels`→`const`.
+- **Webhook purchase idempotency (`app/api/webhooks/stripe/route.ts`)**: new `purchaseAlreadyRecorded(sessionId)` helper; both the `single` and `addon` branches early-return if a `purchases` row already exists for that `stripe_checkout_session_id` → a replayed webhook can't grant a second analysis (single) or a second +10 pack (addon). App-level dedup, matching the existing `insertPaymentIfNew` pattern (no DB unique index, to avoid failing on any pre-existing dup rows).
+
+**Deliberately NOT done (noted, not in this bundle):** retry BUTTON on failed analyses (#4, bigger UI change — the improved error messages already address the "misleading/non-actionable" half); `saveAnalysisToDatabase` silent `catch{}` observability (#4, low priority, UX risk); #3 backend memory items (monitored follow-up).
+
+**⚠️ DEPLOY GATE — the migration must be RUN on prod Supabase for C2 to activate.** Code is safe to ship before it: `can_user_analyze` only returns `USING_PURCHASE` once the migration is applied, so until then `usingPurchase` stays false and `consume_purchase_credit` is never called (no error, C2 just dormant). Both functions are in the one migration file and must be applied together. Migrations in this project are applied **manually in the Supabase SQL editor** (not auto-pushed) — I did NOT apply it (hard-to-reverse prod change → needs Mat's hand). **To go live: (1) on Mat's go, commit all changes + merge `dev`→`main` (local `main` already 1 ahead of origin from `a3dc77d`), one push; (2) paste `20260630000001_purchase_credit_fallback.sql` into the Supabase SQL editor and run it; (3) smoke-test: free user → exhaust 2 free → buy a Single → confirm analysis runs and the purchase row's `analyses_used` increments.**
+
+**Git**: still on `dev`. Working tree has the 7 files above modified/created (+ this CLAUDE.md), NOT committed. Untracked `content/` and the 3 `content_queue` migrations are from a separate unrelated feature — leave them out of the C1/C2 commit.

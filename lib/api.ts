@@ -19,30 +19,59 @@ export class AnalysisApiError extends Error {
 
 /**
  * Fetch a short-lived signed token from /api/analyze-token before calling
- * the analysis backend. Returns null when the token system is not yet
- * configured or the request fails; the backend only enforces tokens once
- * ANALYZE_TOKEN_SECRET is set on both sides.
+ * the analysis backend.
+ *
+ * Returns null ONLY when the endpoint explicitly reports the token system is
+ * disabled (200 with token:null, i.e. ANALYZE_TOKEN_SECRET unset) — in that
+ * case the backend skips validation and a tokenless request is legitimate.
+ *
+ * A 403 means the server-side quota gate refused: throws a 'quota_exceeded'
+ * error so the caller surfaces the limit modal instead of proceeding tokenless
+ * and hitting an opaque backend 401. Transient failures (5xx, network, timeout)
+ * are retried; if they persist it throws 'token_unavailable' rather than
+ * proceeding tokenless, because in production the backend would reject a missing
+ * token with a misleading 401.
  */
 async function fetchAnalyzeToken(accessToken?: string): Promise<string | null> {
-  try {
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 8000)
-    const headers: Record<string, string> = {}
-    if (accessToken) {
-      headers['Authorization'] = `Bearer ${accessToken}`
-    }
-    const res = await fetch('/api/analyze-token', {
-      method: 'POST',
-      headers,
-      signal: controller.signal,
-    })
-    clearTimeout(timeoutId)
-    if (!res.ok) return null
-    const data = await res.json()
-    return data.token || null
-  } catch {
-    return null
+  const maxAttempts = 3
+  const headers: Record<string, string> = {}
+  if (accessToken) {
+    headers['Authorization'] = `Bearer ${accessToken}`
   }
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 12000)
+      const res = await fetch('/api/analyze-token', {
+        method: 'POST',
+        headers,
+        signal: controller.signal,
+      })
+      clearTimeout(timeoutId)
+
+      if (res.status === 403) {
+        throw new AnalysisApiError('quota_exceeded', 'quota_exceeded', 403)
+      }
+      if (!res.ok) {
+        if (attempt < maxAttempts) {
+          await new Promise(r => setTimeout(r, 400 * attempt))
+          continue
+        }
+        break
+      }
+      const data = await res.json()
+      return data.token ?? null
+    } catch (err) {
+      if (err instanceof AnalysisApiError) throw err
+      if (attempt < maxAttempts) {
+        await new Promise(r => setTimeout(r, 400 * attempt))
+        continue
+      }
+    }
+  }
+
+  throw new AnalysisApiError('token_unavailable', 'token_unavailable')
 }
 
 // ORIGINAL: Direct analysis (kept for backward compatibility)

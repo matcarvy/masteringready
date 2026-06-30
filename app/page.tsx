@@ -9,7 +9,7 @@ import ScoreCard from '@/components/ScoreCard'
 import Spinner from '@/components/Spinner'
 import ReadyCertifiedBadge from '@/components/ReadyCertifiedBadge'
 import { analyzeFile, checkIpLimit, IpCheckResult } from '@/lib/api'
-import { startAnalysisPolling, getAnalysisStatus } from '@/lib/api'
+import { startAnalysisPolling, getAnalysisStatus, AnalysisApiError } from '@/lib/api'
 import { compressAudioFile, parseFileHeader } from '@/lib/audio-compression'
 import { supabase, createFreshQueryClient, checkCanAnalyze, AnalysisStatus } from '@/lib/supabase'
 import { useGeo } from '@/lib/useGeo'
@@ -103,7 +103,7 @@ const TESTIMONIALS: {
 ]
 
 // --- Save analysis directly to database for logged-in users ---
-async function saveAnalysisToDatabase(userId: string, analysis: any, fileObj?: File, countryCode?: string, isTestAnalysis?: boolean, sessionTokens?: { access_token: string; refresh_token: string }) {
+async function saveAnalysisToDatabase(userId: string, analysis: any, fileObj?: File, countryCode?: string, isTestAnalysis?: boolean, sessionTokens?: { access_token: string; refresh_token: string }, usingPurchase?: boolean) {
   // Use a fresh client to avoid stale singleton state after analysis
   // (analysis makes multiple auth/quota checks that can leave the singleton locked)
   let client = supabase
@@ -128,7 +128,14 @@ async function saveAnalysisToDatabase(userId: string, analysis: any, fileObj?: F
   const fileInfo = analysis.file || {}
   const fileExtension = (analysis.filename || '').split('.').pop()?.toLowerCase() || null
 
-  // Run INSERT + increment counter in PARALLEL (both are independent operations)
+  // When the analysis ran on one-off purchase credit, decrement the purchase
+  // (FIFO) instead of the free/cycle counter, so a paid analysis never burns
+  // the free lifetime allowance and the purchase is properly consumed.
+  const counterRpc = usingPurchase
+    ? client.rpc('consume_purchase_credit', { p_user_id: userId })
+    : client.rpc('increment_analysis_count', { p_user_id: userId })
+
+  // Run INSERT + counter in PARALLEL (both are independent operations)
   // This halves save time and frees Supabase client faster for dashboard navigation
   const [insertResult, incrementResult] = await Promise.all([
     client
@@ -172,7 +179,7 @@ async function saveAnalysisToDatabase(userId: string, analysis: any, fileObj?: F
         api_request_id: analysis.api_request_id || null
       })
       .select(),
-    client.rpc('increment_analysis_count', { p_user_id: userId })
+    counterRpc
   ])
 
   if (insertResult.error) {
@@ -756,6 +763,9 @@ const handleAnalyze = async () => {
     // --- Quota check ---
     // Use module-level cache as fallback when React state was lost (GoTrueClient conflicts)
     const effectiveQuotaStatus = userAnalysisStatus || _quotaCache
+    // Authoritative reason that authorized THIS analysis; decides whether the
+    // save path consumes purchase credit vs the free/cycle counter.
+    let resolvedReason: string | undefined = effectiveQuotaStatus?.reason
 
     // --- IP rate limiting check (anonymous users only) ---
     if (!isLoggedIn) {
@@ -800,6 +810,7 @@ const handleAnalyze = async () => {
           ])
         }
         setUserAnalysisStatus(analysisStatus); _quotaCache = analysisStatus
+        resolvedReason = analysisStatus.reason
 
         // Defensive: if user is logged in but checkCanAnalyze returns ANONYMOUS,
         // the Supabase session may have expired; deny analysis rather than bypass quota
@@ -996,8 +1007,9 @@ const handleAnalyze = async () => {
           try {
             const postTokens = session ? { access_token: session.access_token, refresh_token: session.refresh_token } : undefined
             const quotaCheck = await checkCanAnalyze(1, postTokens)
+            setUserAnalysisStatus(quotaCheck); _quotaCache = quotaCheck
+            resolvedReason = quotaCheck.reason
             if (!quotaCheck.can_analyze || quotaCheck.reason === 'ANONYMOUS') {
-              setUserAnalysisStatus(quotaCheck); _quotaCache = quotaCheck
               setShowFreeLimitModal(true)
               // Do NOT show results; analysis is lost
               progressRef.current = 0
@@ -1038,7 +1050,7 @@ const handleAnalyze = async () => {
               lang,
               strict,
               api_request_id: requestIdRef.current || null
-            }, file, geo?.countryCode, isAdmin, session ? { access_token: session.access_token, refresh_token: session.refresh_token } : undefined)
+            }, file, geo?.countryCode, isAdmin, session ? { access_token: session.access_token, refresh_token: session.refresh_token } : undefined, resolvedReason === 'USING_PURCHASE')
             setSavedAnalysisId(savedData?.[0]?.id || null)
             const prev = parseInt(sessionStorage.getItem('mr_new_analyses') || '0', 10)
             const count = prev + 1
@@ -1121,7 +1133,13 @@ const handleAnalyze = async () => {
     }, 100)
     
   } catch (err) {
-    setError(getErrorMessage(err, lang))
+    // A 403 from the token gate means quota is actually exhausted (e.g. the
+    // client cache slipped); surface the limit modal, not a generic error.
+    if (err instanceof AnalysisApiError && err.category === 'quota_exceeded') {
+      setShowFreeLimitModal(true)
+    } else {
+      setError(getErrorMessage(err, lang))
+    }
   } finally {
     isAnalyzingRef.current = false
     setLoading(false)

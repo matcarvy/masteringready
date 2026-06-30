@@ -133,6 +133,23 @@ async function insertPaymentIfNew(
 }
 
 /**
+ * Whether a purchase row already exists for this checkout session.
+ * Each checkout.session.completed carries a unique session id, so this makes
+ * the single/addon credit grants idempotent across Stripe webhook replays.
+ */
+async function purchaseAlreadyRecorded(
+  supabase: SupabaseAdmin,
+  sessionId: string
+): Promise<boolean> {
+  const { data } = await supabase
+    .from('purchases')
+    .select('id')
+    .eq('stripe_checkout_session_id', sessionId)
+    .maybeSingle()
+  return !!data
+}
+
+/**
  * Handle checkout.session.completed
  */
 async function handleCheckoutCompleted(
@@ -232,6 +249,11 @@ async function handleCheckoutCompleted(
       return
     }
 
+    // Idempotency: a replayed webhook must not grant a second analysis credit
+    if (await purchaseAlreadyRecorded(supabase, session.id)) {
+      return
+    }
+
     // Create purchase record
     await supabase.from('purchases').insert({
       user_id: userId,
@@ -265,6 +287,11 @@ async function handleCheckoutCompleted(
       .single()
 
     if (!addonPlan) {
+      return
+    }
+
+    // Idempotency: a replayed webhook must not add a second +10 pack
+    if (await purchaseAlreadyRecorded(supabase, session.id)) {
       return
     }
 
