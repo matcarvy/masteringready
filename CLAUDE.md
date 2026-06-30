@@ -5580,7 +5580,7 @@ Mat hit an error "during analysis/upload after a couple of analyses" and is abou
 
 ---
 
-### Session 2026-06-30 — C1 + C2 + #4 hardening IMPLEMENTED (built, build+tsc clean, NOT committed, awaiting Mat's go to commit/merge)
+### Session 2026-06-30 — C1 + C2 + #4 hardening SHIPPED (commit `a130dda`, on `main`+`dev`, migration live, prod analysis verified)
 
 Executed the locked plan from the two addenda above. All five steps done in one uncommitted working set on `dev`. **`npx tsc --noEmit` = clean, `npm run build` = exit 0.** Nothing committed yet (per "commit only on request").
 
@@ -5603,3 +5603,15 @@ Executed the locked plan from the two addenda above. All five steps done in one 
 **⚠️ DEPLOY GATE — the migration must be RUN on prod Supabase for C2 to activate.** Code is safe to ship before it: `can_user_analyze` only returns `USING_PURCHASE` once the migration is applied, so until then `usingPurchase` stays false and `consume_purchase_credit` is never called (no error, C2 just dormant). Both functions are in the one migration file and must be applied together. Migrations in this project are applied **manually in the Supabase SQL editor** (not auto-pushed) — I did NOT apply it (hard-to-reverse prod change → needs Mat's hand). **To go live: (1) on Mat's go, commit all changes + merge `dev`→`main` (local `main` already 1 ahead of origin from `a3dc77d`), one push; (2) paste `20260630000001_purchase_credit_fallback.sql` into the Supabase SQL editor and run it; (3) smoke-test: free user → exhaust 2 free → buy a Single → confirm analysis runs and the purchase row's `analyses_used` increments.**
 
 **Git**: still on `dev`. Working tree has the 7 files above modified/created (+ this CLAUDE.md), NOT committed. Untracked `content/` and the 3 `content_queue` migrations are from a separate unrelated feature — leave them out of the C1/C2 commit.
+
+#### SHIPPED 2026-06-30 — verified, committed, pushed, deployed
+
+**Validation before commit:** `tsc --noEmit` clean · `npm run build` exit 0 · **headless Chrome smoke** (prod server, real browser) clean — homepage hydrates 65KB, analyzer `#file-input` + drag/drop copy render, no error boundary, zero uncaught/TypeError/ReferenceError (only Chrome infra noise). `/audit-code` (full mobile) on changed files: code-quality clean, **R1–R3 white-screen hazards clean** (all `new` target real constructors, no global-name shadow), page.tsx changes **logic-only (no className/JSX touched → no mobile regression)**, **M2 zoom OK** (`maximumScale:5`), **M23 iOS text inflation handled** (`app/layout.tsx:332` `-webkit-text-size-adjust:100%`, correct value not `none`).
+
+**Migration applied + verified LIVE in Supabase** (manual SQL editor run): both functions exist with `p_user_id uuid` sig; `pg_get_functiondef(can_user_analyze)` contains `USING_PURCHASE` = true; the "any stuck buyer" query returned 0 rows (nobody holds unused Single credit yet → nothing to retro-fix, fix is in place for the next buyer).
+
+**Commit `a130dda`** (`fix: grant purchase credit (C2), harden analyze-token gate (C1) + robustness`) — 8 files (7 code + CLAUDE.md + the new migration), `content/`/`content_queue` excluded. Pushed to **`main`** (`9d6c3a8..a130dda`, triggers Vercel prod deploy) and **`dev`** (synced). Both branches now at `a130dda` tracking origin. (`main` is no longer ahead of origin.)
+
+**Prod outcome:** Mat confirmed **a normal analysis works post-deploy** (C1 path + general analyze path validated live — the "after a couple of analyses" error path is the one C1 hardened). **Single-purchase end-to-end test still PENDING** — Mat will run it later; the real C2 proof is: buy a Single → run an analysis → confirm the `purchases` row's `analyses_used` ticks 0→1 (and the analysis isn't blocked).
+
+**Still the only open follow-up:** #3 backend-memory (Render) — the full-upload-buffered-before-`Semaphore(1)` stacking path (`main.py:799` read before `:854` semaphore) — left UNtouched/monitored. If the intermittent error ever recurs after this deploy, that's the next suspect. Also never re-verified this session: `MALLOC_ARENA_MAX=2` still set on the Render dashboard (off-repo, audit caveat (b)).
