@@ -8,6 +8,7 @@
 
 import { useState, useEffect, Suspense, useMemo } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth, UserMenu } from '@/components/auth'
@@ -42,7 +43,10 @@ import { useToast } from '@/components/ui/Toast'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { clearNotification } from '@/components/NotificationBadge'
 import { SkeletonBox, SkeletonText, SkeletonCircle } from '@/components/Skeleton'
-import ProgressTimeline from '@/components/ProgressTimeline'
+const ProgressTimeline = dynamic(() => import('@/components/ProgressTimeline'), {
+  ssr: false,
+  loading: () => <SkeletonBox width="100%" height={400} borderRadius="1rem" style={{ marginBottom: '1.5rem' }} />,
+})
 import { getScoreColor, getVerdictColor, scoreToVerdictLabel } from '@/lib/scoreColor'
 import { formatDate } from '@/lib/formatDate'
 import { cleanReportText } from '@/lib/cleanReportText'

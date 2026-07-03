@@ -308,6 +308,36 @@ ALLOWED_EXTENSIONS = {'.wav', '.mp3', '.aiff', '.aif', '.aac', '.m4a', '.ogg', '
 # Formats that need conversion to WAV before analysis (not natively supported by libsndfile)
 NEEDS_CONVERSION = {'.aac', '.m4a'}
 
+
+async def stream_upload_to_file(file, dest, lang: str) -> int:
+    """Stream an upload into dest in bounded 1MB chunks, aborting before an
+    oversize body can be buffered whole into memory and OOM the instance."""
+    written = 0
+    while True:
+        chunk = await file.read(1024 * 1024)
+        if not chunk:
+            break
+        written += len(chunk)
+        if written > MAX_FILE_SIZE:
+            raise HTTPException(status_code=413, detail=bilingual_error('file_too_large', lang))
+        dest.write(chunk)
+    return written
+
+
+def enforce_upload_size_header(request, lang: str) -> None:
+    """Reject an upload up front when the client declares an oversize length."""
+    declared = request.headers.get('content-length')
+    if declared and declared.isdigit() and int(declared) > MAX_FILE_SIZE:
+        raise HTTPException(status_code=413, detail=bilingual_error('file_too_large', lang))
+
+
+def enforce_stats_auth(request) -> None:
+    """Gate the internal stats endpoints behind a shared secret when configured.
+    Inert until STATS_SECRET is set, so existing callers keep working."""
+    secret = _os.getenv('STATS_SECRET')
+    if secret and request.headers.get('x-stats-secret') != secret:
+        raise HTTPException(status_code=403, detail='Forbidden')
+
 # Bilingual error messages (matching frontend lib/error-messages.ts)
 ERROR_MSGS = {
     'file_too_large': {
@@ -568,21 +598,9 @@ async def analyze_mix_endpoint(
             detail=bilingual_error('format_not_supported', lang)
         )
 
-    # Validate file size
-    content = await file.read()
-    file_size = len(content)
-
-    if file_size > MAX_FILE_SIZE:
-        raise HTTPException(
-            status_code=413,
-            detail=bilingual_error('file_too_large', lang)
-        )
-
-    if file_size == 0:
-        raise HTTPException(
-            status_code=400,
-            detail=bilingual_error('corrupt_file', lang)
-        )
+    # Reject an oversize upload before consuming the body; the auth/IP gate below
+    # and the streamed read further down both run before anything is buffered.
+    enforce_upload_size_header(request, lang)
 
     # Resolve auth from the signed token when the gate is active (this endpoint
     # has no is_authenticated form field, so the token is the only auth source)
@@ -613,23 +631,22 @@ async def analyze_mix_endpoint(
                 else 'Could not verify access. Please try again.'
             )
 
-    logger.info(f"📊 File size: {file_size / 1024 / 1024:.2f} MB")
-
     # Use temporary file (auto-deleted)
     with tempfile.NamedTemporaryFile(
         delete=True,
         suffix=file_ext
     ) as temp_file:
-        
-        try:
-            # Write uploaded content
-            temp_file.write(content)
-            temp_file.flush()
 
-            # Free upload bytes — file is on disk now, no longer needed in RAM
-            del content
+        try:
+            # Stream the upload straight to disk in bounded chunks so a large or
+            # malicious body is capped before it can exhaust memory.
+            file_size = await stream_upload_to_file(file, temp_file, lang)
+            if file_size == 0:
+                raise HTTPException(status_code=400, detail=bilingual_error('corrupt_file', lang))
+            temp_file.flush()
             _free_memory()
 
+            logger.info(f"📊 File size: {file_size / 1024 / 1024:.2f} MB")
             logger.info(f"💾 Temp file created: {temp_file.name}")
 
             # Convert AAC/M4A to WAV (not natively supported by libsndfile)
@@ -795,18 +812,25 @@ async def start_analysis(
             detail=bilingual_error('format_not_supported', lang)
         )
     
-    # Read file content
-    content = await file.read()
+    # Read file content in bounded chunks so an oversize body cannot be buffered
+    # whole into memory and OOM the instance. Kept as a bytearray (written to a
+    # temp file downstream) to avoid a full-size copy on a memory-tight instance.
+    enforce_upload_size_header(request, lang)
+    content = bytearray()
+    while True:
+        chunk = await file.read(1024 * 1024)
+        if not chunk:
+            break
+        content.extend(chunk)
+        if len(content) > MAX_FILE_SIZE:
+            raise HTTPException(
+                status_code=413,
+                detail=bilingual_error('file_too_large', lang)
+            )
     file_size = len(content)
-    
+
     logger.info(f"📥 Analysis request (polling): {file.filename}, lang={lang}, mode={mode}")
     logger.info(f"📊 File size: {file_size / 1024 / 1024:.2f} MB")
-    
-    if file_size > MAX_FILE_SIZE:
-        raise HTTPException(
-            status_code=413,
-            detail=bilingual_error('file_too_large', lang)
-        )
 
     # Server-side IP rate limit enforcement (prevents direct API bypass)
     if not is_authenticated and IP_LIMITER_AVAILABLE and ip_limiter and ip_limiter.is_enabled():
@@ -955,21 +979,18 @@ async def start_analysis(
                     use_chunked = True  # Always chunked — bounded peak memory, fidelity preserved via ffmpeg global LUFS
                     logger.info(f"📊 [{job_id}] Using ACTUAL duration: {estimated_duration_min:.1f} min")
                 elif is_compressed:
-                    # Compressed format - try to get duration via ffmpeg (zero memory)
-                    # Short compressed files (< 2 min) can be analyzed without chunking
+                    # Compressed format - try to get duration via ffprobe (header read, zero decode)
                     try:
                         probe_result = subprocess.run(
-                            [FFMPEG_EXE, '-i', analysis_path, '-f', 'null', '-'],
+                            [FFPROBE_EXE, '-v', 'error', '-show_entries', 'format=duration',
+                             '-of', 'default=noprint_wrappers=1:nokey=1', analysis_path],
                             capture_output=True, text=True, timeout=15
                         )
-                        duration_match = re.search(r'Duration:\s*(\d+):(\d+):(\d+)\.(\d+)', probe_result.stderr)
-                        if duration_match:
-                            h, m, s, frac = duration_match.groups()
-                            total_sec = int(h) * 3600 + int(m) * 60 + int(s) + int(frac) / 100
-                            estimated_duration_min = total_sec / 60.0
+                        if probe_result.returncode == 0 and probe_result.stdout.strip():
+                            estimated_duration_min = float(probe_result.stdout.strip()) / 60.0
                         else:
-                            raise ValueError("Could not parse duration from ffmpeg output")
-                        logger.info(f"📊 [{job_id}] Compressed duration from ffmpeg probe: {estimated_duration_min:.1f} min")
+                            raise ValueError("Could not parse duration from ffprobe output")
+                        logger.info(f"📊 [{job_id}] Compressed duration from ffprobe: {estimated_duration_min:.1f} min")
                     except Exception as e:
                         # Fallback: estimate from file size (conservative: ~0.7 MB/min for low bitrate)
                         estimated_duration_min = file_size_mb * 1.5
@@ -1451,11 +1472,12 @@ async def download_pdf(
 # ============== STATS ENDPOINTS ==============
 
 @app.get("/api/stats")
-async def get_stats():
+async def get_stats(request: Request):
     """
     Obtiene estadísticas del día actual.
     Útil para dashboards o monitoreo.
     """
+    enforce_stats_auth(request)
     if not TELEGRAM_ENABLED:
         return {
             "success": False,
@@ -1477,7 +1499,7 @@ async def get_stats():
 
 
 @app.get("/api/stats/send-summary")
-async def send_daily_summary_endpoint():
+async def send_daily_summary_endpoint(request: Request):
     """
     Envía el resumen diario a Telegram.
     
@@ -1490,6 +1512,7 @@ async def send_daily_summary_endpoint():
     https://tu-app.onrender.com/api/stats/send-summary
     Todos los días a las 8pm (hora Colombia = 1:00 AM UTC del día siguiente)
     """
+    enforce_stats_auth(request)
     if not TELEGRAM_ENABLED:
         return {
             "success": False,
@@ -1514,13 +1537,15 @@ async def send_daily_summary_endpoint():
 
 
 @app.get("/api/stats/history")
-async def get_stats_history(days: int = 7):
+async def get_stats_history(request: Request, days: int = 7):
     """
     Obtiene estadísticas de los últimos N días.
-    
+
     Args:
         days: Número de días (default: 7)
     """
+    enforce_stats_auth(request)
+    days = max(1, min(days, 90))
     if not TELEGRAM_ENABLED:
         return {
             "success": False,

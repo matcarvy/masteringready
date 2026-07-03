@@ -1,7 +1,6 @@
 'use client'
 
 import { useRef, useState, useCallback } from 'react'
-import html2canvas from 'html2canvas'
 import { getBarColor } from '@/lib/scoreCard'
 import { stripExtension } from '@/lib/filename'
 import { nbsp } from '@/lib/nbsp'
@@ -125,6 +124,8 @@ export default function ReadyCertifiedBadge({ analysis, lang }: ReadyCertifiedBa
 
     setGenerating(format)
     try {
+      const { default: html2canvas } = await import('html2canvas')
+
       const el = ref.current
       el.style.position = 'fixed'
       el.style.left = '-99999px'
@@ -168,6 +169,8 @@ export default function ReadyCertifiedBadge({ analysis, lang }: ReadyCertifiedBa
 
     setGenerating('feed')
     try {
+      const { default: html2canvas } = await import('html2canvas')
+
       const el = feedRef.current
       el.style.position = 'fixed'
       el.style.left = '-99999px'

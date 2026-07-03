@@ -1,7 +1,6 @@
 'use client'
 
 import { useRef, useState, useCallback } from 'react'
-import html2canvas from 'html2canvas'
 import { X, Download } from 'lucide-react'
 import { nbsp } from '@/lib/nbsp'
 
@@ -66,6 +65,8 @@ export default function InfographicRenderer({ content, onClose }: InfographicRen
 
     setGenerating(fmt)
     try {
+      const { default: html2canvas } = await import('html2canvas')
+
       const el = ref.current
       el.style.position = 'fixed'
       el.style.left = '-99999px'

@@ -365,24 +365,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
                 } : {})
               })
 
-              // Anti-abuse: Check if this email was previously deleted
-              const { data: deletedRecord } = await supabase
-                .from('deleted_accounts')
-                .select('analyses_lifetime_used, total_analyses')
-                .eq('email', u.email || '')
-                .order('deleted_at', { ascending: false })
-                .limit(1)
-                .single()
-
-              if (deletedRecord && deletedRecord.analyses_lifetime_used > 0) {
-                await supabase
-                  .from('profiles')
-                  .update({
-                    analyses_lifetime_used: deletedRecord.analyses_lifetime_used,
-                    total_analyses: deletedRecord.total_analyses || 0
-                  })
-                  .eq('id', u.id)
-              }
+              // Anti-abuse: carry prior lifetime usage forward if this email was
+              // deleted before. The read + write run server-side in a caller-bound
+              // SECURITY DEFINER function; deleted_accounts is not client-readable.
+              await supabase.rpc('apply_deletion_carryover')
 
               // Create free subscription
               const { data: freePlan } = await supabase

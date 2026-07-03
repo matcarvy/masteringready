@@ -18,6 +18,16 @@ from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
+_session = None
+
+
+async def _get_session():
+    global _session
+    if _session is None or _session.closed:
+        import aiohttp
+        _session = aiohttp.ClientSession()
+    return _session
+
 
 class SupabaseRpcClient:
     """
@@ -55,15 +65,15 @@ class _SupabaseRpcCall:
             'Content-Type': 'application/json',
         }
         timeout = aiohttp.ClientTimeout(total=6)
-        async with aiohttp.ClientSession(timeout=timeout) as session:
-            async with session.post(self._endpoint, json=self._params, headers=headers) as resp:
-                if resp.status >= 400:
-                    body = (await resp.text())[:200]
-                    raise RuntimeError(f"Supabase RPC {self._fn_name} failed: HTTP {resp.status} {body}")
-                if resp.status == 204:
-                    return SimpleNamespace(data=None)
-                data = await resp.json(content_type=None)
-                return SimpleNamespace(data=data)
+        session = await _get_session()
+        async with session.post(self._endpoint, json=self._params, headers=headers, timeout=timeout) as resp:
+            if resp.status >= 400:
+                body = (await resp.text())[:200]
+                raise RuntimeError(f"Supabase RPC {self._fn_name} failed: HTTP {resp.status} {body}")
+            if resp.status == 204:
+                return SimpleNamespace(data=None)
+            data = await resp.json(content_type=None)
+            return SimpleNamespace(data=data)
 
 # Feature flag - enabled by default for security (set to 'false' to disable)
 ENABLE_IP_RATE_LIMIT = os.getenv('ENABLE_IP_RATE_LIMIT', 'true').lower() == 'true'
@@ -101,23 +111,41 @@ def get_client_ip(request) -> str:
     Returns:
         Client IP address string
     """
-    # Cloudflare
+    # When TRUSTED_PROXY_HOPS >= 1, derive the client IP from the hop the platform
+    # proxy appends to the RIGHT of X-Forwarded-For and ignore CF-Connecting-IP /
+    # X-Real-IP (the host does not set them, so they are attacker-controlled and
+    # let an anonymous caller forge a new IP per request to defeat the free-tier
+    # limit). Left unset (0) keeps the legacy header order so this is inert until
+    # a prod log check confirms the correct hop count.
+    try:
+        trusted_hops = int(os.getenv('TRUSTED_PROXY_HOPS', '0'))
+    except ValueError:
+        trusted_hops = 0
+
+    if trusted_hops >= 1:
+        forwarded = request.headers.get('X-Forwarded-For')
+        if forwarded:
+            chain = [ip.strip() for ip in forwarded.split(',') if ip.strip()]
+            if chain:
+                return chain[max(0, len(chain) - trusted_hops)]
+        if request.client and request.client.host:
+            return request.client.host
+        return '0.0.0.0'
+
+    # Legacy behavior (default): Cloudflare, then Nginx, then left-most XFF.
     cf_ip = request.headers.get('CF-Connecting-IP')
     if cf_ip:
         return cf_ip.strip()
 
-    # Nginx proxy
     real_ip = request.headers.get('X-Real-IP')
     if real_ip:
         return real_ip.strip()
 
-    # Standard proxy header (take first IP in chain)
     forwarded = request.headers.get('X-Forwarded-For')
     if forwarded:
         # X-Forwarded-For can be: "client, proxy1, proxy2"
         return forwarded.split(',')[0].strip()
 
-    # Direct connection
     if request.client and request.client.host:
         return request.client.host
 

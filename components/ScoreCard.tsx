@@ -1,7 +1,6 @@
 'use client'
 
 import { useRef, useState, useCallback } from 'react'
-import html2canvas from 'html2canvas'
 import { getScoreHex } from '@/lib/scoreColor'
 import { getBarColor } from '@/lib/scoreCard'
 import { stripExtension } from '@/lib/filename'
@@ -128,6 +127,8 @@ export default function ScoreCard({ score, verdict, filename, metricsBars, genre
 
     setGenerating(format)
     try {
+      const { default: html2canvas } = await import('html2canvas')
+
       // Make the hidden card visible for capture
       const el = ref.current
       el.style.position = 'fixed'

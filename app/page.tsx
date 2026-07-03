@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import Link from 'next/link'
 import { Download, Check, Upload, Zap, Shield, TrendingUp, Play, Music, Crown, X, AlertTriangle, Globe, Headphones, Menu, GraduationCap, Stethoscope, Wrench } from 'lucide-react'
 import { UserMenu, useAuth, AuthModal } from '@/components/auth'
@@ -383,11 +383,24 @@ function Home() {
     }
     checkAccess()
     return () => { cancelled = true }
-  }, [user, isAdmin])
+  }, [user?.id, isAdmin])
 
   // Free user gets full access (Completo + PDF) for their 2 free analyses. Admin always has full access.
   const effectiveHasPaidAccess = hasPaidAccess || isAdmin ||
     (isLoggedIn && result !== null && userAnalysisStatus?.analyses_used !== undefined && userAnalysisStatus.analyses_used <= 2)
+
+  const cleanedVisualReport = useMemo(
+    () => cleanReportText((result as any)?.report_visual || result?.report_short || result?.report || ''),
+    [(result as any)?.report_visual, result?.report_short, result?.report]
+  )
+  const cleanedShortReport = useMemo(
+    () => cleanReportText(result?.report_short || result?.report || ''),
+    [result?.report_short, result?.report]
+  )
+  const cleanedWriteReport = useMemo(
+    () => cleanReportText(result?.report_write || result?.report || ''),
+    [result?.report_write, result?.report]
+  )
 
   // Mobile detection
   useEffect(() => {
@@ -3373,7 +3386,7 @@ by Matías Carvajal
                         userSelect: !isLoggedIn ? 'none' : 'auto',
                         cursor: !isLoggedIn ? 'pointer' : 'auto'
                       }}>
-                        {cleanReportText((result as any).report_visual || result.report_short || result.report)}
+                        {cleanedVisualReport}
                       </pre>
                     </div>
                   </div>
@@ -3412,7 +3425,7 @@ by Matías Carvajal
                       maxWidth: '100%',
                       margin: 0
                     }}>
-                      {cleanReportText(result.report_short || result.report)}
+                      {cleanedShortReport}
                     </pre>
                   </div>
                 )}
@@ -3520,7 +3533,7 @@ by Matías Carvajal
                         maxWidth: '100%',
                         margin: 0
                       }}>
-                        {cleanReportText(result.report_write || result.report)}
+                        {cleanedWriteReport}
                       </pre>
                     </div>
                   </>

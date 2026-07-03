@@ -795,6 +795,14 @@ export interface Database {
         Args: { p_user_id: string }
         Returns: boolean
       }
+      record_own_account_deletion: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      apply_deletion_carryover: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       add_addon_pack: {
         Args: { p_user_id: string; p_purchase_id: string }
         Returns: boolean
