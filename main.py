@@ -407,6 +407,36 @@ else:
     vpn_detector = None
     logger.warning("⚠️ IP rate limiting not available")
 
+# Server-authoritative credit consume: on successful analysis the signed
+# token's uid + nonce are exchanged for one credit via service_role, and the
+# nonce ledger makes retries idempotent. Inert until SUPABASE_URL +
+# SUPABASE_SERVICE_ROLE_KEY are set.
+_credit_key = _os.getenv('SUPABASE_SERVICE_ROLE_KEY') or ''
+if IP_LIMITER_AVAILABLE and _os.getenv('SUPABASE_URL') and _credit_key:
+    credit_rpc_client = SupabaseRpcClient(_os.getenv('SUPABASE_URL', ''), _credit_key)
+    logger.info("✅ Server-side credit consume enabled")
+else:
+    credit_rpc_client = None
+
+
+async def consume_analysis_credit(uid: str, nonce: str):
+    """Consume one analysis credit server-side, keyed to the token nonce.
+    Returns (consumed, source); (None, None) when the feature is inert so the
+    client falls back to its legacy consume path."""
+    if not credit_rpc_client or not uid or not nonce:
+        return None, None
+    try:
+        result = await credit_rpc_client.rpc(
+            'consume_analysis_credit',
+            {'p_user_id': uid, 'p_nonce': nonce}
+        ).execute()
+        row = result.data[0] if isinstance(result.data, list) and result.data else result.data
+        if isinstance(row, dict):
+            return bool(row.get('success')), row.get('source')
+    except Exception as err:
+        logger.warning(f"⚠️ Credit consume failed for {uid[:8]}…: {err}")
+    return False, None
+
 
 # ============== IP RATE LIMITING ENDPOINTS ==============
 
@@ -605,6 +635,9 @@ async def analyze_mix_endpoint(
     # Resolve auth from the signed token when the gate is active (this endpoint
     # has no is_authenticated form field, so the token is the only auth source)
     token_authenticated = resolve_request_auth(signed_token, False, lang)
+    token_payload = verify_signed_token(signed_token) or {}
+    credit_uid = token_payload.get('uid') if token_payload.get('auth') else None
+    credit_nonce = token_payload.get('nonce')
 
     # Server-side IP rate limit enforcement (sync endpoint)
     if not token_authenticated and IP_LIMITER_AVAILABLE and ip_limiter and ip_limiter.is_enabled():
@@ -685,7 +718,12 @@ async def analyze_mix_endpoint(
             else:
                 report = report_write
             
-            return {
+            credit_consumed = None
+            credit_source = None
+            if credit_uid and credit_nonce:
+                credit_consumed, credit_source = await consume_analysis_credit(credit_uid, credit_nonce)
+
+            response = {
                 "success": True,
                 "score": result["score"],
                 "verdict": result["verdict"],
@@ -712,6 +750,10 @@ async def analyze_mix_endpoint(
                 "privacy_note": "🔒 Audio analizado en memoria y eliminado inmediatamente.",
                 "methodology": "Basado en la metodología 'Mastering Ready' de Matías Carvajal"
             }
+            if credit_consumed is not None:
+                response["credit_consumed"] = credit_consumed
+                response["credit_source"] = credit_source
+            return response
 
         except Exception as e:
             logger.error(f"❌ Analysis error: {str(e)}")
@@ -772,6 +814,9 @@ async def start_analysis(
 
     # Resolve auth from the signed token when the gate is active
     is_authenticated = resolve_request_auth(signed_token, is_authenticated, lang)
+    token_payload = verify_signed_token(signed_token) or {}
+    credit_uid = token_payload.get('uid') if token_payload.get('auth') else None
+    credit_nonce = token_payload.get('nonce')
 
     # Get client IP for rate limiting
     client_ip = None
@@ -1118,7 +1163,12 @@ async def start_analysis(
                     report = report_short
                 else:
                     report = report_write
-                
+
+                credit_consumed = None
+                credit_source = None
+                if credit_uid and credit_nonce:
+                    credit_consumed, credit_source = await consume_analysis_credit(credit_uid, credit_nonce)
+
                 # Store result
                 async with jobs_lock:
                     jobs[job_id]['status'] = 'complete'
@@ -1178,7 +1228,10 @@ async def start_analysis(
                         "privacy_note": "🔒 Audio analizado en memoria y eliminado inmediatamente.",
                         "methodology": "Basado en la metodología 'Mastering Ready' de Matías Carvajal"
                     }
-                
+                    if credit_consumed is not None:
+                        jobs[job_id]['result']['credit_consumed'] = credit_consumed
+                        jobs[job_id]['result']['credit_source'] = credit_source
+
                 logger.info(f"✅ [{job_id}] Job complete")
                 
                 # 🔔 TELEGRAM ALERT: Análisis completado

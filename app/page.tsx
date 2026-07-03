@@ -128,12 +128,17 @@ async function saveAnalysisToDatabase(userId: string, analysis: any, fileObj?: F
   const fileInfo = analysis.file || {}
   const fileExtension = (analysis.filename || '').split('.').pop()?.toLowerCase() || null
 
-  // When the analysis ran on one-off purchase credit, decrement the purchase
-  // (FIFO) instead of the free/cycle counter, so a paid analysis never burns
-  // the free lifetime allowance and the purchase is properly consumed.
-  const counterRpc = usingPurchase
-    ? client.rpc('consume_purchase_credit', { p_user_id: userId })
-    : client.rpc('increment_analysis_count', { p_user_id: userId })
+  // The backend consumes the credit server-side (keyed to the analyze-token
+  // nonce) when the response carries credit_consumed. The client RPCs stay as
+  // the fallback for responses that predate server-side consume; when the
+  // analysis ran on purchase credit the FIFO purchase is decremented instead
+  // of the free/cycle counter.
+  const serverConsumed = analysis.credit_consumed !== undefined
+  const counterRpc = serverConsumed
+    ? Promise.resolve(null)
+    : usingPurchase
+      ? client.rpc('consume_purchase_credit', { p_user_id: userId })
+      : client.rpc('increment_analysis_count', { p_user_id: userId })
 
   // Run INSERT + counter in PARALLEL (both are independent operations)
   // This halves save time and frees Supabase client faster for dashboard navigation

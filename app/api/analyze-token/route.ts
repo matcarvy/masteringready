@@ -15,7 +15,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { createHmac } from 'crypto'
+import { createHmac, randomUUID } from 'crypto'
 
 export const dynamic = 'force-dynamic'
 
@@ -68,7 +68,8 @@ export async function POST(request: NextRequest) {
   const payload = JSON.stringify({
     exp: Math.floor(Date.now() / 1000) + TOKEN_TTL_SECONDS,
     auth,
-    uid
+    uid,
+    nonce: randomUUID()
   })
   const payloadB64 = Buffer.from(payload).toString('base64url')
   const sig = createHmac('sha256', secret).update(payloadB64).digest('hex')
