@@ -81,6 +81,7 @@ export async function analyzeFile(
     lang: 'es' | 'en'
     mode: 'short' | 'write'
     strict: boolean
+    profile?: 'master' | null  // v7.5.0: forces the master rubric; omit to auto-detect
     accessToken?: string  // Supabase session token, exchanged for a signed analyze token
     originalMetadata?: {  // NEW: Optional original metadata
       sampleRate: number
@@ -96,6 +97,9 @@ export async function analyzeFile(
   formData.append('lang', options.lang)
   formData.append('mode', options.mode)
   formData.append('strict', String(options.strict))
+  if (options.profile) {
+    formData.append('profile', options.profile)
+  }
 
   const signedToken = await fetchAnalyzeToken(options.accessToken)
   if (signedToken) {
@@ -153,6 +157,7 @@ export async function startAnalysisPolling(
     mode: 'short' | 'write'
     strict: boolean
     genre?: string | null
+    profile?: 'master' | null  // v7.5.0: forces the master rubric; omit to auto-detect
     originalMetadata?: {
       sampleRate: number
       bitDepth: number
@@ -171,6 +176,9 @@ export async function startAnalysisPolling(
   formData.append('strict', String(options.strict))
   if (options.genre) {
     formData.append('genre', options.genre)
+  }
+  if (options.profile) {
+    formData.append('profile', options.profile)
   }
   formData.append('is_authenticated', String(options.isAuthenticated || false))
 

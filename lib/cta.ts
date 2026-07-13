@@ -1,3 +1,5 @@
+import { isMasterProfile } from './scoreColor'
+
 interface ScoreCta {
   title: string
   body: string
@@ -5,7 +7,35 @@ interface ScoreCta {
   action: string
 }
 
-export function getCtaForScore(score: number, lang: 'es' | 'en'): ScoreCta {
+/**
+ * Mirrors _generate_cta_master() in analyzer.py. Without this branch the app
+ * offers to master somebody's master.
+ *
+ * The 60 to 84 band is the best lead the product produces: that person already
+ * has a master, they are not happy with it, and they have budget.
+ */
+function getMasterCta(score: number, lang: 'es' | 'en'): ScoreCta {
+  if (score >= 85) {
+    // No button: a solid master does not need mastering sold to it.
+    return lang === 'es'
+      ? { title: 'Tu máster está listo para publicar.', body: 'Respeta el techo digital y conserva dinámica. No necesita otro mastering.', button: '', action: 'release' }
+      : { title: 'Your master is ready to release.', body: 'It respects the digital ceiling and it kept its dynamics. It does not need another mastering pass.', button: '', action: 'release' }
+  }
+  if (score >= 60) {
+    return lang === 'es'
+      ? { title: 'Tu máster funciona, pero deja valor sobre la mesa.', body: 'Los puntos marcados son los que separan este máster de uno que compite de igual a igual con las referencias de su género. Si quieres, lo revisamos juntos.', button: 'Revisar mi máster', action: 'remaster' }
+      : { title: 'Your master works, but it leaves value on the table.', body: 'The points flagged are what separate this master from one that competes head to head with the references in its genre. If you would like, we can go through it together.', button: 'Review my master', action: 'remaster' }
+  }
+  return lang === 'es'
+    ? { title: 'Tu máster tiene defectos técnicos concretos.', body: 'No son cuestión de gusto: están medidos y se escuchan en la reproducción. Conviene resolverlos antes de publicar.', button: 'Revisar mi máster', action: 'remaster' }
+    : { title: 'Your master has concrete technical defects.', body: 'These are not a matter of taste: they are measured and they are audible on playback. Worth resolving before release.', button: 'Review my master', action: 'remaster' }
+}
+
+export function getCtaForScore(score: number, lang: 'es' | 'en', profile?: string | null): ScoreCta {
+  if (isMasterProfile(profile)) {
+    return getMasterCta(score, lang)
+  }
+
   if (score >= 95) {
     return lang === 'es'
       ? { title: 'Tu mezcla está lista.', body: 'Está técnicamente preparada para el mastering. Si quieres, escríbenos y coordinamos.', button: 'Masterizar este track', action: 'mastering' }

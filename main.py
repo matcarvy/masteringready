@@ -86,7 +86,26 @@ def _free_memory():
         pass  # Not Linux or libc unavailable
 
 # Analyzer version - used in API responses for tracking
-ANALYZER_VERSION = "7.4.2"
+# 7.5.0: master mode. A file is scored against one of three profiles (mix,
+# mix_strict, master) instead of the mix rubric being applied to everything.
+# Scores are not comparable across versions; never compare 7.4.x scores to 7.5.x.
+ANALYZER_VERSION = "7.5.0"
+
+# v7.5.0: the profile arrives from the browser, so it is validated here rather
+# than trusted. Anything unrecognised falls back to auto-detection, which is the
+# safe default: a bad string must never silently select the lenient rubric.
+VALID_PROFILE_OVERRIDES = {"mix", "mix_strict", "master"}
+
+
+def sanitize_profile(raw: Optional[str]) -> Optional[str]:
+    if not raw:
+        return None
+    candidate = raw.strip().lower()
+    if candidate in VALID_PROFILE_OVERRIDES:
+        return candidate
+    logger.warning(f"⚠️ Ignoring unknown profile override: {raw!r}")
+    return None
+
 
 # Import IP rate limiting and VPN detection
 try:
@@ -577,7 +596,8 @@ async def analyze_mix_endpoint(
     strict: bool = Form(False),
     genre: Optional[str] = Form(None),
     original_metadata_json: Optional[str] = Form(None),  # Original file metadata from frontend
-    signed_token: Optional[str] = Form(None)  # HMAC token from /api/analyze-token (Vercel)
+    signed_token: Optional[str] = Form(None),  # HMAC token from /api/analyze-token (Vercel)
+    profile: Optional[str] = Form(None)  # v7.5.0: 'master' forces the master rubric; None auto-detects
 ):
     """
     Analyze audio mix for mastering readiness.
@@ -601,7 +621,8 @@ async def analyze_mix_endpoint(
     """
 
     # Log request
-    logger.info(f"📥 Analysis request: {file.filename}, lang={lang}, mode={mode}, strict={strict}, genre={genre}")
+    safe_profile = sanitize_profile(profile)
+    logger.info(f"📥 Analysis request: {file.filename}, lang={lang}, mode={mode}, strict={strict}, genre={genre}, profile={safe_profile or 'auto'}")
     
     # Parse original metadata if provided
     original_metadata_from_frontend = None
@@ -700,7 +721,8 @@ async def analyze_mix_endpoint(
                 lang=lang,
                 genre=genre,
                 strict=strict,
-                original_metadata=original_metadata_from_frontend
+                original_metadata=original_metadata_from_frontend,
+                profile=safe_profile
             )
             
             logger.info(f"✅ Analysis complete: Score {result['score']}/100")
@@ -737,6 +759,15 @@ async def analyze_mix_endpoint(
                 "mode": mode,
                 "lang": lang,
                 "strict": strict,
+                # v7.5.0: which rubric scored this, who chose it, and the same
+                # file's score under the other rubric.
+                "profile": result.get("profile"),
+                "profile_source": result.get("profile_source"),
+                "profile_auto": result.get("profile_auto"),
+                "profile_confidence": result.get("profile_confidence"),
+                "alternate_profile": result.get("alternate_profile"),
+                "alternate_score": result.get("alternate_score"),
+                "is_mastered": result.get("is_mastered", {}),
                 # NEW v7.4.0: Analysis metadata for database tracking
                 "analysis_version": ANALYZER_VERSION,
                 "is_chunked_analysis": False,  # Sync endpoint always uses normal mode
@@ -790,7 +821,8 @@ async def start_analysis(
     genre: Optional[str] = Form(None),
     original_metadata_json: Optional[str] = Form(None),  # Original file metadata from frontend
     is_authenticated: bool = Form(False),  # Whether user is logged in
-    signed_token: Optional[str] = Form(None)  # HMAC token from /api/analyze-token (Vercel)
+    signed_token: Optional[str] = Form(None),  # HMAC token from /api/analyze-token (Vercel)
+    profile: Optional[str] = Form(None)  # v7.5.0: 'master' forces the master rubric; None auto-detects
 ):
     """
     Start analysis and return job_id immediately (<1 sec).
@@ -874,7 +906,8 @@ async def start_analysis(
             )
     file_size = len(content)
 
-    logger.info(f"📥 Analysis request (polling): {file.filename}, lang={lang}, mode={mode}")
+    safe_profile = sanitize_profile(profile)
+    logger.info(f"📥 Analysis request (polling): {file.filename}, lang={lang}, mode={mode}, profile={safe_profile or 'auto'}")
     logger.info(f"📊 File size: {file_size / 1024 / 1024:.2f} MB")
 
     # Server-side IP rate limit enforcement (prevents direct API bypass)
@@ -1091,7 +1124,8 @@ async def start_analysis(
                         chunk_duration=30.0,  # 30s optimal for 512MB Render (larger chunks are superlinearly slower)
                         progress_callback=update_progress,  # ← Pass callback
                         original_metadata=original_metadata,  # ← Pass original metadata
-                        ffmpeg_exe=FFMPEG_EXE  # ← For accurate global LUFS measurement
+                        ffmpeg_exe=FFMPEG_EXE,  # ← For accurate global LUFS measurement
+                        profile=safe_profile
                     )
                 else:
                     logger.info(f"📊 [{job_id}] Using NORMAL analysis (estimated {estimated_duration_min:.1f} min, {file_size_mb:.1f} MB)")
@@ -1102,7 +1136,8 @@ async def start_analysis(
                         lang=lang,
                         genre=genre,
                         strict=strict,
-                        original_metadata=original_metadata  # ← Pass original metadata
+                        original_metadata=original_metadata,  # ← Pass original metadata
+                        profile=safe_profile
                     )
 
                 result = await loop.run_in_executor(None, analyze_func)
@@ -1212,6 +1247,15 @@ async def start_analysis(
                         "mode": mode,
                         "lang": lang,
                         "strict": strict,
+                        # v7.5.0: which rubric scored this, who chose it, and the
+                        # same file's score under the other rubric.
+                        "profile": result.get("profile"),
+                        "profile_source": result.get("profile_source"),
+                        "profile_auto": result.get("profile_auto"),
+                        "profile_confidence": result.get("profile_confidence"),
+                        "alternate_profile": result.get("alternate_profile"),
+                        "alternate_score": result.get("alternate_score"),
+                        "is_mastered": result.get("is_mastered", {}),
                         # NEW v7.3.50: Add analysis time and metrics bars
                         "analysis_time_seconds": result.get("analysis_time_seconds", 0),
                         "metrics_bars": result.get("metrics_bars", {}),
@@ -1402,6 +1446,9 @@ async def download_pdf(
                 verdict_enum = "needs_work"
             else:
                 verdict_enum = "critical"
+            # v7.5.0: analyses written before master mode have no profile; they were
+            # all scored on the mix rubric, so that is the correct fallback.
+            db_profile = data.get("profile") or "mix"
             result = {
                 "score": db_score,
                 "verdict": verdict_enum,
@@ -1422,7 +1469,8 @@ async def download_pdf(
                 "user_timezone": data.get("user_timezone"),
             }
             strict = data.get("strict_mode", False)
-            logger.info(f"📄 Reconstructed report from analysis_data: score={result['score']}, verdict={result['verdict']}")
+            result["profile"] = db_profile
+            logger.info(f"📄 Reconstructed report from analysis_data: score={result['score']}, verdict={result['verdict']}, profile={db_profile}")
         except (json.JSONDecodeError, KeyError) as e:
             logger.error(f"❌ Invalid analysis_data JSON: {e}")
             raise HTTPException(status_code=400, detail=bilingual_error('server_error', lang))

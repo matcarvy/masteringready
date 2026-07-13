@@ -474,12 +474,53 @@ UI_TEXT = {
 # Language-neutral calculations
 # ----------------------------
 
+# ----------------------------
+# Scoring profiles (v7.5.0)
+# ----------------------------
+# A file is judged against one of three rubrics. They are alternatives, not a
+# matrix: "strict" does not compose with "master".
+#   mix         - a mix on its way to mastering (the historical "normal" rubric)
+#   mix_strict  - the same questions, commercial-delivery tolerances
+#   master      - a finished master. Headroom and True Peak stop asking "did you
+#                 leave room for the engineer", because a master by definition
+#                 did not, and start asking about ceiling compliance.
+PROFILE_MIX = "mix"
+PROFILE_MIX_STRICT = "mix_strict"
+PROFILE_MASTER = "master"
+PROFILES = (PROFILE_MIX, PROFILE_MIX_STRICT, PROFILE_MASTER)
+
+# Threshold dicts keep their historical keys, so a profile maps onto one of them.
+_PROFILE_TO_THRESHOLD_KEY = {
+    PROFILE_MIX: "normal",
+    PROFILE_MIX_STRICT: "strict",
+    PROFILE_MASTER: "master",
+}
+
+
+def resolve_profile(strict: bool = False, profile: Optional[str] = None) -> str:
+    """Profile wins when given; otherwise fall back to the legacy strict flag."""
+    if profile in PROFILES:
+        return profile
+    return PROFILE_MIX_STRICT if strict else PROFILE_MIX
+
+
+def threshold_key(profile: str) -> str:
+    return _PROFILE_TO_THRESHOLD_KEY.get(profile, "normal")
+
+
+def message_key(profile: str) -> str:
+    """Message dicts carry three variants; master copy never mentions the engineer."""
+    if profile == PROFILE_MASTER:
+        return "master"
+    return "strict" if profile == PROFILE_MIX_STRICT else "normal"
+
+
 class ScoringThresholds:
     """
     Unified thresholds - NO language dependency
     Single source of truth for ALL scoring logic
     """
-    
+
     HEADROOM = {
         "strict": {
             "critical": lambda peak: peak >= -1.0,
@@ -494,9 +535,19 @@ class ScoringThresholds:
             "perfect": lambda peak: peak <= -3.0,
             "pass": lambda peak: -3.0 < peak <= -2.0,
             "conservative": lambda peak: False,  # Unreachable: more headroom is never penalized
+        },
+        # Ceiling compliance, not room for the engineer. The only defect is being
+        # pinned at full scale, which is also where sample clipping lives: it is
+        # scored here rather than hard-failing the file.
+        "master": {
+            "critical": lambda peak: peak >= 0.0,
+            "warning": lambda peak: False,
+            "perfect": lambda peak: peak <= -0.1,
+            "pass": lambda peak: -0.1 < peak < 0.0,
+            "conservative": lambda peak: False,
         }
     }
-    
+
     TRUE_PEAK = {
         "strict": {
             "critical": lambda tp: tp >= -0.5,
@@ -509,9 +560,19 @@ class ScoringThresholds:
             "warning": lambda tp: -1.0 < tp < -0.5,
             "perfect": lambda tp: tp <= -3.0,
             "pass": lambda tp: -3.0 < tp <= -1.0,
+        },
+        # Not anchored at -1.0 dBTP: zero of the 18 measured chart masters meet it
+        # and the median commercial true peak is +0.32 dBTP. Anchoring the rubric
+        # to a spec the market ignores is the bug being fixed. -1.0 dBTP survives
+        # as advice in the copy, not as a scoring threshold.
+        "master": {
+            "critical": lambda tp: tp > 2.0,
+            "warning": lambda tp: 1.0 < tp <= 2.0,
+            "perfect": lambda tp: tp <= 0.0,
+            "pass": lambda tp: 0.0 < tp <= 1.0,
         }
     }
-    
+
     PLR = {
         "strict": {
             "perfect": lambda plr: plr >= 14.0,
@@ -524,9 +585,18 @@ class ScoringThresholds:
             "pass": lambda plr: 8.0 <= plr < 12.0,
             "warning": lambda plr: 6.0 <= plr < 8.0,
             "critical": lambda plr: plr < 6.0,
+        },
+        # Genre-independent floor. MeterPlugs, asked directly whether EDM and metal
+        # deserve a lower floor, said no: what varies by genre is the variety of
+        # PSR within a track, not the minimum.
+        "master": {
+            "perfect": lambda plr: plr >= 10.0,
+            "pass": lambda plr: 8.0 <= plr < 10.0,
+            "warning": lambda plr: 6.0 <= plr < 8.0,
+            "critical": lambda plr: plr < 6.0,
         }
     }
-    
+
     # v7.4.1 FIX: Restored strict mode differentiation for stereo
     # Strict shifts each boundary +0.05 (same pattern as headroom/PLR strict offsets)
     # Bars remain mode-independent; text evaluation is stricter
@@ -546,6 +616,16 @@ class ScoringThresholds:
             "poor": lambda corr: 0.1 <= corr < 0.3,     # 0.1-0.3 poor
             "critical": lambda corr: 0 <= corr < 0.1,   # 0-0.1 critical
             "catastrophic": lambda corr: corr < 0,      # Negative = phase issues
+        },
+        # Unchanged from the mix rubric: a collapsed stereo field is a defect at
+        # any stage.
+        "master": {
+            "perfect": lambda corr: corr >= 0.7,
+            "pass": lambda corr: 0.5 <= corr < 0.7,
+            "warning": lambda corr: 0.3 <= corr < 0.5,
+            "poor": lambda corr: 0.1 <= corr < 0.3,
+            "critical": lambda corr: 0 <= corr < 0.1,
+            "catastrophic": lambda corr: corr < 0,
         }
     }
 
@@ -560,14 +640,13 @@ class ScoringThresholds:
     }
 
 
-def calculate_headroom_score(peak_db: float, strict: bool) -> Tuple[str, float]:
+def calculate_headroom_score(peak_db: float, profile: str) -> Tuple[str, float]:
     """
     Calculate headroom score WITHOUT language dependency.
     Returns: (status, score_delta)
     """
-    mode = "strict" if strict else "normal"
-    thresholds = ScoringThresholds.HEADROOM[mode]
-    
+    thresholds = ScoringThresholds.HEADROOM[threshold_key(profile)]
+
     if thresholds["critical"](peak_db):
         return "critical", ScoringThresholds.SCORES["critical"]
     elif thresholds["warning"](peak_db):
@@ -583,43 +662,41 @@ def calculate_headroom_score(peak_db: float, strict: bool) -> Tuple[str, float]:
         return "perfect", ScoringThresholds.SCORES["perfect"]
 
 
-def calculate_true_peak_score(tp_db: float, strict: bool) -> Tuple[str, float, bool]:
+def calculate_true_peak_score(tp_db: float, profile: str) -> Tuple[str, float, bool]:
     """
     Calculate true peak score WITHOUT language dependency.
     Returns: (status, score_delta, hard_fail)
-    
+
     Hard fail SOLO si True Peak >= +3.0 dBTP (clipping intersample extremo).
-    Para TP entre -0.5 y +3.0: crítico pero corregible (NO hard fail).
+    Es el único hard fail del sistema, en los tres perfiles.
     """
-    mode = "strict" if strict else "normal"
-    thresholds = ScoringThresholds.TRUE_PEAK[mode]
-    
+    thresholds = ScoringThresholds.TRUE_PEAK[threshold_key(profile)]
+
     # Hard fail solo para casos EXTREMOS (>= +3.0 dBTP)
     if tp_db >= 3.0:
         return "critical", ScoringThresholds.SCORES["critical"], True
-    
+
     # True Peak crítico pero corregible (< +3.0)
     if thresholds["critical"](tp_db):
         return "critical", ScoringThresholds.SCORES["critical"], False
     elif thresholds["warning"](tp_db):
-        return "warning", 0.3 if strict else 0.4, False
+        return "warning", 0.3 if profile == PROFILE_MIX_STRICT else 0.4, False
     elif thresholds["perfect"](tp_db):
         return "perfect", ScoringThresholds.SCORES["perfect"], False
     else:  # pass
         return "pass", ScoringThresholds.SCORES["pass"], False
 
 
-def calculate_plr_score(plr_db: float, lufs_reliable: bool, strict: bool) -> Tuple[str, float]:
+def calculate_plr_score(plr_db: float, lufs_reliable: bool, profile: str) -> Tuple[str, float]:
     """
     Calculate PLR score WITHOUT language dependency.
     Returns: (status, score_delta)
     """
     if not lufs_reliable:
         return "pass", 0.5
-    
-    mode = "strict" if strict else "normal"
-    thresholds = ScoringThresholds.PLR[mode]
-    
+
+    thresholds = ScoringThresholds.PLR[threshold_key(profile)]
+
     if thresholds["perfect"](plr_db):
         return "perfect", ScoringThresholds.SCORES["perfect"]
     elif thresholds["pass"](plr_db):
@@ -630,7 +707,19 @@ def calculate_plr_score(plr_db: float, lufs_reliable: bool, strict: bool) -> Tup
         return "critical", -0.5
 
 
-def calculate_stereo_score(correlation: float, strict: bool) -> Tuple[str, float]:
+def _pick_message(messages: Dict[str, Any], status: str, profile: str) -> str:
+    """
+    Selecciona el texto del status según el perfil. Una entrada puede ser un
+    string (mismo texto en los tres perfiles) o un dict por perfil. Cuando un
+    perfil no trae texto propio, cae en el de mezcla normal.
+    """
+    entry = messages[status]
+    if isinstance(entry, str):
+        return entry
+    return entry.get(message_key(profile)) or entry["normal"]
+
+
+def calculate_stereo_score(correlation: float, profile: str) -> Tuple[str, float]:
     """
     Calculate stereo width score WITHOUT language dependency.
     Returns: (status, score_delta)
@@ -638,9 +727,9 @@ def calculate_stereo_score(correlation: float, strict: bool) -> Tuple[str, float
     v7.4.1: Strict mode demands +0.05 higher correlation at each threshold.
     Normal: ≥0.7 excellent, 0.5-0.7 good, 0.3-0.5 warning, 0.1-0.3 poor, <0.1 critical
     Strict: ≥0.75 excellent, 0.55-0.75 good, 0.35-0.55 warning, 0.15-0.35 poor, <0.15 critical
+    Master: same as normal.
     """
-    mode = "strict" if strict else "normal"
-    thresholds = ScoringThresholds.STEREO_WIDTH[mode]
+    thresholds = ScoringThresholds.STEREO_WIDTH[threshold_key(profile)]
 
     if thresholds["catastrophic"](correlation):
         return "catastrophic", ScoringThresholds.SCORES["catastrophic"]
@@ -710,27 +799,44 @@ def detect_mastered_file(
     }
     """
     indicators = []
-    
+
     # Indicador 1: True peak over ceiling
     if tp_db > 0.0:
         indicators.append("true_peak_over_ceiling")
-    
+
     # Indicador 2: Headroom crítico
     if peak_db >= -0.5:
         indicators.append("critical_headroom")
-    
+
     # Indicador 3: Loudness comercial
     if lufs is not None and lufs > -12.0:
         indicators.append("commercial_loudness")
-    
+
     # Indicador 4: Over-compression
     if plr is not None and plr < 7.0:
         indicators.append("heavy_limiting")
-    
+
     # Indicador 5: Clipping sostenido
     if tp_clipping_pct > 50:
         indicators.append("sustained_clipping")
-    
+
+    # Indicador 6: nivel de entrega comercial (v7.5.0)
+    #
+    # Los cinco indicadores anteriores son todos señales de DEFECTO: techo
+    # excedido, sin margen, aplastado, saturado. Con eso, un máster bien hecho
+    # (techo en -1 dBTP, dinámica intacta) no dispara ninguno salvo el de
+    # loudness, y el detector lo declara mezcla. Es decir: mientras mejor el
+    # máster, menos se detecta como máster, y termina juzgado con el rubro de
+    # mezcla y regañado por no dejar margen. Ese es el peor falso negativo
+    # posible y es justo lo que master mode existe para evitar.
+    #
+    # Este indicador no busca un defecto, busca la huella de haber pasado por
+    # mastering: nivel claramente comercial y sin el margen que una mezcla
+    # entregada a mastering todavía conserva. Una mezcla para mastering vive
+    # entre -3 y -6 dBFS de pico y rara vez supera -12 LUFS.
+    if lufs is not None and lufs > -11.0 and peak_db > -2.0:
+        indicators.append("commercial_delivery_level")
+
     # Determinar si es master y confianza
     indicator_count = len(indicators)
     
@@ -778,6 +884,25 @@ def calculate_minimum_score(metrics: List[Dict[str, Any]]) -> int:
         return 35  # Un crítico (ej: solo true peak alto - caso común)
     else:
         return 50  # Solo warnings o mejor
+
+
+def calculate_maximum_score(metrics: List[Dict[str, Any]], profile: str) -> int:
+    """
+    Techo del score. Complementa calculate_minimum_score, que solo puede subir.
+
+    En el perfil master la dinámica es el defecto que el resto del rubro no
+    alcanza a castigar: un máster aplastado (PLR bajo 6 dB) pierde solo su peso
+    de 0.25 y aterriza cerca de 70, un número que se lee como aprobado. Un
+    máster sin dinámica no está listo para publicar, así que el techo baja.
+    """
+    if profile != PROFILE_MASTER:
+        return 100
+
+    plr_critical = any(
+        m.get("internal_key", m.get("name")) == "PLR" and m.get("status") == "critical"
+        for m in metrics
+    )
+    return 55 if plr_critical else 100
 
 
 # ----------------------------
@@ -1479,22 +1604,31 @@ def calculate_tonal_balance_percentage(bass_pct: float, mids_pct: float, highs_p
     }
 
 
-def calculate_metrics_bars_percentages(metrics: List[Dict[str, Any]], strict: bool = False) -> Dict[str, Dict[str, Any]]:
+def calculate_metrics_bars_percentages(metrics: List[Dict[str, Any]], strict: bool = False, profile: Optional[str] = None) -> Dict[str, Dict[str, Any]]:
     """
     Calculate percentage bars for quick view tab using Mastering Ready methodology.
-    
+
     Philosophy: Colors indicate MARGIN for decisions, not judgment of the mix.
     - 🟢 Verde: Comfortable margin
-    - 🔵 Azul: Sufficient margin  
+    - 🔵 Azul: Sufficient margin
     - 🟡 Amarillo: Reduced margin
     - 🔴 Rojo: Compromised margin (RARE - only real limitations)
-    
+
+    v7.5.0: the bars carry their own thresholds, separate from ScoringThresholds.
+    They must follow the profile too. Without that, a master scoring 94 shows a
+    red headroom bar next to a verdict that says the ceiling is respected, and
+    that red bar gets baked into the shared score card. The report and the score
+    contradicting each other on the same screen is the exact bug master mode
+    exists to fix; it must not come back through the bars.
+
     Args:
         metrics: List of metric dictionaries from analysis
-    
+
     Returns:
         Dict with percentage, status, value, and tooltip for each metric
     """
+    profile = resolve_profile(strict, profile)
+    is_master = profile == PROFILE_MASTER
     bars = {}
     
     # First pass: collect all values for combined logic
@@ -1514,7 +1648,15 @@ def calculate_metrics_bars_percentages(metrics: List[Dict[str, Any]], strict: bo
                 value = float(first_part)
             except:
                 value = 0
-        
+
+        # Prefer the measured number over the printed one. "value" is a rounded
+        # display string whose sign is not even consistent across analysis paths,
+        # and the master profile's boundaries are finer than one decimal.
+        raw_keys = {"headroom": "raw_peak_db", "true_peak": "raw_true_peak_db", "plr": "raw_plr_db"}
+        raw = m.get(raw_keys[key]) if key in raw_keys else None
+        if isinstance(raw, (int, float)):
+            value = float(raw)
+
         values[key] = {"value": value, "status": status}
     
     # Get key values for combined logic (guard against None — 32-bit floats may yield N/A metrics)
@@ -1568,7 +1710,24 @@ def calculate_metrics_bars_percentages(metrics: List[Dict[str, Any]], strict: bo
         if "headroom" in key:
             headroom_tooltip_override = None  # For contextual headroom messages
 
-            if strict:
+            if is_master:
+                # Ceiling compliance, matching ScoringThresholds.HEADROOM["master"].
+                # A master living at -0.2 dBFS is not "compromised", it is correct.
+                # 🟢 ≤ -0.1 | 🔵 -0.1 to 0.0 | 🔴 ≥ 0.0 (pinned, truncating samples)
+                if value <= -0.1:
+                    percentage = 100
+                    bar_status = "excellent"
+                elif -0.1 < value < 0.0:
+                    percentage = 85
+                    bar_status = "good"
+                else:  # >= 0.0
+                    percentage = 40
+                    bar_status = "critical"
+                    headroom_tooltip_override = {
+                        "es": "El archivo llega al techo digital y se están truncando muestras. Bajar el techo del limitador cerca de -0.3 dBFS lo resuelve.",
+                        "en": "The file reaches the digital ceiling and samples are being truncated. Lowering the limiter ceiling to around -0.3 dBFS resolves it."
+                    }
+            elif strict:
                 # 🟢 Verde: ≤ -5 dBFS (Perfecto)
                 # 🔵 Azul: -5 a -4 dBFS (Funcional)
                 # 🟡 Amarillo: -4 a -1 dBFS (Margen reducido)
@@ -1624,7 +1783,25 @@ def calculate_metrics_bars_percentages(metrics: List[Dict[str, Any]], strict: bo
         # ============================================
         # Mode-aware: strict uses tighter thresholds (aligned with ScoringThresholds.TRUE_PEAK)
         elif "true_peak" in key:
-            if strict:
+            if is_master:
+                # Matches ScoringThresholds.TRUE_PEAK["master"]. Not anchored at
+                # -1 dBTP: the median commercial master sits at +0.32 dBTP, so
+                # painting the whole market red would be the tool being wrong.
+                # 🟢 ≤ 0.0 | 🔵 0.0 to 1.0 | 🟡 1.0 to 2.0 | 🔴 > 2.0
+                if value <= 0.0:
+                    percentage = 100
+                    bar_status = "excellent"
+                elif 0.0 < value <= 1.0:
+                    percentage = 85
+                    bar_status = "good"
+                elif 1.0 < value <= 2.0:
+                    percentage = 65
+                    bar_status = "warning"
+                    warnings_count += 1
+                else:  # > 2.0
+                    percentage = 35
+                    bar_status = "critical"
+            elif strict:
                 # Strict: 🟢 ≤ -3.0 | 🔵 -3.0 to -0.5 | 🟡 n/a | 🔴 ≥ -0.5
                 if value <= -3.0:
                     percentage = 100
@@ -1673,7 +1850,28 @@ def calculate_metrics_bars_percentages(metrics: List[Dict[str, Any]], strict: bo
             # 🔴 Rojo: < 6 dB (Sobre-comprimida)
             plr_tooltip_override = None  # For specific PLR messages
 
-            if value >= 12:
+            if is_master:
+                # Matches ScoringThresholds.PLR["master"]. A finished master is not
+                # expected to hold 12 dB of PLR; commercial masters live near 8 to 10.
+                # 🟢 ≥ 10 | 🔵 8-10 | 🟡 6-8 | 🔴 < 6 (crushed)
+                if value >= 10:
+                    percentage = 100
+                    bar_status = "excellent"
+                elif 8 <= value < 10:
+                    percentage = 85
+                    bar_status = "good"
+                elif 6 <= value < 8:
+                    percentage = 65
+                    bar_status = "warning"
+                    warnings_count += 1
+                else:  # < 6
+                    percentage = 45
+                    bar_status = "critical"
+                    plr_tooltip_override = {
+                        "es": "Máster aplastado. Queda muy poca diferencia entre el momento más fuerte y el promedio, y el streaming lo baja de nivel igual.",
+                        "en": "Crushed master. Very little difference is left between the loudest and the average moment, and streaming turns it down anyway."
+                    }
+            elif value >= 12:
                 percentage = 100
                 bar_status = "excellent"
             elif 8 <= value < 12:
@@ -2536,12 +2734,16 @@ def evaluate_stereo_field_comprehensive(corr: float, ms_ratio: float, lr_balance
     - Correlation (phase relationship)
     - M/S Ratio (stereo width)
     - L/R Balance (channel balance)
-    
+
     Returns enhanced message with contextual information.
     In strict mode, adds commercial delivery standards.
+
+    The base correlation status deliberately uses the mix bands in every profile:
+    the master bands are identical to them, and threading strict through here
+    would newly activate the stricter stereo bands on existing strict users.
     """
     lang = _pick_lang(lang)
-    
+
     # Get base correlation status and message
     base_status, base_message, _ = _status_stereo_en(corr) if lang == 'en' else _status_stereo_es(corr)
     
@@ -2858,15 +3060,17 @@ def _fmt_lr(val: float) -> str:
 # ----------------------------
 # Shared headroom recommendation helper
 # ----------------------------
-def calculate_headroom_recommendation(peak_db: float, strict: bool = False) -> int:
+def calculate_headroom_recommendation(peak_db: float, profile: str = PROFILE_MIX) -> int:
     """
     Calculate how many dB the user should reduce to reach the target headroom.
     Returns a rounded integer. Used by all report generators for consistency.
 
-    Target: -6 dBFS (strict) or -4 dBFS (normal).
-    These sit comfortably within the 'perfect' range for each mode.
+    Target: -6 dBFS (mix_strict), -4 dBFS (mix), -0.3 dBFS (master).
+    These sit comfortably within the 'perfect' range for each profile. A master
+    is not asked to give back 4 dB; it only has to stop touching the ceiling.
     """
-    target = -6.0 if strict else -4.0
+    targets = {PROFILE_MIX_STRICT: -6.0, PROFILE_MIX: -4.0, PROFILE_MASTER: -0.3}
+    target = targets.get(profile, -4.0)
     reduction = max(0, round(peak_db - target))
     return reduction if reduction > 0 else 1  # At least 1 dB if status triggered
 
@@ -2896,20 +3100,21 @@ def round_band_percentages(low: float, mid: float, high: float) -> tuple:
 # ----------------------------
 # Reglas / estados
 # ----------------------------
-def _status_headroom_en(peak_db: float, strict: bool = False) -> Tuple[str, str, float]:
+def _status_headroom_en(peak_db: float, profile: str = PROFILE_MIX) -> Tuple[str, str, float]:
     """
     English headroom evaluation using UNIFIED scoring engine.
     Now uses calculate_headroom_score() for language-neutral consistency.
     """
     # TRACK 1: Calculate (language-neutral)
-    status, score = calculate_headroom_score(peak_db, strict)
-    reduction_db = calculate_headroom_recommendation(peak_db, strict)
+    status, score = calculate_headroom_score(peak_db, profile)
+    reduction_db = calculate_headroom_recommendation(peak_db, profile)
 
     # TRACK 2: Format message (Matías Voice - English)
-    mode = "strict" if strict else "normal"
-
     messages = {
-        "critical": f"Too little headroom, clipping risk. Use a Gain/Utility plugin AFTER your master bus chain (lower approximately {reduction_db} dB), then re-export. This preserves your mix balance and plugin sound.",
+        "critical": {
+            "normal": f"Too little headroom, clipping risk. Use a Gain/Utility plugin AFTER your master bus chain (lower approximately {reduction_db} dB), then re-export. This preserves your mix balance and plugin sound.",
+            "master": "The file sits at the digital ceiling, so samples are being truncated. Lowering the limiter ceiling to around -0.3 dBFS and re-exporting recovers that without touching the loudness in any audible way.",
+        },
         "warning": {
             "strict": f"Mix is running hot. Lower approximately {reduction_db} dB to leave comfortable headroom.",
             "normal": f"Mix is a bit hot. Lower approximately {reduction_db} dB to leave margin.",
@@ -2917,54 +3122,50 @@ def _status_headroom_en(peak_db: float, strict: bool = False) -> Tuple[str, str,
         "perfect": {
             "strict": "Ideal headroom for commercial mastering delivery.",
             "normal": f"Headroom of {abs(peak_db):.1f} dB is what I'm looking for, gives me room to work with EQ, compression and limiting without compromising quality.",
+            "master": f"The ceiling is respected, with {abs(peak_db):.1f} dB to spare. Nothing is being truncated on export.",
         },
         "pass": {
             "strict": "Headroom is acceptable for mastering delivery.",
             "normal": "Headroom is appropriate for mastering.",
+            "master": "The ceiling is respected, though the margin is slim. It holds.",
         },
         "conservative": "Very conservative level. Not wrong, but you could raise 1 to 3 dB if desired.",
     }
 
-    # Select appropriate message
-    if status in ["warning", "perfect", "pass"]:
-        message = messages[status][mode]
-    else:
-        message = messages[status]
+    return status, _pick_message(messages, status, profile), score
 
-    return status, message, score
-
-def _status_true_peak_en(tp_db: float, strict: bool = False) -> Tuple[str, str, float, bool]:
+def _status_true_peak_en(tp_db: float, profile: str = PROFILE_MIX) -> Tuple[str, str, float, bool]:
     """
     English true peak evaluation using UNIFIED scoring engine.
     Now uses calculate_true_peak_score() for language-neutral consistency.
     Returns (status, message, score, hard_fail).
     """
     # TRACK 1: Calculate (language-neutral)
-    status, score, hard_fail = calculate_true_peak_score(tp_db, strict)
-    
+    status, score, hard_fail = calculate_true_peak_score(tp_db, profile)
+
     # TRACK 2: Format message (Matías Voice - English)
-    mode = "strict" if strict else "normal"
-    
     messages = {
-        "critical": "True peak is dangerously high. Lower the level and re-export to give mastering room to work.",
+        "critical": {
+            "normal": "True peak is dangerously high. Lower the level and re-export to give mastering room to work.",
+            "master": f"True peak reaches {tp_db:+.1f} dBTP, far past the ceiling. Encoders for Spotify, Apple Music and YouTube will distort this audibly. A true peak limiter set to -1.0 dBTP solves it.",
+        },
         "warning": {
             "strict": "True peak should be ≤ -3.0 dBTP for professional commercial delivery.",
             "normal": "True peak is close to the limit. Aim for ≤ -1.0 dBTP to give mastering flexibility.",
+            "master": f"True peak sits at {tp_db:+.1f} dBTP. Commercial masters live here routinely, but lossy encoding can add distortion above 0 dBTP. Worth a true peak limiter at -1.0 dBTP if the loudness allows it.",
         },
-        "perfect": "True peak is safe for mastering. Provides enough margin for processing without quality compromises.",
+        "perfect": {
+            "normal": "True peak is safe for mastering. Provides enough margin for processing without quality compromises.",
+            "master": "True peak stays under the ceiling. Nothing will distort on encode.",
+        },
         "pass": {
             "strict": "True peak is acceptable, but -2 dBTP or better is ideal for clients/labels.",
             "normal": "True peak is safe for mastering.",
+            "master": f"True peak of {tp_db:+.1f} dBTP is where most commercial masters land. It can add distortion on lossy encode, which is a tradeoff most records accept.",
         },
     }
-    
-    # Select appropriate message
-    if status in ["warning", "pass"]:
-        message = messages[status][mode]
-    else:
-        message = messages[status]
-    
-    return status, message, score, hard_fail
+
+    return status, _pick_message(messages, status, profile), score, hard_fail
 
 def _status_lufs_en(lufs: Optional[float], method: str, is_reliable: bool) -> Tuple[str, str, float]:
     """Evaluate LUFS with reliability consideration."""
@@ -2987,49 +3188,49 @@ def _status_lufs_en(lufs: Optional[float], method: str, is_reliable: bool) -> Tu
     # Everything between -10 and -40 LUFS is valid for mixes
     return "perfect", "Loudness is informational; final level is set during mastering.", 1.0
 
-def _status_plr_en(plr: Optional[float], has_real_lufs: bool, strict: bool = False) -> Tuple[str, str, float]:
+def _status_plr_en(plr: Optional[float], has_real_lufs: bool, profile: str = PROFILE_MIX) -> Tuple[str, str, float]:
     """
     English PLR evaluation using UNIFIED scoring engine.
     Now uses calculate_plr_score() for language-neutral consistency.
     """
     if not has_real_lufs or plr is None:
         return "info", "PLR is available only with real LUFS (install 'pyloudnorm').", 0.0
-    
+
     # TRACK 1: Calculate (language-neutral)
-    status, score = calculate_plr_score(plr, has_real_lufs, strict)
-    
+    status, score = calculate_plr_score(plr, has_real_lufs, profile)
+
     # TRACK 2: Format message (Matías Voice - English)
-    mode = "strict" if strict else "normal"
-    
     messages = {
         "perfect": {
             "strict": "Optimal PLR: dynamics adequate for commercial delivery.",
             "normal": f"Dynamics are well preserved (PLR: {plr:.1f} dB). No over-limiting on the master bus, which leaves ample room to work the final loudness without sacrificing musicality.",
+            "master": f"Dynamics survived the master (PLR: {plr:.1f} dB). The record still breathes at commercial level.",
         },
         "pass": {
             "strict": "Good PLR for commercial, but ≥14 dB is ideal for maximum flexibility.",
             "normal": "Adequate PLR for mastering.",
+            "master": f"PLR of {plr:.1f} dB is healthy for a finished master.",
         },
-        "warning": f"The mix may already be quite limited (PLR: {plr:.1f} dB). Check master bus limiters/compressors. If you like their color, keep them but adjust so they don't reduce gain (raise threshold/ceiling). This preserves the character while recovering dynamics.",
-        "critical": f"PLR very low ({plr:.1f} dB): over-compressed/limited. Remove limiters or adjust them to pass audio without gain reduction (for color only). Alternatively, use less compression on group buses.",
+        "warning": {
+            "normal": f"The mix may already be quite limited (PLR: {plr:.1f} dB). Check master bus limiters/compressors. If you like their color, keep them but adjust so they don't reduce gain (raise threshold/ceiling). This preserves the character while recovering dynamics.",
+            "master": f"PLR of {plr:.1f} dB means the limiter is working hard. The record will read as loud, and transients are paying for it. Backing the limiter off by a decibel or two is usually audible in the drums.",
+        },
+        "critical": {
+            "normal": f"PLR very low ({plr:.1f} dB): over-compressed/limited. Remove limiters or adjust them to pass audio without gain reduction (for color only). Alternatively, use less compression on group buses.",
+            "master": f"PLR of {plr:.1f} dB is a crushed master. There is very little difference left between the loudest and the average moment, so the track reads as flat and tiring no matter how loud it is. Streaming turns it down anyway, so the loudness bought nothing.",
+        },
     }
-    
-    # Select appropriate message
-    if status in ["perfect", "pass"]:
-        message = messages[status][mode]
-    else:
-        message = messages[status]
-    
-    return status, message, score
 
-def _status_stereo_en(corr: float, strict: bool = False) -> Tuple[str, str, float]:
+    return status, _pick_message(messages, status, profile), score
+
+def _status_stereo_en(corr: float, profile: str = PROFILE_MIX) -> Tuple[str, str, float]:
     """
     English stereo correlation evaluation using UNIFIED scoring engine.
     Now uses calculate_stereo_score() for language-neutral consistency.
     """
     # TRACK 1: Calculate (language-neutral)
-    status, score = calculate_stereo_score(corr, strict)
-    
+    status, score = calculate_stereo_score(corr, profile)
+
     # TRACK 2: Format message (Matías Voice - English)
     # v7.4.0: Added "poor" status for correlation 0.1-0.3
     if status == "poor":
@@ -3049,13 +3250,16 @@ def _status_stereo_en(corr: float, strict: bool = False) -> Tuple[str, str, floa
 
     return status, message, score
 
-def _status_freq_en(fb: Dict[str, float], genre: Optional[str] = None, strict: bool = False) -> Tuple[str, str, float]:
+def _status_freq_en(fb: Dict[str, float], genre: Optional[str] = None, profile: str = PROFILE_MIX) -> Tuple[str, str, float]:
     """
     Evaluate frequency balance relative to midrange using dB deltas.
     Percentages are informational only (arrangement-dependent).
 
     When genre is provided, uses genre-specific dB delta thresholds.
     Otherwise uses universal "mix-for-mastering" thresholds.
+
+    Tonal balance is judged the same way in a mix and in a master: only the
+    strict profile tightens the ranges.
     """
     dL = fb["d_low_mid_db"]
     dH = fb["d_high_mid_db"]
@@ -3064,9 +3268,9 @@ def _status_freq_en(fb: Dict[str, float], genre: Optional[str] = None, strict: b
 
     # Genre-specific thresholds (if genre provided and has dB_deltas)
     if genre and genre in GENRE_FREQUENCY_PROFILES:
-        profile = GENRE_FREQUENCY_PROFILES[genre]
-        if "dB_deltas" in profile:
-            deltas = profile["dB_deltas"]
+        genre_profile = GENRE_FREQUENCY_PROFILES[genre]
+        if "dB_deltas" in genre_profile:
+            deltas = genre_profile["dB_deltas"]
             low_perfect = deltas["d_low_mid"]
             high_perfect = deltas["d_high_mid"]
             low_pass = (low_perfect[0] - 3.0, low_perfect[1] + 3.0)
@@ -3082,7 +3286,7 @@ def _status_freq_en(fb: Dict[str, float], genre: Optional[str] = None, strict: b
         high_perfect = (-15.0, 10.0)
         high_pass = (-18.0, 12.0)
 
-        if strict:
+        if profile == PROFILE_MIX_STRICT:
             low_perfect = (-5.0, 5.0)
             low_pass = (-8.0, 8.0)
             high_perfect = (-12.0, 8.0)
@@ -3151,22 +3355,42 @@ WEIGHTS = {
     "DC Offset": 0.0,              # Auto-crítico si detectado, no suma
 }
 
+# En un máster el headroom ya no es margen para el ingeniero, así que pesa menos,
+# y la dinámica pesa mucho más: es lo único que distingue un máster competente de
+# uno aplastado. True Peak encabeza porque es el defecto que sí viaja al oyente,
+# vía distorsión en la codificación con pérdida.
+WEIGHTS_MASTER = {
+    "Headroom": 0.25,
+    "True Peak": 0.30,
+    "LUFS (Integrated)": 0.0,      # Informativo: se convierte en el preview de loudness
+    "PLR": 0.25,
+    "Crest Factor": 0.0,
+    "Stereo Width": 0.12,
+    "Frequency Balance": 0.08,
+    "DC Offset": 0.0,
+}
 
 
-def _status_headroom_es(peak_db: float, strict: bool = False) -> Tuple[str, str, float]:
+def weights_for(profile: str) -> Dict[str, float]:
+    return WEIGHTS_MASTER if profile == PROFILE_MASTER else WEIGHTS
+
+
+
+def _status_headroom_es(peak_db: float, profile: str = PROFILE_MIX) -> Tuple[str, str, float]:
     """
     Evaluación de headroom en español usando scoring engine UNIFICADO.
     Ahora usa calculate_headroom_score() para consistencia language-neutral.
     """
     # TRACK 1: Calcular (language-neutral)
-    status, score = calculate_headroom_score(peak_db, strict)
-    reduction_db = calculate_headroom_recommendation(peak_db, strict)
+    status, score = calculate_headroom_score(peak_db, profile)
+    reduction_db = calculate_headroom_recommendation(peak_db, profile)
 
     # TRACK 2: Formatear mensaje (Matías Voice - del eBook)
-    mode = "strict" if strict else "normal"
-
     messages = {
-        "critical": f"Muy poco headroom (margen antes del máximo digital), con riesgo de clipping (saturación digital). Conviene añadir un plugin de ganancia al final del bus principal y reducir aproximadamente {reduction_db} dB antes de exportar nuevamente. Esto preserva el balance de la mezcla y el sonido de los plugins.",
+        "critical": {
+            "normal": f"Muy poco headroom (margen antes del máximo digital), con riesgo de clipping (saturación digital). Conviene añadir un plugin de ganancia al final del bus principal y reducir aproximadamente {reduction_db} dB antes de exportar nuevamente. Esto preserva el balance de la mezcla y el sonido de los plugins.",
+            "master": "El archivo llega al techo digital, así que se están truncando muestras. Bajar el techo del limitador a cerca de -0.3 dBFS y volver a exportar lo resuelve sin cambiar el volumen de forma audible.",
+        },
         "warning": {
             "strict": f"Margen insuficiente para entrega comercial. Conviene reducir aproximadamente {reduction_db} dB para llegar a la zona ideal.",
             "normal": f"La mezcla está algo caliente. Conviene bajar aproximadamente {reduction_db} dB para dejar margen.",
@@ -3174,54 +3398,50 @@ def _status_headroom_es(peak_db: float, strict: bool = False) -> Tuple[str, str,
         "perfect": {
             "strict": "Margen óptimo para entrega comercial profesional.",
             "normal": f"El margen de {abs(peak_db):.1f} dB deja espacio suficiente para trabajar EQ, compresión y limitación sin comprometer la calidad.",
+            "master": f"El techo se respeta, con {abs(peak_db):.1f} dB de sobra. No se trunca nada al exportar.",
         },
         "pass": {
             "strict": "Margen aceptable, pero -6 a -4 dBFS es ideal para clientes/sellos discográficos.",
             "normal": "Margen adecuado para mastering.",
+            "master": "El techo se respeta, aunque el margen es mínimo. Alcanza.",
         },
         "conservative": "Nivel muy conservador. No es un problema, pero podrías subir 1 a 3 dB si lo deseas.",
     }
-    
-    # Seleccionar mensaje apropiado
-    if status in ["warning", "perfect", "pass"]:
-        message = messages[status][mode]
-    else:
-        message = messages[status]
-    
-    return status, message, score
 
-def _status_true_peak_es(tp_db: float, strict: bool = False) -> Tuple[str, str, float, bool]:
+    return status, _pick_message(messages, status, profile), score
+
+def _status_true_peak_es(tp_db: float, profile: str = PROFILE_MIX) -> Tuple[str, str, float, bool]:
     """
     Evaluación de true peak en español usando scoring engine UNIFICADO.
     Ahora usa calculate_true_peak_score() para consistencia language-neutral.
     Retorna (status, message, score, hard_fail).
     """
     # TRACK 1: Calcular (language-neutral)
-    status, score, hard_fail = calculate_true_peak_score(tp_db, strict)
-    
+    status, score, hard_fail = calculate_true_peak_score(tp_db, profile)
+
     # TRACK 2: Formatear mensaje (Matías Voice - del eBook)
-    mode = "strict" if strict else "normal"
-    
     messages = {
-        "critical": "True peak muy elevado. Conviene bajar el nivel y re-exportar para que el mastering pueda trabajar con margen.",
+        "critical": {
+            "normal": "True peak muy elevado. Conviene bajar el nivel y re-exportar para que el mastering pueda trabajar con margen.",
+            "master": f"El true peak llega a {tp_db:+.1f} dBTP, muy por encima del techo. Los codificadores de Spotify, Apple Music y YouTube van a distorsionar esto de forma audible. Un limitador de true peak en -1.0 dBTP lo resuelve.",
+        },
         "warning": {
             "strict": "True peak conviene que sea ≤ -3.0 dBTP para entrega comercial profesional.",
             "normal": "True peak muy cerca del límite. Apunta a ≤ -1.0 dBTP para dar flexibilidad al mastering.",
+            "master": f"El true peak está en {tp_db:+.1f} dBTP. Los másters comerciales viven ahí de forma rutinaria, pero la codificación con pérdida puede agregar distorsión por encima de 0 dBTP. Conviene un limitador de true peak en -1.0 dBTP si el volumen lo permite.",
         },
-        "perfect": "True peak seguro para mastering. Deja margen suficiente para procesar sin comprometer la calidad.",
+        "perfect": {
+            "normal": "True peak seguro para mastering. Deja margen suficiente para procesar sin comprometer la calidad.",
+            "master": "El true peak se mantiene bajo el techo. Nada va a distorsionar al codificar.",
+        },
         "pass": {
             "strict": "True peak aceptable, pero -2 dBTP o menos es ideal para clientes/labels.",
             "normal": "True peak seguro para mastering.",
+            "master": f"Un true peak de {tp_db:+.1f} dBTP es donde aterriza la mayoría de los másters comerciales. Puede agregar distorsión al codificar con pérdida, un intercambio que casi todos los discos aceptan.",
         },
     }
-    
-    # Seleccionar mensaje apropiado
-    if status in ["warning", "pass"]:
-        message = messages[status][mode]
-    else:
-        message = messages[status]
-    
-    return status, message, score, hard_fail
+
+    return status, _pick_message(messages, status, profile), score, hard_fail
 
 def _status_lufs_es(lufs: Optional[float], method: str, is_reliable: bool) -> Tuple[str, str, float]:
     """Evalúa LUFS con consideración de confiabilidad."""
@@ -3244,7 +3464,7 @@ def _status_lufs_es(lufs: Optional[float], method: str, is_reliable: bool) -> Tu
     # Todo entre -10 y -40 LUFS es válido para mezclas
     return "perfect", "LUFS informativo. El volumen final se ajusta en mastering.", 1.0
 
-def _status_plr_es(plr: Optional[float], has_real_lufs: bool, strict: bool = False) -> Tuple[str, str, float]:
+def _status_plr_es(plr: Optional[float], has_real_lufs: bool, profile: str = PROFILE_MIX) -> Tuple[str, str, float]:
     """
     Evaluación de PLR en español usando scoring engine UNIFICADO.
     Ahora usa calculate_plr_score() para consistencia language-neutral.
@@ -3253,40 +3473,40 @@ def _status_plr_es(plr: Optional[float], has_real_lufs: bool, strict: bool = Fal
         return "info", "PLR disponible solo con LUFS real (instala 'pyloudnorm').", 0.0
     
     # TRACK 1: Calcular (language-neutral)
-    status, score = calculate_plr_score(plr, has_real_lufs, strict)
-    
+    status, score = calculate_plr_score(plr, has_real_lufs, profile)
+
     # TRACK 2: Formatear mensaje (Matías Voice - del eBook)
-    mode = "strict" if strict else "normal"
-    
     messages = {
         "perfect": {
             "strict": "PLR óptimo: dinámica adecuada para entrega comercial.",
             "normal": f"La dinámica está bien preservada (PLR: {plr:.1f} dB). No hay sobre-limitación en el bus principal, lo que deja amplio espacio para trabajar el volumen final sin sacrificar la musicalidad.",
+            "master": f"La dinámica sobrevivió al mastering (PLR: {plr:.1f} dB). El disco todavía respira a nivel comercial.",
         },
         "pass": {
             "strict": "PLR bueno para comercial, pero ≥14 dB es ideal para máxima flexibilidad.",
             "normal": "PLR adecuado para mastering.",
+            "master": f"Un PLR de {plr:.1f} dB es saludable para un máster terminado.",
         },
-        "warning": f"La mezcla ya puede estar bastante limitada (PLR: {plr:.1f} dB). Conviene revisar limitadores y compresores en el bus principal. Si su color es intencional, pueden conservarse ajustando el umbral y el techo para que no reduzcan ganancia. Así se preserva el carácter mientras se recupera dinámica.",
-        "critical": f"PLR muy bajo ({plr:.1f} dB): sobre-comprimida/limitada. Quita limitadores o ajústalos para que el audio solo PASE sin reducción de ganancia (solo para color). Alternativamente, usa menos compresión en buses de grupos.",
+        "warning": {
+            "normal": f"La mezcla ya puede estar bastante limitada (PLR: {plr:.1f} dB). Conviene revisar limitadores y compresores en el bus principal. Si su color es intencional, pueden conservarse ajustando el umbral y el techo para que no reduzcan ganancia. Así se preserva el carácter mientras se recupera dinámica.",
+            "master": f"Un PLR de {plr:.1f} dB indica que el limitador está trabajando fuerte. El disco se va a leer fuerte y los transitorios lo están pagando. Soltar el limitador uno o dos decibeles suele notarse en la batería.",
+        },
+        "critical": {
+            "normal": f"PLR muy bajo ({plr:.1f} dB): sobre-comprimida/limitada. Quita limitadores o ajústalos para que el audio solo PASE sin reducción de ganancia (solo para color). Alternativamente, usa menos compresión en buses de grupos.",
+            "master": f"Un PLR de {plr:.1f} dB es un máster aplastado. Queda muy poca diferencia entre el momento más fuerte y el promedio, así que el track se lee plano y cansa, por fuerte que suene. Además el streaming lo baja de nivel igual, así que ese volumen no compró nada.",
+        },
     }
-    
-    # Seleccionar mensaje apropiado
-    if status in ["perfect", "pass"]:
-        message = messages[status][mode]
-    else:
-        message = messages[status]
-    
-    return status, message, score
 
-def _status_stereo_es(corr: float, strict: bool = False) -> Tuple[str, str, float]:
+    return status, _pick_message(messages, status, profile), score
+
+def _status_stereo_es(corr: float, profile: str = PROFILE_MIX) -> Tuple[str, str, float]:
     """
     Evaluación de correlación estéreo en español usando scoring engine UNIFICADO.
     Ahora usa calculate_stereo_score() para consistencia language-neutral.
     """
     # TRACK 1: Calcular (language-neutral)
-    status, score = calculate_stereo_score(corr, strict)
-    
+    status, score = calculate_stereo_score(corr, profile)
+
     # TRACK 2: Formatear mensaje (Matías Voice - del eBook)
     # v7.4.0: Agregado estado "poor" para correlación 0.1-0.3
     if status == "poor":
@@ -3306,13 +3526,16 @@ def _status_stereo_es(corr: float, strict: bool = False) -> Tuple[str, str, floa
 
     return status, message, score
 
-def _status_freq_es(fb: Dict[str, float], genre: Optional[str] = None, strict: bool = False) -> Tuple[str, str, float]:
+def _status_freq_es(fb: Dict[str, float], genre: Optional[str] = None, profile: str = PROFILE_MIX) -> Tuple[str, str, float]:
     """
     Evalúa balance de frecuencias relativo a los medios usando deltas dB.
     Porcentajes son informativos únicamente (dependen del arreglo).
 
     Cuando se provee género, usa umbrales específicos del género.
     Si no, usa umbrales universales "mix-for-mastering".
+
+    El balance tonal se juzga igual en una mezcla y en un máster: solo el perfil
+    estricto aprieta los rangos.
     """
     dL = fb["d_low_mid_db"]
     dH = fb["d_high_mid_db"]
@@ -3321,9 +3544,9 @@ def _status_freq_es(fb: Dict[str, float], genre: Optional[str] = None, strict: b
 
     # Umbrales específicos del género (si se provee y tiene dB_deltas)
     if genre and genre in GENRE_FREQUENCY_PROFILES:
-        profile = GENRE_FREQUENCY_PROFILES[genre]
-        if "dB_deltas" in profile:
-            deltas = profile["dB_deltas"]
+        genre_profile = GENRE_FREQUENCY_PROFILES[genre]
+        if "dB_deltas" in genre_profile:
+            deltas = genre_profile["dB_deltas"]
             low_perfect = deltas["d_low_mid"]
             high_perfect = deltas["d_high_mid"]
             low_pass = (low_perfect[0] - 3.0, low_perfect[1] + 3.0)
@@ -3339,7 +3562,7 @@ def _status_freq_es(fb: Dict[str, float], genre: Optional[str] = None, strict: b
         high_perfect = (-15.0, 10.0)
         high_pass = (-18.0, 12.0)
 
-        if strict:
+        if profile == PROFILE_MIX_STRICT:
             low_perfect = (-5.0, 5.0)
             low_pass = (-8.0, 8.0)
             high_perfect = (-12.0, 8.0)
@@ -3406,19 +3629,21 @@ def _pick_lang(lang: str) -> str:
 
 
 
-def status_headroom(peak_db: float, strict: bool = False, lang: str = 'en') -> Tuple[str, str, float]:
+def status_headroom(peak_db: float, strict: bool = False, lang: str = 'en', profile: Optional[str] = None) -> Tuple[str, str, float]:
 
     lang = _pick_lang(lang)
+    profile = resolve_profile(strict, profile)
 
-    return _status_headroom_es(peak_db, strict) if lang == 'es' else _status_headroom_en(peak_db, strict)
+    return _status_headroom_es(peak_db, profile) if lang == 'es' else _status_headroom_en(peak_db, profile)
 
 
 
-def status_true_peak(tp_db: float, strict: bool = False, lang: str = 'en') -> Tuple[str, str, float, bool]:
+def status_true_peak(tp_db: float, strict: bool = False, lang: str = 'en', profile: Optional[str] = None) -> Tuple[str, str, float, bool]:
 
     lang = _pick_lang(lang)
+    profile = resolve_profile(strict, profile)
 
-    return _status_true_peak_es(tp_db, strict) if lang == 'es' else _status_true_peak_en(tp_db, strict)
+    return _status_true_peak_es(tp_db, profile) if lang == 'es' else _status_true_peak_en(tp_db, profile)
 
 
 
@@ -3430,27 +3655,30 @@ def status_lufs(lufs: Optional[float], method: str, is_reliable: bool, lang: str
 
 
 
-def status_plr(plr: Optional[float], has_real_lufs: bool, strict: bool = False, lang: str = 'en') -> Tuple[str, str, float]:
+def status_plr(plr: Optional[float], has_real_lufs: bool, strict: bool = False, lang: str = 'en', profile: Optional[str] = None) -> Tuple[str, str, float]:
 
     lang = _pick_lang(lang)
+    profile = resolve_profile(strict, profile)
 
-    return _status_plr_es(plr, has_real_lufs, strict) if lang == 'es' else _status_plr_en(plr, has_real_lufs, strict)
-
-
-
-def status_stereo(corr: float, lang: str = 'en') -> Tuple[str, str, float]:
-
-    lang = _pick_lang(lang)
-
-    return _status_stereo_es(corr) if lang == 'es' else _status_stereo_en(corr)
+    return _status_plr_es(plr, has_real_lufs, profile) if lang == 'es' else _status_plr_en(plr, has_real_lufs, profile)
 
 
 
-def status_freq(fb: Dict[str, float], genre: Optional[str] = None, strict: bool = False, lang: str = 'en') -> Tuple[str, str, float]:
+def status_stereo(corr: float, lang: str = 'en', profile: Optional[str] = None) -> Tuple[str, str, float]:
 
     lang = _pick_lang(lang)
+    profile = resolve_profile(profile=profile)
 
-    return _status_freq_es(fb, genre, strict) if lang == 'es' else _status_freq_en(fb, genre, strict)
+    return _status_stereo_es(corr, profile) if lang == 'es' else _status_stereo_en(corr, profile)
+
+
+
+def status_freq(fb: Dict[str, float], genre: Optional[str] = None, strict: bool = False, lang: str = 'en', profile: Optional[str] = None) -> Tuple[str, str, float]:
+
+    lang = _pick_lang(lang)
+    profile = resolve_profile(strict, profile)
+
+    return _status_freq_es(fb, genre, profile) if lang == 'es' else _status_freq_en(fb, genre, profile)
 
 
 
@@ -3470,40 +3698,129 @@ def status_dc_offset(dc_data: Dict[str, Any], lang: str = 'en') -> Tuple[str, st
 
 
 
-def score_report(metrics: List[Dict[str, Any]], hard_fail: bool, strict: bool = False, lang: str = 'en') -> Tuple[int, str]:
+def verdict_for_score(score: int, profile: str = PROFILE_MIX, lang: str = 'en') -> str:
+    """
+    Único origen del veredicto. La pantalla, el PDF y el frontend leen de aquí,
+    directa o indirectamente. Las bandas numéricas son las mismas en los tres
+    perfiles; lo que cambia es la pregunta que responden.
+
+    Mezcla: ¿queda margen para masterizar?
+    Máster: ¿está listo para publicar?
+    """
+    lang = _pick_lang(lang)
+
+    if profile == PROFILE_MASTER:
+        if lang == 'es':
+            if score >= 95:
+                return "✅ Máster listo para publicar"
+            if score >= 85:
+                return "✅ Máster sólido"
+            if score >= 75:
+                return "⚠️ Publicable, con detalles por revisar"
+            if score >= 60:
+                return "⚠️ Máster con puntos que conviene revisar"
+            if score >= 40:
+                return "⚠️ Máster con defectos claros"
+            if score >= 20:
+                return "❌ Máster comprometido"
+            return "❌ Requiere revisión antes de publicar"
+        if score >= 95:
+            return "✅ Master ready to release"
+        if score >= 85:
+            return "✅ Solid master"
+        if score >= 75:
+            return "⚠️ Releasable, with details to review"
+        if score >= 60:
+            return "⚠️ Master has points worth reviewing"
+        if score >= 40:
+            return "⚠️ Master has clear defects"
+        if score >= 20:
+            return "❌ Compromised master"
+        return "❌ Requires review before release"
+
+    # Mezcla: filosofía de MARGEN, no de juicio
+    if lang == 'es':
+        if score >= 95:
+            return "✅ Margen óptimo para mastering"
+        if score >= 85:
+            return "✅ Lista para mastering"
+        if score >= 75:
+            return "⚠️ Margen suficiente (revisar sugerencias)"
+        if score >= 60:
+            return "⚠️ Margen reducido, conviene revisar antes de mastering"
+        if score >= 40:
+            return "⚠️ Margen limitado, se recomiendan ajustes"
+        if score >= 20:
+            return "❌ Margen comprometido para mastering"
+        if score >= 5:
+            return "❌ Requiere revisión antes de mastering"
+        return "❌ Sin margen para procesamiento adicional"
+
+    if score >= 95:
+        return "✅ Optimal margin for mastering"
+    if score >= 85:
+        return "✅ Ready for mastering"
+    if score >= 75:
+        return "⚠️ Sufficient margin (review suggestions)"
+    if score >= 60:
+        return "⚠️ Reduced margin, worth reviewing before mastering"
+    if score >= 40:
+        return "⚠️ Limited margin, adjustments recommended"
+    if score >= 20:
+        return "❌ Compromised margin for mastering"
+    if score >= 5:
+        return "❌ Requires review before mastering"
+    return "❌ No margin for additional processing"
+
+
+def verdict_text_only(score: int, profile: str = PROFILE_MIX, lang: str = 'en') -> str:
+    """
+    El veredicto sin el emoji inicial, para el PDF, que no tiene fuente con emoji
+    y los convertiría en [OK] / [!] / [X].
+    """
+    return re.sub(r'^[^\w¡¿]+', '', verdict_for_score(score, profile, lang)).strip()
+
+
+def score_report(
+    metrics: List[Dict[str, Any]],
+    hard_fail: bool,
+    strict: bool = False,
+    lang: str = 'en',
+    profile: Optional[str] = None,
+) -> Tuple[int, str]:
     """Calculate global score (0-100) and verdict with localization support."""
     lang = _pick_lang(lang)
+    profile = resolve_profile(strict, profile)
 
     # v7.4.0 FIX: Minimum score is 5, never 0
     if hard_fail:
-        if lang == 'es':
-            return 5, "❌ Requiere revisión - tu archivo necesita trabajo antes del mastering"
-        return 5, "❌ Requires review - your file needs work before mastering"
+        return 5, verdict_for_score(5, profile, lang)
 
     # v7.4.0: Added "poor" status for correlation 0.1-0.3
     mult = {"perfect": 1.0, "pass": 0.9, "warning": 0.7, "poor": 0.4, "critical": 0.0, "catastrophic": 0.0, "info": 1.0, "conservative": 1.0}
+    weights = weights_for(profile)
     total = 0.0
     wsum = 0.0
-    
+
     for m in metrics:
         # Use internal_key for weight lookup (always English)
         internal_key = m.get("internal_key", m["name"])
-        w = WEIGHTS.get(internal_key, 0.0)
+        w = weights.get(internal_key, 0.0)
         if w <= 0:
             continue
-        
+
         # Crest Factor solo cuenta si no hay PLR real
         if internal_key == "Crest Factor":
             has_plr = any(
-                metric.get("internal_key", metric["name"]) == "PLR" 
-                and metric.get("value") != "N/A" 
+                metric.get("internal_key", metric["name"]) == "PLR"
+                and metric.get("value") != "N/A"
                 for metric in metrics
             )
             if has_plr:
                 continue  # Skip crest factor si tenemos PLR
             else:
-                w = 0.15  # Usar peso de PLR si no hay PLR
-        
+                w = weights["PLR"]  # Usar peso de PLR si no hay PLR
+
         wsum += w
         total += w * mult.get(m["status"], 0.0)
 
@@ -3514,70 +3831,93 @@ def score_report(metrics: List[Dict[str, Any]], hard_fail: bool, strict: bool = 
 
     raw_score = int(round(100.0 * (total / wsum)))
 
-    # Apply intelligent minimum score
-    minimum_score = calculate_minimum_score(metrics)
+    # calculate_minimum_score solo puede subir; calculate_maximum_score solo puede bajar.
     # v7.4.0 FIX: Floor at 5, never return scores below 5
-    score = max(5, max(minimum_score, raw_score))
+    score = max(5, max(calculate_minimum_score(metrics), raw_score))
+    score = min(score, calculate_maximum_score(metrics, profile))
 
-    # Localized verdicts with MARGIN philosophy (not judgment)
-    # v7.4.0: Added verdicts for scores 5-19
-    if lang == 'es':
-        if score >= 95:
-            verdict = "✅ Margen óptimo para mastering"
-        elif score >= 85:
-            verdict = "✅ Lista para mastering"
-        elif score >= 75:
-            verdict = "⚠️ Margen suficiente (revisar sugerencias)"
-        elif score >= 60:
-            verdict = "⚠️ Margen reducido - revisar antes de mastering"
-        elif score >= 40:
-            verdict = "⚠️ Margen limitado - ajustes recomendados"
-        elif score >= 20:
-            verdict = "❌ Margen comprometido para mastering"
-        elif score >= 5:
-            # v7.4.0: New verdict for scores 5-19
-            verdict = "❌ Requiere revisión - tu archivo necesita trabajo antes del mastering"
-        else:
-            verdict = "❌ Sin margen para procesamiento adicional"
-    else:
-        if score >= 95:
-            verdict = "✅ Optimal margin for mastering"
-        elif score >= 85:
-            verdict = "✅ Ready for mastering"
-        elif score >= 75:
-            verdict = "⚠️ Sufficient margin (review suggestions)"
-        elif score >= 60:
-            verdict = "⚠️ Reduced margin - review before mastering"
-        elif score >= 40:
-            verdict = "⚠️ Limited margin - adjustments recommended"
-        elif score >= 20:
-            verdict = "❌ Compromised margin for mastering"
-        elif score >= 5:
-            # v7.4.0: New verdict for scores 5-19
-            verdict = "❌ Requires review - your file needs work before mastering"
-        else:
-            verdict = "❌ No margin for additional processing"
-
-    return score, verdict
+    return score, verdict_for_score(score, profile, lang)
 
 
-def calculate_score_penalties(metrics: List[Dict[str, Any]], score: int, lang: str = 'en') -> Dict[str, Any]:
+def score_under_profile(
+    peak_db: float,
+    tp_db: float,
+    plr: Optional[float],
+    plr_reliable: bool,
+    corr: float,
+    fb: Optional[Dict[str, float]],
+    genre: Optional[str],
+    profile: str,
+    lang: str = 'en',
+) -> int:
+    """
+    Puntaje del mismo archivo bajo otro perfil, a partir de las magnitudes ya
+    medidas. Alimenta la frase que es la razón de ser del master mode:
+
+        Esto parece un máster terminado, no una mezcla.
+        Como máster: 92.
+        Como mezcla enviada a mastering daría 27, porque ya no le queda margen.
+
+    Reusa los mismos calculate_* que el camino principal, así que no puede
+    desincronizarse de él.
+    """
+    st_h, _ = calculate_headroom_score(peak_db, profile)
+    st_tp, _, tp_hard = calculate_true_peak_score(tp_db, profile)
+    st_stereo, _ = calculate_stereo_score(corr, profile)
+
+    metrics = [
+        {"internal_key": "Headroom", "name": "Headroom", "status": st_h},
+        {"internal_key": "True Peak", "name": "True Peak", "status": st_tp},
+        {"internal_key": "Stereo Width", "name": "Stereo Width", "status": st_stereo},
+    ]
+
+    if plr is not None and plr_reliable:
+        st_plr, _ = calculate_plr_score(plr, True, profile)
+        metrics.append({"internal_key": "PLR", "name": "PLR", "status": st_plr, "value": plr})
+
+    if fb:
+        st_f, _, _ = status_freq(fb, genre, lang=lang, profile=profile)
+        metrics.append({"internal_key": "Frequency Balance", "name": "Frequency Balance", "status": st_f})
+
+    score, _ = score_report(metrics, tp_hard, lang=lang, profile=profile)
+    return score
+
+
+def calculate_score_penalties(
+    metrics: List[Dict[str, Any]],
+    score: int,
+    lang: str = 'en',
+    profile: Optional[str] = None,
+) -> Dict[str, Any]:
     """
     Calculate penalty contribution of each scored metric.
     Returns primary_limiting_factor and score_drivers for report display.
     Uses the same weights and status multipliers as score_report().
     """
     lang = _pick_lang(lang)
+    profile = resolve_profile(profile=profile)
     mult = {"perfect": 1.0, "pass": 0.9, "warning": 0.7, "poor": 0.4, "critical": 0.0, "catastrophic": 0.0, "info": 1.0, "conservative": 1.0}
+    weights = weights_for(profile)
 
     # PLF label mapping: internal_key -> (ES observation, EN observation)
-    plf_labels = {
-        "Headroom": ("margen insuficiente", "insufficient headroom"),
-        "True Peak": ("true peak elevado", "elevated true peak"),
-        "PLR": ("rango dinámico reducido", "reduced dynamic range"),
-        "Stereo Width": ("campo estéreo comprometido", "compromised stereo field"),
-        "Frequency Balance": ("balance tonal desigual", "uneven tonal balance"),
-    }
+    # En un máster el defecto no es "falta margen para el ingeniero" sino que el
+    # archivo ya está contra el techo, así que la observación cambia.
+    if profile == PROFILE_MASTER:
+        plf_labels = {
+            "Headroom": ("el archivo está contra el techo digital", "the file is pinned at the digital ceiling"),
+            "True Peak": ("true peak sobre el techo", "true peak over the ceiling"),
+            "PLR": ("dinámica aplastada", "crushed dynamics"),
+            "Stereo Width": ("campo estéreo comprometido", "compromised stereo field"),
+            "Frequency Balance": ("balance tonal desigual", "uneven tonal balance"),
+        }
+    else:
+        plf_labels = {
+            "Headroom": ("margen insuficiente", "insufficient headroom"),
+            "True Peak": ("true peak elevado", "elevated true peak"),
+            "PLR": ("rango dinámico reducido", "reduced dynamic range"),
+            "Stereo Width": ("campo estéreo comprometido", "compromised stereo field"),
+            "Frequency Balance": ("balance tonal desigual", "uneven tonal balance"),
+        }
 
     penalties = []
     has_plr = any(
@@ -3588,13 +3928,13 @@ def calculate_score_penalties(metrics: List[Dict[str, Any]], score: int, lang: s
 
     for m in metrics:
         internal_key = m.get("internal_key", m["name"])
-        w = WEIGHTS.get(internal_key, 0.0)
+        w = weights.get(internal_key, 0.0)
         if w <= 0:
             continue
         if internal_key == "Crest Factor":
             if has_plr:
                 continue
-            w = 0.15
+            w = weights["PLR"]
         metric_score = mult.get(m["status"], 0.0)
         penalty = w * (1.0 - metric_score)
         if penalty < 0.001:
@@ -3658,7 +3998,7 @@ def calculate_score_penalties(metrics: List[Dict[str, Any]], score: int, lang: s
     }
 
 
-def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, strict: bool = False, lang: str = "en", original_metadata: Optional[Dict] = None) -> Dict[str, Any]:
+def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, strict: bool = False, lang: str = "en", original_metadata: Optional[Dict] = None, profile: Optional[str] = None) -> Dict[str, Any]:
     """Analyze a full audio file."""
     start_time = time.time()  # Start timing
     try:
@@ -3729,24 +4069,49 @@ def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, s
 
     metrics: List[Dict[str, Any]] = []
 
-    # 1. Headroom with Clipping Temporal Analysis
+    # 0. Measure before judging.
+    #
+    # The profile decides which rubric every status below is evaluated against,
+    # and the profile depends on peak, true peak, LUFS and PLR. So all four are
+    # measured up front. They are pure functions of the audio, so hoisting them
+    # changes nothing except the order in which they are known.
     peak = peak_dbfs(y)
     headroom = -peak
     sample_peak = float(np.max(np.abs(y))) if y.size else 0.0
     clipping = sample_peak >= 0.999999
-    
+    tp = oversampled_true_peak_db(y, os_factor=oversample)
+    lufs, lufs_method, lufs_reliable = integrated_lufs(y, sr, duration)
+    has_real_lufs = HAS_PYLOUDNORM and lufs_method.startswith("pyloudnorm")
+    plr = tp - lufs if (has_real_lufs and lufs is not None and tp is not None) else None
+
+    # tp_clipping_pct is 0.0 here rather than the temporal figure, which is not
+    # measured yet. The chunked path (the universal one in production) also
+    # passes 0.0, so the two paths now detect identically instead of drifting.
+    is_mastered = detect_mastered_file(lufs, peak, tp, plr, 0.0)
+
+    mix_profile = resolve_profile(strict)
+    auto_profile = PROFILE_MASTER if is_mastered["is_mastered"] else mix_profile
+    profile_source = "user" if profile in PROFILES else "auto"
+    active_profile = profile if profile in PROFILES else auto_profile
+
+    # 1. Headroom with Clipping Temporal Analysis
     # Temporal analysis if clipping detected
     clipping_temporal = None
     if clipping:
         clipping_temporal = analyze_clipping_temporal(y, sr, threshold=0.999999)
 
-    st, msg, _ = status_headroom(peak, strict, lang)
-    
+    st, msg, _ = status_headroom(peak, lang=lang, profile=active_profile)
+
     headroom_metric = {
         "name": METRIC_NAMES[_pick_lang(lang)]["Headroom"],
         "internal_key": "Headroom",
         "value": f"{headroom:.1f} dB",
         "peak_db": f"{peak:.1f} dBFS",
+        # Unrounded sample peak in dBFS. The bars read this, never the display
+        # string: "value" here is headroom (positive) while the chunked path puts
+        # peak (negative) under the same key, and rounding to one decimal is too
+        # coarse for the master profile, whose boundary sits at -0.1 dBFS.
+        "raw_peak_db": float(peak),
         "status": st,
         "message": msg
     }
@@ -3757,9 +4122,8 @@ def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, s
     metrics.append(headroom_metric)
 
     # 2. True Peak with Temporal Analysis
-    tp = oversampled_true_peak_db(y, os_factor=oversample)
-    st_tp, msg_tp, _, tp_hard = status_true_peak(tp, strict, lang)
-    
+    st_tp, msg_tp, _, tp_hard = status_true_peak(tp, lang=lang, profile=active_profile)
+
     # Temporal analysis if problematic
     tp_temporal = None
     if tp > -1.0:  # Analyze if close to or above limit
@@ -3795,6 +4159,7 @@ def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, s
         "name": METRIC_NAMES[_pick_lang(lang)]["True Peak"],
         "internal_key": "True Peak",
         "value": f"{tp:.1f} dBTP",
+        "raw_true_peak_db": float(tp),
         "status": st_tp,
         "message": msg_tp
     }
@@ -3804,11 +4169,10 @@ def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, s
     
     metrics.append(tp_metric)
 
-    # 3. LUFS
-    lufs, lufs_method, lufs_reliable = integrated_lufs(y, sr, duration)
+    # 3. LUFS (measured in step 0)
     lufs_label = "LUFS" if HAS_PYLOUDNORM else "RMS(dBFS) approx"
     st_l, msg_l, _ = status_lufs(lufs, lufs_method, lufs_reliable, lang)
-    
+
     metrics.append({
         "name": METRIC_NAMES[_pick_lang(lang)]["LUFS (Integrated)"],
         "internal_key": "LUFS (Integrated)",  # For WEIGHTS lookup
@@ -3819,17 +4183,15 @@ def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, s
         "reliable": lufs_reliable
     })
 
-    # 4. PLR
-    plr = None
-    has_real_lufs = HAS_PYLOUDNORM and lufs_method.startswith("pyloudnorm")
-    if has_real_lufs and lufs is not None and tp is not None:
-        plr = tp - lufs
-    
-    st_p, msg_p, _ = status_plr(plr, has_real_lufs, strict, lang)
+    # 4. PLR (measured in step 0)
+    st_p, msg_p, _ = status_plr(plr, has_real_lufs, lang=lang, profile=active_profile)
     metrics.append({
         "name": METRIC_NAMES[_pick_lang(lang)]["PLR"],
         "internal_key": "PLR",  # For WEIGHTS lookup
         "value": f"{plr:.1f} dB" if plr is not None else "N/A",
+        # Unrounded, for the bars: a PLR of 5.95 prints as "6.0" and would land in
+        # the warning band while the status, which reads the real number, says critical.
+        "raw_plr_db": float(plr) if plr is not None else None,
         "status": st_p,
         "message": msg_p
     })
@@ -3992,7 +4354,7 @@ def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, s
 
     # 8. Frequency Balance
     fb = band_balance_db(y, sr)
-    st_f, msg_f, _ = status_freq(fb, genre, strict, lang)  # ← FIXED: Added strict and lang parameters
+    st_f, msg_f, _ = status_freq(fb, genre, lang=lang, profile=active_profile)
     
     # NEW v7.3.50: Detect genre and calculate tonal health
     genre_detection = detect_closest_genre(fb['low_percent'], fb['mid_percent'], fb['high_percent'])
@@ -4041,14 +4403,25 @@ def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, s
     })
 
     # Hard fail conditions - only for severe technical issues
-    # True peak hard fail comes from calculate_true_peak_score
-    # Clipping detection
-    hard_fail = bool(clipping) or bool(tp_hard)
-    score, verdict = score_report(metrics, hard_fail, strict, lang)  # ← FIXED: Added strict and lang
-    score_penalties = calculate_score_penalties(metrics, score, lang)
+    #
+    # v7.5.0: sample clipping no longer hard-fails. It used to, here, while the
+    # chunked path (the one every production analysis actually takes) ignored it,
+    # so the two paths disagreed and this branch was effectively dead. Resurrecting
+    # it would have been worse than leaving it: `clipping` is a single sample at
+    # full scale, which is something most finished masters do deliberately, and
+    # hard_fail is a kill switch that returns a flat 5. Clipping is scored instead,
+    # through Headroom going critical. True Peak >= +3.0 dBTP is the only hard fail.
+    hard_fail = bool(tp_hard)
+    score, verdict = score_report(metrics, hard_fail, lang=lang, profile=active_profile)
+    score_penalties = calculate_score_penalties(metrics, score, lang, profile=active_profile)
 
- # Generate CTA for frontend
-    cta_data = generate_cta(score, strict, lang, mode="write")
+    alternate_profile = mix_profile if active_profile == PROFILE_MASTER else PROFILE_MASTER
+    alternate_score = score_under_profile(
+        peak, tp, plr, has_real_lufs, corr, fb, genre, alternate_profile, lang,
+    )
+
+    # Generate CTA for frontend
+    cta_data = generate_cta(score, strict, lang, mode="write", profile=active_profile)
     
     # ========== NEW: Generate interpretative texts ==========
     interpretations = None
@@ -4108,15 +4481,11 @@ def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, s
             interpretations = None
     # ========== END: Interpretative texts generation ==========
     
-    # Detect territory and mastered status
+    # Detect territory. The mastered detection already ran in step 0, because the
+    # profile depended on it; it is deliberately not recomputed here with the
+    # temporal clipping percentage, which would make it disagree with the profile
+    # that was actually used to score the file.
     territory = detect_territory(lufs, peak, tp, plr)
-    
-    # Calculate True Peak clipping percentage for mastered detection
-    tp_clipping_pct = 0.0
-    if tp_temporal:
-        tp_clipping_pct = tp_temporal.get("affected_percentage", 0.0)
-    
-    is_mastered = detect_mastered_file(lufs, peak, tp, plr, tp_clipping_pct)
 
     # v1.5: Energy curve analysis
     energy_data = calculate_energy_curve(y, sr)
@@ -4148,6 +4517,14 @@ def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, s
         "verdict": verdict,
         "territory": territory,
         "is_mastered": is_mastered,
+        # v7.5.0: which rubric produced this score, who chose it, and what the
+        # same file scores under the other one.
+        "profile": active_profile,
+        "profile_source": profile_source,
+        "profile_auto": auto_profile,
+        "profile_confidence": is_mastered["confidence"],
+        "alternate_profile": alternate_profile,
+        "alternate_score": alternate_score,
         "cta": cta_data,  # Add CTA data for frontend
         "interpretations": interpretations,  # NEW: Add interpretations
         "score_penalties": score_penalties,  # PLF + Score Drivers
@@ -4160,7 +4537,7 @@ def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, s
             "auto_oversample": oversample == 0,
             "clipping_detected": clipping
         },
-        "metrics_bars": calculate_metrics_bars_percentages(metrics, strict=strict),  # NEW v7.3.50: Quick view bars
+        "metrics_bars": calculate_metrics_bars_percentages(metrics, strict=strict, profile=active_profile),  # NEW v7.3.50: Quick view bars
         "analysis_time_seconds": round(time.time() - start_time, 1),  # Time elapsed
         # v1.5: New data capture fields
         "spectral_6band": fb.get("spectral_6band", {}),
@@ -4235,13 +4612,80 @@ def generate_recommendations(metrics: List[Dict[str, Any]], score: int, genre: O
 
 
 
-def generate_cta(score: int, strict: bool, lang: str, mode: str = "write") -> Dict[str, str]:
+def _generate_cta_master(score: int, lang: str) -> Dict[str, str]:
+    """
+    CTAs para un máster terminado. Sin esto, la herramienta le ofrece masterizar
+    su máster a alguien que ya lo masterizó.
+
+    La banda 60 a 84 es el mejor lead del producto: esa persona ya tiene un
+    máster, no está conforme con él, y tiene presupuesto.
+    """
+    if score >= 85:
+        # Sin botón: un máster sólido no necesita que le vendan mastering.
+        # El frontend oculta el botón cuando viene vacío y deja solo el mensaje.
+        if lang == 'es':
+            return {
+                "message": (
+                    "🎧 Tu máster está listo para publicar.\n"
+                    "Respeta el techo digital y conserva dinámica. No necesita otro mastering."
+                ),
+                "button": "",
+                "action": "release"
+            }
+        return {
+            "message": (
+                "🎧 Your master is ready to release.\n"
+                "It respects the digital ceiling and it kept its dynamics. It does not need another mastering pass."
+            ),
+            "button": "",
+            "action": "release"
+        }
+
+    if score >= 60:
+        if lang == 'es':
+            return {
+                "message": (
+                    "🎧 Tu máster funciona, pero deja valor sobre la mesa.\n"
+                    "Los puntos marcados arriba son los que separan este máster de uno que compite de igual a igual con las referencias de su género. Si quieres, lo revisamos juntos."
+                ),
+                "button": "Revisar mi máster",
+                "action": "remaster"
+            }
+        return {
+            "message": (
+                "🎧 Your master works, but it leaves value on the table.\n"
+                "The points flagged above are what separate this master from one that competes head to head with the references in its genre. If you'd like, we can go through it together."
+            ),
+            "button": "Review my master",
+            "action": "remaster"
+        }
+
+    if lang == 'es':
+        return {
+            "message": (
+                "🔧 Tu máster tiene defectos técnicos concretos.\n"
+                "No son cuestión de gusto: están medidos arriba y se escuchan en la reproducción. Conviene resolverlos antes de publicar. Si quieres, escríbenos."
+            ),
+            "button": "Revisar mi máster",
+            "action": "remaster"
+        }
+    return {
+        "message": (
+            "🔧 Your master has concrete technical defects.\n"
+            "These are not a matter of taste: they are measured above and they are audible on playback. Worth resolving before release. If you'd like, write us."
+        ),
+        "button": "Review my master",
+        "action": "remaster"
+    }
+
+
+def generate_cta(score: int, strict: bool, lang: str, mode: str = "write", profile: Optional[str] = None) -> Dict[str, str]:
     """
     Generate conversational CTA with button text based on mix score.
-    
+
     Returns:
-        dict: {"message": "CTA text", "button": "Button text", "action": "mastering|preparation|review"}
-    
+        dict: {"message": "CTA text", "button": "Button text", "action": "mastering|preparation|review|remaster|release"}
+
     Score ranges:
     - 95-100: Perfect - offer mastering
     - 85-94: Ready - offer mastering
@@ -4254,7 +4698,10 @@ def generate_cta(score: int, strict: bool, lang: str, mode: str = "write") -> Di
     # SHORT MODE: Never show CTA
     if mode == "short":
         return {"message": "", "button": "", "action": ""}
-    
+
+    if resolve_profile(strict, profile) == PROFILE_MASTER:
+        return _generate_cta_master(score, _pick_lang(lang))
+
     if lang == 'es':
         # Spanish CTAs - ES LATAM Neutro
         if score >= 95:
@@ -5046,7 +5493,8 @@ def analyze_file_chunked(
     chunk_duration: float = 30.0,
     progress_callback = None,
     original_metadata: Optional[Dict] = None,
-    ffmpeg_exe: Optional[str] = None
+    ffmpeg_exe: Optional[str] = None,
+    profile: Optional[str] = None
 ) -> Dict[str, Any]:
     """
     Memory-optimized analysis for large files using chunked processing.
@@ -5560,9 +6008,20 @@ def analyze_file_chunked(
     # v7.4.0: Pass None for PLR if unreliable
     territory = detect_territory(weighted_lufs if lufs_reliable else None, final_peak, final_tp, final_plr)
     is_mastered = detect_mastered_file(weighted_lufs if lufs_reliable else None, final_peak, final_tp, final_plr, 0.0)
-    
+
     print(f"📍 Territory: {territory}")
     print(f"🎛️  {'Mastered' if is_mastered else 'Mix (not mastered)'}")
+
+    # v7.5.0: the profile decides which rubric judges the file. An explicit
+    # profile from the caller is the user's override and always wins; otherwise
+    # detection picks, which is the whole point (RoEx makes the user declare the
+    # stage, we do not have to).
+    mix_profile = resolve_profile(strict)
+    auto_profile = PROFILE_MASTER if is_mastered["is_mastered"] else mix_profile
+    profile_source = "user" if profile in PROFILES else "auto"
+    active_profile = profile if profile in PROFILES else auto_profile
+
+    print(f"🎚️  Profile: {active_profile} ({profile_source})")
     
     # v7.3.51 FIX: Helper function to classify correlation issue based on actual value
     # Only issues < 0.5 are reported - high correlation is NOT a problem
@@ -5676,7 +6135,7 @@ def analyze_file_chunked(
     # In dBFS, headroom is the peak level itself (negative value)
     # Headroom = distance to 0 dBFS ceiling = peak value
     headroom = final_peak  # Both are negative in dBFS (e.g., -6.28 dBFS)
-    st_h, msg_h, _ = status_headroom(final_peak, strict, lang)
+    st_h, msg_h, _ = status_headroom(final_peak, lang=lang, profile=active_profile)
     
     # Build clipping temporal analysis if there are clipping chunks
     # v7.3.36: Unified structure with normal mode
@@ -5711,6 +6170,7 @@ def analyze_file_chunked(
         "value": f"{headroom:.1f} dBFS",
         "status": st_h,
         "message": msg_h,
+        "raw_peak_db": float(final_peak),
         "peak_db": f"{final_peak:.1f} dBFS"
     }
     
@@ -5720,7 +6180,7 @@ def analyze_file_chunked(
     metrics.append(headroom_metric)
     
     # 2. True Peak
-    st_tp, msg_tp, _, tp_hard = status_true_peak(final_tp, strict, lang)
+    st_tp, msg_tp, _, tp_hard = status_true_peak(final_tp, lang=lang, profile=active_profile)
     
     # Build temporal analysis if there are problem chunks
     # v7.3.36: Unified structure with normal mode
@@ -5786,6 +6246,7 @@ def analyze_file_chunked(
         "name": "True Peak",
         "internal_key": "True Peak",
         "value": f"{final_tp:.1f} dBTP",
+        "raw_true_peak_db": float(final_tp),
         "status": st_tp,
         "message": msg_tp
     }
@@ -5812,11 +6273,12 @@ def analyze_file_chunked(
     # 4. PLR
     # v7.4.0 FIX: Only include PLR if LUFS is reliable
     if plr_reliable and final_plr is not None:
-        st_p, msg_p, _ = status_plr(final_plr, True, strict, lang)
+        st_p, msg_p, _ = status_plr(final_plr, True, lang=lang, profile=active_profile)
         metrics.append({
             "name": "PLR",
             "internal_key": "PLR",
             "value": f"{final_plr:.1f} dB",
+            "raw_plr_db": float(final_plr),
             "status": st_p,
             "message": msg_p,
             "reliable": True
@@ -6065,7 +6527,7 @@ def analyze_file_chunked(
         }
         print("\n⚠️  No frequency balance data available (using fallback)")
     
-    st_f, msg_f, _ = status_freq(fb, genre, strict, lang)
+    st_f, msg_f, _ = status_freq(fb, genre, lang=lang, profile=active_profile)
     
     # NEW v7.3.50: Detect genre and calculate tonal health
     genre_detection = detect_closest_genre(fb['low_percent'], fb['mid_percent'], fb['high_percent'])
@@ -6114,15 +6576,28 @@ def analyze_file_chunked(
     })
     
     # Calculate score using the same score_report function as analyze_file
-    hard_fail = tp_hard  # Use the hard fail from status_true_peak
-    
-    # Import and use the actual score_report function
-    from analyzer import score_report, calculate_score_penalties
-    score, verdict = score_report(metrics, hard_fail, strict, lang)
-    score_penalties = calculate_score_penalties(metrics, score, lang)
+    #
+    # hard_fail is a kill switch, not a penalty: it bypasses the weighted score
+    # and returns a flat 5. True Peak at or above +3.0 dBTP is the only thing
+    # that earns it. Sample clipping deliberately does NOT: a sample touching
+    # full scale is what most finished masters do on purpose, and failing them
+    # for it is the exact bug master mode exists to fix. Clipping is scored,
+    # through Headroom going critical at peak >= 0.0.
+    hard_fail = tp_hard
+
+    score, verdict = score_report(metrics, hard_fail, lang=lang, profile=active_profile)
+    score_penalties = calculate_score_penalties(metrics, score, lang, profile=active_profile)
+
+    # The same file under the other rubric. This is the sentence that no
+    # competitor can print: "as a master 92, as a mix 27".
+    alternate_profile = mix_profile if active_profile == PROFILE_MASTER else PROFILE_MASTER
+    alternate_score = score_under_profile(
+        final_peak, final_tp, final_plr, plr_reliable, final_correlation,
+        fb, genre, alternate_profile, lang,
+    )
 
     # Generate CTA for frontend
-    cta_data = generate_cta(score, strict, lang, mode="write")
+    cta_data = generate_cta(score, strict, lang, mode="write", profile=active_profile)
     
     # ========== NEW: Generate interpretative texts ==========
     interpretations = None
@@ -6248,6 +6723,14 @@ def analyze_file_chunked(
         "verdict": verdict,
         "territory": territory,
         "is_mastered": is_mastered,
+        # v7.5.0: which rubric produced this score, who chose it, and what the
+        # same file scores under the other one.
+        "profile": active_profile,
+        "profile_source": profile_source,
+        "profile_auto": auto_profile,
+        "profile_confidence": is_mastered["confidence"],
+        "alternate_profile": alternate_profile,
+        "alternate_score": alternate_score,
         "cta": cta_data,  # Add CTA data for frontend
         "interpretations": interpretations,  # NEW: Add interpretations
         "score_penalties": score_penalties,  # PLF + Score Drivers
@@ -6260,7 +6743,7 @@ def analyze_file_chunked(
             "auto_oversample": True,
             "clipping_detected": bool(results['clipping_chunks'])
         },
-        "metrics_bars": calculate_metrics_bars_percentages(metrics, strict=strict),  # NEW v7.3.50: Quick view bars
+        "metrics_bars": calculate_metrics_bars_percentages(metrics, strict=strict, profile=active_profile),  # NEW v7.3.50: Quick view bars
         "analysis_time_seconds": round(time.time() - analysis_start_time, 1),  # Time elapsed (uses renamed variable)
         # v1.5: New data capture fields
         "spectral_6band": fb.get("spectral_6band", {}),
@@ -6635,7 +7118,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
             # SECTION 4: Bifurcation - If Mix
             # Calculate how much to reduce using shared helper
             if peak_value is not None:
-                reduction_rounded = calculate_headroom_recommendation(peak_value, strict)
+                reduction_rounded = calculate_headroom_recommendation(peak_value, resolve_profile(strict))
             else:
                 reduction_rounded = 6
 
@@ -6965,7 +7448,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
             # SECTION 4: Bifurcation - If Mix
             # Calculate how much to reduce using shared helper
             if peak_value is not None:
-                reduction_rounded = calculate_headroom_recommendation(peak_value, strict)
+                reduction_rounded = calculate_headroom_recommendation(peak_value, resolve_profile(strict))
             else:
                 reduction_rounded = 6
 
@@ -7265,7 +7748,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
             drivers_section = "\n\n📊 Influencia en la puntuación:\n" + "\n".join(drivers_lines)
 
         # Generate CTA based on score
-        cta_data = generate_cta(score, strict, lang, mode="write")
+        cta_data = generate_cta(score, strict, lang, mode="write", profile=report.get("profile"))
         cta_message = f"\n\n{cta_data['message']}" if cta_data['message'] else ""
 
         return f"{filename_ref}{intro}\n\n{tech_sentence}{issues_sentence}{stereo_detail}{drivers_section}{tech_details}{recommendation}{mode_note}{cta_message}"
@@ -7519,7 +8002,7 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
             drivers_section = "\n\n📊 Score influence breakdown:\n" + "\n".join(drivers_lines)
 
         # Generate CTA based on score
-        cta_data = generate_cta(score, strict, lang, mode="write")
+        cta_data = generate_cta(score, strict, lang, mode="write", profile=report.get("profile"))
         cta_message = f"\n\n{cta_data['message']}" if cta_data['message'] else ""
 
         return f"{filename_ref}{intro}\n\n{tech_sentence}{issues_sentence}{stereo_detail}{drivers_section}{tech_details}{recommendation}{mode_note}{cta_message}"
@@ -7609,7 +8092,7 @@ def generate_short_mode_report(report: Dict[str, Any], strict: bool = False, lan
             recommendation = "💡 Recomendación: Requiere recuperar margen técnico antes de mastering."
         
         # Generate CTA - modo short nunca muestra CTA, solo lo agregamos al resultado
-        cta_data = generate_cta(score, strict, lang, mode="short")
+        cta_data = generate_cta(score, strict, lang, mode="short", profile=report.get("profile"))
         cta_message = ""  # Short mode doesn't show CTA in text
         
         return header + body + recommendation + cta_message
@@ -7648,7 +8131,7 @@ def generate_short_mode_report(report: Dict[str, Any], strict: bool = False, lan
             recommendation = "💡 Recommendation: Requires recovering technical margin before mastering."
         
         # Generate CTA - modo short nunca muestra CTA, solo lo agregamos al resultado
-        cta_data = generate_cta(score, strict, lang, mode="short")
+        cta_data = generate_cta(score, strict, lang, mode="short", profile=report.get("profile"))
         cta_message = ""  # Short mode doesn't show CTA in text
         
         return header + body + recommendation + cta_message
@@ -7954,44 +8437,14 @@ def generate_complete_pdf(
             section_style
         ))
         
-        # Derive verdict from score (matches analyzer score_report exactly)
+        # Verdict comes from verdict_for_score, the same function the screen uses.
+        # This used to be a hand-copied band table, which is how a PDF ends up
+        # telling a master it is "ready for mastering" while the screen says
+        # something else. One source, both surfaces.
         raw_verdict = report.get('verdict', 'N/A')
         pdf_score = report.get('score', 0)
-        if lang == 'es':
-            if pdf_score >= 95:
-                verdict_text = "Margen óptimo para mastering"
-            elif pdf_score >= 85:
-                verdict_text = "Lista para mastering"
-            elif pdf_score >= 75:
-                verdict_text = "Margen suficiente (revisar sugerencias)"
-            elif pdf_score >= 60:
-                verdict_text = "Margen reducido - revisar antes de mastering"
-            elif pdf_score >= 40:
-                verdict_text = "Margen limitado - ajustes recomendados"
-            elif pdf_score >= 20:
-                verdict_text = "Margen comprometido para mastering"
-            elif pdf_score >= 5:
-                verdict_text = "Requiere revisión"
-            else:
-                verdict_text = "Sin margen para procesamiento adicional"
-        else:
-            if pdf_score >= 95:
-                verdict_text = "Optimal margin for mastering"
-            elif pdf_score >= 85:
-                verdict_text = "Ready for mastering"
-            elif pdf_score >= 75:
-                verdict_text = "Sufficient margin (review suggestions)"
-            elif pdf_score >= 60:
-                verdict_text = "Reduced margin - review before mastering"
-            elif pdf_score >= 40:
-                verdict_text = "Limited margin - adjustments recommended"
-            elif pdf_score >= 20:
-                verdict_text = "Compromised margin for mastering"
-            elif pdf_score >= 5:
-                verdict_text = "Requires review"
-            else:
-                verdict_text = "No margin for additional processing"
-        verdict_text = clean_text_for_pdf(verdict_text).strip()
+        pdf_profile = report.get('profile') or PROFILE_MIX
+        verdict_text = clean_text_for_pdf(verdict_text_only(pdf_score, pdf_profile, lang)).strip()
         
         # Clean filename - handle Unicode characters like "Paraíso"
         fallback_name = 'Desconocido' if lang == 'es' else 'Unknown'

@@ -47,3 +47,6 @@ Thumbs.db
 # Supabase
 supabase/.temp/
 __pycache__/
+
+# Local Python env for the analyzer (backend deps)
+.venv/

@@ -21,7 +21,7 @@ import { NotificationBadge, setNotification, clearNotification } from '@/compone
 import Select from '@/components/Select'
 import InterpretativeSection from '@/components/InterpretativeSection'
 import { useToast } from '@/components/ui/Toast'
-import { getScoreColor, getScoreBg, scoreToVerdictEnum } from '@/lib/scoreColor'
+import { getScoreColor, getScoreBg, scoreToVerdictEnum, isMasterProfile } from '@/lib/scoreColor'
 import { cleanReportText } from '@/lib/cleanReportText'
 
 // Module-level quota cache; survives React state resets / component remounts
@@ -170,6 +170,10 @@ async function saveAnalysisToDatabase(userId: string, analysis: any, fileObj?: F
         // Analysis metadata
         processing_time_seconds: analysis.analysis_time_seconds || null,
         analysis_version: analysis.analysis_version || null,
+        // v7.5.0: the rubric this score was produced under. Stamped next to the
+        // version because a 7.5 master score and a 7.4 mix score are different
+        // measurements and must never be compared or averaged together.
+        profile: analysis.profile || null,
         is_chunked_analysis: analysis.is_chunked_analysis || false,
         chunk_count: analysis.chunk_count || null,
         // v1.5: New data capture fields
@@ -262,6 +266,9 @@ function Home() {
   const [mode, setMode] = useState<'short' | 'write'>('write')
   const [strict, setStrict] = useState(false)
   const [genre, setGenre] = useState<string | null>(null)
+  // v7.5.0: the user's override of the mix/master rubric. Left unchecked, the
+  // analyzer detects the stage itself.
+  const [isFinishedMaster, setIsFinishedMaster] = useState(false)
   const [langDetected, setLangDetected] = useState(false)
 
   const [loading, setLoading] = useState(false)
@@ -981,6 +988,7 @@ const handleAnalyze = async () => {
       mode,
       strict,
       genre,
+      profile: isFinishedMaster ? 'master' : null,
       originalMetadata,
       isAuthenticated: isLoggedIn,
       accessToken: session?.access_token
@@ -2627,11 +2635,44 @@ by Matías Carvajal
                     </div>
                   </div>
 
+                  {/* Master profile override. The analyzer detects a finished master on its
+                      own; this is the correction for the ambiguous cases. Strict is a mix
+                      setting, so it is disabled here: the profiles are alternatives, not a
+                      matrix, and a master is never judged by mix-delivery tolerances. */}
                   <div>
                     <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
                       <input
                         type="checkbox"
+                        checked={isFinishedMaster}
+                        onChange={(e) => {
+                          setIsFinishedMaster(e.target.checked)
+                          if (e.target.checked) setStrict(false)
+                        }}
+                        style={{ width: '1rem', height: '1rem', borderRadius: '0.25rem' }}
+                      />
+                      <span style={{ fontSize: '0.875rem', fontWeight: '500' }}>
+                        {lang === 'es' ? 'Es un máster terminado' : 'This is a finished master'}
+                      </span>
+                    </label>
+                    <p style={{ fontSize: '0.75rem', color: 'var(--mr-text-secondary)', marginTop: '0.25rem', marginLeft: '1.5rem' }}>
+                      {lang === 'es'
+                        ? 'Se evalúa como máster: el volumen no es un defecto y no se le pide margen para mastering.'
+                        : 'Scored as a master: loudness is not a defect and it is not asked to leave headroom for mastering.'}
+                    </p>
+                  </div>
+
+                  <div>
+                    <label style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      cursor: isFinishedMaster ? 'not-allowed' : 'pointer',
+                      opacity: isFinishedMaster ? 0.5 : 1
+                    }}>
+                      <input
+                        type="checkbox"
                         checked={strict}
+                        disabled={isFinishedMaster}
                         onChange={(e) => setStrict(e.target.checked)}
                         style={{ width: '1rem', height: '1rem', borderRadius: '0.25rem' }}
                       />
@@ -2639,10 +2680,20 @@ by Matías Carvajal
                         {lang === 'es' ? 'Modo Estricto' : 'Strict Mode'}
                       </span>
                     </label>
-                    <p style={{ fontSize: '0.75rem', color: 'var(--mr-text-secondary)', marginTop: '0.25rem', marginLeft: '1.5rem' }}>
-                      {lang === 'es'
-                        ? 'Estándares comerciales más exigentes'
-                        : 'More demanding commercial standards'}
+                    <p style={{
+                      fontSize: '0.75rem',
+                      color: 'var(--mr-text-secondary)',
+                      marginTop: '0.25rem',
+                      marginLeft: '1.5rem',
+                      opacity: isFinishedMaster ? 0.5 : 1
+                    }}>
+                      {isFinishedMaster
+                        ? (lang === 'es'
+                            ? 'No aplica a un máster terminado.'
+                            : 'Does not apply to a finished master.')
+                        : (lang === 'es'
+                            ? 'Estándares comerciales más exigentes'
+                            : 'More demanding commercial standards')}
                     </p>
                   </div>
 
@@ -2973,6 +3024,53 @@ by Matías Carvajal
                     }} />
                   </div>
                   <p style={{ fontSize: '1.125rem', fontWeight: '600' }}>{result.verdict}</p>
+
+                  {/* Which rubric judged this file, and what it would score under the other one.
+                      Auto-detected, so the tool never makes the user declare the stage. */}
+                  {(result as any).profile && (result as any).alternate_score != null && (
+                    <div style={{
+                      marginTop: '0.875rem',
+                      paddingTop: '0.875rem',
+                      borderTop: '1px solid var(--mr-border)',
+                      fontSize: '0.9375rem',
+                      lineHeight: 1.55
+                    }}>
+                      <p style={{ fontWeight: '600', marginBottom: '0.25rem' }}>
+                        {isMasterProfile((result as any).profile)
+                          ? (lang === 'es'
+                              ? 'Esto parece un máster terminado, no una mezcla.'
+                              : 'This looks like a finished master, not a mix.')
+                          : (lang === 'es'
+                              ? 'Esto parece una mezcla, no un máster terminado.'
+                              : 'This looks like a mix, not a finished master.')}
+                      </p>
+                      <p style={{ color: 'var(--mr-text-secondary)', margin: 0 }}>
+                        {isMasterProfile((result as any).profile)
+                          ? (lang === 'es'
+                              ? `Como mezcla enviada a mastering daría ${(result as any).alternate_score}, porque ya no le queda margen. Se evaluó como máster.`
+                              : `As a mix submitted for mastering it would score ${(result as any).alternate_score}, because it has no headroom left. It was scored as a master.`)
+                          : (lang === 'es'
+                              ? `Como máster terminado daría ${(result as any).alternate_score}. Se evaluó como mezcla.`
+                              : `As a finished master it would score ${(result as any).alternate_score}. It was scored as a mix.`)}
+                      </p>
+                      {(result as any).profile_source === 'auto' && (
+                        <p style={{
+                          color: 'var(--mr-text-secondary)',
+                          fontSize: '0.8125rem',
+                          margin: '0.5rem 0 0 0'
+                        }}>
+                          {isMasterProfile((result as any).profile)
+                            ? (lang === 'es'
+                                ? 'Si en realidad es una mezcla, analízala de nuevo sin marcar la casilla de máster.'
+                                : 'If this is actually a mix, analyze it again with the master checkbox unchecked.')
+                            : (lang === 'es'
+                                ? 'Si en realidad es un máster terminado, analízalo de nuevo marcando la casilla de máster.'
+                                : 'If this is actually a finished master, analyze it again with the master checkbox ticked.')}
+                        </p>
+                      )}
+                    </div>
+                  )}
+
                   <p style={{
                     fontSize: '0.7rem',
                     color: 'var(--mr-text-secondary)',
@@ -3191,9 +3289,13 @@ by Matías Carvajal
                           lineHeight: '1.4',
                           fontStyle: 'italic'
                         }}>
-                          {lang === 'es'
-                            ? 'Estos indicadores no significan que tu mezcla esté mal, sino que hay decisiones técnicas que conviene revisar antes del master final.'
-                            : 'These indicators don\'t mean your mix is wrong, but there are technical decisions worth reviewing before the final master.'}
+                          {isMasterProfile((result as any).profile)
+                            ? (lang === 'es'
+                                ? 'Estos indicadores no significan que tu máster esté mal, sino que hay decisiones técnicas que conviene revisar antes de publicar.'
+                                : 'These indicators don\'t mean your master is wrong, but there are technical decisions worth reviewing before release.')
+                            : (lang === 'es'
+                                ? 'Estos indicadores no significan que tu mezcla esté mal, sino que hay decisiones técnicas que conviene revisar antes del master final.'
+                                : 'These indicators don\'t mean your mix is wrong, but there are technical decisions worth reviewing before the final master.')}
                         </p>
                         
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
@@ -3719,6 +3821,7 @@ by Matías Carvajal
                       metricsBars={(result as any).metrics_bars}
                       genre={(result as any).user_genre || null}
                       lang={lang}
+                      profile={(result as any).profile}
                     />
                   </div>
                 )}
@@ -3757,8 +3860,11 @@ by Matías Carvajal
                 )}
               </div>
 
-              {/* CTA for Mastering Service; combined card for ≥85, backend-driven for lower scores */}
-              {result.score >= 85 ? (
+              {/* CTA for Mastering Service; combined card for ≥85, backend-driven for lower scores.
+                  Masters never take this branch: offering to master a finished master is the
+                  exact failure master mode exists to prevent. They fall through to the
+                  backend CTA, which has its own master copy. */}
+              {result.score >= 85 && !isMasterProfile((result as any).profile) ? (
                 <div style={{
                   background: 'linear-gradient(to bottom right, #7478d6 0%, #5a5ec8 100%)',
                   borderRadius: '1.5rem',
@@ -3836,7 +3942,7 @@ by Matías Carvajal
                     {lang === 'es' ? 'Masterizar este track' : 'Master this track'} →
                   </button>
                 </div>
-              ) : result.cta_message && result.cta_button ? (
+              ) : result.cta_message ? (
                 <div style={{
                   background: 'linear-gradient(to bottom right, #7478d6 0%, #5a5ec8 100%)',
                   borderRadius: '1.5rem',
@@ -3882,6 +3988,7 @@ by Matías Carvajal
                     {result.cta_message.split('\n').slice(1).join(' ')}
                   </p>
 
+                  {result.cta_button && (
                   <button
                     onClick={() => {
                       const action = (result as any).cta_action || 'mastering'
@@ -3914,6 +4021,7 @@ by Matías Carvajal
                   >
                     {result.cta_button}
                   </button>
+                  )}
                 </div>
               ) : null}
 

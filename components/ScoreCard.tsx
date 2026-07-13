@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef, useState, useCallback } from 'react'
-import { getScoreHex } from '@/lib/scoreColor'
+import { getScoreHex, isMasterProfile } from '@/lib/scoreColor'
 import { getBarColor } from '@/lib/scoreCard'
 import { stripExtension } from '@/lib/filename'
 import { nbsp } from '@/lib/nbsp'
@@ -28,10 +28,33 @@ interface ScoreCardProps {
   metricsBars: Record<string, MetricBar> | null
   genre: string | null
   lang: 'es' | 'en'
+  profile?: string | null
 }
 
-// Score-based bilingual verdict for PNG cards (always matches current lang)
-function getCardVerdict(score: number, lang: 'es' | 'en'): string {
+// Score-based bilingual verdict for PNG cards (always matches current lang).
+// This card is the artifact people actually share, so a master must never go out
+// saying "ready for mastering": it already was mastered. Shorter than the on
+// screen verdict on purpose, the card has no room for a full sentence.
+function getCardVerdict(score: number, lang: 'es' | 'en', profile?: string | null): string {
+  if (isMasterProfile(profile)) {
+    if (lang === 'es') {
+      if (score >= 95) return '✅ Máster listo para publicar'
+      if (score >= 85) return '✅ Máster sólido'
+      if (score >= 75) return '⚠️ Publicable, con detalles'
+      if (score >= 60) return '⚠️ Máster por revisar'
+      if (score >= 40) return '⚠️ Máster con defectos'
+      if (score >= 20) return '⚠️ Máster comprometido'
+      return '❌ Requiere revisión'
+    }
+    if (score >= 95) return '✅ Master ready to release'
+    if (score >= 85) return '✅ Solid master'
+    if (score >= 75) return '⚠️ Releasable, with details'
+    if (score >= 60) return '⚠️ Master worth reviewing'
+    if (score >= 40) return '⚠️ Master has defects'
+    if (score >= 20) return '⚠️ Compromised master'
+    return '❌ Requires review'
+  }
+
   if (lang === 'es') {
     if (score >= 95) return '✅ Margen óptimo para mastering'
     if (score >= 85) return '✅ Lista para mastering'
@@ -84,7 +107,7 @@ const dedupeMap: Record<string, string> = {
   tonal_balance: 'frequency_balance',
 }
 
-export default function ScoreCard({ score, verdict, filename, metricsBars, genre, lang }: ScoreCardProps) {
+export default function ScoreCard({ score, verdict, filename, metricsBars, genre, lang, profile }: ScoreCardProps) {
   const feedRef = useRef<HTMLDivElement>(null)
   const storyRef = useRef<HTMLDivElement>(null)
   const [generating, setGenerating] = useState<'feed' | 'story' | null>(null)
@@ -111,7 +134,7 @@ export default function ScoreCard({ score, verdict, filename, metricsBars, genre
   const dashOffset = CIRCUMFERENCE * (1 - score / 100)
   const trackName = stripExtension(filename, true)
   // Derive verdict from score + lang (always matches current language, not API response language)
-  const verdictText = getCardVerdict(score, lang)
+  const verdictText = getCardVerdict(score, lang, profile)
   const genreDisplay = genre && genreLabels[genre]
     ? (lang === 'es' ? genreLabels[genre].es : genreLabels[genre].en)
     : genre || null

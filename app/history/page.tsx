@@ -725,7 +725,7 @@ export default function HistoryPage() {
                               color: getVerdictColor(analysis.verdict),
                               fontWeight: '500'
                             }}>
-                              {scoreToVerdictLabel(analysis.score, lang)}
+                              {scoreToVerdictLabel(analysis.score, lang, (analysis as any).profile)}
                             </span>
                             <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                               <Calendar size={12} />
@@ -904,7 +904,7 @@ export default function HistoryPage() {
                   color: getVerdictColor(selectedAnalysis.verdict),
                   marginBottom: '0.25rem'
                 }}>
-                  {scoreToVerdictLabel(selectedAnalysis.score, lang)}
+                  {scoreToVerdictLabel(selectedAnalysis.score, lang, (selectedAnalysis as any).profile)}
                 </p>
                 <p style={{ fontSize: '0.875rem', color: 'var(--mr-text-secondary)' }}>
                   {t.score}: {selectedAnalysis.score}/100
@@ -1460,7 +1460,7 @@ export default function HistoryPage() {
 
               {/* CTA; dynamic based on score (after downloads) */}
               {(() => {
-                const cta = getCtaForScore(selectedAnalysis.score, lang)
+                const cta = getCtaForScore(selectedAnalysis.score, lang, (selectedAnalysis as any).profile)
                 const score = selectedAnalysis.score
                 const emoji = score >= 85 ? '🎧' : score >= 60 ? '🔧' : score >= 40 ? '🔍' : score >= 20 ? '🔍' : '💬'
                 return (
@@ -1499,6 +1499,7 @@ export default function HistoryPage() {
                         </p>
                       </div>
                     </div>
+                    {cta.button && (
                     <button
                       onClick={() => { setCtaAction(cta.action); setShowContactModal(true) }}
                       style={{
@@ -1525,6 +1526,7 @@ export default function HistoryPage() {
                     >
                       {cta.button}
                     </button>
+                    )}
                   </div>
                 )
               })()}

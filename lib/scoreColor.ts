@@ -38,23 +38,61 @@ export function scoreToVerdictEnum(score: number): VerdictEnum {
   return 'critical'
 }
 
-export function scoreToVerdictLabel(score: number, lang: 'es' | 'en'): string {
+/**
+ * Which rubric an analysis was scored against. Analyses written before v7.5.0
+ * carry no profile; they were all scored as mixes, so 'mix' is the fallback.
+ */
+export type AnalysisProfile = 'mix' | 'mix_strict' | 'master'
+
+export function isMasterProfile(profile?: string | null): boolean {
+  return profile === 'master'
+}
+
+/**
+ * Mirrors verdict_for_score() in analyzer.py. The bands are the same in every
+ * profile; the question they answer is not. A mix is asked whether it still has
+ * margin to be mastered. A master is asked whether it is ready to release.
+ */
+export function scoreToVerdictLabel(
+  score: number,
+  lang: 'es' | 'en',
+  profile?: string | null
+): string {
+  if (isMasterProfile(profile)) {
+    if (lang === 'es') {
+      if (score >= 95) return '✅ Máster listo para publicar'
+      if (score >= 85) return '✅ Máster sólido'
+      if (score >= 75) return '⚠️ Publicable, con detalles por revisar'
+      if (score >= 60) return '⚠️ Máster con puntos que conviene revisar'
+      if (score >= 40) return '⚠️ Máster con defectos claros'
+      if (score >= 20) return '❌ Máster comprometido'
+      return '❌ Requiere revisión antes de publicar'
+    }
+    if (score >= 95) return '✅ Master ready to release'
+    if (score >= 85) return '✅ Solid master'
+    if (score >= 75) return '⚠️ Releasable, with details to review'
+    if (score >= 60) return '⚠️ Master has points worth reviewing'
+    if (score >= 40) return '⚠️ Master has clear defects'
+    if (score >= 20) return '❌ Compromised master'
+    return '❌ Requires review before release'
+  }
+
   if (lang === 'es') {
     if (score >= 95) return '✅ Margen óptimo para mastering'
     if (score >= 85) return '✅ Lista para mastering'
     if (score >= 75) return '⚠️ Margen suficiente (revisar sugerencias)'
-    if (score >= 60) return '⚠️ Margen reducido - revisar antes de mastering'
-    if (score >= 40) return '⚠️ Margen limitado - ajustes recomendados'
+    if (score >= 60) return '⚠️ Margen reducido, conviene revisar antes de mastering'
+    if (score >= 40) return '⚠️ Margen limitado, se recomiendan ajustes'
     if (score >= 20) return '❌ Margen comprometido para mastering'
-    if (score >= 5) return '❌ Requiere revisión'
+    if (score >= 5) return '❌ Requiere revisión antes de mastering'
     return '❌ Sin margen para procesamiento adicional'
   }
   if (score >= 95) return '✅ Optimal margin for mastering'
   if (score >= 85) return '✅ Ready for mastering'
   if (score >= 75) return '⚠️ Sufficient margin (review suggestions)'
-  if (score >= 60) return '⚠️ Reduced margin - review before mastering'
-  if (score >= 40) return '⚠️ Limited margin - adjustments recommended'
+  if (score >= 60) return '⚠️ Reduced margin, worth reviewing before mastering'
+  if (score >= 40) return '⚠️ Limited margin, adjustments recommended'
   if (score >= 20) return '❌ Compromised margin for mastering'
-  if (score >= 5) return '❌ Requires review'
+  if (score >= 5) return '❌ Requires review before mastering'
   return '❌ No margin for additional processing'
 }
