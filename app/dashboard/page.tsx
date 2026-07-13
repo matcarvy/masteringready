@@ -16,6 +16,7 @@ import { supabase, UserDashboardStatus } from '@/lib/supabase'
 import { fetchDashboardData } from '@/lib/queries/dashboard'
 import { useGeo } from '@/lib/useGeo'
 import { getAllPricesForCountry } from '@/lib/pricing-config'
+import { startCheckout, type CheckoutProductType } from '@/lib/checkout'
 import { detectLanguage, setLanguageCookie } from '@/lib/language'
 import {
   Music,
@@ -536,28 +537,9 @@ function DashboardContent() {
   }
 
   // Handle Stripe checkout
-  const handleCheckout = async (productType: 'pro_monthly' | 'single' | 'addon') => {
+  const handleCheckout = async (productType: CheckoutProductType) => {
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      const response = await fetch('/api/checkout', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(session?.access_token && { 'Authorization': `Bearer ${session.access_token}` })
-        },
-        body: JSON.stringify({
-          productType,
-          countryCode: geo.countryCode
-        })
-      })
-
-      const data = await response.json()
-
-      if (data.url) {
-        window.location.href = data.url
-      } else {
-        toast.error(lang === 'es' ? 'Error al iniciar el pago' : 'Error starting payment')
-      }
+      await startCheckout(productType, geo.countryCode, session?.access_token)
     } catch {
       toast.error(lang === 'es' ? 'Error al iniciar el pago' : 'Error starting payment')
     }

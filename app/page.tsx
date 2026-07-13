@@ -14,6 +14,7 @@ import { compressAudioFile, parseFileHeader } from '@/lib/audio-compression'
 import { supabase, createFreshQueryClient, checkCanAnalyze, AnalysisStatus } from '@/lib/supabase'
 import { useGeo } from '@/lib/useGeo'
 import { getAllPricesForCountry } from '@/lib/pricing-config'
+import { startCheckout, type CheckoutProductType } from '@/lib/checkout'
 import { detectLanguage, setLanguageCookie } from '@/lib/language'
 import { getErrorMessage, ERROR_MESSAGES } from '@/lib/error-messages'
 import { NotificationBadge, setNotification, clearNotification } from '@/components/NotificationBadge'
@@ -349,6 +350,19 @@ function Home() {
   // Geo detection for regional pricing
   const { geo } = useGeo()
   const prices = getAllPricesForCountry(geo?.countryCode || 'US')
+
+  const [checkoutPending, setCheckoutPending] = useState<CheckoutProductType | null>(null)
+
+  const handlePaywallCheckout = async (productType: CheckoutProductType) => {
+    if (checkoutPending) return
+    setCheckoutPending(productType)
+    try {
+      await startCheckout(productType, geo?.countryCode, session?.access_token)
+    } catch {
+      setCheckoutPending(null)
+      toast.error(lang === 'es' ? 'Error al iniciar el pago' : 'Error starting payment')
+    }
+  }
 
   // Store request ID for PDF download
   const requestIdRef = useRef<string>('')
@@ -5716,8 +5730,9 @@ by Matías Carvajal
 
             {/* CTA Buttons */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              <a
-                href={`/dashboard?upgrade=pro&lang=${lang}`}
+              <button
+                onClick={() => handlePaywallCheckout('pro_monthly')}
+                disabled={checkoutPending !== null}
                 style={{
                   display: 'block',
                   width: '100%',
@@ -5725,18 +5740,23 @@ by Matías Carvajal
                   background: 'var(--mr-gradient)',
                   color: 'white',
                   textAlign: 'center',
-                  textDecoration: 'none',
+                  border: 'none',
                   borderRadius: '0.5rem',
                   fontWeight: '600',
                   fontSize: '1rem',
+                  cursor: checkoutPending ? 'wait' : 'pointer',
+                  opacity: checkoutPending && checkoutPending !== 'pro_monthly' ? 0.6 : 1,
                   boxSizing: 'border-box'
                 }}
               >
-                {lang === 'es' ? 'Actualizar a Pro' : 'Upgrade to Pro'}
-              </a>
+                {checkoutPending === 'pro_monthly'
+                  ? (lang === 'es' ? 'Abriendo el pago...' : 'Opening payment...')
+                  : (lang === 'es' ? 'Actualizar a Pro' : 'Upgrade to Pro')}
+              </button>
 
-              <a
-                href={`/dashboard?upgrade=single&lang=${lang}`}
+              <button
+                onClick={() => handlePaywallCheckout('single')}
+                disabled={checkoutPending !== null}
                 style={{
                   display: 'block',
                   width: '100%',
@@ -5744,16 +5764,19 @@ by Matías Carvajal
                   background: 'transparent',
                   color: 'var(--mr-primary)',
                   textAlign: 'center',
-                  textDecoration: 'none',
                   borderRadius: '0.5rem',
                   fontWeight: '600',
                   fontSize: '1rem',
                   border: '2px solid var(--mr-primary)',
+                  cursor: checkoutPending ? 'wait' : 'pointer',
+                  opacity: checkoutPending && checkoutPending !== 'single' ? 0.6 : 1,
                   boxSizing: 'border-box'
                 }}
               >
-                {lang === 'es' ? 'Comprar 1 análisis' : 'Buy 1 analysis'} ({prices.single})
-              </a>
+                {checkoutPending === 'single'
+                  ? (lang === 'es' ? 'Abriendo el pago...' : 'Opening payment...')
+                  : `${lang === 'es' ? 'Comprar 1 análisis' : 'Buy 1 analysis'} (${prices.single})`}
+              </button>
             </div>
           </div>
         </div>
