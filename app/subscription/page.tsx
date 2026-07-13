@@ -45,6 +45,8 @@ const translations = {
     proBadge: 'PRO',
     // Free plan
     analysisUsage: 'Uso de análisis',
+    purchasedCredit: 'análisis comprado disponible',
+    purchasedCredits: 'análisis comprados disponibles',
     lifetimeAnalyses: 'para empezar',
     getMoreWithPro: 'Obtén más con Pro',
     benefit1: '30 análisis al mes',
@@ -101,6 +103,8 @@ const translations = {
     proBadge: 'PRO',
     // Free plan
     analysisUsage: 'Analysis usage',
+    purchasedCredit: 'purchased analysis available',
+    purchasedCredits: 'purchased analyses available',
     lifetimeAnalyses: 'to get started',
     getMoreWithPro: 'Get more with Pro',
     benefit1: '30 analyses per month',
@@ -342,6 +346,7 @@ export default function SubscriptionPage() {
   const remaining = isPro
     ? Math.max(0, 30 - usedAnalyses)
     : Math.max(0, 2 - usedAnalyses)
+  const purchasedRemaining = userStatus?.purchased_remaining ?? 0
 
   // Safety timeout; if fetch hangs (stale connections from SPA navigation), auto-reload (max 1 attempt)
   useEffect(() => {
@@ -599,6 +604,17 @@ export default function SubscriptionPage() {
               }} />
             </div>
           </div>
+
+          {purchasedRemaining > 0 && (
+            <p style={{
+              fontSize: '0.875rem',
+              fontWeight: '600',
+              color: 'var(--mr-green)',
+              marginBottom: '0.75rem'
+            }}>
+              {`+${purchasedRemaining} ${purchasedRemaining === 1 ? t.purchasedCredit : t.purchasedCredits}`}
+            </p>
+          )}
 
           {isPro && userStatus?.current_period_end && (
             <p style={{ fontSize: '0.8rem', color: 'var(--mr-text-secondary)' }}>

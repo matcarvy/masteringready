@@ -357,7 +357,7 @@ function Home() {
     if (checkoutPending) return
     setCheckoutPending(productType)
     try {
-      await startCheckout(productType, geo?.countryCode, session?.access_token)
+      await startCheckout(productType, geo?.countryCode, session?.access_token, lang)
     } catch {
       setCheckoutPending(null)
       toast.error(lang === 'es' ? 'Error al iniciar el pago' : 'Error starting payment')

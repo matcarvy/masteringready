@@ -255,7 +255,7 @@ export const EXCHANGE_RATES: Record<string, number> = {
   'GBP': 0.743,
 
   // South America
-  'COP': 3682,    // Colombian Peso
+  'COP': 3376,    // Colombian Peso (Stripe's presentment rate, 2026-07-13)
   'BRL': 5.23,    // Brazilian Real
   'ARS': 1452,    // Argentine Peso (volatile)
   'CLP': 863,     // Chilean Peso

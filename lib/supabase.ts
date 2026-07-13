@@ -266,4 +266,5 @@ export interface UserDashboardStatus {
   can_analyze: boolean
   subscription_status: string
   current_period_end: string | null
+  purchased_remaining: number
 }

@@ -3,7 +3,8 @@ export type CheckoutProductType = 'pro_monthly' | 'single' | 'addon'
 export async function startCheckout(
   productType: CheckoutProductType,
   countryCode: string | undefined,
-  accessToken: string | undefined
+  accessToken: string | undefined,
+  lang: 'es' | 'en' = 'en'
 ): Promise<void> {
   const response = await fetch('/api/checkout', {
     method: 'POST',
@@ -11,7 +12,7 @@ export async function startCheckout(
       'Content-Type': 'application/json',
       ...(accessToken && { Authorization: `Bearer ${accessToken}` })
     },
-    body: JSON.stringify({ productType, countryCode })
+    body: JSON.stringify({ productType, countryCode, lang })
   })
 
   const data = await response.json()

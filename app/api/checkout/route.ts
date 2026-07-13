@@ -21,13 +21,21 @@ export const dynamic = 'force-dynamic'
 interface CheckoutRequest {
   productType: 'pro_monthly' | 'single' | 'addon'
   countryCode?: string
+  lang?: 'es' | 'en'
 }
 
-// Product names for Stripe
+// Product names for Stripe; the buyer reads these on the checkout page
 const PRODUCT_NAMES = {
-  pro_monthly: 'Mastering Ready Pro',
-  single: 'Single Analysis',
-  addon: 'Pro Add-on Pack'
+  en: {
+    pro_monthly: 'Mastering Ready Pro',
+    single: 'Single Analysis',
+    addon: 'Pro Add-on Pack'
+  },
+  es: {
+    pro_monthly: 'Mastering Ready Pro',
+    single: 'Análisis individual',
+    addon: 'Pack adicional Pro'
+  }
 } as const
 
 // ISO 3166-1 alpha-2 country codes (complete list)
@@ -52,7 +60,8 @@ export async function POST(request: NextRequest) {
   try {
     // Parse request body
     const body: CheckoutRequest = await request.json()
-    const { productType, countryCode: clientCountryCode = 'US' } = body
+    const { productType, countryCode: clientCountryCode = 'US', lang: clientLang } = body
+    const lang = clientLang === 'es' ? 'es' : 'en'
 
     // Verify country code server-side to prevent pricing manipulation
     const serverCountry = request.headers.get('x-vercel-ip-country') || clientCountryCode
@@ -145,7 +154,7 @@ export async function POST(request: NextRequest) {
       currency: priceInfo.currency,
       unit_amount: priceInfo.amount,
       product_data: {
-        name: PRODUCT_NAMES[productType],
+        name: PRODUCT_NAMES[lang][productType],
         metadata: {
           product_type: productType,
           country_code: countryCode,
@@ -195,6 +204,7 @@ export async function POST(request: NextRequest) {
       },
       allow_promotion_codes: true,
       billing_address_collection: 'auto',
+      locale: lang,
       ...(productType === 'pro_monthly' && {
         subscription_data: {
           metadata: {

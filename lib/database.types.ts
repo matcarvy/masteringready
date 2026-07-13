@@ -785,6 +785,7 @@ export interface Database {
           can_analyze: boolean
           subscription_status: SubscriptionStatus
           current_period_end: string
+          purchased_remaining: number
         }[]
       }
       use_single_purchase: {
@@ -873,6 +874,7 @@ export type UserAnalysisStatus = {
   can_analyze: boolean
   subscription_status: SubscriptionStatus
   current_period_end: string
+  purchased_remaining: number
 }
 export type UserFeedbackUpdate = Database['public']['Tables']['user_feedback']['Update']
 export type FeedbackVoteUpdate = Database['public']['Tables']['feedback_votes']['Update']

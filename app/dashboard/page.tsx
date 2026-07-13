@@ -111,6 +111,8 @@ const translations = {
     singlePurchase: 'Comprar 1 análisis',
     limitReached: 'Límite alcanzado',
     upgradeNow: 'Actualizar ahora',
+    purchasedCredit: 'análisis comprado disponible',
+    purchasedCredits: 'análisis comprados disponibles',
     fileInfo: {
       title: 'Info del archivo',
       duration: 'Duración',
@@ -185,6 +187,8 @@ const translations = {
     singlePurchase: 'Buy 1 analysis',
     limitReached: 'Limit reached',
     upgradeNow: 'Upgrade now',
+    purchasedCredit: 'purchased analysis available',
+    purchasedCredits: 'purchased analyses available',
     fileInfo: {
       title: 'File info',
       duration: 'Duration',
@@ -465,15 +469,19 @@ function DashboardContent() {
 
   const prices = getAllPricesForCountry(geo?.countryCode || 'US')
 
-  // Derive dashboardState from query data
+  const purchasedRemaining: number = userStatus?.purchased_remaining ?? 0
+
+  // Derive dashboardState from query data. A paid Single credit keeps the user
+  // out of the limit-reached states: they already bought their way past it.
   const dashboardState: DashboardState = useMemo(() => {
     if (!userStatus) return 'new_user'
+    const purchased = userStatus.purchased_remaining ?? 0
     if (userStatus.subscription_status === 'canceled' || userStatus.subscription_status === 'past_due') return 'pro_expired'
     if (userStatus.plan_type === 'pro' || userStatus.plan_type === 'studio') {
-      if (userStatus.analyses_used >= 30 && userStatus.addon_remaining === 0) return 'pro_limit_reached'
+      if (userStatus.analyses_used >= 30 && userStatus.addon_remaining === 0 && purchased === 0) return 'pro_limit_reached'
       return 'pro_active'
     }
-    if (userStatus.analyses_used >= 2) return 'free_limit_reached'
+    if (userStatus.analyses_used >= 2 && purchased === 0) return 'free_limit_reached'
     if (userStatus.analyses_used === 0 && analyses.length === 0) return 'new_user'
     return 'has_analyses'
   }, [userStatus, analyses.length])
@@ -539,7 +547,7 @@ function DashboardContent() {
   // Handle Stripe checkout
   const handleCheckout = async (productType: CheckoutProductType) => {
     try {
-      await startCheckout(productType, geo.countryCode, session?.access_token)
+      await startCheckout(productType, geo.countryCode, session?.access_token, lang)
     } catch {
       toast.error(lang === 'es' ? 'Error al iniciar el pago' : 'Error starting payment')
     }
@@ -887,6 +895,16 @@ function DashboardContent() {
                 </>
               )}
             </p>
+            {purchasedRemaining > 0 && (
+              <p style={{
+                marginTop: '0.5rem',
+                fontSize: '0.875rem',
+                fontWeight: '600',
+                color: 'var(--mr-green)'
+              }}>
+                {`+${purchasedRemaining} ${purchasedRemaining === 1 ? t.purchasedCredit : t.purchasedCredits}`}
+              </p>
+            )}
             {/* Limit reached CTAs */}
             {dashboardState === 'free_limit_reached' && (
               <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
