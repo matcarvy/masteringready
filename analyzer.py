@@ -3303,7 +3303,7 @@ def _status_lufs_en(lufs: Optional[float], method: str, is_reliable: bool) -> Tu
     # Real LUFS: for mixes it's informational, not prescriptive
     # Range -15 to -35 LUFS is completely normal for pre-mastering mixes
     if lufs > -10.0:
-        return "warning", "Mix is very loud. Possible over-limiting on the bus. Check PLR.", 0.3
+        return "warning", "Very loud. Possible over-limiting on the bus. Check PLR.", 0.3
     if lufs < -40.0:
         return "info", "Level very low; check for excessive silence or incorrect export.", 0.5
     
@@ -3364,11 +3364,11 @@ def _status_stereo_en(corr: float, profile: str = PROFILE_MIX) -> Tuple[str, str
     elif status == "critical":
         message = f"Very low stereo correlation ({corr:.0%}). Significant mono compatibility issues expected. Check stereo plugins, channel polarity, or phase relationships."
     elif status == "catastrophic":
-        message = f"SEVERE: Phase cancellation detected ({corr:.0%}). The mix will lose significant content in mono. Check for: inverted channels, phase-inverted plugins, or M/S processing errors."
+        message = f"SEVERE: Phase cancellation detected ({corr:.0%}). Significant content will be lost in mono. Check for: inverted channels, phase-inverted plugins, or M/S processing errors."
     elif status == "perfect":
-        message = "Healthy stereo correlation (mono compatible). The mix will translate well on all playback systems."
+        message = "Healthy stereo correlation (mono compatible). It will translate well on all playback systems."
     else:  # pass
-        message = "Good stereo correlation. The mix maintains a healthy stereo image with good mono compatibility."
+        message = "Good stereo correlation. The stereo image is healthy with good mono compatibility."
 
     return status, message, score
 
@@ -8387,13 +8387,19 @@ def generate_short_mode_report(report: Dict[str, Any], strict: bool = False, lan
 # FUNCIÓN 3: generate_visual_report - INSERTAR DESPUÉS DE generate_short_mode_report
 # =============================================================================
 
-def generate_visual_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en', filename: str = "") -> str:
+def generate_visual_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en', filename: str = "",
+                           profile: Optional[str] = None) -> str:
     """
     Generate visual mode report with bullets showing positive aspects and areas to review.
     Educational and constructive tone.
+
+    v7.6.0: takes the profile. Its positive aspects congratulated every clean file on
+    being well prepared FOR MASTERING, which is the wrong compliment to pay a finished
+    master: there is no mastering stage ahead of it.
     """
     lang = _pick_lang(lang)
-    
+    is_master = resolve_profile(strict, profile or report.get("profile")) == PROFILE_MASTER
+
     metrics = report.get("metrics", [])
     
     # Build positive aspects and areas to review
@@ -8413,9 +8419,15 @@ def generate_visual_report(report: Dict[str, Any], strict: bool = False, lang: s
         if status in ["perfect", "pass", "good"]:
             # Extract the positive aspect concisely
             if "Headroom" in name:
-                positive_aspects.append("Headroom (margen) apropiado para mastering" if lang == "es" else "Appropriate headroom for mastering")
+                if is_master:
+                    positive_aspects.append("Techo digital respetado" if lang == "es" else "Digital ceiling respected")
+                else:
+                    positive_aspects.append("Headroom (margen) apropiado para mastering" if lang == "es" else "Appropriate headroom for mastering")
             elif "True Peak" in name:
-                positive_aspects.append("True Peak seguro para mastering" if lang == "es" else "Safe True Peak for mastering")
+                if is_master:
+                    positive_aspects.append("True Peak seguro para distribución" if lang == "es" else "Safe True Peak for distribution")
+                else:
+                    positive_aspects.append("True Peak seguro para mastering" if lang == "es" else "Safe True Peak for mastering")
             elif "PLR" in name or "dinám" in message.lower() or "dynamic" in message.lower():
                 if status == "perfect":
                     positive_aspects.append("Rango dinámico óptimo" if lang == "es" else "Optimal dynamic range")

@@ -1885,6 +1885,8 @@ function DashboardContent() {
                           metrics: selectedAnalysis.metrics,
                           interpretations: selectedAnalysis.interpretations,
                           strict_mode: selectedAnalysis.strict_mode,
+                          profile: (selectedAnalysis as any).profile || null,
+                          profile_source: (selectedAnalysis as any).profile_source || null,
                           report_visual: selectedAnalysis.report_visual,
                           report_short: selectedAnalysis.report_short,
                           report_write: selectedAnalysis.report_write,

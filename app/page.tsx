@@ -1505,6 +1505,10 @@ ${new Date().toLocaleDateString()}
           interpretations: result.interpretations || null,
           score_penalties: (result as any).score_penalties || null,
           strict_mode: result.strict || strict || false,
+          // Without these the PDF falls back to the mix rubric and prints the mix
+          // verdict on a master. The backend has no other source for them.
+          profile: (result as any).profile || null,
+          profile_source: (result as any).profile_source || null,
           report_visual: result.report_visual || null,
           report_short: result.report_short || result.report || null,
           report_write: result.report_write || result.report || null,

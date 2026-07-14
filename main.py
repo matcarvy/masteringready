@@ -1190,7 +1190,8 @@ async def start_analysis(
                     result,
                     strict,
                     lang,
-                    display_filename
+                    display_filename,
+                    profile=result.get('profile')
                 )
                 report_visual = await loop.run_in_executor(None, visual_func)
                 
@@ -1471,7 +1472,10 @@ async def download_pdf(
             }
             strict = data.get("strict_mode", False)
             result["profile"] = db_profile
-            logger.info(f"📄 Reconstructed report from analysis_data: score={result['score']}, verdict={result['verdict']}, profile={db_profile}")
+            # v7.6.0: the PDF's CTA needs to know whether the user declared the master or
+            # the tool guessed it. "user" is the safe fallback: it never pitches mastering.
+            result["profile_source"] = data.get("profile_source") or "user"
+            logger.info(f"📄 Reconstructed report from analysis_data: score={result['score']}, verdict={result['verdict']}, profile={db_profile}, source={result['profile_source']}")
         except (json.JSONDecodeError, KeyError) as e:
             logger.error(f"❌ Invalid analysis_data JSON: {e}")
             raise HTTPException(status_code=400, detail=bilingual_error('server_error', lang))
