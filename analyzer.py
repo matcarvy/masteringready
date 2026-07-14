@@ -8445,7 +8445,10 @@ def generate_visual_report(report: Dict[str, Any], strict: bool = False, lang: s
         elif status in ["warning", "critical", "catastrophic"]:
             # Frame as "areas to review" with educational tone
             if "Headroom" in name:
-                areas_to_review.append("Revisar headroom (margen). Considerar dejar más espacio en los picos" if lang == "es" else "Review headroom. Consider leaving more headroom in peaks")
+                if is_master:
+                    areas_to_review.append("Revisar el techo. Hay muestras llegando al máximo digital" if lang == "es" else "Review the ceiling. Samples are reaching digital full scale")
+                else:
+                    areas_to_review.append("Revisar headroom (margen). Considerar dejar más espacio en los picos" if lang == "es" else "Review headroom. Consider leaving more headroom in peaks")
             elif "True Peak" in name:
                 areas_to_review.append("Revisar True Peak. Ajustar limitadores para evitar saturación digital" if lang == "es" else "Review True Peak. Adjust limiters to avoid clipping")
             elif "PLR" in name:
@@ -8454,7 +8457,10 @@ def generate_visual_report(report: Dict[str, Any], strict: bool = False, lang: s
                 areas_to_review.append("Revisar imagen estéreo. Verificar balance y correlación" if lang == "es" else "Review stereo image. Check balance and correlation")
             elif "Frequency" in name or "Frecuen" in name:
                 areas_to_review.append("Revisar balance de frecuencias. Ajustar EQ si es necesario" if lang == "es" else "Review frequency balance. Adjust EQ if needed")
-            elif "LUFS" in name:
+            elif "LUFS" in name and not is_master:
+                # In a master, level is a delivery decision and LUFS carries weight 0, so
+                # "adjust your gain staging" is an action item the score itself contradicts.
+                # What the loudness cost shows up under PLR and True Peak, which are above.
                 areas_to_review.append("Revisar nivel general. Ajustar niveles de ganancia" if lang == "es" else "Review overall level. Adjust gain staging")
     
     # Remove duplicates while preserving order
