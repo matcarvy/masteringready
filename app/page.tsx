@@ -1546,7 +1546,7 @@ ${new Date().toLocaleDateString()}
       // Fallback to TXT download
       
       const content = `${'═'.repeat(50)}
-   MASTERING READY - ${lang === 'es' ? 'Reporte Completo' : 'Complete Report'}
+   MASTERING READY | ${lang === 'es' ? 'Reporte Completo' : 'Complete Report'}
 ${'═'.repeat(50)}
 
 ${lang === 'es' ? 'INFORMACIÓN DEL ARCHIVO' : 'FILE INFORMATION'}
@@ -3998,7 +3998,15 @@ by Matías Carvajal
                     marginBottom: '0.75rem'
                   }}>
                     <span style={{ fontSize: isMobile ? '1.5rem' : '1.75rem', flexShrink: 0 }}>
-                      {result.score >= 40 ? '🔧' : '🔍'}
+                      {(() => {
+                        // Was picked by score alone, so a master with nothing to fix got a
+                        // wrench over "ready to release". The action already says what the
+                        // message is: release is a sign-off, hot_mix is a question.
+                        const action = (result as any).cta_action
+                        if (action === 'release') return '✅'
+                        if (action === 'hot_mix') return '🎧'
+                        return result.score >= 40 ? '🔧' : '🔍'
+                      })()}
                     </span>
                     <h3 style={{
                       fontSize: isMobile ? '1.125rem' : '1.375rem',
@@ -5447,7 +5455,7 @@ by Matías Carvajal
 
               <button
                 onClick={() => {
-                  const feedbackText = `FEEDBACK - Mastering Ready\n\n⭐ Utilidad: ${feedback.rating}/10\n\n✅ Qué gustó:\n${feedback.liked}\n\n🔄 Qué cambiaría:\n${feedback.change || 'N/A'}\n\n➕ Qué agregaría:\n${feedback.add || 'N/A'}\n\nScore obtenido: ${result?.score || 'N/A'}/100`
+                  const feedbackText = `FEEDBACK Mastering Ready\n\n⭐ Utilidad: ${feedback.rating}/10\n\n✅ Qué gustó:\n${feedback.liked}\n\n🔄 Qué cambiaría:\n${feedback.change || 'N/A'}\n\n➕ Qué agregaría:\n${feedback.add || 'N/A'}\n\nScore obtenido: ${result?.score || 'N/A'}/100`
                   window.open(`https://wa.me/573155576115?text=${encodeURIComponent(feedbackText)}`, '_blank')
                   setFeedbackSubmitted(true)
                   setShowFeedbackModal(false)

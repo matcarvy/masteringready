@@ -9362,9 +9362,53 @@ def generate_complete_pdf(
                 
                 story.append(Spacer(1, 0.2*inch))
         
+        # Closing block: the CTA lived only on the results screen, so the person most
+        # likely to become a mastering client could download a clean report that never
+        # mentioned the service exists. A ticked master reads as a sign-off (no offer,
+        # because it does not need one); an auto-detected file carries the two doors.
+        pdf_cta = generate_cta(
+            pdf_score, strict, lang, mode="write", profile=pdf_profile,
+            true_peak=_report_true_peak(report),
+            profile_source=report.get('profile_source') or 'user',
+        )
+        cta_message = (pdf_cta.get('message') or '').strip()
+        if cta_message:
+            story.append(Spacer(1, 0.3*inch))
+
+            cta_lines = [l.strip() for l in cta_message.split('\n') if l.strip()]
+            # clean_text_for_pdf turns the leading emoji into a symbol (🎧 becomes ♪) that
+            # the fallback Helvetica has no glyph for, so it prints as a box. Drop it.
+            cta_title = re.sub(r'^[^\w¿¡"\'(]+', '', clean_text_for_pdf(cta_lines[0])).strip()
+            cta_body = clean_text_for_pdf(' '.join(cta_lines[1:])) if len(cta_lines) > 1 else ''
+
+            story.append(Paragraph(
+                cta_title,
+                ParagraphStyle('CtaTitle', parent=body_style, fontSize=12, leading=16,
+                               fontName=bold_font, textColor=colors.HexColor('#4f46e5'),
+                               spaceAfter=6)
+            ))
+            if cta_body:
+                story.append(Paragraph(
+                    cta_body,
+                    ParagraphStyle('CtaBody', parent=body_style, fontSize=10, leading=14,
+                                   textColor=colors.HexColor('#374151'))
+                ))
+
+            # The button only exists when the CTA has one. A finished master is not sold
+            # mastering; printing a dead call to action under a 95 would cheapen it.
+            if pdf_cta.get('button'):
+                contact = ("Escríbenos a masteringready.com" if lang == 'es'
+                           else "Get in touch at masteringready.com")
+                story.append(Spacer(1, 0.08*inch))
+                story.append(Paragraph(
+                    f"<b>{clean_text_for_pdf(pdf_cta['button'])}</b>: {contact}",
+                    ParagraphStyle('CtaButton', parent=body_style, fontSize=10, leading=14,
+                                   textColor=colors.HexColor('#4f46e5'))
+                ))
+
         # Footer
         story.append(Spacer(1, 0.4*inch))
-        
+
         footer_style = ParagraphStyle(
             'Footer',
             parent=styles['Normal'],
