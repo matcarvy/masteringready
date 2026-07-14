@@ -2651,13 +2651,20 @@ by Matías Carvajal
                         style={{ width: '1rem', height: '1rem', borderRadius: '0.25rem' }}
                       />
                       <span style={{ fontSize: '0.875rem', fontWeight: '500' }}>
-                        {lang === 'es' ? 'Es un máster terminado' : 'This is a finished master'}
+                        {lang === 'es'
+                          ? 'Es un máster terminado, va directo a publicación'
+                          : 'This is a finished master, going straight to release'}
                       </span>
                     </label>
+                    {/* The question is the destination, not the loudness. The analyzer can
+                        already see that a file is loud; only the user knows whether it is
+                        going to streaming or to a mastering engineer. A loud mix headed for
+                        mastering must stay on the mix rubric, or it gets told it is ready to
+                        release when what it needs is headroom. */}
                     <p style={{ fontSize: '0.75rem', color: 'var(--mr-text-secondary)', marginTop: '0.25rem', marginLeft: '1.5rem' }}>
                       {lang === 'es'
-                        ? 'Se evalúa como máster: el volumen no es un defecto y no se le pide margen para mastering.'
-                        : 'Scored as a master: loudness is not a defect and it is not asked to leave headroom for mastering.'}
+                        ? 'Se evalúa como máster: el volumen no es un defecto y no se le pide margen para mastering. Si es una mezcla que vas a mandar a masterizar, aunque suene fuerte, conviene dejarla sin marcar.'
+                        : 'Scored as a master: loudness is not a defect and it is not asked to leave headroom for mastering. If it is a mix you plan to send to mastering, even a loud one, leave this unchecked.'}
                     </p>
                   </div>
 
@@ -3053,21 +3060,27 @@ by Matías Carvajal
                               ? `Como máster terminado daría ${(result as any).alternate_score}. Se evaluó como mezcla.`
                               : `As a finished master it would score ${(result as any).alternate_score}. It was scored as a mix.`)}
                       </p>
-                      {(result as any).profile_source === 'auto' && (
-                        <p style={{
-                          color: 'var(--mr-text-secondary)',
-                          fontSize: '0.8125rem',
-                          margin: '0.5rem 0 0 0'
-                        }}>
-                          {isMasterProfile((result as any).profile)
-                            ? (lang === 'es'
-                                ? 'Si en realidad es una mezcla, analízala de nuevo sin marcar la casilla de máster.'
-                                : 'If this is actually a mix, analyze it again with the master checkbox unchecked.')
-                            : (lang === 'es'
-                                ? 'Si en realidad es un máster terminado, analízalo de nuevo marcando la casilla de máster.'
-                                : 'If this is actually a finished master, analyze it again with the master checkbox ticked.')}
-                        </p>
-                      )}
+                      {/* The one case the rubric cannot guard: a loud mix that ticked the
+                          master checkbox is told it is ready to release, when what it needs
+                          before mastering is headroom. Only the user knows where the file is
+                          going, so the guard has to be said out loud rather than measured. */}
+                      <p style={{
+                        color: 'var(--mr-text-secondary)',
+                        fontSize: '0.8125rem',
+                        margin: '0.5rem 0 0 0'
+                      }}>
+                        {isMasterProfile((result as any).profile)
+                          ? ((result as any).profile_source === 'user'
+                              ? (lang === 'es'
+                                  ? 'Se evaluó como máster, así que no se le pide headroom. Si en realidad es una mezcla que vas a mandar a masterizar, aunque suene fuerte, conviene analizarla de nuevo sin marcar la casilla.'
+                                  : 'It was scored as a master, so it is not asked to leave headroom. If it is actually a mix you plan to send to mastering, even a loud one, it is worth analyzing it again with the checkbox unchecked.')
+                              : (lang === 'es'
+                                  ? 'Si en realidad es una mezcla que vas a mandar a masterizar, conviene analizarla de nuevo sin marcar la casilla de máster.'
+                                  : 'If this is actually a mix you plan to send to mastering, it is worth analyzing it again with the master checkbox unchecked.'))
+                          : (lang === 'es'
+                              ? 'Si en realidad es un máster terminado, conviene analizarlo de nuevo marcando la casilla de máster.'
+                              : 'If this is actually a finished master, it is worth analyzing it again with the master checkbox ticked.')}
+                      </p>
                     </div>
                   )}
 
@@ -3080,9 +3093,13 @@ by Matías Carvajal
                     transition: 'filter 0.6s ease-out',
                     userSelect: (!isLoggedIn && !isUnlocking) ? 'none' : 'auto'
                   }}>
-                    {lang === 'es'
-                      ? 'Este índice evalúa margen técnico para procesamiento, no calidad artística.'
-                      : 'This index evaluates technical margin for processing, not artistic quality.'}
+                    {isMasterProfile((result as any).profile)
+                      ? (lang === 'es'
+                          ? 'Este índice evalúa la entrega técnica del máster, no la calidad artística.'
+                          : 'This index evaluates the technical delivery of the master, not artistic quality.')
+                      : (lang === 'es'
+                          ? 'Este índice evalúa margen técnico para procesamiento, no calidad artística.'
+                          : 'This index evaluates technical margin for processing, not artistic quality.')}
                   </p>
                 </div>
 
@@ -3450,22 +3467,36 @@ by Matías Carvajal
                           fontSize: '0.65rem',
                           color: 'var(--mr-text-secondary)'
                         }}>
-                          <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }} title={lang === 'es' ? 'Dentro del rango recomendado por Mastering Ready' : 'Within Mastering Ready recommended range'}>
-                            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--mr-green)' }}></span>
-                            {lang === 'es' ? 'Margen cómodo' : 'Comfortable margin'}
-                          </span>
-                          <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }} title={lang === 'es' ? 'Funcional, con margen suficiente para el master' : 'Functional, with sufficient margin for mastering'}>
-                            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--mr-blue)' }}></span>
-                            {lang === 'es' ? 'Margen suficiente' : 'Sufficient margin'}
-                          </span>
-                          <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }} title={lang === 'es' ? 'Revisar si buscas máxima compatibilidad y margen' : 'Review if you want maximum compatibility and margin'}>
-                            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--mr-amber)' }}></span>
-                            {lang === 'es' ? 'Margen reducido' : 'Reduced margin'}
-                          </span>
-                          <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }} title={lang === 'es' ? 'Revisión prioritaria antes del master final' : 'Priority review before final master'}>
-                            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--mr-red)' }}></span>
-                            {lang === 'es' ? 'Margen comprometido' : 'Compromised margin'}
-                          </span>
+                          {(() => {
+                            // A finished master has no downstream stage to protect, so "margin"
+                            // is the wrong noun for it. Master mode reads as delivery, mix mode
+                            // reads as margin. Same colors, same order, different question.
+                            const isMaster = isMasterProfile((result as any).profile);
+                            const legend = isMaster
+                              ? [
+                                  { color: 'var(--mr-green)', es: 'En rango', en: 'On target', titleEs: 'Dentro del rango recomendado por Mastering Ready para un máster', titleEn: 'Within Mastering Ready recommended range for a master' },
+                                  { color: 'var(--mr-blue)', es: 'Correcto', en: 'Correct', titleEs: 'Correcto para distribución. Nada que corregir', titleEn: 'Correct for distribution. Nothing to fix' },
+                                  { color: 'var(--mr-amber)', es: 'Conviene revisar', en: 'Worth reviewing', titleEs: 'Conviene revisarlo antes de publicar', titleEn: 'Worth reviewing before release' },
+                                  { color: 'var(--mr-red)', es: 'Revisión prioritaria', en: 'Priority review', titleEs: 'Revisión prioritaria antes de publicar', titleEn: 'Priority review before release' }
+                                ]
+                              : [
+                                  { color: 'var(--mr-green)', es: 'Margen cómodo', en: 'Comfortable margin', titleEs: 'Dentro del rango recomendado por Mastering Ready', titleEn: 'Within Mastering Ready recommended range' },
+                                  { color: 'var(--mr-blue)', es: 'Margen suficiente', en: 'Sufficient margin', titleEs: 'Funcional, con margen suficiente para el master', titleEn: 'Functional, with sufficient margin for mastering' },
+                                  { color: 'var(--mr-amber)', es: 'Margen reducido', en: 'Reduced margin', titleEs: 'Revisar si buscas máxima compatibilidad y margen', titleEn: 'Review if you want maximum compatibility and margin' },
+                                  { color: 'var(--mr-red)', es: 'Margen comprometido', en: 'Compromised margin', titleEs: 'Revisión prioritaria antes del master final', titleEn: 'Priority review before final master' }
+                                ];
+
+                            return legend.map((item) => (
+                              <span
+                                key={item.en}
+                                style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+                                title={lang === 'es' ? item.titleEs : item.titleEn}
+                              >
+                                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: item.color }}></span>
+                                {lang === 'es' ? item.es : item.en}
+                              </span>
+                            ));
+                          })()}
                         </div>
                         
                         {/* Footer note */}
@@ -3478,9 +3509,13 @@ by Matías Carvajal
                           transition: 'filter 0.6s ease-out',
                           userSelect: (!isLoggedIn && !isUnlocking) ? 'none' : 'auto'
                         }}>
-                          {lang === 'es'
-                            ? 'Basado en criterios de Mastering Ready para compatibilidad, margen y traducción.'
-                            : 'Based on Mastering Ready criteria for compatibility, margin and translation.'}
+                          {isMasterProfile((result as any).profile)
+                            ? (lang === 'es'
+                                ? 'Basado en criterios de Mastering Ready para compatibilidad, distribución y traducción.'
+                                : 'Based on Mastering Ready criteria for compatibility, distribution and translation.')
+                            : (lang === 'es'
+                                ? 'Basado en criterios de Mastering Ready para compatibilidad, margen y traducción.'
+                                : 'Based on Mastering Ready criteria for compatibility, margin and translation.')}
                         </p>
                       </div>
                     )}

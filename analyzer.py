@@ -1630,11 +1630,19 @@ def calculate_metrics_bars_percentages(metrics: List[Dict[str, Any]], strict: bo
     profile = resolve_profile(strict, profile)
     is_master = profile == PROFILE_MASTER
     bars = {}
-    
+
+    # Both analysis paths hang the temporal clipping result off the Headroom metric.
+    clipping_regions = 0
+
     # First pass: collect all values for combined logic
     values = {}
     for m in metrics:
         key = m.get("internal_key", "").lower().replace(" ", "_")
+
+        clip = m.get("clipping_temporal")
+        if isinstance(clip, dict):
+            clipping_regions = clip.get("total_regions", 0) or 0
+
         value = m.get("value", 0)
         if value is None:
             value = 0
@@ -1680,6 +1688,9 @@ def calculate_metrics_bars_percentages(metrics: List[Dict[str, Any]], strict: bo
     warnings_count = 0
     
     # Tooltips by status (Mastering Ready philosophy)
+    # v7.6.0: a finished master has no downstream stage, so "margin for mastering" and
+    # "before the final master" are the wrong frame there. Master mode speaks about
+    # delivery, mix mode speaks about margin.
     tooltips = {
         "es": {
             "excellent": "Dentro del rango recomendado por Mastering Ready.",
@@ -1693,6 +1704,19 @@ def calculate_metrics_bars_percentages(metrics: List[Dict[str, Any]], strict: bo
             "warning": "Review if you want maximum compatibility and margin.",
             "critical": "Priority review before final master."
         }
+    } if not is_master else {
+        "es": {
+            "excellent": "Dentro del rango recomendado por Mastering Ready para un máster.",
+            "good": "Correcto para distribución. Nada que corregir.",
+            "warning": "Conviene revisarlo antes de publicar.",
+            "critical": "Revisión prioritaria antes de publicar."
+        },
+        "en": {
+            "excellent": "Within Mastering Ready recommended range for a master.",
+            "good": "Correct for distribution. Nothing to fix.",
+            "warning": "Worth reviewing before release.",
+            "critical": "Priority review before release."
+        }
     }
     
     for m in metrics:
@@ -1703,7 +1727,8 @@ def calculate_metrics_bars_percentages(metrics: List[Dict[str, Any]], strict: bo
         percentage = 100
         bar_status = "excellent"
         plr_tooltip_override = None  # For specific PLR messages
-        
+        tp_tooltip_override = None   # For specific True Peak messages
+
         # ============================================
         # HEADROOM (dBFS) - Mastering Ready ranges
         # ============================================
@@ -1784,23 +1809,43 @@ def calculate_metrics_bars_percentages(metrics: List[Dict[str, Any]], strict: bo
         # Mode-aware: strict uses tighter thresholds (aligned with ScoringThresholds.TRUE_PEAK)
         elif "true_peak" in key:
             if is_master:
-                # Matches ScoringThresholds.TRUE_PEAK["master"]. Not anchored at
-                # -1 dBTP: the median commercial master sits at +0.32 dBTP, so
-                # painting the whole market red would be the tool being wrong.
-                # 🟢 ≤ 0.0 | 🔵 0.0 to 1.0 | 🟡 1.0 to 2.0 | 🔴 > 2.0
-                if value <= 0.0:
+                # v7.6.0: True Peak is the bar that carries the cost of loudness in a
+                # master, since LUFS no longer reds out and headroom is expected to be
+                # gone. What changed is the band ABOVE the ceiling: 0.0 to +1.0 dBTP
+                # used to read as a blue "sufficient margin", which is the tool waving
+                # through the exact condition where a lossy encoder distorts.
+                # At or under the ceiling stays green at every value. A master that
+                # ceilings at -0.1 dBTP is standard practice, not a defect, and the
+                # detailed report already tells the user so; a blue bar there would
+                # have the panel contradicting the report on the same page. The
+                # -1.0 dBTP codec recommendation lives in the tooltip, where it
+                # informs without alarming.
+                # 🟢 ≤ 0.0 | 🟡 0.0 to 1.0 | 🔴 > 1.0
+                if value <= -1.0:
                     percentage = 100
                     bar_status = "excellent"
+                elif -1.0 < value <= 0.0:
+                    percentage = 100
+                    bar_status = "excellent"
+                    tp_tooltip_override = {
+                        "es": "Al borde del techo digital. Es lo que hace la mayoría de los másters comerciales y el riesgo real en los codificadores modernos es bajo. Las plataformas recomiendan -1.0 dBTP si se busca margen técnico máximo.",
+                        "en": "Right at the digital ceiling. This is what most commercial masters do and the real risk in modern codecs is low. Platforms recommend -1.0 dBTP if you want maximum technical margin."
+                    }
                 elif 0.0 < value <= 1.0:
-                    percentage = 85
-                    bar_status = "good"
-                elif 1.0 < value <= 2.0:
                     percentage = 65
                     bar_status = "warning"
                     warnings_count += 1
-                else:  # > 2.0
+                    tp_tooltip_override = {
+                        "es": "El true peak pasa el techo digital. Los codificadores con pérdida (AAC, MP3) pueden distorsionar en esos picos.",
+                        "en": "True peak goes past the digital ceiling. Lossy encoders (AAC, MP3) can distort on those peaks."
+                    }
+                else:  # > 1.0
                     percentage = 35
                     bar_status = "critical"
+                    tp_tooltip_override = {
+                        "es": "El true peak supera el techo digital por un margen amplio. La distorsión en la codificación es probable.",
+                        "en": "True peak clears the digital ceiling by a wide margin. Distortion on encode is likely."
+                    }
             elif strict:
                 # Strict: 🟢 ≤ -3.0 | 🔵 -3.0 to -0.5 | 🟡 n/a | 🔴 ≥ -0.5
                 if value <= -3.0:
@@ -1895,11 +1940,42 @@ def calculate_metrics_bars_percentages(metrics: List[Dict[str, Any]], strict: bo
         # Quiet mixes = more headroom for mastering = excellent
         # ============================================
         elif "lufs" in key or "loudness" in key:
+            # v7.6.0: LUFS is informational (weight 0 in every profile) and it is the
+            # only bar that can go red on its own. In a mix that is right: a hot mix
+            # takes decisions away from the mastering engineer. In a finished master
+            # loudness is a delivery choice that damages nothing by itself, so this bar
+            # never goes red there. What loudness COSTS is already measured, twice, by
+            # PLR (dynamics crushed) and True Peak (distortion on encode). Turning the
+            # zero-weight metric red next to a 95 was the tool arguing with itself.
+            # Master: 🟢 -16 to -6 | 🔵 quieter than -16, or -6 to -5 | 🟡 louder than -5
+            if is_master:
+                if -16 <= value <= -6:
+                    percentage = 100
+                    bar_status = "excellent"
+                elif value < -16:
+                    percentage = 85
+                    bar_status = "good"
+                    plr_tooltip_override = {
+                        "es": "Máster conservador. El streaming lo sube de nivel al normalizar, así que no se pierde nada.",
+                        "en": "Conservative master. Streaming turns it up when it normalizes, so nothing is lost."
+                    }
+                elif -6 < value <= -5:
+                    percentage = 85
+                    bar_status = "good"
+                else:  # louder than -5 LUFS
+                    percentage = 65
+                    bar_status = "warning"
+                    warnings_count += 1
+                    plr_tooltip_override = {
+                        "es": "Nivel muy alto. La pregunta no es el número sino lo que costó: conviene revisar PLR y True Peak, que es donde se ve.",
+                        "en": "Very loud. The number is not the problem, what it cost is: PLR and True Peak are where that shows up."
+                    }
+            # Mix profiles keep the pre-mastering targets.
             # 🟢 Verde: -24 a -14 LUFS (Excelente para mastering)
             # 🔵 Azul: -14 a -12 LUFS (Funcional, un poco alto para mezcla)
             # 🟡 Amarillo: -12 a -10 LUFS (Muy alto)
             # 🔴 Rojo: > -10 LUFS (Limita decisiones) - CAN be red alone
-            if -24 <= value <= -14:
+            elif -24 <= value <= -14:
                 percentage = 100
                 bar_status = "excellent"
             elif -14 < value <= -12:
@@ -2017,7 +2093,10 @@ def calculate_metrics_bars_percentages(metrics: List[Dict[str, Any]], strict: bo
             if plr_tooltip_override:
                 tooltip_es = plr_tooltip_override.get("es", tooltip_es)
                 tooltip_en = plr_tooltip_override.get("en", tooltip_en)
-            
+            if tp_tooltip_override:
+                tooltip_es = tp_tooltip_override.get("es", tooltip_es)
+                tooltip_en = tp_tooltip_override.get("en", tooltip_en)
+
             bars[key] = {
                 "percentage": round(percentage),
                 "status": bar_status,
@@ -2028,11 +2107,54 @@ def calculate_metrics_bars_percentages(metrics: List[Dict[str, Any]], strict: bo
         
         # Reset tooltip override for next iteration
         plr_tooltip_override = None
-    
+        tp_tooltip_override = None
+
+    # ============================================
+    # SAMPLE CLIPPING, FOLDED INTO TRUE PEAK (master profile only)
+    # ============================================
+    # In the mix profiles clipping is already scored through Headroom going critical
+    # (see hard rule: it is never a hard fail). In master mode headroom is expected to
+    # be gone, so that channel is dead and clipping had nowhere to show up. It folds
+    # into True Peak here, and it can only ever push the bar DOWN.
+    #
+    # It keys on the NUMBER OF DISTINCT REGIONS, deliberately not on severity or
+    # affected_percentage. Those two fields are not comparable across the analysis
+    # paths: the sync path measures clipped samples against total samples, while the
+    # chunked path (the universal one in production) flags a whole 5-second window and
+    # measures its duration against the track. One clipped sample in a six-minute track
+    # therefore reports "localized" on one path and "widespread" on the other, which
+    # would demote almost every commercial master. Region count survives both.
+    #
+    # One or two isolated pinned spots is what a finished master does on purpose.
+    # Three or more separate regions means the limiter is being driven into the ceiling
+    # repeatedly, and that is the thing loudness actually costs.
+    if is_master and "true_peak" in bars and clipping_regions >= 3:
+        over_ceiling = true_peak_val > 0.0
+        if over_ceiling:
+            demoted_status, demoted_pct = "critical", 35
+        else:
+            demoted_status, demoted_pct = "warning", 65
+
+        rank = {"excellent": 3, "good": 2, "warning": 1, "critical": 0}
+        if rank[demoted_status] < rank[bars["true_peak"]["status"]]:
+            bars["true_peak"]["status"] = demoted_status
+            bars["true_peak"]["percentage"] = demoted_pct
+            bars["true_peak"]["tooltip_es"] = (
+                f"Saturación digital sostenida: {clipping_regions} zonas del track llegan al tope. "
+                "Es el costo real del nivel, y se escucha antes que cualquier número."
+            )
+            bars["true_peak"]["tooltip_en"] = (
+                f"Sustained clipping: {clipping_regions} regions of the track hit the ceiling. "
+                "This is what the level actually cost, and it is audible before any number is."
+            )
+
     # ============================================
     # COMBINED LOGIC: Upgrade to critical if 2+ warnings reinforce each other
     # ============================================
-    if warnings_count >= 2:
+    # v7.6.0: not in master profile. Both combinations exist to protect a mastering
+    # stage that a finished master does not have, and the True Peak + LUFS one would
+    # now fire off a LUFS bar that is explicitly informational there.
+    if warnings_count >= 2 and not is_master:
         # Check for reinforcing combinations
         headroom_warning = bars.get("headroom", {}).get("status") == "warning"
         true_peak_warning = bars.get("true_peak", {}).get("status") == "warning"
@@ -4421,7 +4543,8 @@ def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, s
     )
 
     # Generate CTA for frontend
-    cta_data = generate_cta(score, strict, lang, mode="write", profile=active_profile)
+    cta_data = generate_cta(score, strict, lang, mode="write", profile=active_profile,
+                            true_peak=float(tp), profile_source=profile_source)
     
     # ========== NEW: Generate interpretative texts ==========
     interpretations = None
@@ -4467,7 +4590,8 @@ def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, s
             interpretations_raw = generate_interpretative_texts(
                 metrics=interpretation_metrics,
                 lang=lang,
-                strict=strict
+                strict=strict,
+                is_master=(active_profile == PROFILE_MASTER)
             )
             interpretations = format_for_api_response(
                 interpretations_raw,
@@ -4612,7 +4736,7 @@ def generate_recommendations(metrics: List[Dict[str, Any]], score: int, genre: O
 
 
 
-def _generate_cta_master(score: int, lang: str) -> Dict[str, str]:
+def _generate_cta_master(score: int, lang: str, true_peak: Optional[float] = None, profile_source: str = "user") -> Dict[str, str]:
     """
     CTAs para un máster terminado. Sin esto, la herramienta le ofrece masterizar
     su máster a alguien que ya lo masterizó.
@@ -4621,21 +4745,62 @@ def _generate_cta_master(score: int, lang: str) -> Dict[str, str]:
     máster, no está conforme con él, y tiene presupuesto.
     """
     if score >= 85:
+        # v7.6.0: profile_source == "auto" means WE guessed this was a master, from the
+        # file being loud and limited. The user never told us. That file is just as
+        # likely to be a hot mix on its way to a mastering engineer, and telling that
+        # person "ready to release" is the worst advice the product can give them: they
+        # are the best mastering lead it can produce. Two doors, and the button only
+        # exists on this branch. A user who ticked the checkbox is done; do not sell
+        # mastering to someone who just told us they finished mastering.
+        if profile_source == "auto":
+            if lang == 'es':
+                return {
+                    "message": (
+                        "🎧 El archivo funciona técnicamente como un máster.\n"
+                        "Si es tu máster final, está listo para publicar. Si en realidad es una mezcla que quieres masterizar, "
+                        "necesita headroom: conviene exportarla sin limitación en el bus principal. Si quieres, la masterizamos."
+                    ),
+                    "button": "Quiero masterizarla",
+                    "action": "hot_mix"
+                }
+            return {
+                "message": (
+                    "🎧 The file works technically as a master.\n"
+                    "If this is your final master, it is ready to release. If it is actually a mix you want mastered, "
+                    "it needs headroom: export it without the bus limiting. If you'd like, we can master it."
+                ),
+                "button": "I want it mastered",
+                "action": "hot_mix"
+            }
+
         # Sin botón: un máster sólido no necesita que le vendan mastering.
         # El frontend oculta el botón cuando viene vacío y deja solo el mensaje.
+        # El techo solo se declara "respetado" cuando de verdad lo está. A -0.0 dBTP
+        # el archivo está EN el techo, que es práctica estándar pero no es lo mismo.
+        at_ceiling = true_peak is not None and true_peak > -1.0
         if lang == 'es':
+            ceiling_line = (
+                "Está justo en el techo digital, como la mayoría de los másters comerciales, y conserva dinámica."
+                if at_ceiling else
+                "Respeta el techo digital y conserva dinámica."
+            )
             return {
                 "message": (
                     "🎧 Tu máster está listo para publicar.\n"
-                    "Respeta el techo digital y conserva dinámica. No necesita otro mastering."
+                    f"{ceiling_line} No necesita otro mastering."
                 ),
                 "button": "",
                 "action": "release"
             }
+        ceiling_line = (
+            "It sits right at the digital ceiling, like most commercial masters, and it kept its dynamics."
+            if at_ceiling else
+            "It respects the digital ceiling and it kept its dynamics."
+        )
         return {
             "message": (
                 "🎧 Your master is ready to release.\n"
-                "It respects the digital ceiling and it kept its dynamics. It does not need another mastering pass."
+                f"{ceiling_line} It does not need another mastering pass."
             ),
             "button": "",
             "action": "release"
@@ -4679,7 +4844,19 @@ def _generate_cta_master(score: int, lang: str) -> Dict[str, str]:
     }
 
 
-def generate_cta(score: int, strict: bool, lang: str, mode: str = "write", profile: Optional[str] = None) -> Dict[str, str]:
+def _report_true_peak(report: Dict[str, Any]) -> Optional[float]:
+    """Measured true peak out of a finished report, for the CTA. The rounded display
+    string is not usable here: the master bands are finer than one decimal."""
+    for m in report.get("metrics", []):
+        if "True Peak" in m.get("internal_key", ""):
+            raw = m.get("raw_true_peak_db")
+            if isinstance(raw, (int, float)):
+                return float(raw)
+    return None
+
+
+def generate_cta(score: int, strict: bool, lang: str, mode: str = "write", profile: Optional[str] = None,
+                 true_peak: Optional[float] = None, profile_source: str = "user") -> Dict[str, str]:
     """
     Generate conversational CTA with button text based on mix score.
 
@@ -4700,7 +4877,7 @@ def generate_cta(score: int, strict: bool, lang: str, mode: str = "write", profi
         return {"message": "", "button": "", "action": ""}
 
     if resolve_profile(strict, profile) == PROFILE_MASTER:
-        return _generate_cta_master(score, _pick_lang(lang))
+        return _generate_cta_master(score, _pick_lang(lang), true_peak=true_peak, profile_source=profile_source)
 
     if lang == 'es':
         # Spanish CTAs - ES LATAM Neutro
@@ -6597,7 +6774,8 @@ def analyze_file_chunked(
     )
 
     # Generate CTA for frontend
-    cta_data = generate_cta(score, strict, lang, mode="write", profile=active_profile)
+    cta_data = generate_cta(score, strict, lang, mode="write", profile=active_profile,
+                            true_peak=float(final_tp), profile_source=profile_source)
     
     # ========== NEW: Generate interpretative texts ==========
     interpretations = None
@@ -6644,7 +6822,8 @@ def analyze_file_chunked(
             interpretations_raw = generate_interpretative_texts(
                 metrics=interpretation_metrics,
                 lang=lang,
-                strict=strict
+                strict=strict,
+                is_master=(active_profile == PROFILE_MASTER)
             )
             interpretations = format_for_api_response(
                 interpretations_raw,
@@ -6756,13 +6935,22 @@ def analyze_file_chunked(
 
     return result
 
-def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en', filename: str = "mix") -> str:
+def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en', filename: str = "mix", profile: Optional[str] = None) -> str:
     """
     Generate narrative engineer-style feedback from analysis report.
     Perfect for emails, web UI, or written reports.
     Includes detection for already-mastered tracks.
+
+    v7.6.0: takes the profile. This function used to run a THIRD mastered-track
+    heuristic of its own, independent of both detect_mastered_file and the user's
+    checkbox, and it hedged its conclusion across two branches ("if this is a mix...
+    if this is a master..."). That hedge is right when the tool is guessing. It is
+    wrong once the user has told us, and it was printing mix instructions
+    ("verify peaks land around -6 dBFS") into the report of a file the same report
+    scored 95 as a master.
     """
     lang = _pick_lang(lang)
+    is_master_profile = resolve_profile(strict, profile) == PROFILE_MASTER
     
     score = report.get("score", 0)
     verdict = report.get("verdict", "")
@@ -6808,11 +6996,13 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
     # Detection criteria for mastered track:
     # 1. LUFS > -14 (commercial loudness level)
     # 2. AND (Peak > -1.0 dBFS OR True Peak > -1.0 dBTP)
-    is_mastered = False
+    # The user ticking the master checkbox always wins over the heuristic, which only
+    # fires on loud masters and so missed every quiet, well-behaved one.
+    is_mastered = is_master_profile
     if lufs_value is not None and lufs_value > -14:
         if (peak_value is not None and peak_value > -1.0) or (tp_value is not None and tp_value > -1.0):
             is_mastered = True
-    
+
     # If mastered track detected, build comprehensive master analysis message
     if is_mastered:
         # Extract all metrics for comprehensive analysis
@@ -7085,10 +7275,31 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                 plr_value = plr_metric.get("value")
                 if isinstance(plr_value, (int, float)) and plr_value < 7:
                     observations.append(
-                        f"• PLR: {plr_value:.1f} dB - dinámicas muy reducidas por limitación intensa.\n"
+                        f"• PLR: {plr_value:.1f} dB, dinámicas muy reducidas por limitación intensa.\n"
                         "  Normal en masters comerciales loud, pero reduce micro-dinámica."
                     )
-            
+
+            # v7.6.0: máster loud que sí pagó por el nivel. Solo se dice cuando el costo
+            # está medido, nunca por el volumen en sí. Un máster loud limpio no recibe
+            # nada: el índice evalúa entrega técnica, no calidad artística, y contradecir
+            # esa nota para colar una venta le quita el peso al puntaje.
+            plr_value_num = plr_metric.get("value") if plr_metric else None
+            if not isinstance(plr_value_num, (int, float)):
+                plr_value_num = None
+
+            is_loud = lufs_value is not None and lufs_value > -9
+            dynamics_paid = plr_value_num is not None and 7 <= plr_value_num < 9
+            ceiling_paid = tp_value is not None and tp_value > 0.0
+
+            if is_loud and plr_value_num is not None and plr_value_num >= 7 and (dynamics_paid or ceiling_paid):
+                cost = (f"un PLR de {plr_value_num:.1f} dB" if dynamics_paid
+                        else f"picos por encima del techo ({tp_value:.1f} dBTP)")
+                observations.append(
+                    f"• Nivel loud ({lufs_value:.1f} LUFS) con {cost}.\n"
+                    "  Funciona como máster loud. El nivel se pagó con dinámica, y eso es lo que suele\n"
+                    "  recuperar un mastering dedicado si la canción lo pide."
+                )
+
             # Frequency balance observation
             if freq_metric:
                 freq_status = freq_metric.get("status", "")
@@ -7122,27 +7333,32 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
             else:
                 reduction_rounded = 6
 
-            message += (
-                "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-                "⚠️ SI ESTE ARCHIVO CORRESPONDE A UNA MEZCLA:\n"
-                "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
-                "Si la intención es enviarla a mastering, conviene volver a la sesión original sin limitación "
-                "en el bus principal y ajustar el nivel antes de exportar:\n\n"
-                "1. Volver a la sesión de mezcla\n"
-                "2. Insertar un plugin de ganancia al final del bus principal (después de toda la cadena)\n"
-                f"3. Reducir el nivel aproximadamente {reduction_rounded} dB\n"
-                "4. Verificar que los picos queden alrededor de -6 dBFS\n"
-                "5. Re-exportar\n\n"
-                "Esto le devuelve al mastering el espacio necesario para trabajar sin distorsión.\n\n"
-            )
-            
+            # Only when the tool is guessing. If the user ticked the master checkbox,
+            # telling them to go back to the mix session is answering a question they
+            # already answered.
+            if not is_master_profile:
+                message += (
+                    "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                    "⚠️ SI ESTE ARCHIVO CORRESPONDE A UNA MEZCLA:\n"
+                    "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+                    "Si la intención es enviarla a mastering, conviene volver a la sesión original sin limitación "
+                    "en el bus principal y ajustar el nivel antes de exportar:\n\n"
+                    "1. Volver a la sesión de mezcla\n"
+                    "2. Insertar un plugin de ganancia al final del bus principal (después de toda la cadena)\n"
+                    f"3. Reducir el nivel aproximadamente {reduction_rounded} dB\n"
+                    "4. Verificar que los picos queden alrededor de -6 dBFS\n"
+                    "5. Re-exportar\n\n"
+                    "Esto le devuelve al mastering el espacio necesario para trabajar sin distorsión.\n\n"
+                )
+
             # SECTION 5: Bifurcation - If Master
+            master_header = "✅ TU MÁSTER:\n" if is_master_profile else "✅ SI ESTE ES TU MASTER FINAL:\n"
             message += (
                 "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-                "✅ SI ESTE ES TU MASTER FINAL:\n"
+                f"{master_header}"
                 "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
             )
-            
+
             if tp_value is not None and tp_value > -1.0:
                 message += (
                     f"🔧 True Peak: {tp_str}\n\n"
@@ -7415,10 +7631,31 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
                 plr_value = plr_metric.get("value")
                 if isinstance(plr_value, (int, float)) and plr_value < 7:
                     observations.append(
-                        f"• PLR: {plr_value:.1f} dB - dynamics heavily reduced by aggressive limiting.\n"
+                        f"• PLR: {plr_value:.1f} dB, dynamics heavily reduced by aggressive limiting.\n"
                         "  Normal in loud commercial masters, but reduces micro-dynamics."
                     )
-            
+
+            # v7.6.0: a loud master that actually paid for the level. Said only when the
+            # cost is measured, never for loudness on its own. A clean loud master gets
+            # nothing here: the index evaluates technical delivery, not artistic quality,
+            # and contradicting that note to slip in a pitch would hollow out the score.
+            plr_value_num = plr_metric.get("value") if plr_metric else None
+            if not isinstance(plr_value_num, (int, float)):
+                plr_value_num = None
+
+            is_loud = lufs_value is not None and lufs_value > -9
+            dynamics_paid = plr_value_num is not None and 7 <= plr_value_num < 9
+            ceiling_paid = tp_value is not None and tp_value > 0.0
+
+            if is_loud and plr_value_num is not None and plr_value_num >= 7 and (dynamics_paid or ceiling_paid):
+                cost = (f"a PLR of {plr_value_num:.1f} dB" if dynamics_paid
+                        else f"peaks above the ceiling ({tp_value:.1f} dBTP)")
+                observations.append(
+                    f"• Loud level ({lufs_value:.1f} LUFS) with {cost}.\n"
+                    "  It works as a loud master. The level was paid for in dynamics, and that is what a\n"
+                    "  dedicated mastering pass usually recovers, if the song calls for it."
+                )
+
             # Frequency balance observation
             if freq_metric:
                 freq_status = freq_metric.get("status", "")
@@ -7452,24 +7689,29 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
             else:
                 reduction_rounded = 6
 
-            message += (
-                "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-                "⚠️ IF THIS FILE IS INTENDED TO BE A MIX:\n"
-                "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
-                "If your intention is to send it to mastering, go back to the original session without "
-                "bus limiting and adjust the level before bouncing:\n\n"
-                "1. Return to your mix session\n"
-                "2. Insert a Gain/Utility plugin at the end of your master bus (AFTER all processing)\n"
-                f"3. Lower the level by approximately {reduction_rounded} dB\n"
-                "4. Verify peaks land around -6 dBFS\n"
-                "5. Re-export\n\n"
-                "This restores the headroom needed for proper mastering without distortion.\n\n"
-            )
-            
+            # Only when the tool is guessing. If the user ticked the master checkbox,
+            # telling them to go back to the mix session is answering a question they
+            # already answered.
+            if not is_master_profile:
+                message += (
+                    "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                    "⚠️ IF THIS FILE IS INTENDED TO BE A MIX:\n"
+                    "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+                    "If your intention is to send it to mastering, go back to the original session without "
+                    "bus limiting and adjust the level before bouncing:\n\n"
+                    "1. Return to your mix session\n"
+                    "2. Insert a Gain/Utility plugin at the end of your master bus (AFTER all processing)\n"
+                    f"3. Lower the level by approximately {reduction_rounded} dB\n"
+                    "4. Verify peaks land around -6 dBFS\n"
+                    "5. Re-export\n\n"
+                    "This restores the headroom needed for proper mastering without distortion.\n\n"
+                )
+
             # SECTION 5: Bifurcation - If Master
+            master_header = "✅ YOUR MASTER:\n" if is_master_profile else "✅ IF THIS IS YOUR FINAL MASTER:\n"
             message += (
                 "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-                "✅ IF THIS IS YOUR FINAL MASTER:\n"
+                f"{master_header}"
                 "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
             )
             
@@ -7748,7 +7990,8 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
             drivers_section = "\n\n📊 Influencia en la puntuación:\n" + "\n".join(drivers_lines)
 
         # Generate CTA based on score
-        cta_data = generate_cta(score, strict, lang, mode="write", profile=report.get("profile"))
+        cta_data = generate_cta(score, strict, lang, mode="write", profile=report.get("profile"),
+                                 true_peak=_report_true_peak(report), profile_source=report.get("profile_source") or "user")
         cta_message = f"\n\n{cta_data['message']}" if cta_data['message'] else ""
 
         return f"{filename_ref}{intro}\n\n{tech_sentence}{issues_sentence}{stereo_detail}{drivers_section}{tech_details}{recommendation}{mode_note}{cta_message}"
@@ -8002,7 +8245,8 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
             drivers_section = "\n\n📊 Score influence breakdown:\n" + "\n".join(drivers_lines)
 
         # Generate CTA based on score
-        cta_data = generate_cta(score, strict, lang, mode="write", profile=report.get("profile"))
+        cta_data = generate_cta(score, strict, lang, mode="write", profile=report.get("profile"),
+                                 true_peak=_report_true_peak(report), profile_source=report.get("profile_source") or "user")
         cta_message = f"\n\n{cta_data['message']}" if cta_data['message'] else ""
 
         return f"{filename_ref}{intro}\n\n{tech_sentence}{issues_sentence}{stereo_detail}{drivers_section}{tech_details}{recommendation}{mode_note}{cta_message}"
@@ -8092,7 +8336,8 @@ def generate_short_mode_report(report: Dict[str, Any], strict: bool = False, lan
             recommendation = "💡 Recomendación: Requiere recuperar margen técnico antes de mastering."
         
         # Generate CTA - modo short nunca muestra CTA, solo lo agregamos al resultado
-        cta_data = generate_cta(score, strict, lang, mode="short", profile=report.get("profile"))
+        cta_data = generate_cta(score, strict, lang, mode="short", profile=report.get("profile"),
+                                 true_peak=_report_true_peak(report), profile_source=report.get("profile_source") or "user")
         cta_message = ""  # Short mode doesn't show CTA in text
         
         return header + body + recommendation + cta_message
@@ -8131,7 +8376,8 @@ def generate_short_mode_report(report: Dict[str, Any], strict: bool = False, lan
             recommendation = "💡 Recommendation: Requires recovering technical margin before mastering."
         
         # Generate CTA - modo short nunca muestra CTA, solo lo agregamos al resultado
-        cta_data = generate_cta(score, strict, lang, mode="short", profile=report.get("profile"))
+        cta_data = generate_cta(score, strict, lang, mode="short", profile=report.get("profile"),
+                                 true_peak=_report_true_peak(report), profile_source=report.get("profile_source") or "user")
         cta_message = ""  # Short mode doesn't show CTA in text
         
         return header + body + recommendation + cta_message
@@ -8509,7 +8755,10 @@ def generate_complete_pdf(
         story.append(file_table)
         
         # Nota aclaratoria sobre el MR Score
-        score_note = "Este índice evalúa margen técnico para procesamiento, no calidad artística." if lang == 'es' else "This index evaluates technical margin for processing, not artistic quality."
+        if pdf_profile == PROFILE_MASTER:
+            score_note = "Este índice evalúa la entrega técnica del máster, no la calidad artística." if lang == 'es' else "This index evaluates the technical delivery of the master, not artistic quality."
+        else:
+            score_note = "Este índice evalúa margen técnico para procesamiento, no calidad artística." if lang == 'es' else "This index evaluates technical margin for processing, not artistic quality."
         story.append(Paragraph(
             clean_text_for_pdf(score_note),
             ParagraphStyle('ScoreNote', parent=body_style, fontSize=8, textColor=colors.HexColor('#6b7280'), fontStyle='italic')
@@ -8648,7 +8897,11 @@ def generate_complete_pdf(
             story.append(Spacer(1, 0.05*inch))
             
             # Subtexto explicativo - Mastering Ready philosophy
-            subtext = "Estos indicadores no significan que tu mezcla esté mal, sino que hay decisiones técnicas que conviene revisar antes del máster final." if lang == 'es' else "These indicators don't mean your mix is wrong, but there are technical decisions worth reviewing before the final master."
+            # Was hardcoded to the mix wording, so a master's PDF told its owner it was a mix.
+            if pdf_profile == PROFILE_MASTER:
+                subtext = "Estos indicadores no significan que tu máster esté mal, sino que hay decisiones técnicas que conviene revisar antes de publicar." if lang == 'es' else "These indicators don't mean your master is wrong, but there are technical decisions worth reviewing before release."
+            else:
+                subtext = "Estos indicadores no significan que tu mezcla esté mal, sino que hay decisiones técnicas que conviene revisar antes del máster final." if lang == 'es' else "These indicators don't mean your mix is wrong, but there are technical decisions worth reviewing before the final master."
             story.append(Paragraph(
                 clean_text_for_pdf(subtext),
                 ParagraphStyle('Subtext', parent=body_style, fontSize=8, textColor=colors.HexColor('#6b7280'), fontStyle='italic')
@@ -8666,7 +8919,7 @@ def generate_complete_pdf(
                 'loudness': ('Nivel (LUFS)', 'Loudness (LUFS)'),
                 'lufs': ('LUFS', 'LUFS'),
                 'lufs_(integrated)': ('LUFS', 'LUFS'),
-                'stereo_width': ('Imagen Estéreo', 'Stereo Width'),
+                'stereo_width': ('Imagen Estéreo', 'Stereo Image'),
                 'stereo_correlation': ('Correlación', 'Correlation'),
                 'frequency_balance': ('Balance Frecuencias', 'Freq. Balance'),
                 'tonal_balance': ('Balance Frecuencias', 'Freq. Balance')
@@ -8730,8 +8983,14 @@ def generate_complete_pdf(
                 story.append(bars_table)
                 
                 # Legend - Mastering Ready philosophy: margin, not judgment (WITH COLORS)
+                # Master mode reads as delivery. It has no downstream stage to keep margin for.
                 story.append(Spacer(1, 0.1*inch))
-                if lang == 'es':
+                if pdf_profile == PROFILE_MASTER:
+                    if lang == 'es':
+                        legend_text = '<font color="#10b981">●</font> En rango  <font color="#3b82f6">●</font> Correcto  <font color="#f59e0b">●</font> Conviene revisar  <font color="#ef4444">●</font> Revisión prioritaria'
+                    else:
+                        legend_text = '<font color="#10b981">●</font> On target  <font color="#3b82f6">●</font> Correct  <font color="#f59e0b">●</font> Worth reviewing  <font color="#ef4444">●</font> Priority review'
+                elif lang == 'es':
                     legend_text = '<font color="#10b981">●</font> Margen cómodo  <font color="#3b82f6">●</font> Margen suficiente  <font color="#f59e0b">●</font> Margen reducido  <font color="#ef4444">●</font> Margen comprometido'
                 else:
                     legend_text = '<font color="#10b981">●</font> Comfortable margin  <font color="#3b82f6">●</font> Sufficient margin  <font color="#f59e0b">●</font> Reduced margin  <font color="#ef4444">●</font> Compromised margin'

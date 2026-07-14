@@ -89,7 +89,7 @@ def _free_memory():
 # 7.5.0: master mode. A file is scored against one of three profiles (mix,
 # mix_strict, master) instead of the mix rubric being applied to everything.
 # Scores are not comparable across versions; never compare 7.4.x scores to 7.5.x.
-ANALYZER_VERSION = "7.5.0"
+ANALYZER_VERSION = "7.6.0"
 
 # v7.5.0: the profile arrives from the browser, so it is validated here rather
 # than trusted. Anything unrecognised falls back to auto-detection, which is the
@@ -731,7 +731,7 @@ async def analyze_mix_endpoint(
             logger.info("📝 Generating both report modes...")
             # Strip _compressed suffix (added by browser-side compression)
             display_filename = file.filename.replace('_compressed', '') if file.filename else file.filename
-            report_write = write_report(result, strict=strict, lang=lang, filename=display_filename)
+            report_write = write_report(result, strict=strict, lang=lang, filename=display_filename, profile=result.get('profile'))
             report_short = generate_short_mode_report(result, strict=strict, lang=lang, filename=display_filename)
             
             # For backward compatibility, use mode to set primary report
@@ -1163,7 +1163,8 @@ async def start_analysis(
                     result,
                     strict=strict,
                     lang=lang,
-                    filename=display_filename
+                    filename=display_filename,
+                    profile=result.get('profile')
                 )
                 report_write = await loop.run_in_executor(None, write_func)
 
