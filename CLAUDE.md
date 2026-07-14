@@ -112,7 +112,7 @@ Full session history: CLAUDE-archive.md in this directory. Load it only when ask
 
 ## Current State & Next Steps
 
-**Git state (2026-07-13)**: `main` on `a2a0bde` (master mode), pushed and deployed; local `dev` points at the same commit but `origin/dev` is one behind, deliberately, to avoid a double push. Build clean (next build + tsc + py_compile). Untracked `content/` + 3 `content_queue` migrations belong to the content-creator feature; keep them out of unrelated commits. `CLAUDE-archive.md` is untracked and holds the pre-2026-07-13 session log; the same content is permanently in git at `624343d:CLAUDE.md`, so nothing depends on that file being committed. The two `docs/MR-*-Plan.md` files are now tracked.
+**Git state (2026-07-14)**: `main` and `dev` both on `caceba6` (analyzer v7.6.0, master mode profile sweep), pushed and deployed and verified live. Build clean (next build + tsc + py_compile). Untracked `content/` + 3 `content_queue` migrations belong to the content-creator feature; keep them out of unrelated commits. `CLAUDE-archive.md` is untracked and holds the pre-2026-07-13 session log; the same content is permanently in git at `624343d:CLAUDE.md`, so nothing depends on that file being committed. The two `docs/MR-*-Plan.md` files are now tracked.
 
 ### The money path is proven (2026-07-13)
 
@@ -157,7 +157,12 @@ v7.5.0 made the SCORE profile-aware and stopped there. Everything that explains 
 
 **The one failure mode with no code guard: a hot mix that ticks the box.** It will be told it is ready to release. Intent cannot be measured, so the guard is said out loud instead: the dual-score block now always prints, and a user-ticked master reads "It was scored as a master, so it is not asked to leave headroom. If it is actually a mix you plan to send to mastering, even a loud one, it is worth analyzing it again with the checkbox unchecked."
 
-**Not yet verified**: the results screen has not been looked at in a browser (bar colors, new legend, guard line), including at 375px. Everything above is proven by the analyzer, the regression harness and a rendered PDF in both languages, not by eyes on the UI.
+**Verified live on production, 2026-07-14**, all four combinations (EN/ES x ticked/auto): no red bars, correct legend, correct verdict, zero mix-language leaks in the PDFs, and both CTA branches render (ticked = "ready to release" with no button; auto = the two-door message with the mastering button). **375px is still unchecked.**
+
+Three defects got through every automated gate and were caught only by looking at the live app. Worth remembering, because the same gates will pass next time too:
+1. **The PDF never received the profile at all** (`e75cdfb`). The frontend's `analysis_data` payload omitted `profile`, so `main.py` fell back to `"mix"` on every download. Master mode had been shipping a profile-aware PDF verdict since 7.5.0 that **could never fire**: a ticked master and an auto-detected one produced byte-identical PDFs, both headed "Optimal margin for mastering". The regression harness and a locally-rendered PDF both passed, because both bypass the frontend payload.
+2. **`generate_visual_report` turned any warning-status metric into an action item** (`8834908`), so a master verdicted "listo para publicar" was told to "revisar nivel general, ajustar niveles de ganancia". LUFS goes warning on any loud master and carries weight 0, so that was an instruction the score itself contradicted, printed under the verdict.
+3. **The CTA lived only on the results screen** (`caceba6`). The best mastering lead the product makes could download a clean report that never mentioned the service exists. It now closes the PDF; the button only prints when the CTA has one.
 
 ### Master mode LIVE IN PRODUCTION (v7.5.0, 2026-07-13)
 
