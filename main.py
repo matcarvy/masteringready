@@ -88,8 +88,11 @@ def _free_memory():
 # Analyzer version - used in API responses for tracking
 # 7.5.0: master mode. A file is scored against one of three profiles (mix,
 # mix_strict, master) instead of the mix rubric being applied to everything.
+# 7.7.0: strict is a hard override. A loud mix analyzed in strict mode stays on
+# the mix_strict rubric instead of auto-upgrading to master, so strict scores are
+# no longer comparable to 7.6.0 strict scores for a loud file.
 # Scores are not comparable across versions; never compare 7.4.x scores to 7.5.x.
-ANALYZER_VERSION = "7.6.0"
+ANALYZER_VERSION = "7.7.0"
 
 # v7.5.0: the profile arrives from the browser, so it is validated here rather
 # than trusted. Anything unrecognised falls back to auto-detection, which is the

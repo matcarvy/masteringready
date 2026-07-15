@@ -504,6 +504,25 @@ def resolve_profile(strict: bool = False, profile: Optional[str] = None) -> str:
     return PROFILE_MIX_STRICT if strict else PROFILE_MIX
 
 
+def select_active_profile(strict: bool, profile: Optional[str], auto_profile: str) -> Tuple[str, str]:
+    """Pick the rubric that scores this file and record who chose it.
+
+    Returns (active_profile, profile_source). Three declared intents, in order of
+    precedence. An explicit profile (the master checkbox) always wins. Strict is
+    the user declaring a mix, so it forces mix_strict and is never auto-upgraded to
+    a master, even when the file reads as commercially loud. A file with no declared
+    stage is auto-detected (auto_profile).
+    v7.7.0: strict used to fall through to auto_profile, so a loud mix analyzed in
+    strict mode was scored as a master, dropping the strict rubric the user asked
+    for. Strict is now a hard override, the counterpart to the master checkbox.
+    """
+    if profile in PROFILES:
+        return profile, "user"
+    if strict:
+        return PROFILE_MIX_STRICT, "user"
+    return auto_profile, "auto"
+
+
 def threshold_key(profile: str) -> str:
     return _PROFILE_TO_THRESHOLD_KEY.get(profile, "normal")
 
@@ -4213,8 +4232,7 @@ def analyze_file(path: Path, oversample: int = 4, genre: Optional[str] = None, s
 
     mix_profile = resolve_profile(strict)
     auto_profile = PROFILE_MASTER if is_mastered["is_mastered"] else mix_profile
-    profile_source = "user" if profile in PROFILES else "auto"
-    active_profile = profile if profile in PROFILES else auto_profile
+    active_profile, profile_source = select_active_profile(strict, profile, auto_profile)
 
     # 1. Headroom with Clipping Temporal Analysis
     # Temporal analysis if clipping detected
@@ -6195,8 +6213,7 @@ def analyze_file_chunked(
     # stage, we do not have to).
     mix_profile = resolve_profile(strict)
     auto_profile = PROFILE_MASTER if is_mastered["is_mastered"] else mix_profile
-    profile_source = "user" if profile in PROFILES else "auto"
-    active_profile = profile if profile in PROFILES else auto_profile
+    active_profile, profile_source = select_active_profile(strict, profile, auto_profile)
 
     print(f"🎚️  Profile: {active_profile} ({profile_source})")
     
@@ -6998,8 +7015,12 @@ def write_report(report: Dict[str, Any], strict: bool = False, lang: str = 'en',
     # 2. AND (Peak > -1.0 dBFS OR True Peak > -1.0 dBTP)
     # The user ticking the master checkbox always wins over the heuristic, which only
     # fires on loud masters and so missed every quiet, well-behaved one.
+    # v7.7.0: the heuristic only guesses for an auto-detected file. A user who ticked
+    # strict has declared this is a mix, even a loud one, so it is not second-guessed
+    # into a master narrative; otherwise a loud strict mix got a hybrid report (master
+    # observations plus the mix bifurcation) instead of clean mix_strict prose.
     is_mastered = is_master_profile
-    if lufs_value is not None and lufs_value > -14:
+    if not strict and lufs_value is not None and lufs_value > -14:
         if (peak_value is not None and peak_value > -1.0) or (tp_value is not None and tp_value > -1.0):
             is_mastered = True
 

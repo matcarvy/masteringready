@@ -35,10 +35,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from analyzer import (  # noqa: E402
     PROFILE_MASTER,
     PROFILE_MIX,
+    PROFILE_MIX_STRICT,
     WEIGHTS,
     WEIGHTS_MASTER,
     detect_mastered_file,
     score_under_profile,
+    select_active_profile,
 )
 
 HEALTHY_CORR = 0.75
@@ -85,6 +87,21 @@ MIXES = [
     ("Conservative mix",           -8.0, -7.6, -20.0),
     ("Hot mix, still a mix",       -2.5, -2.0, -13.0),
     ("Very hot mix",               -2.0, -1.6, -12.5),
+]
+
+# Profile selection (v7.7.0). Which rubric a file is scored against, given the
+# declared intent and what auto-detection found. `auto_profile` is master when the
+# file reads as a finished master, mix/mix_strict otherwise. The load-bearing case
+# is the last one: strict on a loud file must stay mix_strict, not flip to master.
+# (label, strict, profile_arg, auto_profile, expected_active, expected_source)
+PROFILE_SELECTION = [
+    ("regular, quiet mix",        False, None,     PROFILE_MIX,        PROFILE_MIX,        "auto"),
+    ("regular, loud master",      False, None,     PROFILE_MASTER,     PROFILE_MASTER,     "auto"),
+    ("master checkbox",           False, "master", PROFILE_MASTER,     PROFILE_MASTER,     "user"),
+    ("master checkbox, quiet",    False, "master", PROFILE_MIX,        PROFILE_MASTER,     "user"),
+    ("strict, non-loud mix",      True,  None,     PROFILE_MIX_STRICT, PROFILE_MIX_STRICT, "user"),
+    ("strict, loud mix",          True,  None,     PROFILE_MASTER,     PROFILE_MIX_STRICT, "user"),
+    ("master wins over strict",   True,  "master", PROFILE_MASTER,     PROFILE_MASTER,     "user"),
 ]
 
 # (label, peak_dbfs, true_peak_dbtp, plr, expectation)
@@ -139,6 +156,16 @@ def main():
         print(f"  {label:<28} {peak:>6.1f} {tp:>+6.1f} {lufs:>6.1f} {as_mix:>7}  {verdict}{flag}")
         if detected["is_mastered"]:
             failures.append(f"{label} is falsely detected as a master")
+
+    print("\nProfile selection (declared intent vs auto-detection)")
+    print(f"  {'case':<28} {'active':>11} {'source':>6}")
+    for label, strict, profile_arg, auto_profile, exp_active, exp_source in PROFILE_SELECTION:
+        active, source = select_active_profile(strict, profile_arg, auto_profile)
+        ok = active == exp_active and source == exp_source
+        flag = "" if ok else f"  <-- expected {exp_active}/{exp_source}"
+        print(f"  {label:<28} {active:>11} {source:>6}{flag}")
+        if not ok:
+            failures.append(f"selection '{label}' gave {active}/{source}, expected {exp_active}/{exp_source}")
 
     print("\nControls")
     print(f"  {'control':<28} {'master':>7} {'as mix':>7}   expectation")

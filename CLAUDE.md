@@ -112,7 +112,17 @@ Full session history: CLAUDE-archive.md in this directory. Load it only when ask
 
 ## Current State & Next Steps
 
-**Git state (2026-07-14)**: `main` and `dev` both on `caceba6` (analyzer v7.6.0, master mode profile sweep), pushed and deployed and verified live. Build clean (next build + tsc + py_compile). Untracked `content/` + 3 `content_queue` migrations belong to the content-creator feature; keep them out of unrelated commits. `CLAUDE-archive.md` is untracked and holds the pre-2026-07-13 session log; the same content is permanently in git at `624343d:CLAUDE.md`, so nothing depends on that file being committed. The two `docs/MR-*-Plan.md` files are now tracked.
+**Git state (2026-07-15)**: `main` on analyzer v7.7.0 (strict is a hard override), pushed. Build clean (next build + tsc + py_compile). Untracked `content/` + 3 `content_queue` migrations belong to the content-creator feature; keep them out of unrelated commits. `CLAUDE-archive.md` is untracked and holds the pre-2026-07-13 session log; the same content is permanently in git at `624343d:CLAUDE.md`, so nothing depends on that file being committed. The two `docs/MR-*-Plan.md` files are now tracked.
+
+### Strict is a hard override (v7.7.0, 2026-07-15)
+
+Three mutually exclusive modes: **Regular** (auto-detects mix vs master), **Strict** (forces `mix_strict`), **Master** (forces `master`). Before this, strict was only a threshold flag: a loud mix ticked as strict still auto-detected as a master and was scored on the master rubric, silently dropping the strict rubric the user asked for. Strict is now the counterpart to the master checkbox, a declared "this is a mix, judge it as one even if it is loud." The UI already made the two checkboxes mutually exclusive; the defect was purely backend.
+
+- **`select_active_profile(strict, profile, auto_profile)`** (new, `analyzer.py`) is the single source of selection truth, used by BOTH the sync and chunked paths (they were duplicated inline). Precedence: explicit profile (master checkbox) wins → strict forces `mix_strict`/`user` → otherwise auto-detect. A strict file's `profile_source` is now `"user"`, not `"auto"`.
+- **The one landmine**: `write_report` carried its OWN loudness heuristic (`analyzer.py` ~7020) that upgraded any loud file to the master narrative regardless of profile. A strict loud file would have gotten a hybrid report (master observations + mix bifurcation). Guarded with `not strict`. This is the same class of bug as the v7.6.0 `write_report` caller: a copy path that does not follow the profile.
+- **Score math untouched.** Regression harness identical (masters 83 to 98, mean 92.1); added a 7-case selection matrix, load-bearing case `strict + loud → mix_strict/user`. Scores are NOT comparable across versions: a strict loud file scores lower on 7.7.0 (mix_strict) than it did on 7.6.0 (master).
+- **Strict helper copy** now says when to use it (EN "For a mix you are sending to mastering, even a loud one..."; ES "Para una mezcla que vas a enviar a mastering, aunque suene fuerte..."). The hot mix is strict's intended case, NOT an exclusion: strict docks it for no headroom, which is the honest signal. The dual-score guard no longer nudges a declared-strict mix to re-run as a master.
+- **Pending (Mat, not code)**: upload a loud mix in strict mode as a NON-admin on prod after deploy, and check the results card at 375px.
 
 ### The money path is proven (2026-07-13)
 

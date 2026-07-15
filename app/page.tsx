@@ -2703,8 +2703,8 @@ by Matías Carvajal
                             ? 'No aplica a un máster terminado.'
                             : 'Does not apply to a finished master.')
                         : (lang === 'es'
-                            ? 'Estándares comerciales más exigentes'
-                            : 'More demanding commercial standards')}
+                            ? 'Para una mezcla que vas a enviar a mastering, aunque suene fuerte. Se evalúa como mezcla con tolerancias comerciales, así que se le pide margen en lugar de pasar como un máster terminado.'
+                            : 'For a mix you are sending to mastering, even a loud one. It is judged as a mix at commercial tolerances, so it is asked to leave headroom instead of passing as a finished master.')}
                     </p>
                   </div>
 
@@ -3037,7 +3037,8 @@ by Matías Carvajal
                   <p style={{ fontSize: '1.125rem', fontWeight: '600' }}>{result.verdict}</p>
 
                   {/* Which rubric judged this file, and what it would score under the other one.
-                      Auto-detected, so the tool never makes the user declare the stage. */}
+                      The stage is auto-detected unless the user declared it with strict or the
+                      master checkbox. */}
                   {(result as any).profile && (result as any).alternate_score != null && (
                     <div style={{
                       marginTop: '0.875rem',
@@ -3081,9 +3082,13 @@ by Matías Carvajal
                               : (lang === 'es'
                                   ? 'Si en realidad es una mezcla que vas a mandar a masterizar, conviene analizarla de nuevo sin marcar la casilla de máster.'
                                   : 'If this is actually a mix you plan to send to mastering, it is worth analyzing it again with the master checkbox unchecked.'))
-                          : (lang === 'es'
-                              ? 'Si en realidad es un máster terminado, conviene analizarlo de nuevo marcando la casilla de máster.'
-                              : 'If this is actually a finished master, it is worth analyzing it again with the master checkbox ticked.')}
+                          : ((result as any).profile === 'mix_strict'
+                              ? (lang === 'es'
+                                  ? 'El modo estricto es la evaluación correcta para una mezcla que vas a enviar a mastering. Si en realidad es un máster terminado, conviene analizarlo de nuevo sin el modo estricto y marcando la casilla de máster.'
+                                  : 'Strict mode is the right test for a mix you are sending to mastering. If it is actually a finished master, it is worth analyzing it again without strict mode and with the master checkbox ticked.')
+                              : (lang === 'es'
+                                  ? 'Si en realidad es un máster terminado, conviene analizarlo de nuevo marcando la casilla de máster.'
+                                  : 'If this is actually a finished master, it is worth analyzing it again with the master checkbox ticked.'))}
                       </p>
                     </div>
                   )}
