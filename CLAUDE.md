@@ -164,6 +164,8 @@ Three defects got through every automated gate and were caught only by looking a
 2. **`generate_visual_report` turned any warning-status metric into an action item** (`8834908`), so a master verdicted "listo para publicar" was told to "revisar nivel general, ajustar niveles de ganancia". LUFS goes warning on any loud master and carries weight 0, so that was an instruction the score itself contradicted, printed under the verdict.
 3. **The CTA lived only on the results screen** (`caceba6`). The best mastering lead the product makes could download a clean report that never mentioned the service exists. It now closes the PDF; the button only prints when the CTA has one.
 
+**Only open item on v7.6.0: check the results card at 375px on a phone.** Master mode added a checkbox, the dual-score block, the guard line and the PDF-download CTA block to that card; none of it has been seen below desktop width. Everything else is verified live.
+
 ### Master mode LIVE IN PRODUCTION (v7.5.0, 2026-07-13)
 
 Built per `docs/MR-Master-Mode-Plan.md`, shipped as `a2a0bde`. Backend `/health` confirmed serving 7.5.0. Every gate in the plan's section 1.6 passes: py_compile, `next build`, `tsc --noEmit`, the 18 commercial masters score 83 to 98 (mean 92.1) where they used to score 26 to 29, the 6 controls behave, the crushed master lands at 55, a real master driven through both analysis paths returns a master verdict and a master CTA, the PDF verdict matches the screen verdict in both profiles and both languages, and status agrees with the metric bar across all 12 path/file/profile combinations.
