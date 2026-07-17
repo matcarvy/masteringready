@@ -18,9 +18,18 @@ import { User, LogOut, ChevronDown, History, CreditCard, Settings } from 'lucide
 interface UserMenuProps {
   lang?: 'es' | 'en'
   isMobile?: boolean
+  /** Landing section links (Funciones/Precios/FAQ) inside the dropdown; used on mobile,
+      where the header has neither the desktop links nor a logged-in hamburger */
+  sectionLinks?: boolean
 }
 
 // --- Translations / Traducciones ---
+
+const SECTION_LINKS = [
+  { href: '/#features', es: 'Funciones', en: 'Features' },
+  { href: '/#pricing', es: 'Precios', en: 'Pricing' },
+  { href: '/#faq', es: 'FAQ', en: 'FAQ' }
+] as const
 
 const translations = {
   es: {
@@ -47,7 +56,7 @@ const translations = {
 
 // --- Component / Componente ---
 
-export function UserMenu({ lang = 'es', isMobile = false }: UserMenuProps) {
+export function UserMenu({ lang = 'es', isMobile = false, sectionLinks = false }: UserMenuProps) {
   const { user, loading, signOut } = useAuth()
   const [isOpen, setIsOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -255,6 +264,41 @@ export function UserMenu({ lang = 'es', isMobile = false }: UserMenuProps) {
               {user.email}
             </div>
           </div>
+
+          {/* Landing section links; mobile only, see sectionLinks prop */}
+          {sectionLinks && (
+            <div style={{ padding: '0.5rem 0', borderBottom: '1px solid var(--mr-border)' }}>
+              {SECTION_LINKS.map(link => (
+                <a
+                  key={link.href}
+                  href={link.href}
+                  onClick={(e) => {
+                    setIsOpen(false)
+                    // On the landing page the target section exists; scroll instead of navigating
+                    const target = document.querySelector(link.href.slice(1))
+                    if (target) {
+                      e.preventDefault()
+                      target.scrollIntoView({ behavior: 'smooth' })
+                    }
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.75rem',
+                    padding: '0.75rem 1rem',
+                    color: 'var(--mr-text-secondary)',
+                    textDecoration: 'none',
+                    fontSize: '0.95rem',
+                    transition: 'background 0.2s'
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--mr-bg-elevated)' }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
+                >
+                  {lang === 'es' ? link.es : link.en}
+                </a>
+              ))}
+            </div>
+          )}
 
           {/* Menu Items */}
           <div style={{ padding: '0.5rem 0' }}>

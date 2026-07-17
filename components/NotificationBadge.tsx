@@ -138,14 +138,16 @@ export function NotificationBadge({ lang, isMobile }: NotificationBadgeProps) {
     }, 200)
   }
 
-  // Mobile: compact icon-only with dot indicator + X dismiss
+  // Mobile: icon-only pill with dot indicator + X dismiss, one visual unit
   // Desktop: full pill with text + X dismiss
   if (isMobile) {
     return (
       <div style={{
         display: 'flex',
         alignItems: 'center',
-        gap: '2px',
+        background: 'rgba(102, 126, 234, 0.15)',
+        border: '1px solid rgba(102, 126, 234, 0.3)',
+        borderRadius: '9999px',
         opacity: isVisible ? 1 : 0,
         transform: isVisible ? 'scale(1)' : 'scale(0.8)',
         transition: 'all 0.2s ease'
@@ -157,14 +159,13 @@ export function NotificationBadge({ lang, isMobile }: NotificationBadgeProps) {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            width: '36px',
-            height: '36px',
-            background: 'rgba(102, 126, 234, 0.15)',
+            width: '40px',
+            height: '40px',
+            background: 'transparent',
             color: 'var(--mr-primary)',
-            border: '1px solid rgba(102, 126, 234, 0.3)',
-            borderRadius: '50%',
+            border: 'none',
+            borderRadius: '9999px 0 0 9999px',
             cursor: 'pointer',
-            transition: 'background 0.15s',
             padding: 0
           }}
           aria-label={message}
@@ -173,8 +174,8 @@ export function NotificationBadge({ lang, isMobile }: NotificationBadgeProps) {
           {/* Notification dot */}
           <span style={{
             position: 'absolute',
-            top: '2px',
-            right: '2px',
+            top: '7px',
+            right: '5px',
             width: '8px',
             height: '8px',
             background: '#667eea',
@@ -188,12 +189,13 @@ export function NotificationBadge({ lang, isMobile }: NotificationBadgeProps) {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            width: '44px',
-            height: '44px',
+            width: '34px',
+            height: '40px',
             background: 'transparent',
             border: 'none',
+            borderRadius: '0 9999px 9999px 0',
             cursor: 'pointer',
-            padding: 0
+            padding: '0 6px 0 0'
           }}
           aria-label={lang === 'es' ? 'Cerrar notificación' : 'Dismiss notification'}
         >
@@ -204,11 +206,11 @@ export function NotificationBadge({ lang, isMobile }: NotificationBadgeProps) {
             width: '20px',
             height: '20px',
             borderRadius: '50%',
-            background: 'rgba(102, 126, 234, 0.15)',
+            background: 'rgba(102, 126, 234, 0.2)',
             color: 'var(--mr-primary)',
             transition: 'background 0.15s'
           }}>
-            <X size={10} />
+            <X size={11} />
           </span>
         </button>
       </div>

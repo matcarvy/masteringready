@@ -285,6 +285,12 @@ function Home() {
 
   // Mobile detection
   const [isMobile, setIsMobile] = useState(false)
+  // Compact tier (768 to 1079px): logged-in header content overflows at full width, so the
+  // notification pill and user name collapse the same way they do on mobile
+  const [isCompact, setIsCompact] = useState(false)
+  // Narrow tier (768 to 899px): the logged-out header (login + signup buttons) also
+  // runs out of room for the wordmark
+  const [isNarrow, setIsNarrow] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   // fileInfoExpanded removed; file info always visible on main analyzer (collapsible only on dashboard)
   const mobileMenuRef = useRef<HTMLDivElement>(null)
@@ -430,7 +436,11 @@ function Home() {
 
   // Mobile detection
   useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 768)
+    const check = () => {
+      setIsMobile(window.innerWidth < 768)
+      setIsCompact(window.innerWidth < 1080)
+      setIsNarrow(window.innerWidth < 900)
+    }
     check()
     window.addEventListener('resize', check)
     return () => window.removeEventListener('resize', check)
@@ -1625,7 +1635,7 @@ by Matías Carvajal
               <span className="mr-rd-wave" aria-hidden="true">
                 <i></i><i></i><i></i><i></i>
               </span>
-              {!isMobile && (
+              {!isMobile && (user ? !isCompact : !isNarrow) && (
                 <span style={{
                   fontWeight: '650',
                   fontSize: '0.97rem',
@@ -1702,10 +1712,12 @@ by Matías Carvajal
               <ThemeToggle lang={lang} />
 
               {/* Notification Badge; persistent until clicked or dismissed */}
-              {user && <NotificationBadge lang={lang} isMobile={isMobile} />}
+              {user && <NotificationBadge lang={lang} isMobile={isMobile || isCompact} />}
 
-              {/* User Menu; hidden on mobile when not logged in (hamburger handles it) */}
-              <UserMenu lang={lang} isMobile={isMobile} />
+              {/* User Menu; hidden on mobile when not logged in (hamburger handles it).
+                  Compact only collapses the logged-in name; the logged-out login button must survive
+                  768 to 1079px because the hamburger only exists below 768. */}
+              <UserMenu lang={lang} isMobile={isMobile || (isCompact && !!user)} sectionLinks={isMobile} />
 
               {/* Analyze CTA; always visible */}
               <button
